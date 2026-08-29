@@ -18,8 +18,19 @@ namespace TheRaceForSpace.Programs
 
         public string Name { get; private set; }
         public bool IsPlayer { get; private set; }
+
+        // AwardedFunds is cumulative funding actually paid during this prototype session.
+        // Rival Funds is their simulated spendable balance; the player's real balance remains owned by KSP.
         public double AwardedFunds { get; set; }
+        public double Funds { get; set; }
+        public double NextPayoutFunds { get; set; }
         public int RacePoints { get; set; }
+
+        // Rival launch planning remains session-only in 0.2. These values are intentionally
+        // stored with programme state so scene changes do not reset an in-progress launch.
+        public string NextLaunchBodyName { get; set; }
+        public int LaunchProgressPercent { get; set; }
+        public double NextLaunchProgressCheckUniversalTime { get; set; }
 
         public int GetSatelliteCount(string celestialBodyName)
         {

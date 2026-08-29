@@ -39,16 +39,10 @@ The Funding Targets view uses the expanded 0.2 test requirements and payout pool
 - Mun Survey Network — 5 qualifying satellites, 300,000 Total Available Payout;
 - Minmus Relay Initiative — 5 qualifying satellites, 300,000 Total Available Payout.
 
-Each target displays its data in this order:
+Each funding-target card now uses two columns to make better use of the desktop-width command center:
 
-1. requirement;
-2. Total Available Payout;
-3. Player Progress;
-4. Player Current Payout;
-5. Aster Progress;
-6. Aster Current Payout;
-7. Cobalt Progress;
-8. Cobalt Current Payout.
+- left column — Target, Requirement, and Total Available Payout;
+- right column — Player, Aster, and Cobalt Progress and Current Payout values.
 
 Progress displays the current satellite count only, for example `Player Progress: 1 Satellite`, because the requirement is already shown separately.
 
@@ -89,14 +83,10 @@ The Rival Agencies view presents the existing two simulated agencies:
 - Aster Aerospace Directorate;
 - Cobalt Orbital Bureau.
 
-Each rival begins the prototype session with **50,000 funds** and displays:
+Each rival begins the prototype session with **50,000 funds**. Each rival card uses two columns:
 
-- Funds;
-- Next Payout;
-- Next Launch Planned;
-- Launch Progress;
-- ETA till Launch;
-- tracked satellite counts around Kerbin, Mun and Minmus.
+- left column — Funds, Next Payout, Next Launch Planned, Launch Progress, and ETA till Launch;
+- right column — Kerbin, Mun, and Minmus satellite counts.
 
 Race Points and the previous explanatory subtitle are not displayed on the Rival Agencies view.
 
@@ -171,19 +161,20 @@ For this 0.2 test:
 5. Return to the main menu and confirm the Command Center disappears.
 6. Confirm the Overview no longer shows Race Summary or Funding Programmes Decided.
 7. Confirm Funding Targets no longer display Winner/claimed status.
-8. Confirm the Funding Targets and Rival Agencies views no longer show their explanatory subtitles.
-9. Confirm Funding Target progress lines show only the current satellite count rather than `current/required`.
-10. Confirm the Space Race view no longer shows its explanatory subtitle, associated programme, or race status.
-11. Confirm projected payouts still follow completion percentage below saturation and ownership ratio after saturation.
-12. Confirm the next funding date advances in 90-Kerbin-day intervals.
-13. Confirm both rivals start with 50,000 funds.
-14. Advance across five-day Kerbin boundaries and verify each rival has a 50% chance to gain 10% progress.
-15. Confirm every successful 10% progress step deducts 20,000 rival funds immediately.
-16. Confirm a rival with less than 20,000 funds cannot make a successful progress step.
-17. Confirm `ETA till Launch` uses 10 expected Kerbin days per remaining 10% step when funds are available; for example, 50% progress should show approximately 50 days.
-18. Confirm a cash-limited rival's ETA includes waits for projected 90-day funding payments.
-19. Confirm a rival that cannot finance completion and has a zero projected payout displays `ETA till Launch: Awaiting Funding`.
-20. Confirm reaching 100% adds one satellite without a second launch-cost deduction, resets progress, and selects another body.
-21. Reach a scheduled funding date and confirm rival balances increase by their Next Payout amounts.
-22. In Career mode, confirm the player's Next Payout is added to the real KSP funds balance on the scheduled funding date.
-23. Confirm F8 hides and restores the complete interface only while a game is loaded.
+8. Confirm Funding Target cards use target/requirement/pool information on the left and Player/Aster/Cobalt progress and payout information on the right.
+9. Confirm Rival Agency cards use funding/launch information on the left and Kerbin/Mun/Minmus satellite counts on the right.
+10. Confirm Funding Target progress lines show only the current satellite count rather than `current/required`.
+11. Confirm the Space Race view no longer shows its explanatory subtitle, associated programme, or race status.
+12. Confirm projected payouts still follow completion percentage below saturation and ownership ratio after saturation.
+13. Confirm the next funding date advances in 90-Kerbin-day intervals.
+14. Confirm both rivals start with 50,000 funds.
+15. Advance across five-day Kerbin boundaries and verify each rival has a 50% chance to gain 10% progress.
+16. Confirm every successful 10% progress step deducts 20,000 rival funds immediately.
+17. Confirm a rival with less than 20,000 funds cannot make a successful progress step.
+18. Confirm `ETA till Launch` uses 10 expected Kerbin days per remaining 10% step when funds are available; for example, 50% progress should show approximately 50 days.
+19. Confirm a cash-limited rival's ETA includes waits for projected 90-day funding payments.
+20. Confirm a rival that cannot finance completion and has a zero projected payout displays `ETA till Launch: Awaiting Funding`.
+21. Confirm reaching 100% adds one satellite without a second launch-cost deduction, resets progress, and selects another body.
+22. Reach a scheduled funding date and confirm rival balances increase by their Next Payout amounts.
+23. In Career mode, confirm the player's Next Payout is added to the real KSP funds balance on the scheduled funding date.
+24. Confirm F8 hides and restores the complete interface only while a game is loaded.

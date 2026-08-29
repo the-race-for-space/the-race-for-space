@@ -6,29 +6,28 @@ using UnityEngine;
 namespace TheRaceForSpace.UI
 {
     /// <summary>
-    /// Prototype command center with an overview and focused race-detail windows.
+    /// Prototype command center with an overview and independently managed race-detail windows.
     /// Press F8 to show or hide the complete interface.
     /// </summary>
     [KSPAddon(KSPAddon.Startup.EveryScene, false)]
     public sealed class RaceWindow : MonoBehaviour
     {
-        private enum DetailWindow
-        {
-            None,
-            Funding,
-            Rivals,
-            Milestones
-        }
-
         private const float RefreshIntervalSeconds = 5.0f;
         private static SatelliteRaceController _raceController;
 
-        private Rect _overviewWindowRect = new Rect(30.0f, 40.0f, 500.0f, 650.0f);
-        private Rect _detailWindowRect = new Rect(550.0f, 40.0f, 690.0f, 650.0f);
+        // Desktop-oriented defaults keep the overview visible while leaving room for a larger detail window.
+        // Every window remains draggable, so players can arrange the layout for their own resolution.
+        private Rect _overviewWindowRect = new Rect(35.0f, 45.0f, 540.0f, 720.0f);
+        private Rect _fundingWindowRect = new Rect(600.0f, 45.0f, 760.0f, 720.0f);
+        private Rect _rivalsWindowRect = new Rect(650.0f, 95.0f, 720.0f, 620.0f);
+        private Rect _milestonesWindowRect = new Rect(700.0f, 145.0f, 720.0f, 620.0f);
+
         private Vector2 _fundingScrollPosition;
         private Vector2 _rivalsScrollPosition;
         private Vector2 _milestonesScrollPosition;
-        private DetailWindow _activeDetailWindow;
+        private bool _isFundingWindowVisible;
+        private bool _isRivalsWindowVisible;
+        private bool _isMilestonesWindowVisible;
         private bool _isVisible = true;
         private float _nextRefreshTime;
 
@@ -68,31 +67,31 @@ namespace TheRaceForSpace.UI
                 DrawOverviewWindow,
                 "The Race for Space - Command Center");
 
-            switch (_activeDetailWindow)
+            if (_isFundingWindowVisible)
             {
-                case DetailWindow.Funding:
-                    _detailWindowRect = GUILayout.Window(
-                        overviewWindowId + 1,
-                        _detailWindowRect,
-                        DrawFundingWindow,
-                        "Funding Programmes");
-                    break;
+                _fundingWindowRect = GUILayout.Window(
+                    overviewWindowId + 1,
+                    _fundingWindowRect,
+                    DrawFundingWindow,
+                    "Funding Programmes");
+            }
 
-                case DetailWindow.Rivals:
-                    _detailWindowRect = GUILayout.Window(
-                        overviewWindowId + 2,
-                        _detailWindowRect,
-                        DrawRivalsWindow,
-                        "Rival Agencies");
-                    break;
+            if (_isRivalsWindowVisible)
+            {
+                _rivalsWindowRect = GUILayout.Window(
+                    overviewWindowId + 2,
+                    _rivalsWindowRect,
+                    DrawRivalsWindow,
+                    "Rival Agencies");
+            }
 
-                case DetailWindow.Milestones:
-                    _detailWindowRect = GUILayout.Window(
-                        overviewWindowId + 3,
-                        _detailWindowRect,
-                        DrawMilestonesWindow,
-                        "Milestones & Satellite Tracking");
-                    break;
+            if (_isMilestonesWindowVisible)
+            {
+                _milestonesWindowRect = GUILayout.Window(
+                    overviewWindowId + 3,
+                    _milestonesWindowRect,
+                    DrawMilestonesWindow,
+                    "Milestones & Satellite Tracking");
             }
         }
 
@@ -125,22 +124,22 @@ namespace TheRaceForSpace.UI
             GUILayout.Label("Minmus orbit: " + player.GetSatelliteCount("Minmus") + " qualifying satellite(s)");
 
             GUILayout.Space(12.0f);
-            GUILayout.Label("COMMAND CENTER");
-            GUILayout.Label("Open one detailed view at a time:");
+            GUILayout.Label("COMMAND CENTER WINDOWS");
+            GUILayout.Label("Open and arrange any combination of detailed views:");
 
-            if (GUILayout.Button("Funding Programmes", GUILayout.Height(42.0f)))
+            if (GUILayout.Button(_isFundingWindowVisible ? "Hide Funding Programmes" : "Open Funding Programmes", GUILayout.Height(42.0f)))
             {
-                _activeDetailWindow = DetailWindow.Funding;
+                _isFundingWindowVisible = !_isFundingWindowVisible;
             }
 
-            if (GUILayout.Button("Rival Agencies", GUILayout.Height(42.0f)))
+            if (GUILayout.Button(_isRivalsWindowVisible ? "Hide Rival Agencies" : "Open Rival Agencies", GUILayout.Height(42.0f)))
             {
-                _activeDetailWindow = DetailWindow.Rivals;
+                _isRivalsWindowVisible = !_isRivalsWindowVisible;
             }
 
-            if (GUILayout.Button("Milestones & Satellite Tracking", GUILayout.Height(42.0f)))
+            if (GUILayout.Button(_isMilestonesWindowVisible ? "Hide Milestones & Satellite Tracking" : "Open Milestones & Satellite Tracking", GUILayout.Height(42.0f)))
             {
-                _activeDetailWindow = DetailWindow.Milestones;
+                _isMilestonesWindowVisible = !_isMilestonesWindowVisible;
             }
 
             GUILayout.Space(12.0f);
@@ -161,7 +160,7 @@ namespace TheRaceForSpace.UI
         {
             if (GUILayout.Button("Close", GUILayout.Width(90.0f)))
             {
-                _activeDetailWindow = DetailWindow.None;
+                _isFundingWindowVisible = false;
                 return;
             }
 
@@ -198,7 +197,7 @@ namespace TheRaceForSpace.UI
         {
             if (GUILayout.Button("Close", GUILayout.Width(90.0f)))
             {
-                _activeDetailWindow = DetailWindow.None;
+                _isRivalsWindowVisible = false;
                 return;
             }
 
@@ -226,7 +225,7 @@ namespace TheRaceForSpace.UI
         {
             if (GUILayout.Button("Close", GUILayout.Width(90.0f)))
             {
-                _activeDetailWindow = DetailWindow.None;
+                _isMilestonesWindowVisible = false;
                 return;
             }
 

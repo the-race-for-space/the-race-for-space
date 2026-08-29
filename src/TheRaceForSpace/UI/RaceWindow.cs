@@ -99,10 +99,6 @@ namespace TheRaceForSpace.UI
 
         private void DrawWindow(int windowId)
         {
-            GUILayout.Label("PROTOTYPE 0.2");
-            GUILayout.Label("Kerbal Space Agency - Race Command Center");
-            GUILayout.Space(8.0f);
-
             GUILayout.BeginHorizontal();
 
             if (GUILayout.Button("Overview", GUILayout.Height(40.0f)))

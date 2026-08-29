@@ -16,11 +16,12 @@ namespace TheRaceForSpace.Competition
         private const double KerbinDaySeconds = 21600.0;
         private const int KerbinDaysPerYear = 426;
         private const double FundingIntervalSeconds = 90.0 * KerbinDaySeconds;
-        private const double RivalStartingFunds = 50000.0;
+        private const double RivalStartingFunds = 200000.0;
 
         private readonly List<SpaceProgramState> _programs = new List<SpaceProgramState>();
         private readonly List<FundingProgramme> _fundingProgrammes = new List<FundingProgramme>();
         private double _nextFundingUniversalTime = -1.0;
+        private bool _hasRestoredPersistentRivalState;
 
         public SatelliteRaceController()
         {
@@ -28,7 +29,8 @@ namespace TheRaceForSpace.Competition
             AsterProgram = new SpaceProgramState("Aster Aerospace Directorate", false);
             CobaltProgram = new SpaceProgramState("Cobalt Orbital Bureau", false);
 
-            // Rivals begin with a small simulated seed balance before scheduled funding begins.
+            // New/older saves without Race for Space persistence begin with enough simulated
+            // cash to fund one complete 200,000 rival launch-development cycle.
             AsterProgram.Funds = RivalStartingFunds;
             CobaltProgram.Funds = RivalStartingFunds;
 
@@ -100,6 +102,19 @@ namespace TheRaceForSpace.Competition
                 return;
             }
 
+            // Do not advance rivals until the ScenarioModule has loaded the current save.
+            // Old saves without persisted rival data return true and retain the 200,000 defaults.
+            if (!_hasRestoredPersistentRivalState)
+            {
+                _hasRestoredPersistentRivalState =
+                    RacePersistenceScenario.TryRestoreRivalState(AsterProgram, CobaltProgram);
+
+                if (!_hasRestoredPersistentRivalState)
+                {
+                    return;
+                }
+            }
+
             double currentUniversalTime = Planetarium.GetUniversalTime();
             if (_nextFundingUniversalTime < 0.0)
             {
@@ -114,6 +129,10 @@ namespace TheRaceForSpace.Competition
             RivalSimulation.Refresh(AsterProgram, CobaltProgram, currentUniversalTime);
             EvaluateFundingProgrammes();
             ProcessDueFunding(currentUniversalTime);
+
+            // ScenarioModule.OnSave can occur after any gameplay scene. Keep its in-memory
+            // snapshot synchronized with every rival change rather than reconstructing later.
+            RacePersistenceScenario.CaptureRivalState(AsterProgram, CobaltProgram);
         }
 
         private bool ProcessDueFunding(double currentUniversalTime)

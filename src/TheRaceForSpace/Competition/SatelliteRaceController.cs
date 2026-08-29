@@ -1,5 +1,7 @@
+using System;
 using System.Collections.Generic;
 using TheRaceForSpace.Funding;
+using TheRaceForSpace.KspIntegration;
 using TheRaceForSpace.Programs;
 using TheRaceForSpace.Simulation;
 using TheRaceForSpace.Tracking;
@@ -11,15 +13,24 @@ namespace TheRaceForSpace.Competition
     /// </summary>
     public sealed class SatelliteRaceController
     {
+        private const double KerbinDaySeconds = 21600.0;
+        private const int KerbinDaysPerYear = 426;
+        private const double FundingIntervalSeconds = 30.0 * KerbinDaySeconds;
+        private const double RivalStartingFunds = 50000.0;
+
         private readonly List<SpaceProgramState> _programs = new List<SpaceProgramState>();
         private readonly List<FundingProgramme> _fundingProgrammes = new List<FundingProgramme>();
-        private double _campaignStartUniversalTime = -1.0;
+        private double _nextFundingUniversalTime = -1.0;
 
         public SatelliteRaceController()
         {
             PlayerProgram = new SpaceProgramState("Kerbal Space Agency", true);
             AsterProgram = new SpaceProgramState("Aster Aerospace Directorate", false);
             CobaltProgram = new SpaceProgramState("Cobalt Orbital Bureau", false);
+
+            // Rivals begin with enough simulated cash to fund one prototype launch.
+            AsterProgram.Funds = RivalStartingFunds;
+            CobaltProgram.Funds = RivalStartingFunds;
 
             _programs.Add(PlayerProgram);
             _programs.Add(AsterProgram);
@@ -34,6 +45,35 @@ namespace TheRaceForSpace.Competition
         public SpaceProgramState AsterProgram { get; private set; }
         public SpaceProgramState CobaltProgram { get; private set; }
         public IList<FundingProgramme> FundingProgrammes { get { return _fundingProgrammes.AsReadOnly(); } }
+        public double NextFundingUniversalTime { get { return _nextFundingUniversalTime; } }
+
+        public int NextFundingYear
+        {
+            get
+            {
+                if (_nextFundingUniversalTime < 0.0)
+                {
+                    return 0;
+                }
+
+                int totalKerbinDays = (int)Math.Floor(_nextFundingUniversalTime / KerbinDaySeconds);
+                return (totalKerbinDays / KerbinDaysPerYear) + 1;
+            }
+        }
+
+        public int NextFundingDay
+        {
+            get
+            {
+                if (_nextFundingUniversalTime < 0.0)
+                {
+                    return 0;
+                }
+
+                int totalKerbinDays = (int)Math.Floor(_nextFundingUniversalTime / KerbinDaySeconds);
+                return (totalKerbinDays % KerbinDaysPerYear) + 1;
+            }
+        }
 
         public void Refresh()
         {
@@ -43,32 +83,81 @@ namespace TheRaceForSpace.Competition
             }
 
             double currentUniversalTime = Planetarium.GetUniversalTime();
-            if (_campaignStartUniversalTime < 0.0)
+            if (_nextFundingUniversalTime < 0.0)
             {
-                _campaignStartUniversalTime = currentUniversalTime;
+                // Funding dates align to the next 30-day Kerbin calendar boundary so the
+                // displayed Year/Day remains stable instead of depending on scene load time.
+                _nextFundingUniversalTime =
+                    (Math.Floor(currentUniversalTime / FundingIntervalSeconds) + 1.0)
+                    * FundingIntervalSeconds;
             }
 
             SatelliteTracker.RefreshPlayerSatelliteCounts(PlayerProgram);
-            RivalSimulation.Refresh(AsterProgram, CobaltProgram, currentUniversalTime - _campaignStartUniversalTime);
+            RivalSimulation.Refresh(AsterProgram, CobaltProgram, currentUniversalTime);
             EvaluateFundingProgrammes();
+
+            if (ProcessDueFunding(currentUniversalTime))
+            {
+                // A rival waiting at 100% progress may become able to launch immediately after
+                // receiving its payout. Refresh once more, then recalculate the next payout.
+                RivalSimulation.Refresh(AsterProgram, CobaltProgram, currentUniversalTime);
+                EvaluateFundingProgrammes();
+            }
+        }
+
+        private bool ProcessDueFunding(double currentUniversalTime)
+        {
+            bool processedFundingDate = false;
+
+            while (_nextFundingUniversalTime >= 0.0 && currentUniversalTime >= _nextFundingUniversalTime)
+            {
+                for (int programIndex = 0; programIndex < _programs.Count; programIndex++)
+                {
+                    SpaceProgramState program = _programs[programIndex];
+                    double payout = program.NextPayoutFunds;
+                    if (payout <= 0.0)
+                    {
+                        continue;
+                    }
+
+                    if (program.IsPlayer)
+                    {
+                        // The player receives real KSP Career funds. In non-Career modes the
+                        // adapter deliberately leaves KSP's economy untouched.
+                        if (CareerFundingAdapter.TryAddFunds(payout))
+                        {
+                            program.AwardedFunds += payout;
+                        }
+                    }
+                    else
+                    {
+                        program.Funds += payout;
+                        program.AwardedFunds += payout;
+                    }
+                }
+
+                _nextFundingUniversalTime += FundingIntervalSeconds;
+                processedFundingDate = true;
+            }
+
+            return processedFundingDate;
         }
 
         private void EvaluateFundingProgrammes()
         {
-            // AwardedFunds represents the programme's current proportional payout in this
-            // prototype. Recalculate it on each controlled refresh because rival progress can
-            // dilute an agency's share after a target becomes saturated.
+            // NextPayoutFunds is the amount currently due on the next scheduled funding date.
+            // Recalculate it on each controlled refresh because rival progress can dilute shares.
             for (int programIndex = 0; programIndex < _programs.Count; programIndex++)
             {
-                _programs[programIndex].AwardedFunds = 0.0;
+                _programs[programIndex].NextPayoutFunds = 0.0;
             }
 
             for (int programmeIndex = 0; programmeIndex < _fundingProgrammes.Count; programmeIndex++)
             {
                 FundingProgramme programme = _fundingProgrammes[programmeIndex];
 
-                // First-to-requirement remains a race achievement and awards the race point,
-                // but it no longer grants the entire funding pool to a single agency.
+                // First-to-requirement remains a separate race achievement, but it no longer
+                // grants exclusive ownership of the funding pool.
                 if (!programme.IsClaimed)
                 {
                     for (int programIndex = 0; programIndex < _programs.Count; programIndex++)
@@ -95,7 +184,7 @@ namespace TheRaceForSpace.Competition
                 {
                     SpaceProgramState program = _programs[programIndex];
                     int programSatelliteCount = program.GetSatelliteCount(programme.CelestialBodyName);
-                    program.AwardedFunds += programme.CalculateCurrentPayout(programSatelliteCount, totalSatelliteCount);
+                    program.NextPayoutFunds += programme.CalculateCurrentPayout(programSatelliteCount, totalSatelliteCount);
                 }
             }
         }

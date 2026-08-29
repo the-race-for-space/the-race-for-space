@@ -85,8 +85,10 @@ The Rival Agencies view presents the existing two simulated agencies:
 
 On a save with no existing Race for Space rival data, each rival begins with **200,000 funds**. Each rival card uses two columns:
 
-- left column — Funds, Next Payout, Next Launch Planned, Launch Progress, and ETA till Launch;
+- left column — Funds, Next Payout, Next Launch Planned, Launch Progress, Launch Progress Cost, and ETA till Launch;
 - right column — Kerbin, Mun, and Minmus satellite counts.
+
+`Launch Progress Cost` shows the cost of the rival's next successful 10% development step for its currently planned body.
 
 Race Points and the previous explanatory subtitle are not displayed on the Rival Agencies view.
 
@@ -97,13 +99,14 @@ The rival launch loop uses the following prototype rules:
 - Each rival begins with a randomly selected next launch target: Kerbin, Mun, or Minmus.
 - Every **5 Kerbin days**, each rival receives one launch-progress check.
 - Each check has a **50% chance** of increasing Launch Progress by **10 percentage points**.
-- Each successful 10% progress step deducts **20,000 funds** immediately.
-- If a rival has less than 20,000 funds at a progress check, that check cannot successfully increase progress.
-- Ten successful progress steps are required for a complete launch, so the current total simulated launch cost is **200,000 funds**.
+- Kerbin uses the base **20,000 funds** cost for each successful 10% progress step.
+- Mun and Minmus use a **50% cost modifier**, so each successful 10% progress step costs **10,000 funds**.
+- If a rival has less than the body-adjusted Launch Progress Cost at a progress check, that check cannot successfully increase progress.
+- Ten successful progress steps are required for a complete launch. A full Kerbin development cycle therefore costs **200,000 funds**, while a full Mun or Minmus development cycle costs **100,000 funds**.
 - At 100% progress, the satellite is added immediately because all development costs have already been paid during progress.
-- After the launch, progress returns to 0% and the next body is selected randomly from Kerbin, Mun, and Minmus.
+- After the launch, progress returns to 0% and the next body is selected randomly from Kerbin, Mun, and Minmus. The Launch Progress Cost immediately follows that new planned body.
 
-The 20,000 development payment, five-day progress interval, 50% progress chance, and 10-point progress increment are prototype tuning values.
+The 20,000 base development payment, Mun/Minmus 50% modifier, five-day progress interval, 50% progress chance, and 10-point progress increment are prototype tuning values.
 
 ### Launch ETA
 
@@ -111,12 +114,12 @@ The 20,000 development payment, five-day progress interval, 50% progress chance,
 
 - At a 50% success chance and one roll every 5 Kerbin days, one successful 10% development step takes 10 Kerbin days on average.
 - For example, a rival at 50% progress has five successful steps remaining, so the base expected ETA is 50 Kerbin days when funds are already available.
-- The estimate also checks the rival's current funds. Each remaining successful step requires 20,000 funds.
+- The estimate also checks the rival's current funds using the same body-adjusted Launch Progress Cost displayed in the interface: 20,000 per remaining step for Kerbin and 10,000 per remaining step for Mun or Minmus.
 - If current funds are insufficient, the estimate projects forward using the rival's current `Next Payout` and the 90-day funding cycle.
 - The current `Next Payout` is treated as the projected amount for future funding cycles. Because payouts can change with satellite ownership, the ETA is recalculated on the normal refresh cycle rather than being permanently fixed.
 - If the rival cannot finance all remaining steps with its current balance and projected payout is zero, the interface displays `ETA till Launch: Awaiting Funding` instead of a numeric estimate.
 
-With the 200,000 starting balance and 20,000 development-step cost, a new rival can fund all ten successful development steps required for its first complete launch even before earning satellite-based scheduled funding.
+With the 200,000 starting balance, a new rival can fund one complete Kerbin development cycle or the equivalent of two complete 100,000 Mun/Minmus development cycles before scheduled funding, depending on which targets are selected.
 
 ## Rival save persistence
 
@@ -132,11 +135,12 @@ For both Aster and Cobalt the save stores:
 - Launch Progress percentage;
 - universal time of the next five-day launch-progress check.
 
-The next planned body and next progress-check time are persisted alongside the percentage so a partially completed launch resumes against the same destination and cadence after loading.
+The next planned body and next progress-check time are persisted alongside the percentage so a partially completed launch resumes against the same destination and cadence after loading. Launch Progress Cost is derived from the persisted planned body and therefore does not require an additional save field.
 
 Values that can be derived safely are not duplicated in the save:
 
 - `Next Payout` is recalculated from current satellite ownership;
+- `Launch Progress Cost` is recalculated from the planned launch body;
 - player satellite counts continue to come from the actual KSP vessel tracker;
 - player Career funds remain owned by KSP.
 
@@ -197,15 +201,16 @@ For this 0.2 test:
 13. Confirm the next funding date advances in 90-Kerbin-day intervals.
 14. On an older/new save without persisted Race for Space rival data, confirm both rivals start with 200,000 funds.
 15. Advance across five-day Kerbin boundaries and verify each rival has a 50% chance to gain 10% progress.
-16. Confirm every successful 10% progress step deducts 20,000 rival funds immediately.
-17. Confirm a rival with less than 20,000 funds cannot make a successful progress step.
-18. Confirm `ETA till Launch` uses 10 expected Kerbin days per remaining 10% step when funds are available; for example, 50% progress should show approximately 50 days.
-19. Confirm a cash-limited rival's ETA includes waits for projected 90-day funding payments.
-20. Confirm reaching 100% adds one satellite without a second launch-cost deduction, resets progress, and selects another body.
-21. Change rival funds/progress/satellite counts, save the game, leave or restart KSP, reload the save, and confirm those rival values return unchanged.
-22. Specifically confirm a partially completed launch reloads with the same Next Launch Planned body and Launch Progress percentage.
-23. After reloading, cross the saved next five-day progress-check boundary and confirm the launch cadence resumes rather than resetting from the load time.
-24. Load a different KSP save in the same process and confirm rival funds/satellites/progress come from that save rather than the previously open save.
-25. Reach a scheduled funding date and confirm rival balances increase by their Next Payout amounts.
-26. In Career mode, confirm the player's Next Payout is added to the real KSP funds balance on the scheduled funding date.
-27. Confirm F8 hides and restores the complete interface only while a game is loaded.
+16. With Next Launch Planned set to Kerbin, confirm `Launch Progress Cost: 20,000` and every successful +10% step deducts 20,000.
+17. With Next Launch Planned set to Mun or Minmus, confirm `Launch Progress Cost: 10,000` and every successful +10% step deducts 10,000.
+18. Confirm a rival cannot make a successful progress step when its funds are below the currently displayed Launch Progress Cost.
+19. Confirm `ETA till Launch` uses 10 expected Kerbin days per remaining 10% step when funds are available; for example, 50% progress should show approximately 50 days.
+20. Confirm a cash-limited rival's ETA uses the body-adjusted cost and includes waits for projected 90-day funding payments.
+21. Confirm reaching 100% adds one satellite without a second launch-cost deduction, resets progress, selects another body, and updates Launch Progress Cost for that body.
+22. Change rival funds/progress/satellite counts, save the game, leave or restart KSP, reload the save, and confirm those rival values return unchanged.
+23. Specifically confirm a partially completed launch reloads with the same Next Launch Planned body, Launch Progress percentage, and derived Launch Progress Cost.
+24. After reloading, cross the saved next five-day progress-check boundary and confirm the launch cadence resumes rather than resetting from the load time.
+25. Load a different KSP save in the same process and confirm rival funds/satellites/progress come from that save rather than the previously open save.
+26. Reach a scheduled funding date and confirm rival balances increase by their Next Payout amounts.
+27. In Career mode, confirm the player's Next Payout is added to the real KSP funds balance on the scheduled funding date.
+28. Confirm F8 hides and restores the complete interface only while a game is loaded.

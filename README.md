@@ -1,8 +1,8 @@
 # The Race for Space
 
-Prototype scaffold for **The Race for Space**, a Kerbal Space Program mod.
+Prototype development repository for **The Race for Space**, a Kerbal Space Program mod.
 
-This repository currently contains the planned project structure only. Gameplay systems will be implemented incrementally during prototype development.
+The current vertical slice implements the first satellite funding race prototype with two simulated rival agencies, three funding programmes and player satellite tracking around Kerbin, Mun and Minmus.
 
 ## Repository layout
 
@@ -12,9 +12,15 @@ This repository currently contains the planned project structure only. Gameplay 
 - `docs/` — design, prototype scope, architecture notes and decisions.
 - `tools/` — development/build helper tooling.
 
+## Build
+
+The mod project is `src/TheRaceForSpace/TheRaceForSpace.csproj`. It builds against the assemblies from a local KSP 1.12.x installation; KSP and Unity DLLs are not stored in this repository.
+
+See `docs/BUILDING.md` for prerequisites, `KSP_ROOT` setup, build commands and optional deployment into `GameData/TheRaceForSpace/Plugins/`.
+
 ## Prototype architecture
 
-The initial source structure separates:
+The source structure separates:
 
 - Core lifecycle and shared domain state
 - Space-program / competitor state
@@ -25,4 +31,4 @@ The initial source structure separates:
 - User interface / presentation
 - Debug and prototype-only utilities
 
-No gameplay implementation has been added yet.
+The first gameplay implementation is intentionally narrow so the competitive satellite loop can be verified before persistence, stock Career funding integration and broader programme types are added.

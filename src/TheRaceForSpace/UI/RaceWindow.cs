@@ -136,7 +136,6 @@ namespace TheRaceForSpace.UI
             if (_highlightedCardTitleStyle == null)
             {
                 _highlightedCardTitleStyle = new GUIStyle(GUI.skin.label);
-                _highlightedCardTitleStyle.alignment = TextAnchor.MiddleCenter;
                 _highlightedCardTitleStyle.fontSize = HighlightedCardTitleFontSize;
                 _highlightedCardTitleStyle.normal.textColor = Color.red;
             }
@@ -240,7 +239,15 @@ namespace TheRaceForSpace.UI
                 double cobaltCurrentPayout = programme.CalculateCurrentPayout(cobaltProgress, totalSatelliteCount);
 
                 GUILayout.BeginVertical("box");
-                GUILayout.Label(programme.Name, _highlightedCardTitleStyle, GUILayout.ExpandWidth(true));
+
+                // Center the highlighted title with layout spacing rather than GUIStyle.alignment.
+                // This avoids requiring UnityEngine.TextRenderingModule only for TextAnchor.
+                GUILayout.BeginHorizontal();
+                GUILayout.FlexibleSpace();
+                GUILayout.Label(programme.Name, _highlightedCardTitleStyle, GUILayout.ExpandWidth(false));
+                GUILayout.FlexibleSpace();
+                GUILayout.EndHorizontal();
+
                 GUILayout.BeginHorizontal();
 
                 // Keep programme details on the left while agency progress and projected payouts
@@ -332,7 +339,15 @@ namespace TheRaceForSpace.UI
             double launchProgressCostFunds)
         {
             GUILayout.BeginVertical("box");
-            GUILayout.Label(program.Name, _highlightedCardTitleStyle, GUILayout.ExpandWidth(true));
+
+            // Match the funding-card title treatment while keeping the project on its existing
+            // Unity module references. Flexible spacing provides centering without TextAnchor.
+            GUILayout.BeginHorizontal();
+            GUILayout.FlexibleSpace();
+            GUILayout.Label(program.Name, _highlightedCardTitleStyle, GUILayout.ExpandWidth(false));
+            GUILayout.FlexibleSpace();
+            GUILayout.EndHorizontal();
+
             GUILayout.BeginHorizontal();
 
             // Launch and funding information stays on the left. Satellite coverage is grouped

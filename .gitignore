@@ -1,0 +1,25 @@
+# Build output
+bin/
+obj/
+Build/
+Dist/
+
+# Local KSP references / installs
+KSP/
+KSP_x64_Data/
+*.user
+*.suo
+*.userprefs
+
+# IDE
+.vs/
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs / temporary files
+*.log
+*.tmp

@@ -13,7 +13,7 @@ namespace TheRaceForSpace.Simulation
         private const double LaunchProgressChance = 0.50;
         private const int LaunchProgressIncrementPercent = 10;
         private const double LaunchProgressCostFunds = 20000.0;
-        private const double MunMinmusLaunchProgressCostMultiplier = 0.50;
+        private const double MunMinmusLaunchProgressCostMultiplier = 1.50;
 
         private static readonly string[] LaunchBodies = { "Kerbin", "Mun", "Minmus" };
         private static readonly Random RandomGenerator = new Random();
@@ -31,7 +31,7 @@ namespace TheRaceForSpace.Simulation
 
         /// <summary>
         /// Returns the funds required for the rival's next successful 10% launch-progress step.
-        /// Mun and Minmus launches currently use a 50% prototype cost modifier.
+        /// Mun and Minmus launches currently cost 50% more than the Kerbin base cost.
         /// </summary>
         public static double CalculateLaunchProgressCost(SpaceProgramState program)
         {
@@ -155,7 +155,7 @@ namespace TheRaceForSpace.Simulation
                 double launchProgressCostFunds = CalculateLaunchProgressCost(program);
 
                 // Kerbin uses the 20,000 base cost for each successful 10% step. Mun and Minmus
-                // currently cost 50% of that amount. A rival without enough funds cannot progress.
+                // cost 50% more, or 30,000. A rival without enough funds cannot progress.
                 if (program.LaunchProgressPercent < 100
                     && program.Funds >= launchProgressCostFunds
                     && RandomGenerator.NextDouble() < LaunchProgressChance)

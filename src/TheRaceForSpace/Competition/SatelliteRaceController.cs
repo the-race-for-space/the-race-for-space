@@ -15,7 +15,7 @@ namespace TheRaceForSpace.Competition
     {
         private const double KerbinDaySeconds = 21600.0;
         private const int KerbinDaysPerYear = 426;
-        private const double FundingIntervalSeconds = 30.0 * KerbinDaySeconds;
+        private const double FundingIntervalSeconds = 90.0 * KerbinDaySeconds;
         private const double RivalStartingFunds = 50000.0;
 
         private readonly List<SpaceProgramState> _programs = new List<SpaceProgramState>();
@@ -85,7 +85,7 @@ namespace TheRaceForSpace.Competition
             double currentUniversalTime = Planetarium.GetUniversalTime();
             if (_nextFundingUniversalTime < 0.0)
             {
-                // Funding dates align to the next 30-day Kerbin calendar boundary so the
+                // Funding dates align to the next 90-day Kerbin calendar boundary so the
                 // displayed Year/Day remains stable instead of depending on scene load time.
                 _nextFundingUniversalTime =
                     (Math.Floor(currentUniversalTime / FundingIntervalSeconds) + 1.0)
@@ -95,14 +95,7 @@ namespace TheRaceForSpace.Competition
             SatelliteTracker.RefreshPlayerSatelliteCounts(PlayerProgram);
             RivalSimulation.Refresh(AsterProgram, CobaltProgram, currentUniversalTime);
             EvaluateFundingProgrammes();
-
-            if (ProcessDueFunding(currentUniversalTime))
-            {
-                // A rival waiting at 100% progress may become able to launch immediately after
-                // receiving its payout. Refresh once more, then recalculate the next payout.
-                RivalSimulation.Refresh(AsterProgram, CobaltProgram, currentUniversalTime);
-                EvaluateFundingProgrammes();
-            }
+            ProcessDueFunding(currentUniversalTime);
         }
 
         private bool ProcessDueFunding(double currentUniversalTime)

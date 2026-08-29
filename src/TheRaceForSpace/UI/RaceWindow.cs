@@ -21,6 +21,7 @@ namespace TheRaceForSpace.UI
         }
 
         private const float RefreshIntervalSeconds = 5.0f;
+        private const int FundingProgrammeNameFontSize = 16;
         private static SatelliteRaceController _raceController;
         private static RaceWindow _activeInstance;
         private static Game _controllerGame;
@@ -31,6 +32,7 @@ namespace TheRaceForSpace.UI
         private Vector2 _rivalsScrollPosition;
         private Vector2 _spaceRaceScrollPosition;
         private ActiveView _activeView = ActiveView.Overview;
+        private GUIStyle _fundingProgrammeNameStyle;
         private bool _isDuplicateInstance;
         private bool _isVisible = true;
         private float _nextRefreshTime;
@@ -213,6 +215,16 @@ namespace TheRaceForSpace.UI
             GUILayout.Label("FUNDING TARGETS");
             GUILayout.Space(8.0f);
 
+            // Cache the title style so the frequently rendered IMGUI view does not allocate
+            // a new GUIStyle for every funding card on every frame.
+            if (_fundingProgrammeNameStyle == null)
+            {
+                _fundingProgrammeNameStyle = new GUIStyle(GUI.skin.label);
+                _fundingProgrammeNameStyle.alignment = TextAnchor.MiddleCenter;
+                _fundingProgrammeNameStyle.fontSize = FundingProgrammeNameFontSize;
+                _fundingProgrammeNameStyle.normal.textColor = Color.red;
+            }
+
             _fundingScrollPosition = GUILayout.BeginScrollView(_fundingScrollPosition);
 
             for (int i = 0; i < _raceController.FundingProgrammes.Count; i++)
@@ -228,7 +240,7 @@ namespace TheRaceForSpace.UI
                 double cobaltCurrentPayout = programme.CalculateCurrentPayout(cobaltProgress, totalSatelliteCount);
 
                 GUILayout.BeginVertical("box");
-                GUILayout.Label(programme.Name);
+                GUILayout.Label(programme.Name, _fundingProgrammeNameStyle, GUILayout.ExpandWidth(true));
                 GUILayout.BeginHorizontal();
 
                 // Keep programme details on the left while agency progress and projected payouts

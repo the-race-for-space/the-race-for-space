@@ -34,11 +34,11 @@ The Overview is the player's home screen for the race. It shows:
 
 ### Funding Targets
 
-The Funding Targets view presents the same three prototype programmes already present in version 0.1:
+The Funding Targets view presents the same three prototype programmes already present in version 0.1, using expanded 0.2 test requirements and payout pools:
 
-- Kerbin Orbital Network;
-- Mun Survey Network;
-- Minmus Relay Initiative.
+- Kerbin Orbital Network — 10 qualifying satellites, 200,000 Total Available Payout;
+- Mun Survey Network — 5 qualifying satellites, 300,000 Total Available Payout;
+- Minmus Relay Initiative — 5 qualifying satellites, 300,000 Total Available Payout.
 
 Each target displays its data in this order:
 
@@ -123,10 +123,11 @@ For this 0.2 test:
 3. Confirm the four navigation buttons are named Overview, Funding Targets, Rival Agencies, and Space Race.
 4. Confirm selecting a navigation button replaces the content in the same window.
 5. Confirm only one view is visible at a time and no additional windows appear.
-6. Confirm each Funding Target uses the requested data order and `Total Available Payout` wording.
-7. Confirm a programme below saturation pays each agency according to its percentage of the required satellite count.
-8. Confirm an oversaturated programme splits the fixed pool according to each agency's share of all qualifying satellites.
-9. Confirm the combined displayed current payouts never exceed the Total Available Payout.
-10. Confirm first-to-requirement still records the winner/race point separately from the shared payout.
-11. Confirm F8 hides and restores the complete interface.
-12. Confirm existing satellite tracking and rival simulation still refresh correctly.
+6. Confirm the Funding Targets show Kerbin 10 / 200,000, Mun 5 / 300,000, and Minmus 5 / 300,000.
+7. Confirm each Funding Target uses the requested data order and `Total Available Payout` wording.
+8. Confirm a programme below saturation pays each agency according to its percentage of the required satellite count.
+9. Confirm an oversaturated programme splits the fixed pool according to each agency's share of all qualifying satellites.
+10. Confirm the combined displayed current payouts never exceed the Total Available Payout.
+11. Confirm first-to-requirement still records the winner/race point separately from the shared payout.
+12. Confirm F8 hides and restores the complete interface.
+13. Confirm existing satellite tracking and rival simulation still refresh correctly.

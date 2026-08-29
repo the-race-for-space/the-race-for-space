@@ -217,15 +217,27 @@ namespace TheRaceForSpace.UI
 
                 GUILayout.BeginVertical("box");
                 GUILayout.Label(programme.Name);
+                GUILayout.BeginHorizontal();
+
+                // Keep programme details on the left while agency progress and projected payouts
+                // use the previously empty right side of the desktop command-center window.
+                GUILayout.BeginVertical(GUILayout.Width(400.0f));
                 GUILayout.Label("Target: " + programme.CelestialBodyName);
                 GUILayout.Label("Requirement: " + programme.RequiredSatellites + " qualifying satellite(s) in orbit");
                 GUILayout.Label("Total Available Payout: " + programme.RewardFunds.ToString("N0"));
+                GUILayout.EndVertical();
+
+                GUILayout.Space(24.0f);
+                GUILayout.BeginVertical(GUILayout.ExpandWidth(true));
                 GUILayout.Label("Player Progress: " + playerProgress + (playerProgress == 1 ? " Satellite" : " Satellites"));
                 GUILayout.Label("Player Current Payout: " + playerCurrentPayout.ToString("N0"));
                 GUILayout.Label("Aster Progress: " + asterProgress + (asterProgress == 1 ? " Satellite" : " Satellites"));
                 GUILayout.Label("Aster Current Payout: " + asterCurrentPayout.ToString("N0"));
                 GUILayout.Label("Cobalt Progress: " + cobaltProgress + (cobaltProgress == 1 ? " Satellite" : " Satellites"));
                 GUILayout.Label("Cobalt Current Payout: " + cobaltCurrentPayout.ToString("N0"));
+                GUILayout.EndVertical();
+
+                GUILayout.EndHorizontal();
                 GUILayout.EndVertical();
                 GUILayout.Space(8.0f);
             }
@@ -292,6 +304,11 @@ namespace TheRaceForSpace.UI
         {
             GUILayout.BeginVertical("box");
             GUILayout.Label(program.Name);
+            GUILayout.BeginHorizontal();
+
+            // Launch and funding information stays on the left. Satellite coverage is grouped
+            // into a second column so the wide desktop layout is used more efficiently.
+            GUILayout.BeginVertical(GUILayout.Width(430.0f));
             GUILayout.Label("Funds: " + program.Funds.ToString("N0"));
             GUILayout.Label("Next Payout: " + program.NextPayoutFunds.ToString("N0"));
             GUILayout.Label(
@@ -301,9 +318,16 @@ namespace TheRaceForSpace.UI
             GUILayout.Label(
                 "ETA till Launch: "
                 + (launchEtaDays.HasValue ? launchEtaDays.Value + " days" : "Awaiting Funding"));
+            GUILayout.EndVertical();
+
+            GUILayout.Space(24.0f);
+            GUILayout.BeginVertical(GUILayout.ExpandWidth(true));
             GUILayout.Label("Kerbin satellites: " + program.GetSatelliteCount("Kerbin"));
             GUILayout.Label("Mun satellites: " + program.GetSatelliteCount("Mun"));
             GUILayout.Label("Minmus satellites: " + program.GetSatelliteCount("Minmus"));
+            GUILayout.EndVertical();
+
+            GUILayout.EndHorizontal();
             GUILayout.EndVertical();
         }
 

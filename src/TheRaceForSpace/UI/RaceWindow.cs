@@ -283,7 +283,7 @@ namespace TheRaceForSpace.UI
             GUILayout.Label(
                 "Next Launch Planned: "
                 + (string.IsNullOrEmpty(program.NextLaunchBodyName) ? "Planning" : program.NextLaunchBodyName));
-            GUILayout.Label("Launch Progress %: " + program.LaunchProgressPercent + "%");
+            GUILayout.Label("Launch Progress: " + program.LaunchProgressPercent + "%");
             GUILayout.Label(
                 "ETA till Launch: "
                 + (launchEtaDays.HasValue ? launchEtaDays.Value + " days" : "Awaiting Funding"));

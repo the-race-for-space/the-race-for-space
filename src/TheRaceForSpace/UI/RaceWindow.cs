@@ -278,11 +278,13 @@ namespace TheRaceForSpace.UI
 
             DrawProgramCard(
                 _raceController.AsterProgram,
-                _raceController.GetEstimatedRivalLaunchDays(_raceController.AsterProgram));
+                _raceController.GetEstimatedRivalLaunchDays(_raceController.AsterProgram),
+                _raceController.GetRivalLaunchProgressCost(_raceController.AsterProgram));
             GUILayout.Space(10.0f);
             DrawProgramCard(
                 _raceController.CobaltProgram,
-                _raceController.GetEstimatedRivalLaunchDays(_raceController.CobaltProgram));
+                _raceController.GetEstimatedRivalLaunchDays(_raceController.CobaltProgram),
+                _raceController.GetRivalLaunchProgressCost(_raceController.CobaltProgram));
 
             GUILayout.Space(12.0f);
             GUILayout.Label("RACE COMPARISON");
@@ -324,7 +326,10 @@ namespace TheRaceForSpace.UI
             GUILayout.EndScrollView();
         }
 
-        private void DrawProgramCard(SpaceProgramState program, int? launchEtaDays)
+        private void DrawProgramCard(
+            SpaceProgramState program,
+            int? launchEtaDays,
+            double launchProgressCostFunds)
         {
             GUILayout.BeginVertical("box");
             GUILayout.Label(program.Name, _highlightedCardTitleStyle, GUILayout.ExpandWidth(true));
@@ -339,6 +344,7 @@ namespace TheRaceForSpace.UI
                 "Next Launch Planned: "
                 + (string.IsNullOrEmpty(program.NextLaunchBodyName) ? "Planning" : program.NextLaunchBodyName));
             GUILayout.Label("Launch Progress: " + program.LaunchProgressPercent + "%");
+            GUILayout.Label("Launch Progress Cost: " + launchProgressCostFunds.ToString("N0"));
             GUILayout.Label(
                 "ETA till Launch: "
                 + (launchEtaDays.HasValue ? launchEtaDays.Value + " days" : "Awaiting Funding"));

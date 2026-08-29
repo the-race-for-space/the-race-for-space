@@ -6,28 +6,30 @@ using UnityEngine;
 namespace TheRaceForSpace.UI
 {
     /// <summary>
-    /// Prototype command center with an overview and independently managed race-detail windows.
+    /// Prototype command center with four switchable views inside one interface window.
     /// Press F8 to show or hide the complete interface.
     /// </summary>
     [KSPAddon(KSPAddon.Startup.EveryScene, false)]
     public sealed class RaceWindow : MonoBehaviour
     {
+        private enum ActiveView
+        {
+            Overview,
+            FundingTargets,
+            RivalAgencies,
+            SpaceRace
+        }
+
         private const float RefreshIntervalSeconds = 5.0f;
+        private const float WindowBackgroundAlpha = 0.82f;
         private static SatelliteRaceController _raceController;
 
-        // Desktop-oriented defaults keep the overview visible while leaving room for a larger detail window.
-        // Every window remains draggable, so players can arrange the layout for their own resolution.
-        private Rect _overviewWindowRect = new Rect(35.0f, 45.0f, 540.0f, 720.0f);
-        private Rect _fundingWindowRect = new Rect(600.0f, 45.0f, 760.0f, 720.0f);
-        private Rect _rivalsWindowRect = new Rect(650.0f, 95.0f, 720.0f, 620.0f);
-        private Rect _milestonesWindowRect = new Rect(700.0f, 145.0f, 720.0f, 620.0f);
-
+        // Desktop-oriented size keeps all four views readable without creating additional pop-out windows.
+        private Rect _windowRect = new Rect(70.0f, 55.0f, 900.0f, 720.0f);
         private Vector2 _fundingScrollPosition;
         private Vector2 _rivalsScrollPosition;
-        private Vector2 _milestonesScrollPosition;
-        private bool _isFundingWindowVisible;
-        private bool _isRivalsWindowVisible;
-        private bool _isMilestonesWindowVisible;
+        private Vector2 _spaceRaceScrollPosition;
+        private ActiveView _activeView = ActiveView.Overview;
         private bool _isVisible = true;
         private float _nextRefreshTime;
 
@@ -60,42 +62,79 @@ namespace TheRaceForSpace.UI
                 return;
             }
 
-            int overviewWindowId = GetInstanceID();
-            _overviewWindowRect = GUILayout.Window(
-                overviewWindowId,
-                _overviewWindowRect,
-                DrawOverviewWindow,
+            // Keep KSP visible behind the command center while preserving enough contrast for the stock IMGUI controls.
+            Color previousBackgroundColor = GUI.backgroundColor;
+            GUI.backgroundColor = new Color(
+                previousBackgroundColor.r,
+                previousBackgroundColor.g,
+                previousBackgroundColor.b,
+                WindowBackgroundAlpha);
+
+            _windowRect = GUILayout.Window(
+                GetInstanceID(),
+                _windowRect,
+                DrawWindow,
                 "The Race for Space - Command Center");
 
-            if (_isFundingWindowVisible)
-            {
-                _fundingWindowRect = GUILayout.Window(
-                    overviewWindowId + 1,
-                    _fundingWindowRect,
-                    DrawFundingWindow,
-                    "Funding Programmes");
-            }
-
-            if (_isRivalsWindowVisible)
-            {
-                _rivalsWindowRect = GUILayout.Window(
-                    overviewWindowId + 2,
-                    _rivalsWindowRect,
-                    DrawRivalsWindow,
-                    "Rival Agencies");
-            }
-
-            if (_isMilestonesWindowVisible)
-            {
-                _milestonesWindowRect = GUILayout.Window(
-                    overviewWindowId + 3,
-                    _milestonesWindowRect,
-                    DrawMilestonesWindow,
-                    "Milestones & Satellite Tracking");
-            }
+            GUI.backgroundColor = previousBackgroundColor;
         }
 
-        private void DrawOverviewWindow(int windowId)
+        private void DrawWindow(int windowId)
+        {
+            GUILayout.Label("PROTOTYPE 0.2");
+            GUILayout.Label("Kerbal Space Agency - Race Command Center");
+            GUILayout.Space(8.0f);
+
+            GUILayout.BeginHorizontal();
+
+            if (GUILayout.Button("Overview", GUILayout.Height(40.0f)))
+            {
+                _activeView = ActiveView.Overview;
+            }
+
+            if (GUILayout.Button("Funding Targets", GUILayout.Height(40.0f)))
+            {
+                _activeView = ActiveView.FundingTargets;
+            }
+
+            if (GUILayout.Button("Rival Agencies", GUILayout.Height(40.0f)))
+            {
+                _activeView = ActiveView.RivalAgencies;
+            }
+
+            if (GUILayout.Button("Space Race", GUILayout.Height(40.0f)))
+            {
+                _activeView = ActiveView.SpaceRace;
+            }
+
+            GUILayout.EndHorizontal();
+            GUILayout.Space(12.0f);
+
+            switch (_activeView)
+            {
+                case ActiveView.Overview:
+                    DrawOverview();
+                    break;
+
+                case ActiveView.FundingTargets:
+                    DrawFundingTargets();
+                    break;
+
+                case ActiveView.RivalAgencies:
+                    DrawRivalAgencies();
+                    break;
+
+                case ActiveView.SpaceRace:
+                    DrawSpaceRace();
+                    break;
+            }
+
+            GUILayout.FlexibleSpace();
+            GUILayout.Label("F8: show/hide interface   |   tracking refresh: 5 seconds");
+            GUI.DragWindow();
+        }
+
+        private void DrawOverview()
         {
             SpaceProgramState player = _raceController.PlayerProgram;
             int claimedProgrammes = 0;
@@ -108,9 +147,8 @@ namespace TheRaceForSpace.UI
                 }
             }
 
-            GUILayout.Label("PROTOTYPE 0.2");
-            GUILayout.Label("Kerbal Space Agency - Race Command Center");
-            GUILayout.Space(8.0f);
+            GUILayout.Label("OVERVIEW");
+            GUILayout.Space(6.0f);
 
             GUILayout.Label("PROGRAM STATUS");
             GUILayout.Label("Race points: " + player.RacePoints);
@@ -124,25 +162,6 @@ namespace TheRaceForSpace.UI
             GUILayout.Label("Minmus orbit: " + player.GetSatelliteCount("Minmus") + " qualifying satellite(s)");
 
             GUILayout.Space(12.0f);
-            GUILayout.Label("COMMAND CENTER WINDOWS");
-            GUILayout.Label("Open and arrange any combination of detailed views:");
-
-            if (GUILayout.Button(_isFundingWindowVisible ? "Hide Funding Programmes" : "Open Funding Programmes", GUILayout.Height(42.0f)))
-            {
-                _isFundingWindowVisible = !_isFundingWindowVisible;
-            }
-
-            if (GUILayout.Button(_isRivalsWindowVisible ? "Hide Rival Agencies" : "Open Rival Agencies", GUILayout.Height(42.0f)))
-            {
-                _isRivalsWindowVisible = !_isRivalsWindowVisible;
-            }
-
-            if (GUILayout.Button(_isMilestonesWindowVisible ? "Hide Milestones & Satellite Tracking" : "Open Milestones & Satellite Tracking", GUILayout.Height(42.0f)))
-            {
-                _isMilestonesWindowVisible = !_isMilestonesWindowVisible;
-            }
-
-            GUILayout.Space(12.0f);
             GUILayout.Label("RACE SUMMARY");
             for (int i = 0; i < _raceController.FundingProgrammes.Count; i++)
             {
@@ -150,20 +169,11 @@ namespace TheRaceForSpace.UI
                 string status = programme.IsClaimed ? "Won by " + programme.WinnerProgramName : "Open";
                 GUILayout.Label(programme.Name + ": " + status);
             }
-
-            GUILayout.FlexibleSpace();
-            GUILayout.Label("F8: show/hide interface   |   tracking refresh: 5 seconds");
-            GUI.DragWindow();
         }
 
-        private void DrawFundingWindow(int windowId)
+        private void DrawFundingTargets()
         {
-            if (GUILayout.Button("Close", GUILayout.Width(90.0f)))
-            {
-                _isFundingWindowVisible = false;
-                return;
-            }
-
+            GUILayout.Label("FUNDING TARGETS");
             GUILayout.Space(5.0f);
             GUILayout.Label("Current prototype funding opportunities. No additional programmes are introduced in 0.2.");
             GUILayout.Space(8.0f);
@@ -174,11 +184,15 @@ namespace TheRaceForSpace.UI
             {
                 FundingProgramme programme = _raceController.FundingProgrammes[i];
                 int playerProgress = _raceController.PlayerProgram.GetSatelliteCount(programme.CelestialBodyName);
-                string status = programme.IsClaimed ? "CLAIMED - " + programme.WinnerProgramName : "OPEN";
 
                 GUILayout.BeginVertical("box");
                 GUILayout.Label(programme.Name);
-                GUILayout.Label("Status: " + status);
+
+                if (programme.IsClaimed)
+                {
+                    GUILayout.Label("Winner: " + programme.WinnerProgramName);
+                }
+
                 GUILayout.Label("Target: " + programme.CelestialBodyName);
                 GUILayout.Label("Requirement: " + programme.RequiredSatellites + " qualifying satellite(s) in orbit");
                 GUILayout.Label("Player progress: " + playerProgress + "/" + programme.RequiredSatellites);
@@ -190,17 +204,11 @@ namespace TheRaceForSpace.UI
             }
 
             GUILayout.EndScrollView();
-            GUI.DragWindow();
         }
 
-        private void DrawRivalsWindow(int windowId)
+        private void DrawRivalAgencies()
         {
-            if (GUILayout.Button("Close", GUILayout.Width(90.0f)))
-            {
-                _isRivalsWindowVisible = false;
-                return;
-            }
-
+            GUILayout.Label("RIVAL AGENCIES");
             GUILayout.Space(5.0f);
             GUILayout.Label("Competitive intelligence for the two prototype rival agencies.");
             GUILayout.Space(8.0f);
@@ -218,22 +226,16 @@ namespace TheRaceForSpace.UI
             DrawComparisonRow(_raceController.CobaltProgram);
 
             GUILayout.EndScrollView();
-            GUI.DragWindow();
         }
 
-        private void DrawMilestonesWindow(int windowId)
+        private void DrawSpaceRace()
         {
-            if (GUILayout.Button("Close", GUILayout.Width(90.0f)))
-            {
-                _isMilestonesWindowVisible = false;
-                return;
-            }
-
+            GUILayout.Label("SPACE RACE");
             GUILayout.Space(5.0f);
             GUILayout.Label("Live player tracking for the satellite milestones used by the current race.");
             GUILayout.Space(8.0f);
 
-            _milestonesScrollPosition = GUILayout.BeginScrollView(_milestonesScrollPosition);
+            _spaceRaceScrollPosition = GUILayout.BeginScrollView(_spaceRaceScrollPosition);
 
             for (int i = 0; i < _raceController.FundingProgrammes.Count; i++)
             {
@@ -259,7 +261,6 @@ namespace TheRaceForSpace.UI
             GUILayout.Label("- Counts refresh every 5 seconds rather than every frame.");
 
             GUILayout.EndScrollView();
-            GUI.DragWindow();
         }
 
         private static void DrawProgramCard(SpaceProgramState program)

@@ -99,14 +99,14 @@ The rival launch loop uses the following prototype rules:
 - Each rival begins with a randomly selected next launch target: Kerbin, Mun, or Minmus.
 - Every **5 Kerbin days**, each rival receives one launch-progress check.
 - Each check has a **50% chance** of increasing Launch Progress by **10 percentage points**.
-- Kerbin uses the base **20,000 funds** cost for each successful 10% progress step.
-- Mun and Minmus use a **50% cost modifier**, so each successful 10% progress step costs **10,000 funds**.
+- Kerbin uses the base **20,000 funds** cost for each successful 10% progress step, representing 100% of the base cost.
+- Mun and Minmus cost **50% more than Kerbin**, so they use **150% of the base cost**, or **30,000 funds** for each successful 10% progress step.
 - If a rival has less than the body-adjusted Launch Progress Cost at a progress check, that check cannot successfully increase progress.
-- Ten successful progress steps are required for a complete launch. A full Kerbin development cycle therefore costs **200,000 funds**, while a full Mun or Minmus development cycle costs **100,000 funds**.
+- Ten successful progress steps are required for a complete launch. A full Kerbin development cycle therefore costs **200,000 funds**, while a full Mun or Minmus development cycle costs **300,000 funds**.
 - At 100% progress, the satellite is added immediately because all development costs have already been paid during progress.
 - After the launch, progress returns to 0% and the next body is selected randomly from Kerbin, Mun, and Minmus. The Launch Progress Cost immediately follows that new planned body.
 
-The 20,000 base development payment, Mun/Minmus 50% modifier, five-day progress interval, 50% progress chance, and 10-point progress increment are prototype tuning values.
+The 20,000 base development payment, Mun/Minmus 150%-of-base modifier, five-day progress interval, 50% progress chance, and 10-point progress increment are prototype tuning values.
 
 ### Launch ETA
 
@@ -114,12 +114,12 @@ The 20,000 base development payment, Mun/Minmus 50% modifier, five-day progress 
 
 - At a 50% success chance and one roll every 5 Kerbin days, one successful 10% development step takes 10 Kerbin days on average.
 - For example, a rival at 50% progress has five successful steps remaining, so the base expected ETA is 50 Kerbin days when funds are already available.
-- The estimate also checks the rival's current funds using the same body-adjusted Launch Progress Cost displayed in the interface: 20,000 per remaining step for Kerbin and 10,000 per remaining step for Mun or Minmus.
+- The estimate also checks the rival's current funds using the same body-adjusted Launch Progress Cost displayed in the interface: 20,000 per remaining step for Kerbin and 30,000 per remaining step for Mun or Minmus.
 - If current funds are insufficient, the estimate projects forward using the rival's current `Next Payout` and the 90-day funding cycle.
 - The current `Next Payout` is treated as the projected amount for future funding cycles. Because payouts can change with satellite ownership, the ETA is recalculated on the normal refresh cycle rather than being permanently fixed.
 - If the rival cannot finance all remaining steps with its current balance and projected payout is zero, the interface displays `ETA till Launch: Awaiting Funding` instead of a numeric estimate.
 
-With the 200,000 starting balance, a new rival can fund one complete Kerbin development cycle or the equivalent of two complete 100,000 Mun/Minmus development cycles before scheduled funding, depending on which targets are selected.
+With the 200,000 starting balance, a new rival can fund one complete Kerbin development cycle. For a Mun or Minmus target, the same balance funds six successful 30,000 steps (60% progress), leaving 20,000 and requiring further funding before the seventh step.
 
 ## Rival save persistence
 
@@ -202,7 +202,7 @@ For this 0.2 test:
 14. On an older/new save without persisted Race for Space rival data, confirm both rivals start with 200,000 funds.
 15. Advance across five-day Kerbin boundaries and verify each rival has a 50% chance to gain 10% progress.
 16. With Next Launch Planned set to Kerbin, confirm `Launch Progress Cost: 20,000` and every successful +10% step deducts 20,000.
-17. With Next Launch Planned set to Mun or Minmus, confirm `Launch Progress Cost: 10,000` and every successful +10% step deducts 10,000.
+17. With Next Launch Planned set to Mun or Minmus, confirm `Launch Progress Cost: 30,000` and every successful +10% step deducts 30,000.
 18. Confirm a rival cannot make a successful progress step when its funds are below the currently displayed Launch Progress Cost.
 19. Confirm `ETA till Launch` uses 10 expected Kerbin days per remaining 10% step when funds are available; for example, 50% progress should show approximately 50 days.
 20. Confirm a cash-limited rival's ETA uses the body-adjusted cost and includes waits for projected 90-day funding payments.

@@ -36,6 +36,14 @@ namespace TheRaceForSpace.UI
 
         public void Awake()
         {
+            // EveryScene also instantiates addons during loading and on the main menu. Do not
+            // create command-center state until KSP has entered an actual saved-game scene.
+            if (!HighLogic.LoadedSceneIsGame || HighLogic.CurrentGame == null)
+            {
+                Destroy(this);
+                return;
+            }
+
             // KSP can instantiate an EveryScene addon more than once while editor scenes and
             // sub-scenes are loading. Only one RaceWindow may own Update/OnGUI at a time.
             if (_activeInstance != null && _activeInstance != this)
@@ -65,7 +73,12 @@ namespace TheRaceForSpace.UI
 
         public void Update()
         {
-            if (_isDuplicateInstance || _activeInstance != this)
+            // Scene transitions can briefly leave an addon alive after KSP has stopped treating
+            // the current scene as gameplay, so suppress input and refresh work immediately.
+            if (_isDuplicateInstance
+                || _activeInstance != this
+                || !HighLogic.LoadedSceneIsGame
+                || HighLogic.CurrentGame == null)
             {
                 return;
             }
@@ -84,7 +97,12 @@ namespace TheRaceForSpace.UI
 
         public void OnGUI()
         {
-            if (_isDuplicateInstance || _activeInstance != this || !_isVisible || _raceController == null)
+            if (_isDuplicateInstance
+                || _activeInstance != this
+                || !HighLogic.LoadedSceneIsGame
+                || HighLogic.CurrentGame == null
+                || !_isVisible
+                || _raceController == null)
             {
                 return;
             }

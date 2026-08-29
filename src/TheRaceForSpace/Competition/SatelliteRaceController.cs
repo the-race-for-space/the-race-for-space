@@ -55,30 +55,47 @@ namespace TheRaceForSpace.Competition
 
         private void EvaluateFundingProgrammes()
         {
+            // AwardedFunds represents the programme's current proportional payout in this
+            // prototype. Recalculate it on each controlled refresh because rival progress can
+            // dilute an agency's share after a target becomes saturated.
+            for (int programIndex = 0; programIndex < _programs.Count; programIndex++)
+            {
+                _programs[programIndex].AwardedFunds = 0.0;
+            }
+
             for (int programmeIndex = 0; programmeIndex < _fundingProgrammes.Count; programmeIndex++)
             {
                 FundingProgramme programme = _fundingProgrammes[programmeIndex];
-                if (programme.IsClaimed)
+
+                // First-to-requirement remains a race achievement and awards the race point,
+                // but it no longer grants the entire funding pool to a single agency.
+                if (!programme.IsClaimed)
                 {
-                    continue;
+                    for (int programIndex = 0; programIndex < _programs.Count; programIndex++)
+                    {
+                        SpaceProgramState program = _programs[programIndex];
+                        if (program.GetSatelliteCount(programme.CelestialBodyName) < programme.RequiredSatellites)
+                        {
+                            continue;
+                        }
+
+                        programme.WinnerProgramName = program.Name;
+                        program.RacePoints += 1;
+                        break;
+                    }
+                }
+
+                int totalSatelliteCount = 0;
+                for (int programIndex = 0; programIndex < _programs.Count; programIndex++)
+                {
+                    totalSatelliteCount += _programs[programIndex].GetSatelliteCount(programme.CelestialBodyName);
                 }
 
                 for (int programIndex = 0; programIndex < _programs.Count; programIndex++)
                 {
                     SpaceProgramState program = _programs[programIndex];
-                    if (program.GetSatelliteCount(programme.CelestialBodyName) < programme.RequiredSatellites)
-                    {
-                        continue;
-                    }
-
-                    programme.WinnerProgramName = program.Name;
-                    program.RacePoints += 1;
-                    if (program.IsPlayer)
-                    {
-                        program.AwardedFunds += programme.RewardFunds;
-                    }
-
-                    break;
+                    int programSatelliteCount = program.GetSatelliteCount(programme.CelestialBodyName);
+                    program.AwardedFunds += programme.CalculateCurrentPayout(programSatelliteCount, totalSatelliteCount);
                 }
             }
         }

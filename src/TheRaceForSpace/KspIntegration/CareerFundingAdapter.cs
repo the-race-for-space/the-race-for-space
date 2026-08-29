@@ -12,14 +12,16 @@ namespace TheRaceForSpace.KspIntegration
                 return false;
             }
 
+            // Qualify KSP's global Funding type explicitly because the mod also has a
+            // TheRaceForSpace.Funding namespace, which would otherwise shadow this class.
             if (HighLogic.CurrentGame == null
                 || HighLogic.CurrentGame.Mode != Game.Modes.CAREER
-                || Funding.Instance == null)
+                || global::Funding.Instance == null)
             {
                 return false;
             }
 
-            Funding.Instance.AddFunds(amount, TransactionReasons.ContractReward);
+            global::Funding.Instance.AddFunds(amount, TransactionReasons.ContractReward);
             return true;
         }
     }

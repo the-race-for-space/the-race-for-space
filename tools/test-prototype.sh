@@ -2,13 +2,7 @@
 set -euo pipefail
 
 repositoryRoot="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-targetBranch="${1:-$(git -C "$repositoryRoot" branch --show-current)}"
 projectPath="$repositoryRoot/src/TheRaceForSpace/TheRaceForSpace.csproj"
-
-if [[ -z "$targetBranch" ]]; then
-    echo "Usage: bash tools/test-prototype.sh <branch>"
-    exit 1
-fi
 
 if ! command -v git >/dev/null 2>&1; then
     echo "git is required but was not found in PATH."
@@ -17,6 +11,12 @@ fi
 
 if ! command -v dotnet >/dev/null 2>&1; then
     echo "dotnet is required but was not found in PATH."
+    exit 1
+fi
+
+targetBranch="${1:-$(git -C "$repositoryRoot" branch --show-current)}"
+if [[ -z "$targetBranch" ]]; then
+    echo "Usage: bash tools/test-prototype.sh <branch>"
     exit 1
 fi
 

@@ -109,13 +109,13 @@ The rival launch loop uses the following prototype rules:
 - Each rival begins with a randomly selected next launch target: Kerbin, Mun, or Minmus.
 - Every **5 Kerbin days**, each rival receives one launch-progress check.
 - Each check has a **50% chance** of increasing Launch Progress by **10 percentage points**.
-- A complete simulated launch still costs **50,000 funds** in total.
-- The launch cost is paid gradually: each successful 10% progress step deducts **5,000 funds** immediately.
-- If a rival has less than 5,000 funds at a progress check, that check cannot successfully increase progress.
-- At 100% progress, the satellite is added immediately because the full 50,000 has already been spent during development.
+- Each successful 10% progress step deducts **20,000 funds** immediately.
+- If a rival has less than 20,000 funds at a progress check, that check cannot successfully increase progress.
+- Ten successful progress steps are required for a complete launch, so the current total simulated launch cost is **200,000 funds**.
+- At 100% progress, the satellite is added immediately because all development costs have already been paid during progress.
 - After the launch, progress returns to 0% and the next body is selected randomly from Kerbin, Mun, and Minmus.
 
-The 50,000 total launch cost, five-day progress interval, 50% progress chance, and 10-point progress increment are prototype tuning values.
+The 20,000 development payment, five-day progress interval, 50% progress chance, and 10-point progress increment are prototype tuning values.
 
 ## Space Race
 
@@ -160,8 +160,8 @@ For this 0.2 test:
 8. Confirm the next funding date advances in 90-Kerbin-day intervals.
 9. Confirm both rivals start with 50,000 funds.
 10. Advance across five-day Kerbin boundaries and verify each rival has a 50% chance to gain 10% progress.
-11. Confirm every successful 10% progress step deducts 5,000 rival funds immediately.
-12. Confirm a rival with less than 5,000 funds cannot make a successful progress step.
+11. Confirm every successful 10% progress step deducts 20,000 rival funds immediately.
+12. Confirm a rival with less than 20,000 funds cannot make a successful progress step.
 13. Confirm reaching 100% adds one satellite without a second launch-cost deduction, resets progress, and selects another body.
 14. Reach a scheduled funding date and confirm rival balances increase by their Next Payout amounts.
 15. In Career mode, confirm the player's Next Payout is added to the real KSP funds balance on the scheduled funding date.

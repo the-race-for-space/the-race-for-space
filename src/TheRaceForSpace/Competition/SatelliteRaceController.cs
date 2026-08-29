@@ -28,7 +28,7 @@ namespace TheRaceForSpace.Competition
             AsterProgram = new SpaceProgramState("Aster Aerospace Directorate", false);
             CobaltProgram = new SpaceProgramState("Cobalt Orbital Bureau", false);
 
-            // Rivals begin with enough simulated cash to fund one prototype launch.
+            // Rivals begin with a small simulated seed balance before scheduled funding begins.
             AsterProgram.Funds = RivalStartingFunds;
             CobaltProgram.Funds = RivalStartingFunds;
 

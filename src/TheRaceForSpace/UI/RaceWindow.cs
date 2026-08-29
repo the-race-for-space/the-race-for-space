@@ -190,22 +190,11 @@ namespace TheRaceForSpace.UI
             GUILayout.Label("Kerbin orbit: " + player.GetSatelliteCount("Kerbin") + " qualifying satellite(s)");
             GUILayout.Label("Mun orbit: " + player.GetSatelliteCount("Mun") + " qualifying satellite(s)");
             GUILayout.Label("Minmus orbit: " + player.GetSatelliteCount("Minmus") + " qualifying satellite(s)");
-
-            GUILayout.Space(12.0f);
-            GUILayout.Label("RACE SUMMARY");
-            for (int i = 0; i < _raceController.FundingProgrammes.Count; i++)
-            {
-                FundingProgramme programme = _raceController.FundingProgrammes[i];
-                string status = programme.IsClaimed ? "Won by " + programme.WinnerProgramName : "Open";
-                GUILayout.Label(programme.Name + ": " + status);
-            }
         }
 
         private void DrawFundingTargets()
         {
             GUILayout.Label("FUNDING TARGETS");
-            GUILayout.Space(5.0f);
-            GUILayout.Label("Current prototype funding opportunities. No additional programmes are introduced in 0.2.");
             GUILayout.Space(8.0f);
 
             _fundingScrollPosition = GUILayout.BeginScrollView(_fundingScrollPosition);
@@ -233,11 +222,11 @@ namespace TheRaceForSpace.UI
                 GUILayout.Label("Target: " + programme.CelestialBodyName);
                 GUILayout.Label("Requirement: " + programme.RequiredSatellites + " qualifying satellite(s) in orbit");
                 GUILayout.Label("Total Available Payout: " + programme.RewardFunds.ToString("N0"));
-                GUILayout.Label("Player Progress: " + playerProgress + "/" + programme.RequiredSatellites);
+                GUILayout.Label("Player Progress: " + playerProgress + (playerProgress == 1 ? " Satellite" : " Satellites"));
                 GUILayout.Label("Player Current Payout: " + playerCurrentPayout.ToString("N0"));
-                GUILayout.Label("Aster Progress: " + asterProgress + "/" + programme.RequiredSatellites);
+                GUILayout.Label("Aster Progress: " + asterProgress + (asterProgress == 1 ? " Satellite" : " Satellites"));
                 GUILayout.Label("Aster Current Payout: " + asterCurrentPayout.ToString("N0"));
-                GUILayout.Label("Cobalt Progress: " + cobaltProgress + "/" + programme.RequiredSatellites);
+                GUILayout.Label("Cobalt Progress: " + cobaltProgress + (cobaltProgress == 1 ? " Satellite" : " Satellites"));
                 GUILayout.Label("Cobalt Current Payout: " + cobaltCurrentPayout.ToString("N0"));
                 GUILayout.EndVertical();
                 GUILayout.Space(8.0f);
@@ -249,8 +238,6 @@ namespace TheRaceForSpace.UI
         private void DrawRivalAgencies()
         {
             GUILayout.Label("RIVAL AGENCIES");
-            GUILayout.Space(5.0f);
-            GUILayout.Label("Competitive intelligence for the two prototype rival agencies.");
             GUILayout.Space(8.0f);
 
             _rivalsScrollPosition = GUILayout.BeginScrollView(_rivalsScrollPosition);
@@ -271,8 +258,6 @@ namespace TheRaceForSpace.UI
         private void DrawSpaceRace()
         {
             GUILayout.Label("SPACE RACE");
-            GUILayout.Space(5.0f);
-            GUILayout.Label("Live player tracking for the satellite milestones used by the current race.");
             GUILayout.Space(8.0f);
 
             _spaceRaceScrollPosition = GUILayout.BeginScrollView(_spaceRaceScrollPosition);
@@ -285,10 +270,8 @@ namespace TheRaceForSpace.UI
 
                 GUILayout.BeginVertical("box");
                 GUILayout.Label(programme.CelestialBodyName + " Orbital Milestone");
-                GUILayout.Label("Associated programme: " + programme.Name);
                 GUILayout.Label("Progress: " + satelliteCount + "/" + programme.RequiredSatellites);
                 GUILayout.Label("Milestone status: " + (requirementMet ? "COMPLETE" : "IN PROGRESS"));
-                GUILayout.Label("Race status: " + (programme.IsClaimed ? "Won by " + programme.WinnerProgramName : "Open"));
                 GUILayout.EndVertical();
                 GUILayout.Space(8.0f);
             }

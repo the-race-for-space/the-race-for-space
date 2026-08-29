@@ -28,6 +28,90 @@ namespace TheRaceForSpace.Simulation
             RefreshProgram(cobaltProgram, currentUniversalTime);
         }
 
+        /// <summary>
+        /// Estimates the average Kerbin days until a rival completes its planned launch.
+        /// Returns null when current funds and projected scheduled payouts cannot finance
+        /// all remaining development steps.
+        /// </summary>
+        public static int? CalculateEstimatedLaunchDays(
+            SpaceProgramState program,
+            double currentUniversalTime,
+            double nextFundingUniversalTime,
+            double fundingIntervalSeconds)
+        {
+            if (program == null)
+            {
+                return null;
+            }
+
+            int remainingProgressPercent = Math.Max(0, 100 - program.LaunchProgressPercent);
+            int remainingProgressSteps = (remainingProgressPercent + LaunchProgressIncrementPercent - 1)
+                / LaunchProgressIncrementPercent;
+
+            if (remainingProgressSteps <= 0)
+            {
+                return 0;
+            }
+
+            double availableFunds = Math.Max(0.0, program.Funds);
+            double projectedPayoutFunds = Math.Max(0.0, program.NextPayoutFunds);
+            double expectedDaysPerSuccessfulStep =
+                (LaunchProgressIntervalSeconds / KerbinDaySeconds) / LaunchProgressChance;
+            double fundingIntervalDays = fundingIntervalSeconds / KerbinDaySeconds;
+            double nextFundingInDays = nextFundingUniversalTime >= 0.0
+                ? Math.Max(0.0, (nextFundingUniversalTime - currentUniversalTime) / KerbinDaySeconds)
+                : double.PositiveInfinity;
+            double elapsedDays = 0.0;
+
+            for (int stepIndex = 0; stepIndex < remainingProgressSteps; stepIndex++)
+            {
+                double expectedStepDay = elapsedDays + expectedDaysPerSuccessfulStep;
+
+                // Include any scheduled payouts expected to arrive before the next average
+                // successful roll. The current Next Payout is used as a rolling projection;
+                // the estimate is recalculated every normal controller refresh as ownership changes.
+                while (projectedPayoutFunds > 0.0
+                    && fundingIntervalDays > 0.0
+                    && nextFundingInDays <= expectedStepDay)
+                {
+                    availableFunds += projectedPayoutFunds;
+                    nextFundingInDays += fundingIntervalDays;
+                }
+
+                if (availableFunds < LaunchProgressCostFunds)
+                {
+                    if (projectedPayoutFunds <= 0.0
+                        || fundingIntervalDays <= 0.0
+                        || double.IsPositiveInfinity(nextFundingInDays))
+                    {
+                        return null;
+                    }
+
+                    // If development is cash-limited, wait for enough scheduled payouts to
+                    // finance the next 20,000 step, then allow another average roll period.
+                    while (availableFunds < LaunchProgressCostFunds)
+                    {
+                        elapsedDays = Math.Max(elapsedDays, nextFundingInDays);
+                        availableFunds += projectedPayoutFunds;
+                        nextFundingInDays += fundingIntervalDays;
+                    }
+
+                    expectedStepDay = elapsedDays + expectedDaysPerSuccessfulStep;
+
+                    while (nextFundingInDays <= expectedStepDay)
+                    {
+                        availableFunds += projectedPayoutFunds;
+                        nextFundingInDays += fundingIntervalDays;
+                    }
+                }
+
+                availableFunds -= LaunchProgressCostFunds;
+                elapsedDays = expectedStepDay;
+            }
+
+            return (int)Math.Ceiling(elapsedDays);
+        }
+
         private static void RefreshProgram(SpaceProgramState program, double currentUniversalTime)
         {
             if (string.IsNullOrEmpty(program.NextLaunchBodyName))

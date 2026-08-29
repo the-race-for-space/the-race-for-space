@@ -169,8 +169,20 @@ namespace TheRaceForSpace.UI
             GUILayout.Space(6.0f);
 
             GUILayout.Label("PROGRAM STATUS");
-            GUILayout.Label("Race points: " + player.RacePoints);
-            GUILayout.Label("Current prototype payout: " + player.AwardedFunds.ToString("N0"));
+            if (_raceController.NextFundingYear > 0)
+            {
+                GUILayout.Label(
+                    "Next funding date: Year "
+                    + _raceController.NextFundingYear
+                    + ", Day "
+                    + _raceController.NextFundingDay);
+            }
+            else
+            {
+                GUILayout.Label("Next funding date: Pending");
+            }
+
+            GUILayout.Label("Next payout: " + player.NextPayoutFunds.ToString("N0"));
             GUILayout.Label("Funding programmes decided: " + claimedProgrammes + "/" + _raceController.FundingProgrammes.Count);
 
             GUILayout.Space(10.0f);
@@ -295,7 +307,12 @@ namespace TheRaceForSpace.UI
         {
             GUILayout.BeginVertical("box");
             GUILayout.Label(program.Name);
-            GUILayout.Label("Race points: " + program.RacePoints);
+            GUILayout.Label("Funds: " + program.Funds.ToString("N0"));
+            GUILayout.Label("Next Payout: " + program.NextPayoutFunds.ToString("N0"));
+            GUILayout.Label(
+                "Next Launch Planned: "
+                + (string.IsNullOrEmpty(program.NextLaunchBodyName) ? "Planning" : program.NextLaunchBodyName));
+            GUILayout.Label("Launch Progress %: " + program.LaunchProgressPercent + "%");
             GUILayout.Label("Kerbin satellites: " + program.GetSatelliteCount("Kerbin"));
             GUILayout.Label("Mun satellites: " + program.GetSatelliteCount("Mun"));
             GUILayout.Label("Minmus satellites: " + program.GetSatelliteCount("Minmus"));
@@ -308,7 +325,25 @@ namespace TheRaceForSpace.UI
                 + program.GetSatelliteCount("Mun")
                 + program.GetSatelliteCount("Minmus");
 
-            GUILayout.Label(program.Name + " | points " + program.RacePoints + " | tracked satellites " + totalSatellites);
+            if (program.IsPlayer)
+            {
+                GUILayout.Label(
+                    program.Name
+                    + " | next payout "
+                    + program.NextPayoutFunds.ToString("N0")
+                    + " | tracked satellites "
+                    + totalSatellites);
+                return;
+            }
+
+            GUILayout.Label(
+                program.Name
+                + " | funds "
+                + program.Funds.ToString("N0")
+                + " | next payout "
+                + program.NextPayoutFunds.ToString("N0")
+                + " | tracked satellites "
+                + totalSatellites);
         }
     }
 }

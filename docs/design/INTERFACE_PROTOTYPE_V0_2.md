@@ -94,7 +94,7 @@ Each rival begins the prototype session with **50,000 funds** and displays:
 - Funds;
 - Next Payout;
 - Next Launch Planned;
-- Launch Progress %;
+- Launch Progress;
 - ETA till Launch;
 - tracked satellite counts around Kerbin, Mun and Minmus.
 
@@ -141,7 +141,10 @@ The view still documents the prototype tracking rules in-game: Probe and Relay v
 
 ## Window behaviour
 
-- F8 shows or hides the complete Race for Space interface.
+- The command center does not initialize or render during KSP loading screens or on the main menu.
+- The command center becomes available only after KSP has entered an actual loaded-game scene.
+- Returning from a save to the main menu suppresses the interface immediately during the scene transition.
+- F8 shows or hides the complete Race for Space interface while in a loaded game.
 - Only one command-center window is created.
 - Overview, Funding Targets, Rival Agencies, and Space Race are navigation views inside that window.
 - Only one view is visible at a time.
@@ -153,7 +156,7 @@ The view still documents the prototype tracking rules in-game: Probe and Relay v
 
 ## Versioning
 
-The project metadata for this prototype is `0.2.0` and the interface identifies itself as Prototype 0.2.
+The project metadata for this prototype remains `0.2.0`.
 
 Version 0.2 remains session-only for Race for Space state. Rival balances, planned launches, progress, funding dates, and race state are not yet persisted into the KSP save file.
 
@@ -162,22 +165,25 @@ Version 0.2 remains session-only for Race for Space state. Rival balances, plann
 For this 0.2 test:
 
 1. Build and deploy the `prototype/interface-v0.2` branch.
-2. Confirm only one opaque Command Center window appears through Space Center, editor, and flight scene changes.
-3. Confirm the Overview no longer shows Race Summary or Funding Programmes Decided.
-4. Confirm Funding Targets no longer display Winner/claimed status.
-5. Confirm the Funding Targets and Rival Agencies views no longer show their explanatory subtitles.
-6. Confirm Funding Target progress lines show only the current satellite count rather than `current/required`.
-7. Confirm the Space Race view no longer shows its explanatory subtitle, associated programme, or race status.
-8. Confirm projected payouts still follow completion percentage below saturation and ownership ratio after saturation.
-9. Confirm the next funding date advances in 90-Kerbin-day intervals.
-10. Confirm both rivals start with 50,000 funds.
-11. Advance across five-day Kerbin boundaries and verify each rival has a 50% chance to gain 10% progress.
-12. Confirm every successful 10% progress step deducts 20,000 rival funds immediately.
-13. Confirm a rival with less than 20,000 funds cannot make a successful progress step.
-14. Confirm `ETA till Launch` uses 10 expected Kerbin days per remaining 10% step when funds are available; for example, 50% progress should show approximately 50 days.
-15. Confirm a cash-limited rival's ETA includes waits for projected 90-day funding payments.
-16. Confirm a rival that cannot finance completion and has a zero projected payout displays `ETA till Launch: Awaiting Funding`.
-17. Confirm reaching 100% adds one satellite without a second launch-cost deduction, resets progress, and selects another body.
-18. Reach a scheduled funding date and confirm rival balances increase by their Next Payout amounts.
-19. In Career mode, confirm the player's Next Payout is added to the real KSP funds balance on the scheduled funding date.
-20. Confirm F8 hides and restores the complete interface.
+2. Start KSP and confirm no Command Center is shown during loading or on the main menu.
+3. Load a save and confirm one Command Center appears in the loaded game.
+4. Confirm the window remains available through Space Center, editor, and flight scene changes without duplicates.
+5. Return to the main menu and confirm the Command Center disappears.
+6. Confirm the Overview no longer shows Race Summary or Funding Programmes Decided.
+7. Confirm Funding Targets no longer display Winner/claimed status.
+8. Confirm the Funding Targets and Rival Agencies views no longer show their explanatory subtitles.
+9. Confirm Funding Target progress lines show only the current satellite count rather than `current/required`.
+10. Confirm the Space Race view no longer shows its explanatory subtitle, associated programme, or race status.
+11. Confirm projected payouts still follow completion percentage below saturation and ownership ratio after saturation.
+12. Confirm the next funding date advances in 90-Kerbin-day intervals.
+13. Confirm both rivals start with 50,000 funds.
+14. Advance across five-day Kerbin boundaries and verify each rival has a 50% chance to gain 10% progress.
+15. Confirm every successful 10% progress step deducts 20,000 rival funds immediately.
+16. Confirm a rival with less than 20,000 funds cannot make a successful progress step.
+17. Confirm `ETA till Launch` uses 10 expected Kerbin days per remaining 10% step when funds are available; for example, 50% progress should show approximately 50 days.
+18. Confirm a cash-limited rival's ETA includes waits for projected 90-day funding payments.
+19. Confirm a rival that cannot finance completion and has a zero projected payout displays `ETA till Launch: Awaiting Funding`.
+20. Confirm reaching 100% adds one satellite without a second launch-cost deduction, resets progress, and selects another body.
+21. Reach a scheduled funding date and confirm rival balances increase by their Next Payout amounts.
+22. In Career mode, confirm the player's Next Payout is added to the real KSP funds balance on the scheduled funding date.
+23. Confirm F8 hides and restores the complete interface only while a game is loaded.

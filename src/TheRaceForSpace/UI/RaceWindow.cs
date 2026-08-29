@@ -242,9 +242,13 @@ namespace TheRaceForSpace.UI
 
             _rivalsScrollPosition = GUILayout.BeginScrollView(_rivalsScrollPosition);
 
-            DrawProgramCard(_raceController.AsterProgram);
+            DrawProgramCard(
+                _raceController.AsterProgram,
+                _raceController.GetEstimatedRivalLaunchDays(_raceController.AsterProgram));
             GUILayout.Space(10.0f);
-            DrawProgramCard(_raceController.CobaltProgram);
+            DrawProgramCard(
+                _raceController.CobaltProgram,
+                _raceController.GetEstimatedRivalLaunchDays(_raceController.CobaltProgram));
 
             GUILayout.Space(12.0f);
             GUILayout.Label("RACE COMPARISON");
@@ -286,7 +290,7 @@ namespace TheRaceForSpace.UI
             GUILayout.EndScrollView();
         }
 
-        private static void DrawProgramCard(SpaceProgramState program)
+        private static void DrawProgramCard(SpaceProgramState program, int? launchEtaDays)
         {
             GUILayout.BeginVertical("box");
             GUILayout.Label(program.Name);
@@ -296,6 +300,9 @@ namespace TheRaceForSpace.UI
                 "Next Launch Planned: "
                 + (string.IsNullOrEmpty(program.NextLaunchBodyName) ? "Planning" : program.NextLaunchBodyName));
             GUILayout.Label("Launch Progress %: " + program.LaunchProgressPercent + "%");
+            GUILayout.Label(
+                "ETA till Launch: "
+                + (launchEtaDays.HasValue ? launchEtaDays.Value + " days" : "Awaiting Funding"));
             GUILayout.Label("Kerbin satellites: " + program.GetSatelliteCount("Kerbin"));
             GUILayout.Label("Mun satellites: " + program.GetSatelliteCount("Mun"));
             GUILayout.Label("Minmus satellites: " + program.GetSatelliteCount("Minmus"));

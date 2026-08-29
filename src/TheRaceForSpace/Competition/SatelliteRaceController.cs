@@ -17,6 +17,7 @@ namespace TheRaceForSpace.Competition
         private const int KerbinDaysPerYear = 426;
         private const double FundingIntervalSeconds = 90.0 * KerbinDaySeconds;
         private const double RivalStartingFunds = 200000.0;
+        private const string RivalInitialLaunchBodyName = "Kerbin";
 
         private readonly List<SpaceProgramState> _programs = new List<SpaceProgramState>();
         private readonly List<FundingProgramme> _fundingProgrammes = new List<FundingProgramme>();
@@ -30,9 +31,12 @@ namespace TheRaceForSpace.Competition
             CobaltProgram = new SpaceProgramState("Cobalt Orbital Bureau", false);
 
             // New/older saves without Race for Space persistence begin with enough simulated
-            // cash to fund one complete Kerbin launch-development cycle at the base cost.
+            // cash for one complete Kerbin development cycle, so Kerbin is always the first
+            // planned launch. Persisted saves overwrite these defaults with their saved state.
             AsterProgram.Funds = RivalStartingFunds;
             CobaltProgram.Funds = RivalStartingFunds;
+            AsterProgram.NextLaunchBodyName = RivalInitialLaunchBodyName;
+            CobaltProgram.NextLaunchBodyName = RivalInitialLaunchBodyName;
 
             _programs.Add(PlayerProgram);
             _programs.Add(AsterProgram);
@@ -116,7 +120,7 @@ namespace TheRaceForSpace.Competition
             }
 
             // Do not advance rivals until the ScenarioModule has loaded the current save.
-            // Old saves without persisted rival data return true and retain the 200,000 defaults.
+            // Old saves without persisted rival data retain the 200,000/Kerbin defaults.
             if (!_hasRestoredPersistentRivalState)
             {
                 _hasRestoredPersistentRivalState =

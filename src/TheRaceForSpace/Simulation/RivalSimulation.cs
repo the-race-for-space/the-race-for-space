@@ -67,12 +67,14 @@ namespace TheRaceForSpace.Simulation
             {
                 double expectedStepDay = elapsedDays + expectedDaysPerSuccessfulStep;
 
-                // Include any scheduled payouts expected to arrive before the next average
-                // successful roll. The current Next Payout is used as a rolling projection;
-                // the estimate is recalculated every normal controller refresh as ownership changes.
+                // Include scheduled payouts that arrive before the next average successful
+                // roll. A payout on the exact same game-time boundary is processed after the
+                // rival roll by the controller, so it cannot finance that particular check.
+                // The current Next Payout is reused as a projection and recalculated normally
+                // as satellite ownership changes.
                 while (projectedPayoutFunds > 0.0
                     && fundingIntervalDays > 0.0
-                    && nextFundingInDays <= expectedStepDay)
+                    && nextFundingInDays < expectedStepDay)
                 {
                     availableFunds += projectedPayoutFunds;
                     nextFundingInDays += fundingIntervalDays;
@@ -98,7 +100,7 @@ namespace TheRaceForSpace.Simulation
 
                     expectedStepDay = elapsedDays + expectedDaysPerSuccessfulStep;
 
-                    while (nextFundingInDays <= expectedStepDay)
+                    while (nextFundingInDays < expectedStepDay)
                     {
                         availableFunds += projectedPayoutFunds;
                         nextFundingInDays += fundingIntervalDays;

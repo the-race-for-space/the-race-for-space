@@ -26,8 +26,8 @@ namespace TheRaceForSpace.Programs
         public double NextPayoutFunds { get; set; }
         public int RacePoints { get; set; }
 
-        // Rival launch planning remains session-only in 0.2. These values are intentionally
-        // stored with programme state so scene changes do not reset an in-progress launch.
+        // Rival funds, satellite counts, and launch planning/progress are persisted by the
+        // KSP ScenarioModule so an in-progress rival programme resumes after save/load.
         public string NextLaunchBodyName { get; set; }
         public int LaunchProgressPercent { get; set; }
         public double NextLaunchProgressCheckUniversalTime { get; set; }

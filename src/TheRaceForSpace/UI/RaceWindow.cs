@@ -23,6 +23,7 @@ namespace TheRaceForSpace.UI
         private const float RefreshIntervalSeconds = 5.0f;
         private static SatelliteRaceController _raceController;
         private static RaceWindow _activeInstance;
+        private static Game _controllerGame;
 
         // Desktop-oriented size keeps all four views readable without creating additional pop-out windows.
         private Rect _windowRect = new Rect(70.0f, 55.0f, 900.0f, 720.0f);
@@ -55,9 +56,12 @@ namespace TheRaceForSpace.UI
 
             _activeInstance = this;
 
-            if (_raceController == null)
+            // Keep one controller across scene changes inside a save, but never carry rival
+            // state into a different save loaded during the same KSP process.
+            if (_raceController == null || _controllerGame != HighLogic.CurrentGame)
             {
                 _raceController = new SatelliteRaceController();
+                _controllerGame = HighLogic.CurrentGame;
             }
         }
 
@@ -81,6 +85,14 @@ namespace TheRaceForSpace.UI
                 || HighLogic.CurrentGame == null)
             {
                 return;
+            }
+
+            // A save reload can replace HighLogic.CurrentGame without a useful UI transition.
+            // Rebind defensively so persistence is always restored into a controller for that save.
+            if (_controllerGame != HighLogic.CurrentGame)
+            {
+                _raceController = new SatelliteRaceController();
+                _controllerGame = HighLogic.CurrentGame;
             }
 
             if (Input.GetKeyDown(KeyCode.F8))

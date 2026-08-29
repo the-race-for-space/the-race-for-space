@@ -23,14 +23,14 @@ The command-center uses the normal opaque KSP IMGUI window background so scene c
 
 ### Overview
 
-The Overview is the player's home screen for the race. It shows:
+The Overview shows:
 
-- prototype version;
 - next scheduled funding date as Kerbin Year and Day;
-- the player's current projected next payout;
+- the player's projected next payout;
 - number of funding programmes already decided;
-- qualifying satellite counts around Kerbin, Mun and Minmus;
-- a compact status line for each current funding programme.
+- qualifying satellite counts around Kerbin, Mun and Minmus.
+
+The previous Race Summary section is removed from the 0.2 interface.
 
 ## Funding Targets
 
@@ -50,6 +50,8 @@ Each target displays its data in this order:
 6. Aster Current Payout;
 7. Cobalt Progress;
 8. Cobalt Current Payout.
+
+Progress displays the current satellite count only, for example `Player Progress: 1 Satellite`, because the requirement is already shown separately.
 
 The target body and first-to-requirement winner remain visible as contextual race information. Open targets do not display a redundant `Status: OPEN` line.
 
@@ -71,17 +73,17 @@ First-to-requirement remains a separate competitive achievement. Winning that ra
 
 ## Scheduled funding
 
-Funding is no longer deposited continuously. Version 0.2 uses a prototype funding cycle of **30 Kerbin days**.
+Funding is paid on a prototype cycle of **90 Kerbin days**.
 
-- Funding dates align to 30-day Kerbin calendar boundaries.
+- Funding dates align to 90-day Kerbin calendar boundaries.
 - The Overview shows the next funding date as `Year X, Day Y`.
-- `Next Payout` is recalculated from the current satellite ownership on the normal five-second tracking refresh.
+- `Next Payout` is recalculated from current satellite ownership on the normal five-second tracking refresh.
 - When the funding date is reached, the player's projected payout is added to the real KSP Career funds balance.
 - Rival payouts are added to their simulated spendable funds balances.
-- The next funding date then advances by another 30 Kerbin days.
+- The next funding date then advances by another 90 Kerbin days.
 - In Sandbox or Science modes the mod does not modify KSP's funds because the Career funding system is unavailable.
 
-The 30-day interval is a prototype tuning value and is intentionally represented as a named constant rather than embedded throughout the code.
+The 90-day interval is a prototype tuning value represented as a named constant.
 
 ## Rival Agencies
 
@@ -98,34 +100,33 @@ Each rival begins the prototype session with **50,000 funds** and displays:
 - Launch Progress %;
 - tracked satellite counts around Kerbin, Mun and Minmus.
 
-Race Points are no longer displayed on the Rival Agencies view.
+Race Points and the previous explanatory subtitle are not displayed on the Rival Agencies view.
 
 ## Rival launch simulation
 
-The old fixed timetable has been replaced by a simple funded launch loop.
+The rival launch loop uses the following prototype rules:
 
 - Each rival begins with a randomly selected next launch target: Kerbin, Mun, or Minmus.
 - Every **5 Kerbin days**, each rival receives one launch-progress check.
-- Each check has a **25% chance** of increasing Launch Progress by **25 percentage points**.
-- Launch Progress therefore moves through 0%, 25%, 50%, 75%, and 100%.
-- A completed launch currently costs **50,000 funds**.
-- At 100% progress, a rival launches as soon as it has at least 50,000 funds.
-- The launch deducts 50,000 from the rival's simulated funds and adds one satellite at the planned body.
+- Each check has a **50% chance** of increasing Launch Progress by **10 percentage points**.
+- A complete simulated launch still costs **50,000 funds** in total.
+- The launch cost is paid gradually: each successful 10% progress step deducts **5,000 funds** immediately.
+- If a rival has less than 5,000 funds at a progress check, that check cannot successfully increase progress.
+- At 100% progress, the satellite is added immediately because the full 50,000 has already been spent during development.
 - After the launch, progress returns to 0% and the next body is selected randomly from Kerbin, Mun, and Minmus.
-- If progress reaches 100% while the rival cannot afford the launch, it remains ready until a later funding payout supplies enough funds.
 
-The 50,000 launch cost, five-day progress interval, 25% progress chance, and 25-point progress increment are prototype tuning values.
+The 50,000 total launch cost, five-day progress interval, 50% progress chance, and 10-point progress increment are prototype tuning values.
 
 ## Space Race
 
-The Space Race view presents the existing satellite milestones and tracking information. For each existing programme it shows:
+The Space Race view presents the existing player satellite milestones. For each body it shows:
 
-- associated celestial body;
-- required and current satellite count;
-- whether the player requirement is complete;
-- whether the competitive programme is still open or already claimed.
+- current progress against the required satellite count;
+- whether the player's milestone is complete.
 
-The view also documents the prototype tracking rules in-game: Probe and Relay vessel types, ORBITING situation, loaded and unloaded ProtoVessel records, and the five-second refresh interval.
+The previous explanatory subtitle, associated-programme line, and race-status line are removed from this view.
+
+The view still documents the prototype tracking rules in-game: Probe and Relay vessel types, ORBITING situation, loaded and unloaded ProtoVessel records, and the five-second refresh interval.
 
 ## Window behaviour
 
@@ -151,15 +152,17 @@ For this 0.2 test:
 
 1. Build and deploy the `prototype/interface-v0.2` branch.
 2. Confirm only one opaque Command Center window appears through Space Center, editor, and flight scene changes.
-3. Confirm the Overview shows Next Funding Date and Next Payout rather than Race Points.
-4. Confirm the Funding Targets show Kerbin 10 / 200,000, Mun 5 / 300,000, and Minmus 5 / 300,000.
-5. Confirm projected payouts still follow completion percentage below saturation and ownership ratio after saturation.
-6. Confirm both rivals start with 50,000 funds.
-7. Confirm each rival shows Next Payout, Next Launch Planned, and Launch Progress %.
-8. Advance across five-day Kerbin boundaries and confirm rival launch progress only changes on those checks, with stochastic 25-point increases.
-9. Confirm a rival at 100% spends 50,000, adds one satellite at its planned body, resets progress, and chooses another body.
-10. Confirm a rival at 100% without enough funds waits instead of launching for free.
-11. Reach a scheduled funding date and confirm rival balances increase by their Next Payout amounts.
-12. In Career mode, confirm the player's Next Payout is added to the real KSP funds balance on the scheduled funding date.
-13. Confirm the next funding date advances by another 30 Kerbin days after payment.
-14. Confirm F8 hides and restores the complete interface.
+3. Confirm the Overview no longer shows the Race Summary section.
+4. Confirm the Funding Targets and Rival Agencies views no longer show their explanatory subtitles.
+5. Confirm Funding Target progress lines show only the current satellite count rather than `current/required`.
+6. Confirm the Space Race view no longer shows its explanatory subtitle, associated programme, or race status.
+7. Confirm projected payouts still follow completion percentage below saturation and ownership ratio after saturation.
+8. Confirm the next funding date advances in 90-Kerbin-day intervals.
+9. Confirm both rivals start with 50,000 funds.
+10. Advance across five-day Kerbin boundaries and verify each rival has a 50% chance to gain 10% progress.
+11. Confirm every successful 10% progress step deducts 5,000 rival funds immediately.
+12. Confirm a rival with less than 5,000 funds cannot make a successful progress step.
+13. Confirm reaching 100% adds one satellite without a second launch-cost deduction, resets progress, and selects another body.
+14. Reach a scheduled funding date and confirm rival balances increase by their Next Payout amounts.
+15. In Career mode, confirm the player's Next Payout is added to the real KSP funds balance on the scheduled funding date.
+16. Confirm F8 hides and restores the complete interface.

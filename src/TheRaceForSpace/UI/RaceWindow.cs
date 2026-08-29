@@ -21,7 +21,7 @@ namespace TheRaceForSpace.UI
         }
 
         private const float RefreshIntervalSeconds = 5.0f;
-        private const int FundingProgrammeNameFontSize = 16;
+        private const int HighlightedCardTitleFontSize = 16;
         private static SatelliteRaceController _raceController;
         private static RaceWindow _activeInstance;
         private static Game _controllerGame;
@@ -32,7 +32,7 @@ namespace TheRaceForSpace.UI
         private Vector2 _rivalsScrollPosition;
         private Vector2 _spaceRaceScrollPosition;
         private ActiveView _activeView = ActiveView.Overview;
-        private GUIStyle _fundingProgrammeNameStyle;
+        private GUIStyle _highlightedCardTitleStyle;
         private bool _isDuplicateInstance;
         private bool _isVisible = true;
         private float _nextRefreshTime;
@@ -131,6 +131,16 @@ namespace TheRaceForSpace.UI
 
         private void DrawWindow(int windowId)
         {
+            // Funding programme names and rival agency names intentionally share one cached style
+            // so both card types use the same highlighted title treatment without per-frame allocations.
+            if (_highlightedCardTitleStyle == null)
+            {
+                _highlightedCardTitleStyle = new GUIStyle(GUI.skin.label);
+                _highlightedCardTitleStyle.alignment = TextAnchor.MiddleCenter;
+                _highlightedCardTitleStyle.fontSize = HighlightedCardTitleFontSize;
+                _highlightedCardTitleStyle.normal.textColor = Color.red;
+            }
+
             GUILayout.BeginHorizontal();
 
             if (GUILayout.Button("Overview", GUILayout.Height(40.0f)))
@@ -215,16 +225,6 @@ namespace TheRaceForSpace.UI
             GUILayout.Label("FUNDING TARGETS");
             GUILayout.Space(8.0f);
 
-            // Cache the title style so the frequently rendered IMGUI view does not allocate
-            // a new GUIStyle for every funding card on every frame.
-            if (_fundingProgrammeNameStyle == null)
-            {
-                _fundingProgrammeNameStyle = new GUIStyle(GUI.skin.label);
-                _fundingProgrammeNameStyle.alignment = TextAnchor.MiddleCenter;
-                _fundingProgrammeNameStyle.fontSize = FundingProgrammeNameFontSize;
-                _fundingProgrammeNameStyle.normal.textColor = Color.red;
-            }
-
             _fundingScrollPosition = GUILayout.BeginScrollView(_fundingScrollPosition);
 
             for (int i = 0; i < _raceController.FundingProgrammes.Count; i++)
@@ -240,7 +240,7 @@ namespace TheRaceForSpace.UI
                 double cobaltCurrentPayout = programme.CalculateCurrentPayout(cobaltProgress, totalSatelliteCount);
 
                 GUILayout.BeginVertical("box");
-                GUILayout.Label(programme.Name, _fundingProgrammeNameStyle, GUILayout.ExpandWidth(true));
+                GUILayout.Label(programme.Name, _highlightedCardTitleStyle, GUILayout.ExpandWidth(true));
                 GUILayout.BeginHorizontal();
 
                 // Keep programme details on the left while agency progress and projected payouts
@@ -324,10 +324,10 @@ namespace TheRaceForSpace.UI
             GUILayout.EndScrollView();
         }
 
-        private static void DrawProgramCard(SpaceProgramState program, int? launchEtaDays)
+        private void DrawProgramCard(SpaceProgramState program, int? launchEtaDays)
         {
             GUILayout.BeginVertical("box");
-            GUILayout.Label(program.Name);
+            GUILayout.Label(program.Name, _highlightedCardTitleStyle, GUILayout.ExpandWidth(true));
             GUILayout.BeginHorizontal();
 
             // Launch and funding information stays on the left. Satellite coverage is grouped

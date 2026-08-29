@@ -1,6 +1,6 @@
 # Interface Prototype 0.2
 
-Version 0.2 focuses on presenting the satellite-race prototype as a coherent command-center interface while refining the first funding and rival-program simulation. It does not add new funding targets, rival agencies, vessel rules, or save persistence.
+Version 0.2 focuses on presenting the satellite-race prototype as a coherent command-center interface while refining the first funding, rival-program simulation, and rival save persistence. It does not add new funding targets, rival agencies, or vessel rules.
 
 ## Target display
 
@@ -83,7 +83,7 @@ The Rival Agencies view presents the existing two simulated agencies:
 - Aster Aerospace Directorate;
 - Cobalt Orbital Bureau.
 
-Each rival begins the prototype session with **50,000 funds**. Each rival card uses two columns:
+On a save with no existing Race for Space rival data, each rival begins with **200,000 funds**. Each rival card uses two columns:
 
 - left column — Funds, Next Payout, Next Launch Planned, Launch Progress, and ETA till Launch;
 - right column — Kerbin, Mun, and Minmus satellite counts.
@@ -116,7 +116,35 @@ The 20,000 development payment, five-day progress interval, 50% progress chance,
 - The current `Next Payout` is treated as the projected amount for future funding cycles. Because payouts can change with satellite ownership, the ETA is recalculated on the normal refresh cycle rather than being permanently fixed.
 - If the rival cannot finance all remaining steps with its current balance and projected payout is zero, the interface displays `ETA till Launch: Awaiting Funding` instead of a numeric estimate.
 
-With the current 50,000 starting balance and 20,000 development-step cost, a rival with no satellites and therefore no projected payout can only fund two successful progress steps before becoming `Awaiting Funding`. This is intentional visibility of the current prototype economy rather than a hidden fallback source of rival money.
+With the 200,000 starting balance and 20,000 development-step cost, a new rival can fund all ten successful development steps required for its first complete launch even before earning satellite-based scheduled funding.
+
+## Rival save persistence
+
+Rival programme progress is stored inside the KSP save through a `ScenarioModule` rather than a separate external file.
+
+For both Aster and Cobalt the save stores:
+
+- current simulated Funds;
+- Kerbin satellite count;
+- Mun satellite count;
+- Minmus satellite count;
+- Next Launch Planned body;
+- Launch Progress percentage;
+- universal time of the next five-day launch-progress check.
+
+The next planned body and next progress-check time are persisted alongside the percentage so a partially completed launch resumes against the same destination and cadence after loading.
+
+Values that can be derived safely are not duplicated in the save:
+
+- `Next Payout` is recalculated from current satellite ownership;
+- player satellite counts continue to come from the actual KSP vessel tracker;
+- player Career funds remain owned by KSP.
+
+Save values are validated when loaded. Negative funds and satellite counts are clamped to zero, launch progress is clamped to 0–100%, and an invalid saved launch body is discarded so the existing rival simulation can choose a valid Kerbin/Mun/Minmus target.
+
+Older saves that do not yet contain Race for Space scenario data remain valid. They receive the new 200,000 rival starting balances and begin with zero simulated rival satellites/progress until the state is first saved.
+
+The command center keeps one controller across ordinary scene changes inside the same KSP game, but binds that controller to the current KSP `Game` object so loading a different save in the same KSP process does not carry rival state across saves.
 
 ## Space Race
 
@@ -148,7 +176,7 @@ The view still documents the prototype tracking rules in-game: Probe and Relay v
 
 The project metadata for this prototype remains `0.2.0`.
 
-Version 0.2 remains session-only for Race for Space state. Rival balances, planned launches, progress, funding dates, and race state are not yet persisted into the KSP save file.
+Version 0.2 now persists the rival values listed above. Other Race for Space state remains prototype/session-derived unless explicitly covered by the persistence list.
 
 ## Verification focus
 
@@ -167,14 +195,17 @@ For this 0.2 test:
 11. Confirm the Space Race view no longer shows its explanatory subtitle, associated programme, or race status.
 12. Confirm projected payouts still follow completion percentage below saturation and ownership ratio after saturation.
 13. Confirm the next funding date advances in 90-Kerbin-day intervals.
-14. Confirm both rivals start with 50,000 funds.
+14. On an older/new save without persisted Race for Space rival data, confirm both rivals start with 200,000 funds.
 15. Advance across five-day Kerbin boundaries and verify each rival has a 50% chance to gain 10% progress.
 16. Confirm every successful 10% progress step deducts 20,000 rival funds immediately.
 17. Confirm a rival with less than 20,000 funds cannot make a successful progress step.
 18. Confirm `ETA till Launch` uses 10 expected Kerbin days per remaining 10% step when funds are available; for example, 50% progress should show approximately 50 days.
 19. Confirm a cash-limited rival's ETA includes waits for projected 90-day funding payments.
-20. Confirm a rival that cannot finance completion and has a zero projected payout displays `ETA till Launch: Awaiting Funding`.
-21. Confirm reaching 100% adds one satellite without a second launch-cost deduction, resets progress, and selects another body.
-22. Reach a scheduled funding date and confirm rival balances increase by their Next Payout amounts.
-23. In Career mode, confirm the player's Next Payout is added to the real KSP funds balance on the scheduled funding date.
-24. Confirm F8 hides and restores the complete interface only while a game is loaded.
+20. Confirm reaching 100% adds one satellite without a second launch-cost deduction, resets progress, and selects another body.
+21. Change rival funds/progress/satellite counts, save the game, leave or restart KSP, reload the save, and confirm those rival values return unchanged.
+22. Specifically confirm a partially completed launch reloads with the same Next Launch Planned body and Launch Progress percentage.
+23. After reloading, cross the saved next five-day progress-check boundary and confirm the launch cadence resumes rather than resetting from the load time.
+24. Load a different KSP save in the same process and confirm rival funds/satellites/progress come from that save rather than the previously open save.
+25. Reach a scheduled funding date and confirm rival balances increase by their Next Payout amounts.
+26. In Career mode, confirm the player's Next Payout is added to the real KSP funds balance on the scheduled funding date.
+27. Confirm F8 hides and restores the complete interface only while a game is loaded.

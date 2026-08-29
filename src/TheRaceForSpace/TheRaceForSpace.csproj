@@ -11,34 +11,45 @@
 
     <!--
       KSP assemblies remain in the local game installation and are never copied
-      into this repository. KSP_ROOT should point at the folder containing
-      KSP_x64.exe and GameData.
+      into this repository. KSP_ROOT should point at the folder containing the
+      KSP executable and GameData.
     -->
-    <KspManagedPath Condition="'$(KSP_ROOT)' != ''">$(KSP_ROOT)\KSP_x64_Data\Managed</KspManagedPath>
+    <KspManagedPath Condition="'$(KSP_ROOT)' != '' and '$(OS)' == 'Windows_NT'">$(KSP_ROOT)/KSP_x64_Data/Managed</KspManagedPath>
+    <KspManagedPath Condition="'$(KSP_ROOT)' != '' and '$(OS)' != 'Windows_NT'">$(KSP_ROOT)/KSP_Data/Managed</KspManagedPath>
+
+    <!--
+      .NET Framework targeting packs are Windows-only. On common Linux/Mono
+      installations, use Mono's compatible 4.7.2 reference assemblies so the
+      SDK can compile the same net472 project without adding a NuGet dependency.
+      Other Mono layouts can override FrameworkPathOverride externally.
+    -->
+    <FrameworkPathOverride Condition="'$(OS)' != 'Windows_NT' and '$(FrameworkPathOverride)' == '' and Exists('/usr/lib/mono/4.7.2-api/mscorlib.dll')">/usr/lib/mono/4.7.2-api</FrameworkPathOverride>
+    <EnableFrameworkPathOverride Condition="'$(OS)' != 'Windows_NT' and '$(FrameworkPathOverride)' != ''">true</EnableFrameworkPathOverride>
+    <AssemblySearchPaths Condition="'$(OS)' != 'Windows_NT' and '$(FrameworkPathOverride)' != ''">$(FrameworkPathOverride)/Facades;$(AssemblySearchPaths)</AssemblySearchPaths>
   </PropertyGroup>
 
   <ItemGroup>
     <!-- KSP gameplay API. -->
     <Reference Include="Assembly-CSharp">
-      <HintPath>$(KspManagedPath)\Assembly-CSharp.dll</HintPath>
+      <HintPath>$(KspManagedPath)/Assembly-CSharp.dll</HintPath>
       <Private>false</Private>
     </Reference>
 
     <!-- Unity references used by the current prototype UI and lifecycle code. -->
     <Reference Include="UnityEngine">
-      <HintPath>$(KspManagedPath)\UnityEngine.dll</HintPath>
+      <HintPath>$(KspManagedPath)/UnityEngine.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.CoreModule">
-      <HintPath>$(KspManagedPath)\UnityEngine.CoreModule.dll</HintPath>
+      <HintPath>$(KspManagedPath)/UnityEngine.CoreModule.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.IMGUIModule">
-      <HintPath>$(KspManagedPath)\UnityEngine.IMGUIModule.dll</HintPath>
+      <HintPath>$(KspManagedPath)/UnityEngine.IMGUIModule.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.InputLegacyModule">
-      <HintPath>$(KspManagedPath)\UnityEngine.InputLegacyModule.dll</HintPath>
+      <HintPath>$(KspManagedPath)/UnityEngine.InputLegacyModule.dll</HintPath>
       <Private>false</Private>
     </Reference>
   </ItemGroup>
@@ -47,9 +58,9 @@
   <Target Name="ValidateKspReferences" BeforeTargets="ResolveReferences">
     <Error
       Condition="'$(KSP_ROOT)' == ''"
-      Text="KSP_ROOT is not set. Point it at the KSP installation folder containing KSP_x64.exe and GameData." />
+      Text="KSP_ROOT is not set. Point it at the KSP installation folder containing the KSP executable and GameData." />
     <Error
-      Condition="!Exists('$(KspManagedPath)\Assembly-CSharp.dll')"
+      Condition="!Exists('$(KspManagedPath)/Assembly-CSharp.dll')"
       Text="Could not find KSP managed assemblies under '$(KspManagedPath)'. Check KSP_ROOT and confirm this is a KSP 1.12.x installation." />
   </Target>
 
@@ -59,7 +70,7 @@
   -->
   <Target Name="DeployToKspInstallation" AfterTargets="Build" Condition="'$(DeployToKsp)' == 'true'">
     <PropertyGroup>
-      <KspPluginPath>$(KSP_ROOT)\GameData\TheRaceForSpace\Plugins</KspPluginPath>
+      <KspPluginPath>$(KSP_ROOT)/GameData/TheRaceForSpace/Plugins</KspPluginPath>
     </PropertyGroup>
     <MakeDir Directories="$(KspPluginPath)" />
     <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(KspPluginPath)" />

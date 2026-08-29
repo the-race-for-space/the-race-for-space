@@ -98,6 +98,7 @@ Each rival begins the prototype session with **50,000 funds** and displays:
 - Next Payout;
 - Next Launch Planned;
 - Launch Progress %;
+- ETA till Launch;
 - tracked satellite counts around Kerbin, Mun and Minmus.
 
 Race Points and the previous explanatory subtitle are not displayed on the Rival Agencies view.
@@ -116,6 +117,19 @@ The rival launch loop uses the following prototype rules:
 - After the launch, progress returns to 0% and the next body is selected randomly from Kerbin, Mun, and Minmus.
 
 The 20,000 development payment, five-day progress interval, 50% progress chance, and 10-point progress increment are prototype tuning values.
+
+### Launch ETA
+
+`ETA till Launch` is an expected value rather than a guaranteed countdown.
+
+- At a 50% success chance and one roll every 5 Kerbin days, one successful 10% development step takes 10 Kerbin days on average.
+- For example, a rival at 50% progress has five successful steps remaining, so the base expected ETA is 50 Kerbin days when funds are already available.
+- The estimate also checks the rival's current funds. Each remaining successful step requires 20,000 funds.
+- If current funds are insufficient, the estimate projects forward using the rival's current `Next Payout` and the 90-day funding cycle.
+- The current `Next Payout` is treated as the projected amount for future funding cycles. Because payouts can change with satellite ownership, the ETA is recalculated on the normal refresh cycle rather than being permanently fixed.
+- If the rival cannot finance all remaining steps with its current balance and projected payout is zero, the interface displays `ETA till Launch: Awaiting Funding` instead of a numeric estimate.
+
+With the current 50,000 starting balance and 20,000 development-step cost, a rival with no satellites and therefore no projected payout can only fund two successful progress steps before becoming `Awaiting Funding`. This is intentional visibility of the current prototype economy rather than a hidden fallback source of rival money.
 
 ## Space Race
 
@@ -162,7 +176,10 @@ For this 0.2 test:
 10. Advance across five-day Kerbin boundaries and verify each rival has a 50% chance to gain 10% progress.
 11. Confirm every successful 10% progress step deducts 20,000 rival funds immediately.
 12. Confirm a rival with less than 20,000 funds cannot make a successful progress step.
-13. Confirm reaching 100% adds one satellite without a second launch-cost deduction, resets progress, and selects another body.
-14. Reach a scheduled funding date and confirm rival balances increase by their Next Payout amounts.
-15. In Career mode, confirm the player's Next Payout is added to the real KSP funds balance on the scheduled funding date.
-16. Confirm F8 hides and restores the complete interface.
+13. Confirm `ETA till Launch` uses 10 expected Kerbin days per remaining 10% step when funds are available; for example, 50% progress should show approximately 50 days.
+14. Confirm a cash-limited rival's ETA includes waits for projected 90-day funding payments.
+15. Confirm a rival that cannot finance completion and has a zero projected payout displays `ETA till Launch: Awaiting Funding`.
+16. Confirm reaching 100% adds one satellite without a second launch-cost deduction, resets progress, and selects another body.
+17. Reach a scheduled funding date and confirm rival balances increase by their Next Payout amounts.
+18. In Career mode, confirm the player's Next Payout is added to the real KSP funds balance on the scheduled funding date.
+19. Confirm F8 hides and restores the complete interface.

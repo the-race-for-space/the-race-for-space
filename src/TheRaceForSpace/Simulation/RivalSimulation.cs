@@ -10,9 +10,10 @@ namespace TheRaceForSpace.Simulation
     {
         private const double KerbinDaySeconds = 21600.0;
         private const double LaunchProgressIntervalSeconds = 5.0 * KerbinDaySeconds;
-        private const double LaunchProgressChance = 0.25;
-        private const int LaunchProgressIncrementPercent = 25;
-        private const double LaunchCostFunds = 50000.0;
+        private const double LaunchProgressChance = 0.50;
+        private const int LaunchProgressIncrementPercent = 10;
+        private const double TotalLaunchCostFunds = 50000.0;
+        private const double LaunchProgressCostFunds = TotalLaunchCostFunds * LaunchProgressIncrementPercent / 100.0;
 
         private static readonly string[] LaunchBodies = { "Kerbin", "Mun", "Minmus" };
         private static readonly Random RandomGenerator = new Random();
@@ -44,14 +45,18 @@ namespace TheRaceForSpace.Simulation
                     * LaunchProgressIntervalSeconds;
             }
 
-            // A rival that previously reached 100% but lacked funds should launch as soon as
-            // a scheduled payout makes the launch affordable, without waiting another five days.
             TryCompleteLaunch(program);
 
             while (currentUniversalTime >= program.NextLaunchProgressCheckUniversalTime)
             {
-                if (program.LaunchProgressPercent < 100 && RandomGenerator.NextDouble() < LaunchProgressChance)
+                // The 50,000 launch cost is paid gradually as development progresses. Each
+                // successful 10% step costs 5,000, so a complete launch still costs 50,000.
+                // A rival without enough funds for the next step cannot make progress.
+                if (program.LaunchProgressPercent < 100
+                    && program.Funds >= LaunchProgressCostFunds
+                    && RandomGenerator.NextDouble() < LaunchProgressChance)
                 {
+                    program.Funds -= LaunchProgressCostFunds;
                     program.LaunchProgressPercent = Math.Min(
                         100,
                         program.LaunchProgressPercent + LaunchProgressIncrementPercent);
@@ -64,12 +69,11 @@ namespace TheRaceForSpace.Simulation
 
         private static void TryCompleteLaunch(SpaceProgramState program)
         {
-            if (program.LaunchProgressPercent < 100 || program.Funds < LaunchCostFunds)
+            if (program.LaunchProgressPercent < 100)
             {
                 return;
             }
 
-            program.Funds -= LaunchCostFunds;
             program.SetSatelliteCount(
                 program.NextLaunchBodyName,
                 program.GetSatelliteCount(program.NextLaunchBodyName) + 1);

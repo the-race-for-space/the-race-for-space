@@ -144,7 +144,7 @@ namespace TheRaceForSpace.UI
             }
 
             GUILayout.FlexibleSpace();
-            GUILayout.Label("F8: show/hide interface   |   tracking refresh: 5 seconds");
+            GUILayout.Label("F8: show/hide interface");
             GUI.DragWindow();
         }
 

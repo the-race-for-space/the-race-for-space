@@ -25,9 +25,9 @@ namespace TheRaceForSpace.Competition
             _programs.Add(AsterProgram);
             _programs.Add(CobaltProgram);
 
-            _fundingProgrammes.Add(new FundingProgramme("kerbin-network", "Kerbin Orbital Network", "Kerbin", 2, 25000.0));
-            _fundingProgrammes.Add(new FundingProgramme("mun-survey", "Mun Survey Network", "Mun", 1, 40000.0));
-            _fundingProgrammes.Add(new FundingProgramme("minmus-relay", "Minmus Relay Initiative", "Minmus", 1, 50000.0));
+            _fundingProgrammes.Add(new FundingProgramme("kerbin-network", "Kerbin Orbital Network", "Kerbin", 10, 200000.0));
+            _fundingProgrammes.Add(new FundingProgramme("mun-survey", "Mun Survey Network", "Mun", 5, 300000.0));
+            _fundingProgrammes.Add(new FundingProgramme("minmus-relay", "Minmus Relay Initiative", "Minmus", 5, 300000.0));
         }
 
         public SpaceProgramState PlayerProgram { get; private set; }

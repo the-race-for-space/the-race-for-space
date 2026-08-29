@@ -21,7 +21,6 @@ namespace TheRaceForSpace.UI
         }
 
         private const float RefreshIntervalSeconds = 5.0f;
-        private const float WindowBackgroundAlpha = 0.82f;
         private static SatelliteRaceController _raceController;
 
         // Desktop-oriented size keeps all four views readable without creating additional pop-out windows.
@@ -62,21 +61,12 @@ namespace TheRaceForSpace.UI
                 return;
             }
 
-            // Keep KSP visible behind the command center while preserving enough contrast for the stock IMGUI controls.
-            Color previousBackgroundColor = GUI.backgroundColor;
-            GUI.backgroundColor = new Color(
-                previousBackgroundColor.r,
-                previousBackgroundColor.g,
-                previousBackgroundColor.b,
-                WindowBackgroundAlpha);
-
+            // Use the normal KSP IMGUI window background without reducing its alpha.
             _windowRect = GUILayout.Window(
                 GetInstanceID(),
                 _windowRect,
                 DrawWindow,
                 "The Race for Space - Command Center");
-
-            GUI.backgroundColor = previousBackgroundColor;
         }
 
         private void DrawWindow(int windowId)
@@ -152,7 +142,7 @@ namespace TheRaceForSpace.UI
 
             GUILayout.Label("PROGRAM STATUS");
             GUILayout.Label("Race points: " + player.RacePoints);
-            GUILayout.Label("Prototype funding won: " + player.AwardedFunds.ToString("N0"));
+            GUILayout.Label("Current prototype payout: " + player.AwardedFunds.ToString("N0"));
             GUILayout.Label("Funding programmes decided: " + claimedProgrammes + "/" + _raceController.FundingProgrammes.Count);
 
             GUILayout.Space(10.0f);
@@ -184,6 +174,13 @@ namespace TheRaceForSpace.UI
             {
                 FundingProgramme programme = _raceController.FundingProgrammes[i];
                 int playerProgress = _raceController.PlayerProgram.GetSatelliteCount(programme.CelestialBodyName);
+                int asterProgress = _raceController.AsterProgram.GetSatelliteCount(programme.CelestialBodyName);
+                int cobaltProgress = _raceController.CobaltProgram.GetSatelliteCount(programme.CelestialBodyName);
+                int totalSatelliteCount = playerProgress + asterProgress + cobaltProgress;
+
+                double playerCurrentPayout = programme.CalculateCurrentPayout(playerProgress, totalSatelliteCount);
+                double asterCurrentPayout = programme.CalculateCurrentPayout(asterProgress, totalSatelliteCount);
+                double cobaltCurrentPayout = programme.CalculateCurrentPayout(cobaltProgress, totalSatelliteCount);
 
                 GUILayout.BeginVertical("box");
                 GUILayout.Label(programme.Name);
@@ -195,10 +192,13 @@ namespace TheRaceForSpace.UI
 
                 GUILayout.Label("Target: " + programme.CelestialBodyName);
                 GUILayout.Label("Requirement: " + programme.RequiredSatellites + " qualifying satellite(s) in orbit");
-                GUILayout.Label("Player progress: " + playerProgress + "/" + programme.RequiredSatellites);
-                GUILayout.Label("Prototype reward: " + programme.RewardFunds.ToString("N0"));
-                GUILayout.Label("Aster progress: " + _raceController.AsterProgram.GetSatelliteCount(programme.CelestialBodyName));
-                GUILayout.Label("Cobalt progress: " + _raceController.CobaltProgram.GetSatelliteCount(programme.CelestialBodyName));
+                GUILayout.Label("Total Available Payout: " + programme.RewardFunds.ToString("N0"));
+                GUILayout.Label("Player Progress: " + playerProgress + "/" + programme.RequiredSatellites);
+                GUILayout.Label("Player Current Payout: " + playerCurrentPayout.ToString("N0"));
+                GUILayout.Label("Aster Progress: " + asterProgress + "/" + programme.RequiredSatellites);
+                GUILayout.Label("Aster Current Payout: " + asterCurrentPayout.ToString("N0"));
+                GUILayout.Label("Cobalt Progress: " + cobaltProgress + "/" + programme.RequiredSatellites);
+                GUILayout.Label("Cobalt Current Payout: " + cobaltCurrentPayout.ToString("N0"));
                 GUILayout.EndVertical();
                 GUILayout.Space(8.0f);
             }

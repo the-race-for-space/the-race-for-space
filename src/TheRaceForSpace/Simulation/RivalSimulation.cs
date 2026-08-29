@@ -13,6 +13,7 @@ namespace TheRaceForSpace.Simulation
         private const double LaunchProgressChance = 0.50;
         private const int LaunchProgressIncrementPercent = 10;
         private const double LaunchProgressCostFunds = 20000.0;
+        private const double MunMinmusLaunchProgressCostMultiplier = 0.50;
 
         private static readonly string[] LaunchBodies = { "Kerbin", "Mun", "Minmus" };
         private static readonly Random RandomGenerator = new Random();
@@ -26,6 +27,22 @@ namespace TheRaceForSpace.Simulation
 
             RefreshProgram(asterProgram, currentUniversalTime);
             RefreshProgram(cobaltProgram, currentUniversalTime);
+        }
+
+        /// <summary>
+        /// Returns the funds required for the rival's next successful 10% launch-progress step.
+        /// Mun and Minmus launches currently use a 50% prototype cost modifier.
+        /// </summary>
+        public static double CalculateLaunchProgressCost(SpaceProgramState program)
+        {
+            if (program != null
+                && (string.Equals(program.NextLaunchBodyName, "Mun", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(program.NextLaunchBodyName, "Minmus", StringComparison.OrdinalIgnoreCase)))
+            {
+                return LaunchProgressCostFunds * MunMinmusLaunchProgressCostMultiplier;
+            }
+
+            return LaunchProgressCostFunds;
         }
 
         /// <summary>
@@ -53,6 +70,7 @@ namespace TheRaceForSpace.Simulation
                 return 0;
             }
 
+            double launchProgressCostFunds = CalculateLaunchProgressCost(program);
             double availableFunds = Math.Max(0.0, program.Funds);
             double projectedPayoutFunds = Math.Max(0.0, program.NextPayoutFunds);
             double expectedDaysPerSuccessfulStep =
@@ -80,7 +98,7 @@ namespace TheRaceForSpace.Simulation
                     nextFundingInDays += fundingIntervalDays;
                 }
 
-                if (availableFunds < LaunchProgressCostFunds)
+                if (availableFunds < launchProgressCostFunds)
                 {
                     if (projectedPayoutFunds <= 0.0
                         || fundingIntervalDays <= 0.0
@@ -90,8 +108,8 @@ namespace TheRaceForSpace.Simulation
                     }
 
                     // If development is cash-limited, wait for enough scheduled payouts to
-                    // finance the next 20,000 step, then allow another average roll period.
-                    while (availableFunds < LaunchProgressCostFunds)
+                    // finance the next body-adjusted progress step, then allow another average roll period.
+                    while (availableFunds < launchProgressCostFunds)
                     {
                         elapsedDays = Math.Max(elapsedDays, nextFundingInDays);
                         availableFunds += projectedPayoutFunds;
@@ -107,7 +125,7 @@ namespace TheRaceForSpace.Simulation
                     }
                 }
 
-                availableFunds -= LaunchProgressCostFunds;
+                availableFunds -= launchProgressCostFunds;
                 elapsedDays = expectedStepDay;
             }
 
@@ -134,14 +152,15 @@ namespace TheRaceForSpace.Simulation
 
             while (currentUniversalTime >= program.NextLaunchProgressCheckUniversalTime)
             {
-                // Each successful 10% development step costs 20,000 funds. With ten steps
-                // required for a complete launch, the current prototype launch costs 200,000.
-                // A rival without enough funds for the next step cannot make progress.
+                double launchProgressCostFunds = CalculateLaunchProgressCost(program);
+
+                // Kerbin uses the 20,000 base cost for each successful 10% step. Mun and Minmus
+                // currently cost 50% of that amount. A rival without enough funds cannot progress.
                 if (program.LaunchProgressPercent < 100
-                    && program.Funds >= LaunchProgressCostFunds
+                    && program.Funds >= launchProgressCostFunds
                     && RandomGenerator.NextDouble() < LaunchProgressChance)
                 {
-                    program.Funds -= LaunchProgressCostFunds;
+                    program.Funds -= launchProgressCostFunds;
                     program.LaunchProgressPercent = Math.Min(
                         100,
                         program.LaunchProgressPercent + LaunchProgressIncrementPercent);

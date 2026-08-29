@@ -12,8 +12,7 @@ namespace TheRaceForSpace.Simulation
         private const double LaunchProgressIntervalSeconds = 5.0 * KerbinDaySeconds;
         private const double LaunchProgressChance = 0.50;
         private const int LaunchProgressIncrementPercent = 10;
-        private const double TotalLaunchCostFunds = 50000.0;
-        private const double LaunchProgressCostFunds = TotalLaunchCostFunds * LaunchProgressIncrementPercent / 100.0;
+        private const double LaunchProgressCostFunds = 20000.0;
 
         private static readonly string[] LaunchBodies = { "Kerbin", "Mun", "Minmus" };
         private static readonly Random RandomGenerator = new Random();
@@ -49,8 +48,8 @@ namespace TheRaceForSpace.Simulation
 
             while (currentUniversalTime >= program.NextLaunchProgressCheckUniversalTime)
             {
-                // The 50,000 launch cost is paid gradually as development progresses. Each
-                // successful 10% step costs 5,000, so a complete launch still costs 50,000.
+                // Each successful 10% development step costs 20,000 funds. With ten steps
+                // required for a complete launch, the current prototype launch costs 200,000.
                 // A rival without enough funds for the next step cannot make progress.
                 if (program.LaunchProgressPercent < 100
                     && program.Funds >= LaunchProgressCostFunds

@@ -155,15 +155,6 @@ namespace TheRaceForSpace.UI
         private void DrawOverview()
         {
             SpaceProgramState player = _raceController.PlayerProgram;
-            int claimedProgrammes = 0;
-
-            for (int i = 0; i < _raceController.FundingProgrammes.Count; i++)
-            {
-                if (_raceController.FundingProgrammes[i].IsClaimed)
-                {
-                    claimedProgrammes++;
-                }
-            }
 
             GUILayout.Label("OVERVIEW");
             GUILayout.Space(6.0f);
@@ -183,7 +174,6 @@ namespace TheRaceForSpace.UI
             }
 
             GUILayout.Label("Next payout: " + player.NextPayoutFunds.ToString("N0"));
-            GUILayout.Label("Funding programmes decided: " + claimedProgrammes + "/" + _raceController.FundingProgrammes.Count);
 
             GUILayout.Space(10.0f);
             GUILayout.Label("SATELLITE NETWORK");
@@ -213,12 +203,6 @@ namespace TheRaceForSpace.UI
 
                 GUILayout.BeginVertical("box");
                 GUILayout.Label(programme.Name);
-
-                if (programme.IsClaimed)
-                {
-                    GUILayout.Label("Winner: " + programme.WinnerProgramName);
-                }
-
                 GUILayout.Label("Target: " + programme.CelestialBodyName);
                 GUILayout.Label("Requirement: " + programme.RequiredSatellites + " qualifying satellite(s) in orbit");
                 GUILayout.Label("Total Available Payout: " + programme.RewardFunds.ToString("N0"));

@@ -22,6 +22,7 @@ namespace TheRaceForSpace.UI
 
         private const float RefreshIntervalSeconds = 5.0f;
         private static SatelliteRaceController _raceController;
+        private static RaceWindow _activeInstance;
 
         // Desktop-oriented size keeps all four views readable without creating additional pop-out windows.
         private Rect _windowRect = new Rect(70.0f, 55.0f, 900.0f, 720.0f);
@@ -29,19 +30,46 @@ namespace TheRaceForSpace.UI
         private Vector2 _rivalsScrollPosition;
         private Vector2 _spaceRaceScrollPosition;
         private ActiveView _activeView = ActiveView.Overview;
+        private bool _isDuplicateInstance;
         private bool _isVisible = true;
         private float _nextRefreshTime;
 
         public void Awake()
         {
+            // KSP can instantiate an EveryScene addon more than once while editor scenes and
+            // sub-scenes are loading. Only one RaceWindow may own Update/OnGUI at a time.
+            if (_activeInstance != null && _activeInstance != this)
+            {
+                _isDuplicateInstance = true;
+                Destroy(this);
+                return;
+            }
+
+            _activeInstance = this;
+
             if (_raceController == null)
             {
                 _raceController = new SatelliteRaceController();
             }
         }
 
+        public void OnDestroy()
+        {
+            // Release ownership when the active scene instance is genuinely destroyed so the
+            // next KSP scene can create its replacement without being mistaken for a duplicate.
+            if (_activeInstance == this)
+            {
+                _activeInstance = null;
+            }
+        }
+
         public void Update()
         {
+            if (_isDuplicateInstance || _activeInstance != this)
+            {
+                return;
+            }
+
             if (Input.GetKeyDown(KeyCode.F8))
             {
                 _isVisible = !_isVisible;
@@ -56,7 +84,7 @@ namespace TheRaceForSpace.UI
 
         public void OnGUI()
         {
-            if (!_isVisible || _raceController == null)
+            if (_isDuplicateInstance || _activeInstance != this || !_isVisible || _raceController == null)
             {
                 return;
             }

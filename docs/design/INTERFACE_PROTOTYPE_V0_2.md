@@ -2,9 +2,15 @@
 
 Version 0.2 focuses on presenting the existing satellite-race prototype as a coherent command-center interface. It deliberately does not add new funding programmes, rival agencies, vessel rules, persistence, or Career-mode funding integration.
 
+## Target display
+
+The primary target is a Steam Machine or conventional desktop PC connected to a normal PC-sized display. The interface therefore prioritizes a larger command-center layout rather than handheld-screen constraints.
+
+The default window positions are intended to work well on a typical desktop resolution while remaining draggable so players can arrange the interface for their own display size and KSP layout.
+
 ## Interface structure
 
-The interface is organized around one always-available overview window and three focused detail windows.
+The interface is organized around one always-available overview window and three independently managed detail windows.
 
 ### Command Center Overview
 
@@ -16,9 +22,9 @@ The overview is the player's home screen for the race. It shows:
 - number of funding programmes already decided;
 - qualifying satellite counts around Kerbin, Mun and Minmus;
 - a compact status line for each current funding programme;
-- buttons for opening each detailed race view.
+- controls for opening or hiding each detailed race view.
 
-Only one detail window is shown at a time so the layout remains usable at Steam Deck resolution and does not cover the complete KSP scene.
+The overview remains visible while any combination of the three detail windows is open.
 
 ### Funding Programmes
 
@@ -58,10 +64,11 @@ The window also documents the prototype tracking rules in-game: Probe and Relay 
 
 - F8 shows or hides the complete Race for Space interface.
 - The Command Center overview remains the primary window.
-- Funding, Rivals, and Milestones are opened from the overview.
-- Opening a detail view replaces the previous detail view rather than stacking all three.
+- Funding, Rivals, and Milestones are opened or hidden independently from the overview.
+- Multiple detail windows may be open at the same time.
 - Every detail window can be closed independently.
-- Windows remain draggable through KSP/Unity IMGUI behaviour.
+- All windows remain draggable through KSP/Unity IMGUI behaviour.
+- Default window sizes are larger than version 0.1 to make better use of normal desktop resolutions.
 
 ## Versioning
 
@@ -71,13 +78,15 @@ Version 0.2 is intentionally an interface prototype. Gameplay expansion remains 
 
 ## Verification focus
 
-For the first 0.2 test:
+For the first 0.2 desktop test:
 
 1. Build and deploy the `prototype/interface-v0.2` branch.
 2. Confirm the Command Center overview appears and remains draggable.
 3. Open each of the three detail windows from the overview.
-4. Confirm only one detail window is displayed at a time.
-5. Confirm Close returns to the overview-only layout.
-6. Confirm F8 hides and restores the complete interface.
-7. Confirm existing satellite counts, rival progress and programme winners display the same underlying values as version 0.1.
-8. Confirm the two-window layout remains usable at Steam Deck resolution.
+4. Confirm two or all three detail windows can remain open simultaneously.
+5. Confirm each Close button hides only its own window.
+6. Confirm the overview buttons correctly show and hide each detail window.
+7. Confirm F8 hides and restores the complete interface.
+8. Confirm existing satellite counts, rival progress and programme winners display the same underlying values as version 0.1.
+9. Confirm the default window sizes and positions are comfortable on the target desktop resolution.
+10. Rearrange the windows and identify any preferred desktop layout before further visual polish.

@@ -75,6 +75,24 @@ namespace TheRaceForSpace.Competition
             }
         }
 
+        /// <summary>
+        /// Returns the current expected Kerbin days until a rival launch, including projected
+        /// funding waits. A null result means the rival cannot currently finance completion.
+        /// </summary>
+        public int? GetEstimatedRivalLaunchDays(SpaceProgramState program)
+        {
+            if (program == null || program.IsPlayer || Planetarium.fetch == null)
+            {
+                return null;
+            }
+
+            return RivalSimulation.CalculateEstimatedLaunchDays(
+                program,
+                Planetarium.GetUniversalTime(),
+                _nextFundingUniversalTime,
+                FundingIntervalSeconds);
+        }
+
         public void Refresh()
         {
             if (Planetarium.fetch == null)

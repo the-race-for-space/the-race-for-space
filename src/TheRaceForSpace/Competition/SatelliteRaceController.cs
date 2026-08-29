@@ -30,7 +30,7 @@ namespace TheRaceForSpace.Competition
             CobaltProgram = new SpaceProgramState("Cobalt Orbital Bureau", false);
 
             // New/older saves without Race for Space persistence begin with enough simulated
-            // cash to fund one complete 200,000 rival launch-development cycle.
+            // cash to fund one complete Kerbin launch-development cycle at the base cost.
             AsterProgram.Funds = RivalStartingFunds;
             CobaltProgram.Funds = RivalStartingFunds;
 
@@ -75,6 +75,19 @@ namespace TheRaceForSpace.Competition
                 int totalKerbinDays = (int)Math.Floor(_nextFundingUniversalTime / KerbinDaySeconds);
                 return (totalKerbinDays % KerbinDaysPerYear) + 1;
             }
+        }
+
+        /// <summary>
+        /// Returns the funds required for the rival's next successful 10% launch-progress step.
+        /// </summary>
+        public double GetRivalLaunchProgressCost(SpaceProgramState program)
+        {
+            if (program == null || program.IsPlayer)
+            {
+                return 0.0;
+            }
+
+            return RivalSimulation.CalculateLaunchProgressCost(program);
         }
 
         /// <summary>

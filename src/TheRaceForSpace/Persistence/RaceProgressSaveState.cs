@@ -21,9 +21,12 @@ namespace TheRaceForSpace.Persistence
         public bool MinmusNetworkUnlocked { get; private set; }
         public bool ProbeContractStarted { get; private set; }
         public int ProbePaymentsProcessed { get; private set; }
-        public double ProbeNextPayoutUniversalTime { get; private set; }
         public bool CrewedContractStarted { get; private set; }
         public int CrewedPaymentsProcessed { get; private set; }
+
+        // Retained only so saves produced by the short-lived independent-schedule 0.3 pass
+        // can still be read and rewritten safely. Gameplay no longer uses these timestamps.
+        public double ProbeNextPayoutUniversalTime { get; private set; }
         public double CrewedNextPayoutUniversalTime { get; private set; }
 
         public void Capture(
@@ -58,10 +61,13 @@ namespace TheRaceForSpace.Persistence
             MinmusNetworkUnlocked = minmusProgramme.IsAvailable;
             ProbeContractStarted = probeOrbitProgramme.HasStarted;
             ProbePaymentsProcessed = probeOrbitProgramme.PaymentsProcessed;
-            ProbeNextPayoutUniversalTime = probeOrbitProgramme.NextPayoutUniversalTime;
             CrewedContractStarted = crewedOrbitProgramme.HasStarted;
             CrewedPaymentsProcessed = crewedOrbitProgramme.PaymentsProcessed;
-            CrewedNextPayoutUniversalTime = crewedOrbitProgramme.NextPayoutUniversalTime;
+
+            // New saves deliberately do not track per-contract payout dates. The fields stay
+            // present as -1 for compatibility with the earlier 0.3 prototype save format.
+            ProbeNextPayoutUniversalTime = -1.0;
+            CrewedNextPayoutUniversalTime = -1.0;
         }
 
         public void ApplyTo(
@@ -103,14 +109,8 @@ namespace TheRaceForSpace.Persistence
                 minmusProgramme.Unlock();
             }
 
-            probeOrbitProgramme.RestoreState(
-                ProbeContractStarted,
-                ProbePaymentsProcessed,
-                ProbeNextPayoutUniversalTime);
-            crewedOrbitProgramme.RestoreState(
-                CrewedContractStarted,
-                CrewedPaymentsProcessed,
-                CrewedNextPayoutUniversalTime);
+            probeOrbitProgramme.RestoreState(ProbeContractStarted, ProbePaymentsProcessed);
+            crewedOrbitProgramme.RestoreState(CrewedContractStarted, CrewedPaymentsProcessed);
         }
 
         public void Load(ConfigNode node)

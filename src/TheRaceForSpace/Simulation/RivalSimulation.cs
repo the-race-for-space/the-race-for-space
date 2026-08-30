@@ -155,12 +155,6 @@ namespace TheRaceForSpace.Simulation
                 return;
             }
 
-            // Persistence and a few staged callers still populate the old six achievement fields.
-            // Import them before the generic simulation checks prerequisites or completion state.
-            PrototypeMilestones.SynchronizeLegacyAchievementState(playerProgram);
-            PrototypeMilestones.SynchronizeLegacyAchievementState(asterProgram);
-            PrototypeMilestones.SynchronizeLegacyAchievementState(cobaltProgram);
-
             var context = new RivalSimulationContext(
                 playerProgram,
                 asterProgram,
@@ -497,8 +491,6 @@ namespace TheRaceForSpace.Simulation
                         milestone.CelestialBodyName,
                         program.GetSatelliteCount(milestone.CelestialBodyName) + 1);
                 }
-
-                PrototypeMilestones.SynchronizeGenericAchievementStateToLegacy(program);
             }
             else
             {

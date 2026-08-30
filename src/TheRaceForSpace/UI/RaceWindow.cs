@@ -191,17 +191,19 @@ namespace TheRaceForSpace.UI
             if (_raceController.NextFundingYear > 0)
             {
                 GUILayout.Label(
-                    "Next funding date: Year "
+                    "Next satellite funding date: Year "
                     + _raceController.NextFundingYear
                     + ", Day "
                     + _raceController.NextFundingDay);
             }
             else
             {
-                GUILayout.Label("Next funding date: Pending");
+                GUILayout.Label("Next satellite funding date: Pending");
             }
 
-            GUILayout.Label("Next payout: " + player.NextPayoutFunds.ToString("N0"));
+            // Orbit contracts have independent payout dates. This is therefore a useful
+            // projection of current funding shares rather than one guaranteed combined payment.
+            GUILayout.Label("Current projected funding: " + player.NextPayoutFunds.ToString("N0"));
 
             GUILayout.Space(10.0f);
             GUILayout.Label("ORBIT ACHIEVEMENTS");
@@ -292,9 +294,18 @@ namespace TheRaceForSpace.UI
             GUILayout.Label("Base Payout: " + programme.BaseRewardFunds.ToString("N0"));
             GUILayout.Label("Current Interest: " + programme.CurrentInterestPercent + "%");
             GUILayout.Label("Current Total Payout: " + programme.CurrentTotalPayoutFunds.ToString("N0"));
-            GUILayout.Label(
-                "Contract Status: "
-                + (programme.HasStarted ? "DECLINING INTEREST ACTIVE" : "AWAITING FIRST ACHIEVEMENT"));
+
+            if (!programme.HasStarted)
+            {
+                GUILayout.Label("Contract Status: AWAITING FIRST ACHIEVEMENT");
+                GUILayout.Label("Next Payout: Immediate when the first agency achieves the objective");
+            }
+            else
+            {
+                GUILayout.Label("Contract Status: DECLINING INTEREST ACTIVE");
+                GUILayout.Label("Next Payout: " + FormatKerbinDate(programme.NextPayoutUniversalTime));
+            }
+
             GUILayout.EndVertical();
 
             GUILayout.Space(24.0f);
@@ -357,7 +368,7 @@ namespace TheRaceForSpace.UI
             GUILayout.BeginVertical("box");
             GUILayout.Label("HELP / PLAYER GUIDE");
             GUILayout.Label("Version 0.3 guide text placeholder. Final player-facing wording will be added after the first gameplay test pass.");
-            GUILayout.Label("Funding is reviewed every 90 Kerbin days. Orbit contracts lose interest after they begin; satellite contracts remain permanent once unlocked.");
+            GUILayout.Label("Orbit contracts pay immediately when first achieved, then every 90 Kerbin days at declining interest. Satellite contracts use recurring 90-day funding and remain permanent once unlocked.");
             GUILayout.EndVertical();
 
             GUILayout.Space(12.0f);
@@ -395,10 +406,11 @@ namespace TheRaceForSpace.UI
             else
             {
                 GUILayout.Label("State: ACTIVE - current interest " + programme.CurrentInterestPercent + "%");
+                GUILayout.Label("Next payout: " + FormatKerbinDate(programme.NextPayoutUniversalTime));
             }
 
             GUILayout.Label("Base payout: " + programme.BaseRewardFunds.ToString("N0"));
-            GUILayout.Label("Funding: shared by agencies that have achieved the objective; interest falls by 10% after each 90-day payment.");
+            GUILayout.Label("Funding: 100% is paid when first achieved; the remaining payments occur every 90 days and fall by 10% each time. Each payment is shared by agencies that had achieved the objective by that date.");
             GUILayout.Label(
                 "Player: "
                 + (_raceController.HasProgramAchieved(_raceController.PlayerProgram, programme) ? "ACHIEVED" : "NOT ACHIEVED"));
@@ -438,7 +450,7 @@ namespace TheRaceForSpace.UI
             GUILayout.BeginHorizontal();
             GUILayout.BeginVertical(GUILayout.Width(430.0f));
             GUILayout.Label("Funds: " + program.Funds.ToString("N0"));
-            GUILayout.Label("Next Payout: " + program.NextPayoutFunds.ToString("N0"));
+            GUILayout.Label("Current Projected Funding: " + program.NextPayoutFunds.ToString("N0"));
             GUILayout.Label(
                 "Next Mission Planned: "
                 + (string.IsNullOrEmpty(program.NextLaunchBodyName) ? "Planning" : program.NextLaunchBodyName));
@@ -471,6 +483,19 @@ namespace TheRaceForSpace.UI
             GUILayout.EndHorizontal();
         }
 
+        private string FormatKerbinDate(double universalTime)
+        {
+            if (universalTime < 0.0)
+            {
+                return "Pending";
+            }
+
+            return "Year "
+                + _raceController.GetKerbinYear(universalTime)
+                + ", Day "
+                + _raceController.GetKerbinDay(universalTime);
+        }
+
         private static string FormatSatelliteCount(int satelliteCount)
         {
             return satelliteCount + (satelliteCount == 1 ? " Satellite" : " Satellites");
@@ -486,7 +511,7 @@ namespace TheRaceForSpace.UI
             {
                 GUILayout.Label(
                     program.Name
-                    + " | next payout "
+                    + " | projected funding "
                     + program.NextPayoutFunds.ToString("N0")
                     + " | tracked satellites "
                     + totalSatellites);
@@ -497,7 +522,7 @@ namespace TheRaceForSpace.UI
                 program.Name
                 + " | funds "
                 + program.Funds.ToString("N0")
-                + " | next payout "
+                + " | projected funding "
                 + program.NextPayoutFunds.ToString("N0")
                 + " | tracked satellites "
                 + totalSatellites);

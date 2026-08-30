@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace TheRaceForSpace.Programs
 {
     /// <summary>
-    /// Minimal campaign state for one space program in the satellite prototype.
+    /// Minimal campaign state for one space program in the current prototype.
     /// </summary>
     public sealed class SpaceProgramState
     {
@@ -26,8 +26,13 @@ namespace TheRaceForSpace.Programs
         public double NextPayoutFunds { get; set; }
         public int RacePoints { get; set; }
 
-        // Rival funds, satellite counts, and launch planning/progress are persisted by the
-        // KSP ScenarioModule so an in-progress rival programme resumes after save/load.
+        // Orbit achievements are permanent once observed. Rival values and the player's
+        // achievement flags are persisted so a completed race cannot be lost on save/load.
+        public bool HasAchievedProbeOrbit { get; set; }
+        public bool HasAchievedCrewedOrbit { get; set; }
+
+        // NextLaunchBodyName is retained for save compatibility with 0.2. In 0.3 it may also
+        // contain the named Probe Orbit or Crewed Orbit mission while a rival develops it.
         public string NextLaunchBodyName { get; set; }
         public int LaunchProgressPercent { get; set; }
         public double NextLaunchProgressCheckUniversalTime { get; set; }

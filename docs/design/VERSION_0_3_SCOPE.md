@@ -142,6 +142,8 @@ The implementation uses these prototype values unless a later design change expl
 - Crewed Orbit base 100% payout: **200,000 funds**.
 - Mun Probe Orbit base 100% payout: **300,000 funds**.
 - Minmus Probe Orbit base 100% payout: **300,000 funds**.
+- Mun Survey Network total available payout: **100,000 funds**.
+- Minmus Relay Initiative total available payout: **100,000 funds**.
 - Probe Orbit and Crewed Orbit: **available from campaign start**.
 - Mun Probe Orbit and Minmus Probe Orbit unlock: **any agency achieves Probe Orbit around Kerbin**.
 - Probe Orbit rival development cost: **20,000 funds per successful 10% step / 200,000 total**.

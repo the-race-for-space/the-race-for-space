@@ -383,7 +383,6 @@ namespace TheRaceForSpace.Competition
                     return;
                 }
 
-                SynchronizeLegacyAchievementState();
                 _hasRestoredPersistentState = true;
             }
 
@@ -423,8 +422,6 @@ namespace TheRaceForSpace.Competition
                 PlayerProgram,
                 PrototypeMilestones.All,
                 _availableAchievementMilestoneIds);
-            PrototypeMilestones.SynchronizeGenericAchievementStateToLegacy(PlayerProgram);
-            SynchronizeLegacyAchievementState();
             UpdateFundingAvailability();
 
             if (!hasDueFunding)
@@ -461,16 +458,6 @@ namespace TheRaceForSpace.Competition
                 currentUniversalTime,
                 _achievementFundingProgrammes,
                 _fundingProgrammes);
-
-            SynchronizeLegacyAchievementState();
-        }
-
-        private void SynchronizeLegacyAchievementState()
-        {
-            for (int programIndex = 0; programIndex < _programs.Count; programIndex++)
-            {
-                PrototypeMilestones.SynchronizeLegacyAchievementState(_programs[programIndex]);
-            }
         }
 
         private void UpdateFundingAvailability()

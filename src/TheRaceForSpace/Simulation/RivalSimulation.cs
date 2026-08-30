@@ -11,6 +11,8 @@ namespace TheRaceForSpace.Simulation
     {
         public const string ProbeOrbitTargetName = "Probe Orbit";
         public const string CrewedOrbitTargetName = "Crewed Orbit";
+        public const string MunProbeOrbitTargetName = "Mun Probe Orbit";
+        public const string MinmusProbeOrbitTargetName = "Minmus Probe Orbit";
 
         private const double KerbinDaySeconds = 21600.0;
         private const double LaunchProgressIntervalSeconds = 5.0 * KerbinDaySeconds;
@@ -19,7 +21,6 @@ namespace TheRaceForSpace.Simulation
         private const double LaunchProgressCostFunds = 20000.0;
         private const double MunMinmusLaunchProgressCostMultiplier = 2.0;
         private const double CrewedOrbitLaunchProgressCostMultiplier = 2.0;
-        private const int LunarNetworkUnlockKerbinSatelliteCount = 6;
 
         private static readonly Random RandomGenerator = new Random();
 
@@ -32,7 +33,9 @@ namespace TheRaceForSpace.Simulation
             bool munNetworkAvailable,
             bool minmusNetworkAvailable,
             bool probeOrbitContractLive,
-            bool crewedOrbitContractLive)
+            bool crewedOrbitContractLive,
+            bool munProbeOrbitContractLive,
+            bool minmusProbeOrbitContractLive)
         {
             if (playerProgram == null || asterProgram == null || cobaltProgram == null)
             {
@@ -49,7 +52,9 @@ namespace TheRaceForSpace.Simulation
                 munNetworkAvailable,
                 minmusNetworkAvailable,
                 probeOrbitContractLive,
-                crewedOrbitContractLive);
+                crewedOrbitContractLive,
+                munProbeOrbitContractLive,
+                minmusProbeOrbitContractLive);
 
             RefreshProgram(
                 cobaltProgram,
@@ -61,13 +66,15 @@ namespace TheRaceForSpace.Simulation
                 munNetworkAvailable,
                 minmusNetworkAvailable,
                 probeOrbitContractLive,
-                crewedOrbitContractLive);
+                crewedOrbitContractLive,
+                munProbeOrbitContractLive,
+                minmusProbeOrbitContractLive);
         }
 
         /// <summary>
         /// Returns the funds required for the rival's next successful 10% mission-progress step.
-        /// Probe Orbit uses the Kerbin satellite cost, while Crewed Orbit and Mun/Minmus
-        /// satellite launches cost twice the Kerbin base cost.
+        /// Probe Orbit uses the Kerbin satellite cost, while Crewed Orbit and all Mun/Minmus
+        /// probe or satellite launches cost twice the Kerbin base cost.
         /// </summary>
         public static double CalculateLaunchProgressCost(SpaceProgramState program)
         {
@@ -81,7 +88,9 @@ namespace TheRaceForSpace.Simulation
                 return LaunchProgressCostFunds * CrewedOrbitLaunchProgressCostMultiplier;
             }
 
-            if (string.Equals(program.NextLaunchBodyName, "Mun", StringComparison.OrdinalIgnoreCase)
+            if (string.Equals(program.NextLaunchBodyName, MunProbeOrbitTargetName, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(program.NextLaunchBodyName, MinmusProbeOrbitTargetName, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(program.NextLaunchBodyName, "Mun", StringComparison.OrdinalIgnoreCase)
                 || string.Equals(program.NextLaunchBodyName, "Minmus", StringComparison.OrdinalIgnoreCase))
             {
                 return LaunchProgressCostFunds * MunMinmusLaunchProgressCostMultiplier;
@@ -183,7 +192,9 @@ namespace TheRaceForSpace.Simulation
             bool munNetworkAvailable,
             bool minmusNetworkAvailable,
             bool probeOrbitContractLive,
-            bool crewedOrbitContractLive)
+            bool crewedOrbitContractLive,
+            bool munProbeOrbitContractLive,
+            bool minmusProbeOrbitContractLive)
         {
             if (!IsCurrentTargetAvailable(
                 program,
@@ -194,7 +205,9 @@ namespace TheRaceForSpace.Simulation
                 munNetworkAvailable,
                 minmusNetworkAvailable,
                 probeOrbitContractLive,
-                crewedOrbitContractLive))
+                crewedOrbitContractLive,
+                munProbeOrbitContractLive,
+                minmusProbeOrbitContractLive))
             {
                 // If an achievement contract expires before this rival completes it, abandon
                 // that development rather than spending simulated funds on a dead objective.
@@ -213,7 +226,9 @@ namespace TheRaceForSpace.Simulation
                     munNetworkAvailable,
                     minmusNetworkAvailable,
                     probeOrbitContractLive,
-                    crewedOrbitContractLive);
+                    crewedOrbitContractLive,
+                    munProbeOrbitContractLive,
+                    minmusProbeOrbitContractLive);
             }
 
             if (program.NextLaunchProgressCheckUniversalTime <= 0.0)
@@ -236,7 +251,9 @@ namespace TheRaceForSpace.Simulation
                     munNetworkAvailable,
                     minmusNetworkAvailable,
                     probeOrbitContractLive,
-                    crewedOrbitContractLive);
+                    crewedOrbitContractLive,
+                    munProbeOrbitContractLive,
+                    minmusProbeOrbitContractLive);
             }
 
             while (currentUniversalTime >= program.NextLaunchProgressCheckUniversalTime)
@@ -252,7 +269,9 @@ namespace TheRaceForSpace.Simulation
                         munNetworkAvailable,
                         minmusNetworkAvailable,
                         probeOrbitContractLive,
-                        crewedOrbitContractLive);
+                        crewedOrbitContractLive,
+                        munProbeOrbitContractLive,
+                        minmusProbeOrbitContractLive);
                 }
 
                 if (!string.IsNullOrEmpty(program.NextLaunchBodyName))
@@ -280,7 +299,9 @@ namespace TheRaceForSpace.Simulation
                             munNetworkAvailable,
                             minmusNetworkAvailable,
                             probeOrbitContractLive,
-                            crewedOrbitContractLive);
+                            crewedOrbitContractLive,
+                            munProbeOrbitContractLive,
+                            minmusProbeOrbitContractLive);
                     }
                 }
 
@@ -318,6 +339,24 @@ namespace TheRaceForSpace.Simulation
                     program.CrewedOrbitAchievementUniversalTime = Math.Max(0.0, completionUniversalTime);
                 }
             }
+            else if (string.Equals(program.NextLaunchBodyName, MunProbeOrbitTargetName, StringComparison.OrdinalIgnoreCase))
+            {
+                if (!program.HasAchievedMunProbeOrbit)
+                {
+                    program.HasAchievedMunProbeOrbit = true;
+                    program.MunProbeOrbitAchievementUniversalTime = Math.Max(0.0, completionUniversalTime);
+                    program.SetSatelliteCount("Mun", program.GetSatelliteCount("Mun") + 1);
+                }
+            }
+            else if (string.Equals(program.NextLaunchBodyName, MinmusProbeOrbitTargetName, StringComparison.OrdinalIgnoreCase))
+            {
+                if (!program.HasAchievedMinmusProbeOrbit)
+                {
+                    program.HasAchievedMinmusProbeOrbit = true;
+                    program.MinmusProbeOrbitAchievementUniversalTime = Math.Max(0.0, completionUniversalTime);
+                    program.SetSatelliteCount("Minmus", program.GetSatelliteCount("Minmus") + 1);
+                }
+            }
             else
             {
                 program.SetSatelliteCount(
@@ -339,7 +378,9 @@ namespace TheRaceForSpace.Simulation
             bool munNetworkAvailable,
             bool minmusNetworkAvailable,
             bool probeOrbitContractLive,
-            bool crewedOrbitContractLive)
+            bool crewedOrbitContractLive,
+            bool munProbeOrbitContractLive,
+            bool minmusProbeOrbitContractLive)
         {
             if (program == null || string.IsNullOrEmpty(program.NextLaunchBodyName))
             {
@@ -356,6 +397,16 @@ namespace TheRaceForSpace.Simulation
                 return crewedOrbitContractLive && !program.HasAchievedCrewedOrbit;
             }
 
+            if (string.Equals(program.NextLaunchBodyName, MunProbeOrbitTargetName, StringComparison.OrdinalIgnoreCase))
+            {
+                return munProbeOrbitContractLive && !program.HasAchievedMunProbeOrbit;
+            }
+
+            if (string.Equals(program.NextLaunchBodyName, MinmusProbeOrbitTargetName, StringComparison.OrdinalIgnoreCase))
+            {
+                return minmusProbeOrbitContractLive && !program.HasAchievedMinmusProbeOrbit;
+            }
+
             if (string.Equals(program.NextLaunchBodyName, "Kerbin", StringComparison.OrdinalIgnoreCase))
             {
                 return IsKerbinNetworkAvailable(
@@ -367,7 +418,7 @@ namespace TheRaceForSpace.Simulation
 
             if (string.Equals(program.NextLaunchBodyName, "Mun", StringComparison.OrdinalIgnoreCase))
             {
-                return IsLunarNetworkAvailable(
+                return IsMunNetworkAvailable(
                     munNetworkAvailable,
                     playerProgram,
                     asterProgram,
@@ -376,7 +427,7 @@ namespace TheRaceForSpace.Simulation
 
             if (string.Equals(program.NextLaunchBodyName, "Minmus", StringComparison.OrdinalIgnoreCase))
             {
-                return IsLunarNetworkAvailable(
+                return IsMinmusNetworkAvailable(
                     minmusNetworkAvailable,
                     playerProgram,
                     asterProgram,
@@ -395,7 +446,9 @@ namespace TheRaceForSpace.Simulation
             bool munNetworkAvailable,
             bool minmusNetworkAvailable,
             bool probeOrbitContractLive,
-            bool crewedOrbitContractLive)
+            bool crewedOrbitContractLive,
+            bool munProbeOrbitContractLive,
+            bool minmusProbeOrbitContractLive)
         {
             var availableTargets = new List<string>();
 
@@ -409,17 +462,27 @@ namespace TheRaceForSpace.Simulation
                 availableTargets.Add(CrewedOrbitTargetName);
             }
 
+            if (munProbeOrbitContractLive && !program.HasAchievedMunProbeOrbit)
+            {
+                availableTargets.Add(MunProbeOrbitTargetName);
+            }
+
+            if (minmusProbeOrbitContractLive && !program.HasAchievedMinmusProbeOrbit)
+            {
+                availableTargets.Add(MinmusProbeOrbitTargetName);
+            }
+
             if (IsKerbinNetworkAvailable(kerbinNetworkAvailable, playerProgram, asterProgram, cobaltProgram))
             {
                 availableTargets.Add("Kerbin");
             }
 
-            if (IsLunarNetworkAvailable(munNetworkAvailable, playerProgram, asterProgram, cobaltProgram))
+            if (IsMunNetworkAvailable(munNetworkAvailable, playerProgram, asterProgram, cobaltProgram))
             {
                 availableTargets.Add("Mun");
             }
 
-            if (IsLunarNetworkAvailable(minmusNetworkAvailable, playerProgram, asterProgram, cobaltProgram))
+            if (IsMinmusNetworkAvailable(minmusNetworkAvailable, playerProgram, asterProgram, cobaltProgram))
             {
                 availableTargets.Add("Minmus");
             }
@@ -444,21 +507,28 @@ namespace TheRaceForSpace.Simulation
                 || cobaltProgram.HasAchievedProbeOrbit;
         }
 
-        private static bool IsLunarNetworkAvailable(
+        private static bool IsMunNetworkAvailable(
             bool savedAvailability,
             SpaceProgramState playerProgram,
             SpaceProgramState asterProgram,
             SpaceProgramState cobaltProgram)
         {
-            if (savedAvailability)
-            {
-                return true;
-            }
+            return savedAvailability
+                || playerProgram.HasAchievedMunProbeOrbit
+                || asterProgram.HasAchievedMunProbeOrbit
+                || cobaltProgram.HasAchievedMunProbeOrbit;
+        }
 
-            int combinedKerbinSatelliteCount = playerProgram.GetSatelliteCount("Kerbin")
-                + asterProgram.GetSatelliteCount("Kerbin")
-                + cobaltProgram.GetSatelliteCount("Kerbin");
-            return combinedKerbinSatelliteCount >= LunarNetworkUnlockKerbinSatelliteCount;
+        private static bool IsMinmusNetworkAvailable(
+            bool savedAvailability,
+            SpaceProgramState playerProgram,
+            SpaceProgramState asterProgram,
+            SpaceProgramState cobaltProgram)
+        {
+            return savedAvailability
+                || playerProgram.HasAchievedMinmusProbeOrbit
+                || asterProgram.HasAchievedMinmusProbeOrbit
+                || cobaltProgram.HasAchievedMinmusProbeOrbit;
         }
     }
 }

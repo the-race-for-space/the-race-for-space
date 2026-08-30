@@ -11,7 +11,8 @@ namespace TheRaceForSpace.Tracking
     {
         public static void RefreshPlayerSatelliteCounts(
             SpaceProgramState playerProgram,
-            bool lunarProbeAchievementsAvailable)
+            bool lunarProbeAchievementsAvailable,
+            bool lunarCrewedAchievementsAvailable)
         {
             if (playerProgram == null
                 || HighLogic.CurrentGame == null
@@ -85,32 +86,50 @@ namespace TheRaceForSpace.Tracking
                         playerProgram.HasAchievedCrewedOrbit = true;
                         playerProgram.CrewedOrbitAchievementUniversalTime = currentUniversalTime;
                     }
-                    else if (isPrototypeSatellite && !playerProgram.HasAchievedProbeOrbit)
+                    else if (isPrototypeSatellite && crewCount == 0 && !playerProgram.HasAchievedProbeOrbit)
                     {
                         playerProgram.HasAchievedProbeOrbit = true;
                         playerProgram.ProbeOrbitAchievementUniversalTime = currentUniversalTime;
                     }
                 }
-                else if (bodyName == "Mun"
-                    && (lunarProbeAchievementsAvailable || playerProgram.HasAchievedProbeOrbit)
-                    && isPrototypeSatellite
-                    && crewCount == 0
-                    && !playerProgram.HasAchievedMunProbeOrbit)
+                else if (bodyName == "Mun")
                 {
-                    // Mun/Minmus probe achievements do not exist as active funding targets until
-                    // Kerbin Probe Orbit has been completed by an agency. Satellite counting is
-                    // still independent so existing craft are recognised once the target unlocks.
-                    playerProgram.HasAchievedMunProbeOrbit = true;
-                    playerProgram.MunProbeOrbitAchievementUniversalTime = currentUniversalTime;
+                    if ((lunarCrewedAchievementsAvailable || playerProgram.HasAchievedCrewedOrbit)
+                        && crewCount > 0
+                        && !playerProgram.HasAchievedMunCrewedOrbit)
+                    {
+                        playerProgram.HasAchievedMunCrewedOrbit = true;
+                        playerProgram.MunCrewedOrbitAchievementUniversalTime = currentUniversalTime;
+                    }
+                    else if ((lunarProbeAchievementsAvailable || playerProgram.HasAchievedProbeOrbit)
+                        && isPrototypeSatellite
+                        && crewCount == 0
+                        && !playerProgram.HasAchievedMunProbeOrbit)
+                    {
+                        // Lunar probe achievements do not exist as active funding targets until
+                        // Kerbin Probe Orbit has been completed by an agency. Satellite counting
+                        // remains independent so existing craft are recognised once the target unlocks.
+                        playerProgram.HasAchievedMunProbeOrbit = true;
+                        playerProgram.MunProbeOrbitAchievementUniversalTime = currentUniversalTime;
+                    }
                 }
-                else if (bodyName == "Minmus"
-                    && (lunarProbeAchievementsAvailable || playerProgram.HasAchievedProbeOrbit)
-                    && isPrototypeSatellite
-                    && crewCount == 0
-                    && !playerProgram.HasAchievedMinmusProbeOrbit)
+                else if (bodyName == "Minmus")
                 {
-                    playerProgram.HasAchievedMinmusProbeOrbit = true;
-                    playerProgram.MinmusProbeOrbitAchievementUniversalTime = currentUniversalTime;
+                    if ((lunarCrewedAchievementsAvailable || playerProgram.HasAchievedCrewedOrbit)
+                        && crewCount > 0
+                        && !playerProgram.HasAchievedMinmusCrewedOrbit)
+                    {
+                        playerProgram.HasAchievedMinmusCrewedOrbit = true;
+                        playerProgram.MinmusCrewedOrbitAchievementUniversalTime = currentUniversalTime;
+                    }
+                    else if ((lunarProbeAchievementsAvailable || playerProgram.HasAchievedProbeOrbit)
+                        && isPrototypeSatellite
+                        && crewCount == 0
+                        && !playerProgram.HasAchievedMinmusProbeOrbit)
+                    {
+                        playerProgram.HasAchievedMinmusProbeOrbit = true;
+                        playerProgram.MinmusProbeOrbitAchievementUniversalTime = currentUniversalTime;
+                    }
                 }
 
                 // The prototype treats probe and relay vessel types as satellites.

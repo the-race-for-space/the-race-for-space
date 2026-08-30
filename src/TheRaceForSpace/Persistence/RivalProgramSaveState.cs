@@ -81,6 +81,8 @@ namespace TheRaceForSpace.Persistence
             }
 
             program.Funds = Math.Max(0.0, Funds);
+            program.ClearSatelliteCounts();
+            program.ClearRecordedAchievements();
 
             foreach (KeyValuePair<string, int> bodyCount in _satellitesByBody)
             {

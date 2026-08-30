@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using TheRaceForSpace.Funding;
 using TheRaceForSpace.Milestones;
 using TheRaceForSpace.Programs;
 
@@ -10,8 +11,8 @@ namespace TheRaceForSpace.Simulation
     /// </summary>
     public static class RivalSimulation
     {
-        // Satellite mission IDs deliberately match the funding-programme IDs so later rival
-        // selection can consume the same programme collection without translating identities.
+        // These IDs match the current funding-programme IDs. They remain public for the
+        // compatibility path; the main simulation discovers satellite targets from programmes.
         public const string KerbinSatelliteTargetId = "kerbin-network";
         public const string MunSatelliteTargetId = "mun-survey";
         public const string MinmusSatelliteTargetId = "minmus-relay";
@@ -31,7 +32,7 @@ namespace TheRaceForSpace.Simulation
         private const double SatelliteMissionSelectionChance = 0.60;
         private const int LaunchProgressIncrementPercent = 10;
         private const double LaunchProgressCostFunds = 20000.0;
-        private const double MunMinmusLaunchProgressCostMultiplier = 2.0;
+        private const double DistantLaunchProgressCostMultiplier = 2.0;
         private const double CrewedOrbitLaunchProgressCostMultiplier = 2.0;
 
         private static readonly Random RandomGenerator = new Random();
@@ -43,46 +44,30 @@ namespace TheRaceForSpace.Simulation
                 SpaceProgramState asterProgram,
                 SpaceProgramState cobaltProgram,
                 double currentUniversalTime,
-                bool kerbinNetworkAvailable,
-                bool munNetworkAvailable,
-                bool minmusNetworkAvailable,
-                bool probeOrbitContractLive,
-                bool crewedOrbitContractLive,
-                bool munProbeOrbitContractLive,
-                bool minmusProbeOrbitContractLive,
-                bool munCrewedOrbitContractLive,
-                bool minmusCrewedOrbitContractLive)
+                IList<AchievementFundingProgramme> achievementProgrammes,
+                IList<FundingProgramme> fundingProgrammes)
             {
                 PlayerProgram = playerProgram;
                 AsterProgram = asterProgram;
                 CobaltProgram = cobaltProgram;
                 CurrentUniversalTime = currentUniversalTime;
-                KerbinNetworkAvailable = kerbinNetworkAvailable;
-                MunNetworkAvailable = munNetworkAvailable;
-                MinmusNetworkAvailable = minmusNetworkAvailable;
-                ProbeOrbitContractLive = probeOrbitContractLive;
-                CrewedOrbitContractLive = crewedOrbitContractLive;
-                MunProbeOrbitContractLive = munProbeOrbitContractLive;
-                MinmusProbeOrbitContractLive = minmusProbeOrbitContractLive;
-                MunCrewedOrbitContractLive = munCrewedOrbitContractLive;
-                MinmusCrewedOrbitContractLive = minmusCrewedOrbitContractLive;
+                AchievementProgrammes = achievementProgrammes;
+                FundingProgrammes = fundingProgrammes;
             }
 
             public readonly SpaceProgramState PlayerProgram;
             public readonly SpaceProgramState AsterProgram;
             public readonly SpaceProgramState CobaltProgram;
             public readonly double CurrentUniversalTime;
-            public readonly bool KerbinNetworkAvailable;
-            public readonly bool MunNetworkAvailable;
-            public readonly bool MinmusNetworkAvailable;
-            public readonly bool ProbeOrbitContractLive;
-            public readonly bool CrewedOrbitContractLive;
-            public readonly bool MunProbeOrbitContractLive;
-            public readonly bool MinmusProbeOrbitContractLive;
-            public readonly bool MunCrewedOrbitContractLive;
-            public readonly bool MinmusCrewedOrbitContractLive;
+            public readonly IList<AchievementFundingProgramme> AchievementProgrammes;
+            public readonly IList<FundingProgramme> FundingProgrammes;
         }
 
+        /// <summary>
+        /// Compatibility overload retained for tests and callers using the original 0.3 boolean
+        /// snapshot. It converts that snapshot into the same programme collections used by the
+        /// main simulation path, so selection and completion logic remains collection-driven.
+        /// </summary>
         public static void Refresh(
             SpaceProgramState playerProgram,
             SpaceProgramState asterProgram,
@@ -98,27 +83,91 @@ namespace TheRaceForSpace.Simulation
             bool munCrewedOrbitContractLive,
             bool minmusCrewedOrbitContractLive)
         {
-            if (playerProgram == null || asterProgram == null || cobaltProgram == null)
+            var achievementProgrammes = new List<AchievementFundingProgramme>
+            {
+                CreateCompatibilityAchievementProgramme(PrototypeMilestones.ProbeOrbitId, probeOrbitContractLive),
+                CreateCompatibilityAchievementProgramme(PrototypeMilestones.CrewedOrbitId, crewedOrbitContractLive),
+                CreateCompatibilityAchievementProgramme(PrototypeMilestones.MunProbeOrbitId, munProbeOrbitContractLive),
+                CreateCompatibilityAchievementProgramme(PrototypeMilestones.MinmusProbeOrbitId, minmusProbeOrbitContractLive),
+                CreateCompatibilityAchievementProgramme(PrototypeMilestones.MunCrewedOrbitId, munCrewedOrbitContractLive),
+                CreateCompatibilityAchievementProgramme(PrototypeMilestones.MinmusCrewedOrbitId, minmusCrewedOrbitContractLive)
+            };
+
+            var fundingProgrammes = new List<FundingProgramme>
+            {
+                new FundingProgramme(
+                    KerbinSatelliteTargetId,
+                    "Kerbin Orbital Network",
+                    "Kerbin",
+                    10,
+                    0.0,
+                    kerbinNetworkAvailable,
+                    null,
+                    PrototypeMilestones.ProbeOrbitId),
+                new FundingProgramme(
+                    MunSatelliteTargetId,
+                    "Mun Survey Network",
+                    "Mun",
+                    5,
+                    0.0,
+                    munNetworkAvailable,
+                    null,
+                    PrototypeMilestones.MunProbeOrbitId),
+                new FundingProgramme(
+                    MinmusSatelliteTargetId,
+                    "Minmus Relay Initiative",
+                    "Minmus",
+                    5,
+                    0.0,
+                    minmusNetworkAvailable,
+                    null,
+                    PrototypeMilestones.MinmusProbeOrbitId)
+            };
+
+            Refresh(
+                playerProgram,
+                asterProgram,
+                cobaltProgram,
+                currentUniversalTime,
+                achievementProgrammes,
+                fundingProgrammes);
+        }
+
+        /// <summary>
+        /// Advances both prototype rivals using the live achievement and satellite programme
+        /// collections. Adding a new target to those collections does not require another target
+        /// branch in candidate selection.
+        /// </summary>
+        public static void Refresh(
+            SpaceProgramState playerProgram,
+            SpaceProgramState asterProgram,
+            SpaceProgramState cobaltProgram,
+            double currentUniversalTime,
+            IList<AchievementFundingProgramme> achievementProgrammes,
+            IList<FundingProgramme> fundingProgrammes)
+        {
+            if (playerProgram == null
+                || asterProgram == null
+                || cobaltProgram == null
+                || achievementProgrammes == null
+                || fundingProgrammes == null)
             {
                 return;
             }
 
-            // Keep the public prototype call shape stable while passing one immutable snapshot
-            // through the private simulation methods instead of repeating the full argument list.
+            // Persistence and a few staged callers still populate the old six achievement fields.
+            // Import them before the generic simulation checks prerequisites or completion state.
+            PrototypeMilestones.SynchronizeLegacyAchievementState(playerProgram);
+            PrototypeMilestones.SynchronizeLegacyAchievementState(asterProgram);
+            PrototypeMilestones.SynchronizeLegacyAchievementState(cobaltProgram);
+
             var context = new RivalSimulationContext(
                 playerProgram,
                 asterProgram,
                 cobaltProgram,
                 currentUniversalTime,
-                kerbinNetworkAvailable,
-                munNetworkAvailable,
-                minmusNetworkAvailable,
-                probeOrbitContractLive,
-                crewedOrbitContractLive,
-                munProbeOrbitContractLive,
-                minmusProbeOrbitContractLive,
-                munCrewedOrbitContractLive,
-                minmusCrewedOrbitContractLive);
+                achievementProgrammes,
+                fundingProgrammes);
 
             RefreshProgram(asterProgram, context);
             RefreshProgram(cobaltProgram, context);
@@ -126,6 +175,7 @@ namespace TheRaceForSpace.Simulation
 
         /// <summary>
         /// Returns the display text for a stable rival mission target ID, or null for an unknown ID.
+        /// This overload remains for the current persistence format and the three prototype networks.
         /// </summary>
         public static string GetMissionTargetDisplayName(string targetId)
         {
@@ -159,9 +209,34 @@ namespace TheRaceForSpace.Simulation
         }
 
         /// <summary>
+        /// Returns display text using the supplied live programme collections, including targets
+        /// added after the original Kerbin/Mun/Minmus prototype set.
+        /// </summary>
+        public static string GetMissionTargetDisplayName(
+            string targetId,
+            IList<AchievementFundingProgramme> achievementProgrammes,
+            IList<FundingProgramme> fundingProgrammes)
+        {
+            AchievementFundingProgramme achievementProgramme = FindAchievementProgramme(
+                targetId,
+                achievementProgrammes);
+            if (achievementProgramme != null)
+            {
+                return achievementProgramme.Name;
+            }
+
+            FundingProgramme fundingProgramme = FindFundingProgramme(targetId, fundingProgrammes);
+            if (fundingProgramme != null)
+            {
+                return fundingProgramme.CelestialBodyName;
+            }
+
+            return GetMissionTargetDisplayName(targetId);
+        }
+
+        /// <summary>
         /// Returns the funds required for the rival's next successful 10% mission-progress step.
-        /// Probe Orbit uses the Kerbin satellite cost, while Crewed Orbit and all Mun/Minmus
-        /// achievement or satellite launches cost twice the Kerbin base cost.
+        /// This compatibility overload understands the original prototype target set.
         /// </summary>
         public static double CalculateLaunchProgressCost(SpaceProgramState program)
         {
@@ -171,23 +246,28 @@ namespace TheRaceForSpace.Simulation
             }
 
             string targetId = SynchronizeMissionTargetIdentity(program);
+            return CalculateLaunchProgressCostForTarget(targetId, null);
+        }
 
-            if (string.Equals(targetId, PrototypeMilestones.CrewedOrbitId, StringComparison.OrdinalIgnoreCase))
+        /// <summary>
+        /// Returns mission-progress cost using the live funding collection so newly added bodies
+        /// follow the same Kerbin-versus-distant cost rule without another ID branch.
+        /// </summary>
+        public static double CalculateLaunchProgressCost(
+            SpaceProgramState program,
+            IList<AchievementFundingProgramme> achievementProgrammes,
+            IList<FundingProgramme> fundingProgrammes)
+        {
+            if (program == null)
             {
-                return LaunchProgressCostFunds * CrewedOrbitLaunchProgressCostMultiplier;
+                return LaunchProgressCostFunds;
             }
 
-            if (string.Equals(targetId, PrototypeMilestones.MunProbeOrbitId, StringComparison.OrdinalIgnoreCase)
-                || string.Equals(targetId, PrototypeMilestones.MinmusProbeOrbitId, StringComparison.OrdinalIgnoreCase)
-                || string.Equals(targetId, PrototypeMilestones.MunCrewedOrbitId, StringComparison.OrdinalIgnoreCase)
-                || string.Equals(targetId, PrototypeMilestones.MinmusCrewedOrbitId, StringComparison.OrdinalIgnoreCase)
-                || string.Equals(targetId, MunSatelliteTargetId, StringComparison.OrdinalIgnoreCase)
-                || string.Equals(targetId, MinmusSatelliteTargetId, StringComparison.OrdinalIgnoreCase))
-            {
-                return LaunchProgressCostFunds * MunMinmusLaunchProgressCostMultiplier;
-            }
-
-            return LaunchProgressCostFunds;
+            string targetId = SynchronizeMissionTargetIdentity(
+                program,
+                achievementProgrammes,
+                fundingProgrammes);
+            return CalculateLaunchProgressCostForTarget(targetId, fundingProgrammes);
         }
 
         /// <summary>
@@ -200,6 +280,41 @@ namespace TheRaceForSpace.Simulation
             double currentUniversalTime,
             double nextFundingUniversalTime,
             double fundingIntervalSeconds)
+        {
+            return CalculateEstimatedLaunchDays(
+                program,
+                currentUniversalTime,
+                nextFundingUniversalTime,
+                fundingIntervalSeconds,
+                CalculateLaunchProgressCost(program));
+        }
+
+        /// <summary>
+        /// Collection-aware ETA used by the live controller so target cost stays correct for
+        /// satellite programmes added beyond the original three-body prototype.
+        /// </summary>
+        public static int? CalculateEstimatedLaunchDays(
+            SpaceProgramState program,
+            double currentUniversalTime,
+            double nextFundingUniversalTime,
+            double fundingIntervalSeconds,
+            IList<AchievementFundingProgramme> achievementProgrammes,
+            IList<FundingProgramme> fundingProgrammes)
+        {
+            return CalculateEstimatedLaunchDays(
+                program,
+                currentUniversalTime,
+                nextFundingUniversalTime,
+                fundingIntervalSeconds,
+                CalculateLaunchProgressCost(program, achievementProgrammes, fundingProgrammes));
+        }
+
+        private static int? CalculateEstimatedLaunchDays(
+            SpaceProgramState program,
+            double currentUniversalTime,
+            double nextFundingUniversalTime,
+            double fundingIntervalSeconds,
+            double launchProgressCostFunds)
         {
             if (program == null)
             {
@@ -215,7 +330,6 @@ namespace TheRaceForSpace.Simulation
                 return 0;
             }
 
-            double launchProgressCostFunds = CalculateLaunchProgressCost(program);
             double availableFunds = Math.Max(0.0, program.Funds);
             double projectedPayoutFunds = Math.Max(0.0, program.NextPayoutFunds);
             double expectedDaysPerSuccessfulStep =
@@ -279,20 +393,23 @@ namespace TheRaceForSpace.Simulation
         {
             bool hadStoredTarget = !string.IsNullOrEmpty(program.NextMissionTargetId)
                 || !string.IsNullOrEmpty(program.NextLaunchBodyName);
-            string targetId = SynchronizeMissionTargetIdentity(program);
+            string targetId = SynchronizeMissionTargetIdentity(
+                program,
+                context.AchievementProgrammes,
+                context.FundingProgrammes);
 
             if ((hadStoredTarget && string.IsNullOrEmpty(targetId))
                 || !IsTargetAvailable(targetId, program, context))
             {
-                // Invalid legacy targets and targets whose contracts have expired are abandoned
+                // Invalid saved targets and targets whose contracts have expired are abandoned
                 // before any more simulated funds can be spent on them.
-                SetMissionTarget(program, null);
+                SetMissionTarget(program, null, context);
                 program.LaunchProgressPercent = 0;
             }
 
             if (string.IsNullOrEmpty(program.NextMissionTargetId))
             {
-                SetMissionTarget(program, ChooseNextLaunchTarget(program, context));
+                SetMissionTarget(program, ChooseNextLaunchTarget(program, context), context);
             }
 
             if (program.NextLaunchProgressCheckUniversalTime <= 0.0)
@@ -304,21 +421,24 @@ namespace TheRaceForSpace.Simulation
                     * LaunchProgressIntervalSeconds;
             }
 
-            if (TryCompleteLaunch(program, context.CurrentUniversalTime))
+            if (TryCompleteLaunch(program, context.CurrentUniversalTime, context))
             {
-                SetMissionTarget(program, ChooseNextLaunchTarget(program, context));
+                SetMissionTarget(program, ChooseNextLaunchTarget(program, context), context);
             }
 
             while (context.CurrentUniversalTime >= program.NextLaunchProgressCheckUniversalTime)
             {
                 if (string.IsNullOrEmpty(program.NextMissionTargetId))
                 {
-                    SetMissionTarget(program, ChooseNextLaunchTarget(program, context));
+                    SetMissionTarget(program, ChooseNextLaunchTarget(program, context), context);
                 }
 
                 if (!string.IsNullOrEmpty(program.NextMissionTargetId))
                 {
-                    double launchProgressCostFunds = CalculateLaunchProgressCost(program);
+                    double launchProgressCostFunds = CalculateLaunchProgressCost(
+                        program,
+                        context.AchievementProgrammes,
+                        context.FundingProgrammes);
 
                     if (program.LaunchProgressPercent < 100
                         && program.Funds >= launchProgressCostFunds
@@ -330,9 +450,9 @@ namespace TheRaceForSpace.Simulation
                             program.LaunchProgressPercent + LaunchProgressIncrementPercent);
                     }
 
-                    if (TryCompleteLaunch(program, program.NextLaunchProgressCheckUniversalTime))
+                    if (TryCompleteLaunch(program, program.NextLaunchProgressCheckUniversalTime, context))
                     {
-                        SetMissionTarget(program, ChooseNextLaunchTarget(program, context));
+                        SetMissionTarget(program, ChooseNextLaunchTarget(program, context), context);
                     }
                 }
 
@@ -340,97 +460,66 @@ namespace TheRaceForSpace.Simulation
             }
         }
 
-        private static bool TryCompleteLaunch(SpaceProgramState program, double completionUniversalTime)
+        private static bool TryCompleteLaunch(
+            SpaceProgramState program,
+            double completionUniversalTime,
+            RivalSimulationContext context)
         {
-            string targetId = SynchronizeMissionTargetIdentity(program);
+            string targetId = SynchronizeMissionTargetIdentity(
+                program,
+                context.AchievementProgrammes,
+                context.FundingProgrammes);
             if (program.LaunchProgressPercent < 100 || string.IsNullOrEmpty(targetId))
             {
                 return false;
             }
 
-            if (string.Equals(targetId, PrototypeMilestones.ProbeOrbitId, StringComparison.OrdinalIgnoreCase))
+            AchievementFundingProgramme achievementProgramme = FindAchievementProgramme(
+                targetId,
+                context.AchievementProgrammes);
+            if (achievementProgramme != null)
             {
-                if (!program.HasAchievedProbeOrbit)
+                MilestoneDefinition milestone = PrototypeMilestones.FindById(achievementProgramme.Id);
+                if (milestone == null)
                 {
-                    program.HasAchievedProbeOrbit = true;
-                    program.ProbeOrbitAchievementUniversalTime = Math.Max(0.0, completionUniversalTime);
+                    return false;
+                }
 
-                    // The rival's first Probe Orbit mission represents a real unmanned probe in
-                    // Kerbin orbit, matching the player's qualifying probe which satisfies both
-                    // the achievement and one satellite-network slot.
+                bool recordedAchievement = program.RecordAchievement(
+                    milestone.Id,
+                    Math.Max(0.0, completionUniversalTime));
+                if (recordedAchievement
+                    && milestone.CrewRequirement == MilestoneCrewRequirement.UncrewedProbe)
+                {
+                    // An uncrewed achievement mission represents a real probe occupying one
+                    // satellite slot around the milestone body, matching player tracking rules.
                     program.SetSatelliteCount(
-                        "Kerbin",
-                        program.GetSatelliteCount("Kerbin") + 1);
+                        milestone.CelestialBodyName,
+                        program.GetSatelliteCount(milestone.CelestialBodyName) + 1);
                 }
-            }
-            else if (string.Equals(targetId, PrototypeMilestones.CrewedOrbitId, StringComparison.OrdinalIgnoreCase))
-            {
-                if (!program.HasAchievedCrewedOrbit)
-                {
-                    program.HasAchievedCrewedOrbit = true;
-                    program.CrewedOrbitAchievementUniversalTime = Math.Max(0.0, completionUniversalTime);
-                }
-            }
-            else if (string.Equals(targetId, PrototypeMilestones.MunProbeOrbitId, StringComparison.OrdinalIgnoreCase))
-            {
-                if (!program.HasAchievedMunProbeOrbit)
-                {
-                    program.HasAchievedMunProbeOrbit = true;
-                    program.MunProbeOrbitAchievementUniversalTime = Math.Max(0.0, completionUniversalTime);
-                    program.SetSatelliteCount("Mun", program.GetSatelliteCount("Mun") + 1);
-                }
-            }
-            else if (string.Equals(targetId, PrototypeMilestones.MinmusProbeOrbitId, StringComparison.OrdinalIgnoreCase))
-            {
-                if (!program.HasAchievedMinmusProbeOrbit)
-                {
-                    program.HasAchievedMinmusProbeOrbit = true;
-                    program.MinmusProbeOrbitAchievementUniversalTime = Math.Max(0.0, completionUniversalTime);
-                    program.SetSatelliteCount("Minmus", program.GetSatelliteCount("Minmus") + 1);
-                }
-            }
-            else if (string.Equals(targetId, PrototypeMilestones.MunCrewedOrbitId, StringComparison.OrdinalIgnoreCase))
-            {
-                if (!program.HasAchievedMunCrewedOrbit)
-                {
-                    program.HasAchievedMunCrewedOrbit = true;
-                    program.MunCrewedOrbitAchievementUniversalTime = Math.Max(0.0, completionUniversalTime);
-                }
-            }
-            else if (string.Equals(targetId, PrototypeMilestones.MinmusCrewedOrbitId, StringComparison.OrdinalIgnoreCase))
-            {
-                if (!program.HasAchievedMinmusCrewedOrbit)
-                {
-                    program.HasAchievedMinmusCrewedOrbit = true;
-                    program.MinmusCrewedOrbitAchievementUniversalTime = Math.Max(0.0, completionUniversalTime);
-                }
-            }
-            else if (string.Equals(targetId, KerbinSatelliteTargetId, StringComparison.OrdinalIgnoreCase))
-            {
-                program.SetSatelliteCount("Kerbin", program.GetSatelliteCount("Kerbin") + 1);
-            }
-            else if (string.Equals(targetId, MunSatelliteTargetId, StringComparison.OrdinalIgnoreCase))
-            {
-                program.SetSatelliteCount("Mun", program.GetSatelliteCount("Mun") + 1);
-            }
-            else if (string.Equals(targetId, MinmusSatelliteTargetId, StringComparison.OrdinalIgnoreCase))
-            {
-                program.SetSatelliteCount("Minmus", program.GetSatelliteCount("Minmus") + 1);
+
+                PrototypeMilestones.SynchronizeGenericAchievementStateToLegacy(program);
             }
             else
             {
-                return false;
+                FundingProgramme fundingProgramme = FindFundingProgramme(
+                    targetId,
+                    context.FundingProgrammes);
+                if (fundingProgramme == null || string.IsNullOrEmpty(fundingProgramme.CelestialBodyName))
+                {
+                    return false;
+                }
+
+                program.SetSatelliteCount(
+                    fundingProgramme.CelestialBodyName,
+                    program.GetSatelliteCount(fundingProgramme.CelestialBodyName) + 1);
             }
 
             program.LaunchProgressPercent = 0;
-            SetMissionTarget(program, null);
+            SetMissionTarget(program, null, context);
             return true;
         }
 
-        /// <summary>
-        /// Keeps the availability rules for saved/current targets and newly selected targets
-        /// identical. The target list remains deliberately explicit for the narrow 0.3 prototype.
-        /// </summary>
         private static bool IsTargetAvailable(
             string targetId,
             SpaceProgramState program,
@@ -441,61 +530,26 @@ namespace TheRaceForSpace.Simulation
                 return true;
             }
 
-            bool lunarCrewedAchievementsAvailable = context.PlayerProgram.HasAchievedCrewedOrbit
-                || context.AsterProgram.HasAchievedCrewedOrbit
-                || context.CobaltProgram.HasAchievedCrewedOrbit;
-
-            if (string.Equals(targetId, PrototypeMilestones.ProbeOrbitId, StringComparison.OrdinalIgnoreCase))
+            AchievementFundingProgramme achievementProgramme = FindAchievementProgramme(
+                targetId,
+                context.AchievementProgrammes);
+            if (achievementProgramme != null)
             {
-                return context.ProbeOrbitContractLive && !program.HasAchievedProbeOrbit;
+                if (achievementProgramme.IsExpired || program.HasAchievement(achievementProgramme.Id))
+                {
+                    return false;
+                }
+
+                return string.IsNullOrEmpty(achievementProgramme.PrerequisiteMilestoneId)
+                    || HasAnyProgramAchieved(achievementProgramme.PrerequisiteMilestoneId, context);
             }
 
-            if (string.Equals(targetId, PrototypeMilestones.CrewedOrbitId, StringComparison.OrdinalIgnoreCase))
+            FundingProgramme fundingProgramme = FindFundingProgramme(targetId, context.FundingProgrammes);
+            if (fundingProgramme != null)
             {
-                return context.CrewedOrbitContractLive && !program.HasAchievedCrewedOrbit;
-            }
-
-            if (string.Equals(targetId, PrototypeMilestones.MunProbeOrbitId, StringComparison.OrdinalIgnoreCase))
-            {
-                return IsKerbinNetworkAvailable(context)
-                    && context.MunProbeOrbitContractLive
-                    && !program.HasAchievedMunProbeOrbit;
-            }
-
-            if (string.Equals(targetId, PrototypeMilestones.MinmusProbeOrbitId, StringComparison.OrdinalIgnoreCase))
-            {
-                return IsKerbinNetworkAvailable(context)
-                    && context.MinmusProbeOrbitContractLive
-                    && !program.HasAchievedMinmusProbeOrbit;
-            }
-
-            if (string.Equals(targetId, PrototypeMilestones.MunCrewedOrbitId, StringComparison.OrdinalIgnoreCase))
-            {
-                return lunarCrewedAchievementsAvailable
-                    && context.MunCrewedOrbitContractLive
-                    && !program.HasAchievedMunCrewedOrbit;
-            }
-
-            if (string.Equals(targetId, PrototypeMilestones.MinmusCrewedOrbitId, StringComparison.OrdinalIgnoreCase))
-            {
-                return lunarCrewedAchievementsAvailable
-                    && context.MinmusCrewedOrbitContractLive
-                    && !program.HasAchievedMinmusCrewedOrbit;
-            }
-
-            if (string.Equals(targetId, KerbinSatelliteTargetId, StringComparison.OrdinalIgnoreCase))
-            {
-                return IsKerbinNetworkAvailable(context);
-            }
-
-            if (string.Equals(targetId, MunSatelliteTargetId, StringComparison.OrdinalIgnoreCase))
-            {
-                return IsMunNetworkAvailable(context);
-            }
-
-            if (string.Equals(targetId, MinmusSatelliteTargetId, StringComparison.OrdinalIgnoreCase))
-            {
-                return IsMinmusNetworkAvailable(context);
+                return fundingProgramme.IsAvailable
+                    || string.IsNullOrEmpty(fundingProgramme.PrerequisiteMilestoneId)
+                    || HasAnyProgramAchieved(fundingProgramme.PrerequisiteMilestoneId, context);
             }
 
             return false;
@@ -508,49 +562,33 @@ namespace TheRaceForSpace.Simulation
             var availableOneOffTargets = new List<string>();
             var availableSatelliteTargets = new List<string>();
 
-            if (IsTargetAvailable(PrototypeMilestones.ProbeOrbitId, program, context))
+            for (int programmeIndex = 0;
+                programmeIndex < context.AchievementProgrammes.Count;
+                programmeIndex++)
             {
-                availableOneOffTargets.Add(PrototypeMilestones.ProbeOrbitId);
+                AchievementFundingProgramme programme = context.AchievementProgrammes[programmeIndex];
+                if (programme == null
+                    || PrototypeMilestones.FindById(programme.Id) == null
+                    || !IsTargetAvailable(programme.Id, program, context))
+                {
+                    continue;
+                }
+
+                availableOneOffTargets.Add(programme.Id);
             }
 
-            if (IsTargetAvailable(PrototypeMilestones.CrewedOrbitId, program, context))
+            for (int programmeIndex = 0; programmeIndex < context.FundingProgrammes.Count; programmeIndex++)
             {
-                availableOneOffTargets.Add(PrototypeMilestones.CrewedOrbitId);
-            }
+                FundingProgramme programme = context.FundingProgrammes[programmeIndex];
+                if (programme == null
+                    || string.IsNullOrEmpty(programme.Id)
+                    || string.IsNullOrEmpty(programme.CelestialBodyName)
+                    || !IsTargetAvailable(programme.Id, program, context))
+                {
+                    continue;
+                }
 
-            if (IsTargetAvailable(PrototypeMilestones.MunProbeOrbitId, program, context))
-            {
-                availableOneOffTargets.Add(PrototypeMilestones.MunProbeOrbitId);
-            }
-
-            if (IsTargetAvailable(PrototypeMilestones.MinmusProbeOrbitId, program, context))
-            {
-                availableOneOffTargets.Add(PrototypeMilestones.MinmusProbeOrbitId);
-            }
-
-            if (IsTargetAvailable(PrototypeMilestones.MunCrewedOrbitId, program, context))
-            {
-                availableOneOffTargets.Add(PrototypeMilestones.MunCrewedOrbitId);
-            }
-
-            if (IsTargetAvailable(PrototypeMilestones.MinmusCrewedOrbitId, program, context))
-            {
-                availableOneOffTargets.Add(PrototypeMilestones.MinmusCrewedOrbitId);
-            }
-
-            if (IsTargetAvailable(KerbinSatelliteTargetId, program, context))
-            {
-                availableSatelliteTargets.Add(KerbinSatelliteTargetId);
-            }
-
-            if (IsTargetAvailable(MunSatelliteTargetId, program, context))
-            {
-                availableSatelliteTargets.Add(MunSatelliteTargetId);
-            }
-
-            if (IsTargetAvailable(MinmusSatelliteTargetId, program, context))
-            {
-                availableSatelliteTargets.Add(MinmusSatelliteTargetId);
+                availableSatelliteTargets.Add(programme.Id);
             }
 
             if (availableOneOffTargets.Count == 0 && availableSatelliteTargets.Count == 0)
@@ -569,14 +607,67 @@ namespace TheRaceForSpace.Simulation
             }
             else
             {
-                // Mission type is selected first so repeatable satellite work has a stable 60%
-                // share regardless of how many one-off contracts happen to be live at the time.
+                // Mission type is selected first so repeatable satellite work keeps a stable 60%
+                // share regardless of how many one-off contracts are live at the time.
                 selectedTargetType = RandomGenerator.NextDouble() < SatelliteMissionSelectionChance
                     ? availableSatelliteTargets
                     : availableOneOffTargets;
             }
 
             return selectedTargetType[RandomGenerator.Next(selectedTargetType.Count)];
+        }
+
+        private static double CalculateLaunchProgressCostForTarget(
+            string targetId,
+            IList<FundingProgramme> fundingProgrammes)
+        {
+            MilestoneDefinition milestone = PrototypeMilestones.FindById(targetId);
+            if (milestone != null)
+            {
+                if (milestone.CrewRequirement == MilestoneCrewRequirement.Crewed)
+                {
+                    return LaunchProgressCostFunds * CrewedOrbitLaunchProgressCostMultiplier;
+                }
+
+                if (!string.Equals(
+                    milestone.CelestialBodyName,
+                    "Kerbin",
+                    StringComparison.OrdinalIgnoreCase))
+                {
+                    return LaunchProgressCostFunds * DistantLaunchProgressCostMultiplier;
+                }
+
+                return LaunchProgressCostFunds;
+            }
+
+            FundingProgramme fundingProgramme = FindFundingProgramme(targetId, fundingProgrammes);
+            if (fundingProgramme != null)
+            {
+                return string.Equals(
+                    fundingProgramme.CelestialBodyName,
+                    "Kerbin",
+                    StringComparison.OrdinalIgnoreCase)
+                    ? LaunchProgressCostFunds
+                    : LaunchProgressCostFunds * DistantLaunchProgressCostMultiplier;
+            }
+
+            // Compatibility fallback for the original three network IDs when no collection was supplied.
+            if (string.Equals(targetId, MunSatelliteTargetId, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(targetId, MinmusSatelliteTargetId, StringComparison.OrdinalIgnoreCase))
+            {
+                return LaunchProgressCostFunds * DistantLaunchProgressCostMultiplier;
+            }
+
+            return LaunchProgressCostFunds;
+        }
+
+        private static bool HasAnyProgramAchieved(
+            string milestoneId,
+            RivalSimulationContext context)
+        {
+            return context.PlayerProgram.HasAchievement(milestoneId)
+                || context.AsterProgram.HasAchievement(milestoneId)
+                || context.CobaltProgram.HasAchievement(milestoneId);
         }
 
         private static string SynchronizeMissionTargetIdentity(SpaceProgramState program)
@@ -588,13 +679,11 @@ namespace TheRaceForSpace.Simulation
 
             if (!string.IsNullOrEmpty(program.NextMissionTargetId))
             {
-                // Stable IDs are authoritative. If the current save/display mirror disagrees,
-                // regenerate it rather than allowing presentation text to change simulation state.
                 program.NextLaunchBodyName = GetMissionTargetDisplayName(program.NextMissionTargetId);
                 return program.NextMissionTargetId;
             }
 
-            string targetId = ResolveLegacyMissionTargetId(program.NextLaunchBodyName);
+            string targetId = ResolveLegacyMissionTargetId(program.NextLaunchBodyName, null, null);
             if (!string.IsNullOrEmpty(targetId))
             {
                 program.NextMissionTargetId = targetId;
@@ -604,7 +693,47 @@ namespace TheRaceForSpace.Simulation
             return targetId;
         }
 
-        private static string ResolveLegacyMissionTargetId(string legacyTargetName)
+        private static string SynchronizeMissionTargetIdentity(
+            SpaceProgramState program,
+            IList<AchievementFundingProgramme> achievementProgrammes,
+            IList<FundingProgramme> fundingProgrammes)
+        {
+            if (program == null)
+            {
+                return null;
+            }
+
+            if (!string.IsNullOrEmpty(program.NextMissionTargetId))
+            {
+                // Stable IDs are authoritative. Presentation text is regenerated from the live
+                // definitions rather than being allowed to change simulation identity.
+                program.NextLaunchBodyName = GetMissionTargetDisplayName(
+                    program.NextMissionTargetId,
+                    achievementProgrammes,
+                    fundingProgrammes);
+                return program.NextMissionTargetId;
+            }
+
+            string targetId = ResolveLegacyMissionTargetId(
+                program.NextLaunchBodyName,
+                achievementProgrammes,
+                fundingProgrammes);
+            if (!string.IsNullOrEmpty(targetId))
+            {
+                program.NextMissionTargetId = targetId;
+                program.NextLaunchBodyName = GetMissionTargetDisplayName(
+                    targetId,
+                    achievementProgrammes,
+                    fundingProgrammes);
+            }
+
+            return targetId;
+        }
+
+        private static string ResolveLegacyMissionTargetId(
+            string legacyTargetName,
+            IList<AchievementFundingProgramme> achievementProgrammes,
+            IList<FundingProgramme> fundingProgrammes)
         {
             if (string.IsNullOrEmpty(legacyTargetName))
             {
@@ -615,6 +744,38 @@ namespace TheRaceForSpace.Simulation
             if (milestone != null)
             {
                 return milestone.Id;
+            }
+
+            if (achievementProgrammes != null)
+            {
+                for (int programmeIndex = 0; programmeIndex < achievementProgrammes.Count; programmeIndex++)
+                {
+                    AchievementFundingProgramme programme = achievementProgrammes[programmeIndex];
+                    if (programme != null
+                        && (string.Equals(programme.Id, legacyTargetName, StringComparison.OrdinalIgnoreCase)
+                            || string.Equals(programme.Name, legacyTargetName, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        return programme.Id;
+                    }
+                }
+            }
+
+            if (fundingProgrammes != null)
+            {
+                for (int programmeIndex = 0; programmeIndex < fundingProgrammes.Count; programmeIndex++)
+                {
+                    FundingProgramme programme = fundingProgrammes[programmeIndex];
+                    if (programme != null
+                        && (string.Equals(programme.Id, legacyTargetName, StringComparison.OrdinalIgnoreCase)
+                            || string.Equals(programme.Name, legacyTargetName, StringComparison.OrdinalIgnoreCase)
+                            || string.Equals(
+                                programme.CelestialBodyName,
+                                legacyTargetName,
+                                StringComparison.OrdinalIgnoreCase)))
+                    {
+                        return programme.Id;
+                    }
+                }
             }
 
             if (string.Equals(legacyTargetName, ProbeOrbitTargetName, StringComparison.OrdinalIgnoreCase))
@@ -668,7 +829,10 @@ namespace TheRaceForSpace.Simulation
             return null;
         }
 
-        private static void SetMissionTarget(SpaceProgramState program, string targetId)
+        private static void SetMissionTarget(
+            SpaceProgramState program,
+            string targetId,
+            RivalSimulationContext context)
         {
             if (program == null)
             {
@@ -676,31 +840,75 @@ namespace TheRaceForSpace.Simulation
             }
 
             program.NextMissionTargetId = targetId;
-            program.NextLaunchBodyName = GetMissionTargetDisplayName(targetId);
+            program.NextLaunchBodyName = GetMissionTargetDisplayName(
+                targetId,
+                context.AchievementProgrammes,
+                context.FundingProgrammes);
         }
 
-        private static bool IsKerbinNetworkAvailable(RivalSimulationContext context)
+        private static AchievementFundingProgramme FindAchievementProgramme(
+            string targetId,
+            IList<AchievementFundingProgramme> achievementProgrammes)
         {
-            return context.KerbinNetworkAvailable
-                || context.PlayerProgram.HasAchievedProbeOrbit
-                || context.AsterProgram.HasAchievedProbeOrbit
-                || context.CobaltProgram.HasAchievedProbeOrbit;
+            if (string.IsNullOrEmpty(targetId) || achievementProgrammes == null)
+            {
+                return null;
+            }
+
+            for (int programmeIndex = 0; programmeIndex < achievementProgrammes.Count; programmeIndex++)
+            {
+                AchievementFundingProgramme programme = achievementProgrammes[programmeIndex];
+                if (programme != null
+                    && string.Equals(programme.Id, targetId, StringComparison.OrdinalIgnoreCase))
+                {
+                    return programme;
+                }
+            }
+
+            return null;
         }
 
-        private static bool IsMunNetworkAvailable(RivalSimulationContext context)
+        private static FundingProgramme FindFundingProgramme(
+            string targetId,
+            IList<FundingProgramme> fundingProgrammes)
         {
-            return context.MunNetworkAvailable
-                || context.PlayerProgram.HasAchievedMunProbeOrbit
-                || context.AsterProgram.HasAchievedMunProbeOrbit
-                || context.CobaltProgram.HasAchievedMunProbeOrbit;
+            if (string.IsNullOrEmpty(targetId) || fundingProgrammes == null)
+            {
+                return null;
+            }
+
+            for (int programmeIndex = 0; programmeIndex < fundingProgrammes.Count; programmeIndex++)
+            {
+                FundingProgramme programme = fundingProgrammes[programmeIndex];
+                if (programme != null
+                    && string.Equals(programme.Id, targetId, StringComparison.OrdinalIgnoreCase))
+                {
+                    return programme;
+                }
+            }
+
+            return null;
         }
 
-        private static bool IsMinmusNetworkAvailable(RivalSimulationContext context)
+        private static AchievementFundingProgramme CreateCompatibilityAchievementProgramme(
+            string milestoneId,
+            bool isLive)
         {
-            return context.MinmusNetworkAvailable
-                || context.PlayerProgram.HasAchievedMinmusProbeOrbit
-                || context.AsterProgram.HasAchievedMinmusProbeOrbit
-                || context.CobaltProgram.HasAchievedMinmusProbeOrbit;
+            MilestoneDefinition milestone = PrototypeMilestones.FindById(milestoneId);
+            var programme = new AchievementFundingProgramme(
+                milestone.Id,
+                milestone.Name,
+                milestone.ObjectiveDescription,
+                0.0,
+                null,
+                milestone.PrerequisiteMilestoneId);
+
+            if (!isLive)
+            {
+                programme.RestoreState(true, 10);
+            }
+
+            return programme;
         }
     }
 }

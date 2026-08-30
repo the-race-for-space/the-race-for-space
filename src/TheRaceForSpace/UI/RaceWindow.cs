@@ -271,25 +271,7 @@ namespace TheRaceForSpace.UI
             int minmusSatelliteCount = player.GetSatelliteCount("Minmus");
 
             GUILayout.Label("Funding Information", _boldLabelStyle);
-            if (_raceController.NextFundingYear > 0)
-            {
-                int daysUntilNextFunding = _raceController.DaysUntilNextFunding;
-                string daysUntilNextFundingText = daysUntilNextFunding == 1
-                    ? "1 Day to go"
-                    : daysUntilNextFunding + " Days to go";
-
-                GUILayout.Label(
-                    "Next Funding Date: Year "
-                    + _raceController.NextFundingYear
-                    + ", Day "
-                    + _raceController.NextFundingDay
-                    + " - "
-                    + daysUntilNextFundingText);
-            }
-            else
-            {
-                GUILayout.Label("Next Funding Date: Pending");
-            }
+            GUILayout.Label(FormatNextFundingDate());
 
             // Every live contract is included because all funding now pays on the same date.
             GUILayout.Label("Next payout: " + player.NextPayoutFunds.ToString("N0"));
@@ -320,7 +302,7 @@ namespace TheRaceForSpace.UI
 
         private void DrawFundingTargets()
         {
-            GUILayout.Label("FUNDING TARGETS");
+            GUILayout.Label("FUNDING TARGETS - " + FormatNextFundingDate());
             GUILayout.Space(8.0f);
 
             _fundingScrollPosition = GUILayout.BeginScrollView(_fundingScrollPosition);
@@ -499,7 +481,7 @@ namespace TheRaceForSpace.UI
 
         private void DrawRivalAgencies()
         {
-            GUILayout.Label("RIVAL AGENCIES");
+            GUILayout.Label("RIVAL AGENCIES - " + FormatNextFundingDate());
             GUILayout.Space(8.0f);
 
             _rivalsScrollPosition = GUILayout.BeginScrollView(_rivalsScrollPosition);
@@ -750,6 +732,24 @@ namespace TheRaceForSpace.UI
             GUILayout.Label(title, _highlightedCardTitleStyle, GUILayout.ExpandWidth(false));
             GUILayout.FlexibleSpace();
             GUILayout.EndHorizontal();
+        }
+
+        private string FormatNextFundingDate()
+        {
+            if (_raceController.NextFundingYear <= 0)
+            {
+                return "Next Funding Date: Pending";
+            }
+
+            int daysUntilNextFunding = _raceController.DaysUntilNextFunding;
+            string daysUntilNextFundingText = daysUntilNextFunding == 1
+                ? "1 Day to go"
+                : daysUntilNextFunding + " Days to go";
+
+            return "Next Funding Date: "
+                + FormatKerbinDate(_raceController.NextFundingUniversalTime)
+                + " - "
+                + daysUntilNextFundingText;
         }
 
         private string FormatKerbinDate(double universalTime)

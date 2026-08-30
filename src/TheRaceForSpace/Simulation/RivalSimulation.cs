@@ -131,8 +131,8 @@ namespace TheRaceForSpace.Simulation
                 double expectedStepDay = elapsedDays + expectedDaysPerSuccessfulStep;
 
                 // Include scheduled payouts that arrive before the next average successful
-                // roll. A payout on the exact same game-time boundary is processed after the
-                // rival roll by the controller, so it cannot finance that particular check.
+                // roll. Achievement-contract payouts are intentionally treated as part of the
+                // rival's current projected income estimate rather than an exact forecast here.
                 while (projectedPayoutFunds > 0.0
                     && fundingIntervalDays > 0.0
                     && nextFundingInDays < expectedStepDay)
@@ -225,7 +225,7 @@ namespace TheRaceForSpace.Simulation
                     * LaunchProgressIntervalSeconds;
             }
 
-            if (TryCompleteLaunch(program))
+            if (TryCompleteLaunch(program, currentUniversalTime))
             {
                 program.NextLaunchBodyName = ChooseNextLaunchTarget(
                     program,
@@ -269,7 +269,7 @@ namespace TheRaceForSpace.Simulation
                             program.LaunchProgressPercent + LaunchProgressIncrementPercent);
                     }
 
-                    if (TryCompleteLaunch(program))
+                    if (TryCompleteLaunch(program, program.NextLaunchProgressCheckUniversalTime))
                     {
                         program.NextLaunchBodyName = ChooseNextLaunchTarget(
                             program,
@@ -288,7 +288,7 @@ namespace TheRaceForSpace.Simulation
             }
         }
 
-        private static bool TryCompleteLaunch(SpaceProgramState program)
+        private static bool TryCompleteLaunch(SpaceProgramState program, double completionUniversalTime)
         {
             if (program.LaunchProgressPercent < 100 || string.IsNullOrEmpty(program.NextLaunchBodyName))
             {
@@ -297,11 +297,19 @@ namespace TheRaceForSpace.Simulation
 
             if (string.Equals(program.NextLaunchBodyName, ProbeOrbitTargetName, StringComparison.OrdinalIgnoreCase))
             {
-                program.HasAchievedProbeOrbit = true;
+                if (!program.HasAchievedProbeOrbit)
+                {
+                    program.HasAchievedProbeOrbit = true;
+                    program.ProbeOrbitAchievementUniversalTime = Math.Max(0.0, completionUniversalTime);
+                }
             }
             else if (string.Equals(program.NextLaunchBodyName, CrewedOrbitTargetName, StringComparison.OrdinalIgnoreCase))
             {
-                program.HasAchievedCrewedOrbit = true;
+                if (!program.HasAchievedCrewedOrbit)
+                {
+                    program.HasAchievedCrewedOrbit = true;
+                    program.CrewedOrbitAchievementUniversalTime = Math.Max(0.0, completionUniversalTime);
+                }
             }
             else
             {

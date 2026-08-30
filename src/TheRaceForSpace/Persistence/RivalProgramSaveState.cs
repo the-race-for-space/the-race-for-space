@@ -1,35 +1,37 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
-using TheRaceForSpace.Milestones;
 using TheRaceForSpace.Programs;
 
 namespace TheRaceForSpace.Persistence
 {
     /// <summary>
-    /// Serializable rival-program values that must survive KSP save/load cycles.
-    /// Gameplay calculations remain in their owning modules; this class only captures,
-    /// validates, applies, and serializes the state required to resume a rival programme.
+    /// Serializable rival-program values required to resume a simulated agency. Achievements,
+    /// satellite bodies, and the active mission are stored by stable identifiers rather than a
+    /// fixed prototype field list.
     /// </summary>
     public sealed class RivalProgramSaveState
     {
+        private const string AchievementNodeName = "ACHIEVEMENT";
+        private const string SatelliteNodeName = "SATELLITE";
+        private const string IdValueName = "id";
+        private const string UniversalTimeValueName = "universalTime";
+        private const string BodyValueName = "body";
+        private const string CountValueName = "count";
+        private const string FundsValueName = "funds";
+        private const string NextMissionTargetIdValueName = "nextMissionTargetId";
+        private const string LaunchProgressPercentValueName = "launchProgressPercent";
+        private const string NextLaunchProgressCheckUniversalTimeValueName =
+            "nextLaunchProgressCheckUniversalTime";
+
+        private readonly Dictionary<string, double> _achievementTimesById =
+            new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, int> _satellitesByBody =
+            new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+
         public bool HasData { get; private set; }
         public double Funds { get; private set; }
-        public int KerbinSatellites { get; private set; }
-        public int MunSatellites { get; private set; }
-        public int MinmusSatellites { get; private set; }
-        public bool HasAchievedProbeOrbit { get; private set; }
-        public double ProbeOrbitAchievementUniversalTime { get; private set; }
-        public bool HasAchievedCrewedOrbit { get; private set; }
-        public double CrewedOrbitAchievementUniversalTime { get; private set; }
-        public bool HasAchievedMunProbeOrbit { get; private set; }
-        public double MunProbeOrbitAchievementUniversalTime { get; private set; }
-        public bool HasAchievedMinmusProbeOrbit { get; private set; }
-        public double MinmusProbeOrbitAchievementUniversalTime { get; private set; }
-        public bool HasAchievedMunCrewedOrbit { get; private set; }
-        public double MunCrewedOrbitAchievementUniversalTime { get; private set; }
-        public bool HasAchievedMinmusCrewedOrbit { get; private set; }
-        public double MinmusCrewedOrbitAchievementUniversalTime { get; private set; }
-        public string NextLaunchBodyName { get; private set; }
+        public string NextMissionTargetId { get; private set; }
         public int LaunchProgressPercent { get; private set; }
         public double NextLaunchProgressCheckUniversalTime { get; private set; }
 
@@ -40,38 +42,34 @@ namespace TheRaceForSpace.Persistence
                 return;
             }
 
+            ClearState();
             HasData = true;
             Funds = Math.Max(0.0, program.Funds);
-            KerbinSatellites = Math.Max(0, program.GetSatelliteCount("Kerbin"));
-            MunSatellites = Math.Max(0, program.GetSatelliteCount("Mun"));
-            MinmusSatellites = Math.Max(0, program.GetSatelliteCount("Minmus"));
-            HasAchievedProbeOrbit = program.HasAchievement(PrototypeMilestones.ProbeOrbitId);
-            ProbeOrbitAchievementUniversalTime = NormalizeAchievementTime(
-                HasAchievedProbeOrbit,
-                program.GetAchievementUniversalTime(PrototypeMilestones.ProbeOrbitId));
-            HasAchievedCrewedOrbit = program.HasAchievement(PrototypeMilestones.CrewedOrbitId);
-            CrewedOrbitAchievementUniversalTime = NormalizeAchievementTime(
-                HasAchievedCrewedOrbit,
-                program.GetAchievementUniversalTime(PrototypeMilestones.CrewedOrbitId));
-            HasAchievedMunProbeOrbit = program.HasAchievement(PrototypeMilestones.MunProbeOrbitId);
-            MunProbeOrbitAchievementUniversalTime = NormalizeAchievementTime(
-                HasAchievedMunProbeOrbit,
-                program.GetAchievementUniversalTime(PrototypeMilestones.MunProbeOrbitId));
-            HasAchievedMinmusProbeOrbit = program.HasAchievement(PrototypeMilestones.MinmusProbeOrbitId);
-            MinmusProbeOrbitAchievementUniversalTime = NormalizeAchievementTime(
-                HasAchievedMinmusProbeOrbit,
-                program.GetAchievementUniversalTime(PrototypeMilestones.MinmusProbeOrbitId));
-            HasAchievedMunCrewedOrbit = program.HasAchievement(PrototypeMilestones.MunCrewedOrbitId);
-            MunCrewedOrbitAchievementUniversalTime = NormalizeAchievementTime(
-                HasAchievedMunCrewedOrbit,
-                program.GetAchievementUniversalTime(PrototypeMilestones.MunCrewedOrbitId));
-            HasAchievedMinmusCrewedOrbit = program.HasAchievement(PrototypeMilestones.MinmusCrewedOrbitId);
-            MinmusCrewedOrbitAchievementUniversalTime = NormalizeAchievementTime(
-                HasAchievedMinmusCrewedOrbit,
-                program.GetAchievementUniversalTime(PrototypeMilestones.MinmusCrewedOrbitId));
-            NextLaunchBodyName = program.NextLaunchBodyName;
+            NextMissionTargetId = string.IsNullOrEmpty(program.NextMissionTargetId)
+                ? null
+                : program.NextMissionTargetId;
             LaunchProgressPercent = Math.Max(0, Math.Min(100, program.LaunchProgressPercent));
-            NextLaunchProgressCheckUniversalTime = Math.Max(0.0, program.NextLaunchProgressCheckUniversalTime);
+            NextLaunchProgressCheckUniversalTime = Math.Max(
+                0.0,
+                program.NextLaunchProgressCheckUniversalTime);
+
+            foreach (KeyValuePair<string, double> achievement in program.RecordedAchievements)
+            {
+                if (!string.IsNullOrEmpty(achievement.Key)
+                    && !double.IsNaN(achievement.Value)
+                    && !double.IsInfinity(achievement.Value))
+                {
+                    _achievementTimesById[achievement.Key] = Math.Max(0.0, achievement.Value);
+                }
+            }
+
+            foreach (KeyValuePair<string, int> bodyCount in program.SatelliteCountsByBody)
+            {
+                if (!string.IsNullOrEmpty(bodyCount.Key))
+                {
+                    _satellitesByBody[bodyCount.Key] = Math.Max(0, bodyCount.Value);
+                }
+            }
         }
 
         public void ApplyTo(SpaceProgramState program)
@@ -82,178 +80,98 @@ namespace TheRaceForSpace.Persistence
             }
 
             program.Funds = Math.Max(0.0, Funds);
-            program.SetSatelliteCount("Kerbin", KerbinSatellites);
-            program.SetSatelliteCount("Mun", MunSatellites);
-            program.SetSatelliteCount("Minmus", MinmusSatellites);
 
-            if (HasAchievedProbeOrbit)
+            foreach (KeyValuePair<string, int> bodyCount in _satellitesByBody)
             {
-                program.RecordAchievement(PrototypeMilestones.ProbeOrbitId, ProbeOrbitAchievementUniversalTime);
+                program.SetSatelliteCount(bodyCount.Key, bodyCount.Value);
             }
 
-            if (HasAchievedCrewedOrbit)
+            foreach (KeyValuePair<string, double> achievement in _achievementTimesById)
             {
-                program.RecordAchievement(PrototypeMilestones.CrewedOrbitId, CrewedOrbitAchievementUniversalTime);
+                program.RecordAchievement(achievement.Key, achievement.Value);
             }
 
-            if (HasAchievedMunProbeOrbit)
-            {
-                program.RecordAchievement(PrototypeMilestones.MunProbeOrbitId, MunProbeOrbitAchievementUniversalTime);
-            }
-
-            if (HasAchievedMinmusProbeOrbit)
-            {
-                program.RecordAchievement(PrototypeMilestones.MinmusProbeOrbitId, MinmusProbeOrbitAchievementUniversalTime);
-            }
-
-            if (HasAchievedMunCrewedOrbit)
-            {
-                program.RecordAchievement(PrototypeMilestones.MunCrewedOrbitId, MunCrewedOrbitAchievementUniversalTime);
-            }
-
-            if (HasAchievedMinmusCrewedOrbit)
-            {
-                program.RecordAchievement(PrototypeMilestones.MinmusCrewedOrbitId, MinmusCrewedOrbitAchievementUniversalTime);
-            }
-
-            program.NextLaunchBodyName = NextLaunchBodyName;
+            program.NextMissionTargetId = NextMissionTargetId;
+            // Display text is derived from the live programme collections by RivalSimulation.
+            program.NextLaunchBodyName = null;
             program.LaunchProgressPercent = Math.Max(0, Math.Min(100, LaunchProgressPercent));
-            program.NextLaunchProgressCheckUniversalTime = Math.Max(0.0, NextLaunchProgressCheckUniversalTime);
+            program.NextLaunchProgressCheckUniversalTime = Math.Max(
+                0.0,
+                NextLaunchProgressCheckUniversalTime);
         }
 
         public void Load(ConfigNode node)
         {
+            ClearState();
             HasData = node != null;
-            Funds = 0.0;
-            KerbinSatellites = 0;
-            MunSatellites = 0;
-            MinmusSatellites = 0;
-            HasAchievedProbeOrbit = false;
-            ProbeOrbitAchievementUniversalTime = -1.0;
-            HasAchievedCrewedOrbit = false;
-            CrewedOrbitAchievementUniversalTime = -1.0;
-            HasAchievedMunProbeOrbit = false;
-            MunProbeOrbitAchievementUniversalTime = -1.0;
-            HasAchievedMinmusProbeOrbit = false;
-            MinmusProbeOrbitAchievementUniversalTime = -1.0;
-            HasAchievedMunCrewedOrbit = false;
-            MunCrewedOrbitAchievementUniversalTime = -1.0;
-            HasAchievedMinmusCrewedOrbit = false;
-            MinmusCrewedOrbitAchievementUniversalTime = -1.0;
-            NextLaunchBodyName = null;
-            LaunchProgressPercent = 0;
-            NextLaunchProgressCheckUniversalTime = 0.0;
-
             if (!HasData)
             {
                 return;
             }
 
             double parsedDouble;
-            int parsedInt;
-            string value = node.GetValue("funds");
-            if (!string.IsNullOrEmpty(value)
-                && double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out parsedDouble))
+            if (TryParseFiniteDouble(node.GetValue(FundsValueName), out parsedDouble))
             {
                 Funds = Math.Max(0.0, parsedDouble);
             }
 
-            value = node.GetValue("kerbinSatellites");
-            if (!string.IsNullOrEmpty(value)
-                && int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out parsedInt))
-            {
-                KerbinSatellites = Math.Max(0, parsedInt);
-            }
+            string targetId = node.GetValue(NextMissionTargetIdValueName);
+            NextMissionTargetId = string.IsNullOrEmpty(targetId) ? null : targetId;
 
-            value = node.GetValue("munSatellites");
-            if (!string.IsNullOrEmpty(value)
-                && int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out parsedInt))
-            {
-                MunSatellites = Math.Max(0, parsedInt);
-            }
-
-            value = node.GetValue("minmusSatellites");
-            if (!string.IsNullOrEmpty(value)
-                && int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out parsedInt))
-            {
-                MinmusSatellites = Math.Max(0, parsedInt);
-            }
-
-            HasAchievedProbeOrbit = ParseBool(node.GetValue("hasAchievedProbeOrbit"));
-            ProbeOrbitAchievementUniversalTime = ParseAchievementTime(
-                node.GetValue("probeOrbitAchievementUniversalTime"),
-                HasAchievedProbeOrbit);
-            HasAchievedCrewedOrbit = ParseBool(node.GetValue("hasAchievedCrewedOrbit"));
-            CrewedOrbitAchievementUniversalTime = ParseAchievementTime(
-                node.GetValue("crewedOrbitAchievementUniversalTime"),
-                HasAchievedCrewedOrbit);
-            HasAchievedMunProbeOrbit = ParseBool(node.GetValue("hasAchievedMunProbeOrbit"));
-            MunProbeOrbitAchievementUniversalTime = ParseAchievementTime(
-                node.GetValue("munProbeOrbitAchievementUniversalTime"),
-                HasAchievedMunProbeOrbit);
-            HasAchievedMinmusProbeOrbit = ParseBool(node.GetValue("hasAchievedMinmusProbeOrbit"));
-            MinmusProbeOrbitAchievementUniversalTime = ParseAchievementTime(
-                node.GetValue("minmusProbeOrbitAchievementUniversalTime"),
-                HasAchievedMinmusProbeOrbit);
-            HasAchievedMunCrewedOrbit = ParseBool(node.GetValue("hasAchievedMunCrewedOrbit"));
-            MunCrewedOrbitAchievementUniversalTime = ParseAchievementTime(
-                node.GetValue("munCrewedOrbitAchievementUniversalTime"),
-                HasAchievedMunCrewedOrbit);
-            HasAchievedMinmusCrewedOrbit = ParseBool(node.GetValue("hasAchievedMinmusCrewedOrbit"));
-            MinmusCrewedOrbitAchievementUniversalTime = ParseAchievementTime(
-                node.GetValue("minmusCrewedOrbitAchievementUniversalTime"),
-                HasAchievedMinmusCrewedOrbit);
-
-            value = node.GetValue("nextLaunchBodyName");
-            if (string.Equals(value, "Kerbin", StringComparison.OrdinalIgnoreCase))
-            {
-                NextLaunchBodyName = "Kerbin";
-            }
-            else if (string.Equals(value, "Mun", StringComparison.OrdinalIgnoreCase))
-            {
-                NextLaunchBodyName = "Mun";
-            }
-            else if (string.Equals(value, "Minmus", StringComparison.OrdinalIgnoreCase))
-            {
-                NextLaunchBodyName = "Minmus";
-            }
-            else if (string.Equals(value, "Probe Orbit", StringComparison.OrdinalIgnoreCase))
-            {
-                NextLaunchBodyName = "Probe Orbit";
-            }
-            else if (string.Equals(value, "Crewed Orbit", StringComparison.OrdinalIgnoreCase))
-            {
-                NextLaunchBodyName = "Crewed Orbit";
-            }
-            else if (string.Equals(value, "Mun Probe Orbit", StringComparison.OrdinalIgnoreCase))
-            {
-                NextLaunchBodyName = "Mun Probe Orbit";
-            }
-            else if (string.Equals(value, "Minmus Probe Orbit", StringComparison.OrdinalIgnoreCase))
-            {
-                NextLaunchBodyName = "Minmus Probe Orbit";
-            }
-            else if (string.Equals(value, "Mun Crewed Orbit", StringComparison.OrdinalIgnoreCase))
-            {
-                NextLaunchBodyName = "Mun Crewed Orbit";
-            }
-            else if (string.Equals(value, "Minmus Crewed Orbit", StringComparison.OrdinalIgnoreCase))
-            {
-                NextLaunchBodyName = "Minmus Crewed Orbit";
-            }
-
-            value = node.GetValue("launchProgressPercent");
-            if (!string.IsNullOrEmpty(value)
-                && int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out parsedInt))
+            int parsedInt;
+            if (int.TryParse(
+                node.GetValue(LaunchProgressPercentValueName),
+                NumberStyles.Integer,
+                CultureInfo.InvariantCulture,
+                out parsedInt))
             {
                 LaunchProgressPercent = Math.Max(0, Math.Min(100, parsedInt));
             }
 
-            value = node.GetValue("nextLaunchProgressCheckUniversalTime");
-            if (!string.IsNullOrEmpty(value)
-                && double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out parsedDouble))
+            if (TryParseFiniteDouble(
+                node.GetValue(NextLaunchProgressCheckUniversalTimeValueName),
+                out parsedDouble))
             {
                 NextLaunchProgressCheckUniversalTime = Math.Max(0.0, parsedDouble);
+            }
+
+            ConfigNode[] achievementNodes = node.GetNodes(AchievementNodeName);
+            for (int nodeIndex = 0; nodeIndex < achievementNodes.Length; nodeIndex++)
+            {
+                ConfigNode achievementNode = achievementNodes[nodeIndex];
+                string id = achievementNode.GetValue(IdValueName);
+                double universalTime;
+                if (string.IsNullOrEmpty(id)
+                    || !TryParseFiniteDouble(achievementNode.GetValue(UniversalTimeValueName), out universalTime))
+                {
+                    continue;
+                }
+
+                universalTime = Math.Max(0.0, universalTime);
+                double existingTime;
+                if (!_achievementTimesById.TryGetValue(id, out existingTime) || universalTime < existingTime)
+                {
+                    _achievementTimesById[id] = universalTime;
+                }
+            }
+
+            ConfigNode[] satelliteNodes = node.GetNodes(SatelliteNodeName);
+            for (int nodeIndex = 0; nodeIndex < satelliteNodes.Length; nodeIndex++)
+            {
+                ConfigNode satelliteNode = satelliteNodes[nodeIndex];
+                string bodyName = satelliteNode.GetValue(BodyValueName);
+                int count;
+                if (string.IsNullOrEmpty(bodyName)
+                    || !int.TryParse(
+                        satelliteNode.GetValue(CountValueName),
+                        NumberStyles.Integer,
+                        CultureInfo.InvariantCulture,
+                        out count))
+                {
+                    continue;
+                }
+
+                _satellitesByBody[bodyName] = Math.Max(0, count);
             }
         }
 
@@ -264,75 +182,62 @@ namespace TheRaceForSpace.Persistence
                 return;
             }
 
-            node.AddValue("funds", Funds.ToString("R", CultureInfo.InvariantCulture));
-            node.AddValue("kerbinSatellites", KerbinSatellites.ToString(CultureInfo.InvariantCulture));
-            node.AddValue("munSatellites", MunSatellites.ToString(CultureInfo.InvariantCulture));
-            node.AddValue("minmusSatellites", MinmusSatellites.ToString(CultureInfo.InvariantCulture));
-
-            // Keep the 0.3 key names stable while the in-memory programme state is now ID-based.
-            node.AddValue("hasAchievedProbeOrbit", HasAchievedProbeOrbit);
-            node.AddValue(
-                "probeOrbitAchievementUniversalTime",
-                ProbeOrbitAchievementUniversalTime.ToString("R", CultureInfo.InvariantCulture));
-            node.AddValue("hasAchievedCrewedOrbit", HasAchievedCrewedOrbit);
-            node.AddValue(
-                "crewedOrbitAchievementUniversalTime",
-                CrewedOrbitAchievementUniversalTime.ToString("R", CultureInfo.InvariantCulture));
-            node.AddValue("hasAchievedMunProbeOrbit", HasAchievedMunProbeOrbit);
-            node.AddValue(
-                "munProbeOrbitAchievementUniversalTime",
-                MunProbeOrbitAchievementUniversalTime.ToString("R", CultureInfo.InvariantCulture));
-            node.AddValue("hasAchievedMinmusProbeOrbit", HasAchievedMinmusProbeOrbit);
-            node.AddValue(
-                "minmusProbeOrbitAchievementUniversalTime",
-                MinmusProbeOrbitAchievementUniversalTime.ToString("R", CultureInfo.InvariantCulture));
-            node.AddValue("hasAchievedMunCrewedOrbit", HasAchievedMunCrewedOrbit);
-            node.AddValue(
-                "munCrewedOrbitAchievementUniversalTime",
-                MunCrewedOrbitAchievementUniversalTime.ToString("R", CultureInfo.InvariantCulture));
-            node.AddValue("hasAchievedMinmusCrewedOrbit", HasAchievedMinmusCrewedOrbit);
-            node.AddValue(
-                "minmusCrewedOrbitAchievementUniversalTime",
-                MinmusCrewedOrbitAchievementUniversalTime.ToString("R", CultureInfo.InvariantCulture));
-
-            if (!string.IsNullOrEmpty(NextLaunchBodyName))
+            node.AddValue(FundsValueName, Funds.ToString("R", CultureInfo.InvariantCulture));
+            if (!string.IsNullOrEmpty(NextMissionTargetId))
             {
-                node.AddValue("nextLaunchBodyName", NextLaunchBodyName);
+                node.AddValue(NextMissionTargetIdValueName, NextMissionTargetId);
             }
 
-            node.AddValue("launchProgressPercent", LaunchProgressPercent.ToString(CultureInfo.InvariantCulture));
             node.AddValue(
-                "nextLaunchProgressCheckUniversalTime",
+                LaunchProgressPercentValueName,
+                LaunchProgressPercent.ToString(CultureInfo.InvariantCulture));
+            node.AddValue(
+                NextLaunchProgressCheckUniversalTimeValueName,
                 NextLaunchProgressCheckUniversalTime.ToString("R", CultureInfo.InvariantCulture));
-        }
 
-        private static bool ParseBool(string value)
-        {
-            bool parsedValue;
-            return !string.IsNullOrEmpty(value) && bool.TryParse(value, out parsedValue) && parsedValue;
-        }
-
-        private static double ParseAchievementTime(string value, bool hasAchievement)
-        {
-            if (!hasAchievement)
+            var achievementIds = new List<string>(_achievementTimesById.Keys);
+            achievementIds.Sort(StringComparer.OrdinalIgnoreCase);
+            for (int idIndex = 0; idIndex < achievementIds.Count; idIndex++)
             {
-                return -1.0;
+                string id = achievementIds[idIndex];
+                ConfigNode achievementNode = node.AddNode(AchievementNodeName);
+                achievementNode.AddValue(IdValueName, id);
+                achievementNode.AddValue(
+                    UniversalTimeValueName,
+                    _achievementTimesById[id].ToString("R", CultureInfo.InvariantCulture));
             }
 
-            double parsedValue;
-            if (!string.IsNullOrEmpty(value)
-                && double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out parsedValue))
+            var bodyNames = new List<string>(_satellitesByBody.Keys);
+            bodyNames.Sort(StringComparer.OrdinalIgnoreCase);
+            for (int bodyIndex = 0; bodyIndex < bodyNames.Count; bodyIndex++)
             {
-                return Math.Max(0.0, parsedValue);
+                string bodyName = bodyNames[bodyIndex];
+                ConfigNode satelliteNode = node.AddNode(SatelliteNodeName);
+                satelliteNode.AddValue(BodyValueName, bodyName);
+                satelliteNode.AddValue(
+                    CountValueName,
+                    _satellitesByBody[bodyName].ToString(CultureInfo.InvariantCulture));
             }
-
-            // Version 0.3 state written before timestamps were added is treated as historical.
-            return 0.0;
         }
 
-        private static double NormalizeAchievementTime(bool hasAchievement, double achievementUniversalTime)
+        private void ClearState()
         {
-            return hasAchievement ? Math.Max(0.0, achievementUniversalTime) : -1.0;
+            HasData = false;
+            Funds = 0.0;
+            NextMissionTargetId = null;
+            LaunchProgressPercent = 0;
+            NextLaunchProgressCheckUniversalTime = 0.0;
+            _achievementTimesById.Clear();
+            _satellitesByBody.Clear();
+        }
+
+        private static bool TryParseFiniteDouble(string value, out double parsedValue)
+        {
+            parsedValue = 0.0;
+            return !string.IsNullOrEmpty(value)
+                && double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out parsedValue)
+                && !double.IsNaN(parsedValue)
+                && !double.IsInfinity(parsedValue);
         }
     }
 }

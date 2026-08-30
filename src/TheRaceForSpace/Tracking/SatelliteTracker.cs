@@ -89,6 +89,22 @@ namespace TheRaceForSpace.Tracking
                         playerProgram.ProbeOrbitAchievementUniversalTime = currentUniversalTime;
                     }
                 }
+                else if (bodyName == "Mun"
+                    && isPrototypeSatellite
+                    && crewCount == 0
+                    && !playerProgram.HasAchievedMunProbeOrbit)
+                {
+                    playerProgram.HasAchievedMunProbeOrbit = true;
+                    playerProgram.MunProbeOrbitAchievementUniversalTime = currentUniversalTime;
+                }
+                else if (bodyName == "Minmus"
+                    && isPrototypeSatellite
+                    && crewCount == 0
+                    && !playerProgram.HasAchievedMinmusProbeOrbit)
+                {
+                    playerProgram.HasAchievedMinmusProbeOrbit = true;
+                    playerProgram.MinmusProbeOrbitAchievementUniversalTime = currentUniversalTime;
+                }
 
                 // The prototype treats probe and relay vessel types as satellites.
                 if (!isPrototypeSatellite)

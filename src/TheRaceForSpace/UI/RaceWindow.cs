@@ -323,84 +323,83 @@ namespace TheRaceForSpace.UI
             GUILayout.EndVertical();
 
             GUILayout.Space(24.0f);
-            GUILayout.BeginVertical(GUILayout.Width(330.0f));
+            GUILayout.BeginVertical(GUILayout.ExpandWidth(true));
+
+            // The funding heading and shared date span both funding sub-columns so the date
+            // has the full remaining window width and does not wrap above the payout rows.
             GUILayout.Label("Funding Information", _boldLabelStyle);
             GUILayout.Label(FormatNextFundingDate());
             GUILayout.Space(10.0f);
 
+            // Draw each funding source and value in the same horizontal row. This keeps the
+            // third-column amount aligned even when labels have different text lengths.
             if (probeOrbitNextPayout > 0.0)
             {
-                GUILayout.Label("Probe Orbit: Completed");
+                GUILayout.BeginHorizontal();
+                GUILayout.Label("Probe Orbit: Completed", GUILayout.Width(245.0f));
+                GUILayout.Space(2.0f);
+                GUILayout.Label(probeOrbitNextPayout.ToString("N0"), GUILayout.Width(100.0f));
+                GUILayout.EndHorizontal();
             }
 
             if (crewedOrbitNextPayout > 0.0)
             {
-                GUILayout.Label("Crewed Orbit: Completed");
+                GUILayout.BeginHorizontal();
+                GUILayout.Label("Crewed Orbit: Completed", GUILayout.Width(245.0f));
+                GUILayout.Space(2.0f);
+                GUILayout.Label(crewedOrbitNextPayout.ToString("N0"), GUILayout.Width(100.0f));
+                GUILayout.EndHorizontal();
             }
 
             if (kerbinSatelliteNextPayout > 0.0)
             {
+                GUILayout.BeginHorizontal();
                 GUILayout.Label(
                     kerbinSatelliteCount
                     + " Kerbin "
-                    + (kerbinSatelliteCount == 1 ? "Satellite" : "Satellites"));
+                    + (kerbinSatelliteCount == 1 ? "Satellite" : "Satellites"),
+                    GUILayout.Width(245.0f));
+                GUILayout.Space(2.0f);
+                GUILayout.Label(kerbinSatelliteNextPayout.ToString("N0"), GUILayout.Width(100.0f));
+                GUILayout.EndHorizontal();
             }
 
             if (munSatelliteNextPayout > 0.0)
             {
+                GUILayout.BeginHorizontal();
                 GUILayout.Label(
                     munSatelliteCount
                     + " Mun "
-                    + (munSatelliteCount == 1 ? "Satellite" : "Satellites"));
+                    + (munSatelliteCount == 1 ? "Satellite" : "Satellites"),
+                    GUILayout.Width(245.0f));
+                GUILayout.Space(2.0f);
+                GUILayout.Label(munSatelliteNextPayout.ToString("N0"), GUILayout.Width(100.0f));
+                GUILayout.EndHorizontal();
             }
 
             if (minmusSatelliteNextPayout > 0.0)
             {
+                GUILayout.BeginHorizontal();
                 GUILayout.Label(
                     minmusSatelliteCount
                     + " Minmus "
-                    + (minmusSatelliteCount == 1 ? "Satellite" : "Satellites"));
+                    + (minmusSatelliteCount == 1 ? "Satellite" : "Satellites"),
+                    GUILayout.Width(245.0f));
+                GUILayout.Space(2.0f);
+                GUILayout.Label(minmusSatelliteNextPayout.ToString("N0"), GUILayout.Width(100.0f));
+                GUILayout.EndHorizontal();
             }
 
             GUILayout.Space(6.0f);
-            GUILayout.Label("Total Next Payout", _boldLabelStyle);
-            GUILayout.EndVertical();
-
-            // Keep the amounts close to their funding labels while separating them into a
-            // dedicated column so the player can scan the payout sources and values quickly.
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Total Next Payout", _boldLabelStyle, GUILayout.Width(245.0f));
             GUILayout.Space(2.0f);
-            GUILayout.BeginVertical(GUILayout.Width(100.0f));
-            GUILayout.Label(string.Empty, _boldLabelStyle);
-            GUILayout.Label(string.Empty);
-            GUILayout.Space(10.0f);
+            GUILayout.Label(
+                player.NextPayoutFunds.ToString("N0"),
+                _boldLabelStyle,
+                GUILayout.Width(100.0f));
+            GUILayout.EndHorizontal();
 
-            if (probeOrbitNextPayout > 0.0)
-            {
-                GUILayout.Label(probeOrbitNextPayout.ToString("N0"));
-            }
-
-            if (crewedOrbitNextPayout > 0.0)
-            {
-                GUILayout.Label(crewedOrbitNextPayout.ToString("N0"));
-            }
-
-            if (kerbinSatelliteNextPayout > 0.0)
-            {
-                GUILayout.Label(kerbinSatelliteNextPayout.ToString("N0"));
-            }
-
-            if (munSatelliteNextPayout > 0.0)
-            {
-                GUILayout.Label(munSatelliteNextPayout.ToString("N0"));
-            }
-
-            if (minmusSatelliteNextPayout > 0.0)
-            {
-                GUILayout.Label(minmusSatelliteNextPayout.ToString("N0"));
-            }
-
-            GUILayout.Space(6.0f);
-            GUILayout.Label(player.NextPayoutFunds.ToString("N0"), _boldLabelStyle);
             GUILayout.EndVertical();
             GUILayout.EndHorizontal();
         }
@@ -622,8 +621,26 @@ namespace TheRaceForSpace.UI
 
             GUILayout.BeginVertical("box");
             GUILayout.Label("HELP / PLAYER GUIDE");
-            GUILayout.Label("Version 0.3 guide text placeholder. Final player-facing wording will be added after the first gameplay test pass.");
-            GUILayout.Label("All live contracts pay on the same 90-Kerbin-day funding date. Orbit contracts lose 10% interest after each payment; satellite contracts remain permanent once unlocked.");
+            GUILayout.Label(
+                "Here below is a list of all the funding targets available. These are paid out by the Corporation and Nations of Kerbin. But there are rival companies out to get a piece of the funding. You will need to achieve the targets before they do to get the largest share of the funding.");
+
+            GUILayout.Space(8.0f);
+            GUILayout.Label("Types of Funding Contract", _boldLabelStyle);
+            GUILayout.Label("One off achievements - First orbit Kerbin/Mun etc either manned or unmanned.");
+            GUILayout.Space(4.0f);
+            GUILayout.Label(
+                "These Payout on the next payout date once it has been first achieved. If multiple agencies complete the achievement than the payout is split between those agencies. There are a total of 10 payouts. As interest in this achievement is lost overtime this is reflected in reduced funding overtime and each following payout is reduced by 10%. Whatever agencies can reach the achievement before the first payout will be able to maximise their funding.");
+
+            GUILayout.Space(8.0f);
+            GUILayout.Label("Satellite Contracts - Satellite/Probes in orbit of Kerbin/Mun unmanned");
+            GUILayout.Space(4.0f);
+            GUILayout.Label(
+                "These are fixed contracts with a set required number of satellites funding is available for. Once the maximum number of satellites has been meet by the funding goal than further satellites will take a bigger split of the funding from other agencies. Interest in this contract is never lost as these satellites are always needed. But you will need to work hard to avoid the other agencies taking all of your funding away.");
+
+            GUILayout.Space(8.0f);
+            GUILayout.Label("Unlocking New Funding Target", _boldLabelStyle);
+            GUILayout.Label(
+                "New funding targets can be unlocked by meeting the requirements of the funding targets currently available. Look down the list below to see all of the available funding targets that the Corporations and Countries of Kerbin are offering");
             GUILayout.EndVertical();
 
             GUILayout.Space(12.0f);

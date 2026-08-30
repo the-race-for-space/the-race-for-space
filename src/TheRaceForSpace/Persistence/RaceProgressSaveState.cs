@@ -1,6 +1,7 @@
 using System;
 using System.Globalization;
 using TheRaceForSpace.Funding;
+using TheRaceForSpace.Milestones;
 using TheRaceForSpace.Programs;
 
 namespace TheRaceForSpace.Persistence
@@ -67,30 +68,30 @@ namespace TheRaceForSpace.Persistence
             }
 
             HasData = true;
-            PlayerProbeOrbit = playerProgram.HasAchievedProbeOrbit;
+            PlayerProbeOrbit = playerProgram.HasAchievement(PrototypeMilestones.ProbeOrbitId);
             PlayerProbeOrbitUniversalTime = NormalizeAchievementTime(
                 PlayerProbeOrbit,
-                playerProgram.ProbeOrbitAchievementUniversalTime);
-            PlayerCrewedOrbit = playerProgram.HasAchievedCrewedOrbit;
+                playerProgram.GetAchievementUniversalTime(PrototypeMilestones.ProbeOrbitId));
+            PlayerCrewedOrbit = playerProgram.HasAchievement(PrototypeMilestones.CrewedOrbitId);
             PlayerCrewedOrbitUniversalTime = NormalizeAchievementTime(
                 PlayerCrewedOrbit,
-                playerProgram.CrewedOrbitAchievementUniversalTime);
-            PlayerMunProbeOrbit = playerProgram.HasAchievedMunProbeOrbit;
+                playerProgram.GetAchievementUniversalTime(PrototypeMilestones.CrewedOrbitId));
+            PlayerMunProbeOrbit = playerProgram.HasAchievement(PrototypeMilestones.MunProbeOrbitId);
             PlayerMunProbeOrbitUniversalTime = NormalizeAchievementTime(
                 PlayerMunProbeOrbit,
-                playerProgram.MunProbeOrbitAchievementUniversalTime);
-            PlayerMinmusProbeOrbit = playerProgram.HasAchievedMinmusProbeOrbit;
+                playerProgram.GetAchievementUniversalTime(PrototypeMilestones.MunProbeOrbitId));
+            PlayerMinmusProbeOrbit = playerProgram.HasAchievement(PrototypeMilestones.MinmusProbeOrbitId);
             PlayerMinmusProbeOrbitUniversalTime = NormalizeAchievementTime(
                 PlayerMinmusProbeOrbit,
-                playerProgram.MinmusProbeOrbitAchievementUniversalTime);
-            PlayerMunCrewedOrbit = playerProgram.HasAchievedMunCrewedOrbit;
+                playerProgram.GetAchievementUniversalTime(PrototypeMilestones.MinmusProbeOrbitId));
+            PlayerMunCrewedOrbit = playerProgram.HasAchievement(PrototypeMilestones.MunCrewedOrbitId);
             PlayerMunCrewedOrbitUniversalTime = NormalizeAchievementTime(
                 PlayerMunCrewedOrbit,
-                playerProgram.MunCrewedOrbitAchievementUniversalTime);
-            PlayerMinmusCrewedOrbit = playerProgram.HasAchievedMinmusCrewedOrbit;
+                playerProgram.GetAchievementUniversalTime(PrototypeMilestones.MunCrewedOrbitId));
+            PlayerMinmusCrewedOrbit = playerProgram.HasAchievement(PrototypeMilestones.MinmusCrewedOrbitId);
             PlayerMinmusCrewedOrbitUniversalTime = NormalizeAchievementTime(
                 PlayerMinmusCrewedOrbit,
-                playerProgram.MinmusCrewedOrbitAchievementUniversalTime);
+                playerProgram.GetAchievementUniversalTime(PrototypeMilestones.MinmusCrewedOrbitId));
             KerbinNetworkUnlocked = kerbinProgramme.IsAvailable;
             MunNetworkUnlocked = munProgramme.IsAvailable;
             MinmusNetworkUnlocked = minmusProgramme.IsAvailable;
@@ -135,18 +136,35 @@ namespace TheRaceForSpace.Persistence
                 return;
             }
 
-            playerProgram.HasAchievedProbeOrbit = PlayerProbeOrbit;
-            playerProgram.ProbeOrbitAchievementUniversalTime = PlayerProbeOrbitUniversalTime;
-            playerProgram.HasAchievedCrewedOrbit = PlayerCrewedOrbit;
-            playerProgram.CrewedOrbitAchievementUniversalTime = PlayerCrewedOrbitUniversalTime;
-            playerProgram.HasAchievedMunProbeOrbit = PlayerMunProbeOrbit;
-            playerProgram.MunProbeOrbitAchievementUniversalTime = PlayerMunProbeOrbitUniversalTime;
-            playerProgram.HasAchievedMinmusProbeOrbit = PlayerMinmusProbeOrbit;
-            playerProgram.MinmusProbeOrbitAchievementUniversalTime = PlayerMinmusProbeOrbitUniversalTime;
-            playerProgram.HasAchievedMunCrewedOrbit = PlayerMunCrewedOrbit;
-            playerProgram.MunCrewedOrbitAchievementUniversalTime = PlayerMunCrewedOrbitUniversalTime;
-            playerProgram.HasAchievedMinmusCrewedOrbit = PlayerMinmusCrewedOrbit;
-            playerProgram.MinmusCrewedOrbitAchievementUniversalTime = PlayerMinmusCrewedOrbitUniversalTime;
+            if (PlayerProbeOrbit)
+            {
+                playerProgram.RecordAchievement(PrototypeMilestones.ProbeOrbitId, PlayerProbeOrbitUniversalTime);
+            }
+
+            if (PlayerCrewedOrbit)
+            {
+                playerProgram.RecordAchievement(PrototypeMilestones.CrewedOrbitId, PlayerCrewedOrbitUniversalTime);
+            }
+
+            if (PlayerMunProbeOrbit)
+            {
+                playerProgram.RecordAchievement(PrototypeMilestones.MunProbeOrbitId, PlayerMunProbeOrbitUniversalTime);
+            }
+
+            if (PlayerMinmusProbeOrbit)
+            {
+                playerProgram.RecordAchievement(PrototypeMilestones.MinmusProbeOrbitId, PlayerMinmusProbeOrbitUniversalTime);
+            }
+
+            if (PlayerMunCrewedOrbit)
+            {
+                playerProgram.RecordAchievement(PrototypeMilestones.MunCrewedOrbitId, PlayerMunCrewedOrbitUniversalTime);
+            }
+
+            if (PlayerMinmusCrewedOrbit)
+            {
+                playerProgram.RecordAchievement(PrototypeMilestones.MinmusCrewedOrbitId, PlayerMinmusCrewedOrbitUniversalTime);
+            }
 
             if (KerbinNetworkUnlocked)
             {
@@ -255,6 +273,7 @@ namespace TheRaceForSpace.Persistence
                 return;
             }
 
+            // Keep the 0.3 key names stable while the in-memory programme state is now ID-based.
             node.AddValue("playerProbeOrbit", PlayerProbeOrbit);
             node.AddValue(
                 "playerProbeOrbitUniversalTime",

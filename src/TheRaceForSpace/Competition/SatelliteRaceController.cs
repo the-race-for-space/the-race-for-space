@@ -371,6 +371,19 @@ namespace TheRaceForSpace.Competition
                     * FundingIntervalSeconds;
             }
 
+            bool hasDueFunding = currentUniversalTime >= _nextFundingUniversalTime;
+
+            if (hasDueFunding)
+            {
+                // Replay crossed funding boundaries before observing new player vessel state.
+                // KSP exposes current vessel state but not the exact time each vessel entered
+                // orbit, so using the last observed player counts avoids retroactively paying
+                // newly detected satellites at historical funding dates.
+                ProcessDueFunding(currentUniversalTime);
+                RefreshRivals(currentUniversalTime);
+                UpdateFundingAvailability();
+            }
+
             bool lunarProbeAchievementsAvailable = IsAchievementProgrammeAvailable(MunProbeOrbitProgramme);
             bool lunarCrewedAchievementsAvailable = IsAchievementProgrammeAvailable(MunCrewedOrbitProgramme);
             SatelliteTracker.RefreshPlayerSatelliteCounts(
@@ -379,26 +392,15 @@ namespace TheRaceForSpace.Competition
                 lunarCrewedAchievementsAvailable);
             UpdateFundingAvailability();
 
-            // Catch rivals up before processing funding so their recorded achievement timestamps
-            // determine whether they were eligible at each shared funding boundary crossed by time-warp.
-            RivalSimulation.Refresh(
-                PlayerProgram,
-                AsterProgram,
-                CobaltProgram,
-                currentUniversalTime,
-                KerbinNetworkProgramme.IsAvailable,
-                MunNetworkProgramme.IsAvailable,
-                MinmusNetworkProgramme.IsAvailable,
-                !ProbeOrbitProgramme.IsExpired,
-                !CrewedOrbitProgramme.IsExpired,
-                !MunProbeOrbitProgramme.IsExpired,
-                !MinmusProbeOrbitProgramme.IsExpired,
-                !MunCrewedOrbitProgramme.IsExpired,
-                !MinmusCrewedOrbitProgramme.IsExpired);
+            if (!hasDueFunding)
+            {
+                // Without a crossed funding boundary, keep the normal immediate-response path:
+                // current player achievements can influence rival target selection this refresh.
+                RefreshRivals(currentUniversalTime);
+                UpdateFundingAvailability();
+            }
 
-            UpdateFundingAvailability();
             StartAchievementContracts();
-            ProcessDueFunding(currentUniversalTime);
             EvaluateFundingProgrammes();
 
             RacePersistenceScenario.CaptureRivalState(AsterProgram, CobaltProgram);
@@ -413,6 +415,24 @@ namespace TheRaceForSpace.Competition
                 MinmusProbeOrbitProgramme,
                 MunCrewedOrbitProgramme,
                 MinmusCrewedOrbitProgramme);
+        }
+
+        private void RefreshRivals(double currentUniversalTime)
+        {
+            RivalSimulation.Refresh(
+                PlayerProgram,
+                AsterProgram,
+                CobaltProgram,
+                currentUniversalTime,
+                KerbinNetworkProgramme.IsAvailable,
+                MunNetworkProgramme.IsAvailable,
+                MinmusNetworkProgramme.IsAvailable,
+                !ProbeOrbitProgramme.IsExpired,
+                !CrewedOrbitProgramme.IsExpired,
+                !MunProbeOrbitProgramme.IsExpired,
+                !MinmusProbeOrbitProgramme.IsExpired,
+                !MunCrewedOrbitProgramme.IsExpired,
+                !MinmusCrewedOrbitProgramme.IsExpired);
         }
 
         private void UpdateFundingAvailability()
@@ -451,17 +471,20 @@ namespace TheRaceForSpace.Competition
         }
 
         /// <summary>
-        /// Processes every crossed global 90-day funding boundary. Satellite programmes and
-        /// achievement programmes are deliberately paid in the same loop so every contract
-        /// shares one funding date. Rivals also receive their guaranteed base income at each
-        /// boundary. Achievement interest only advances when at least one agency had qualified
-        /// by that exact boundary.
+        /// Processes every crossed global 90-day funding boundary. Rivals are advanced only to
+        /// each boundary before that boundary pays, so they cannot spend funding before receiving
+        /// it and their satellite/achievement state is evaluated at the correct historical time.
+        /// Satellite and achievement programmes then pay on the same shared date.
         /// </summary>
         private void ProcessDueFunding(double currentUniversalTime)
         {
             while (_nextFundingUniversalTime >= 0.0 && currentUniversalTime >= _nextFundingUniversalTime)
             {
                 double payoutUniversalTime = _nextFundingUniversalTime;
+
+                RefreshRivals(payoutUniversalTime);
+                UpdateFundingAvailability();
+                StartAchievementContracts();
 
                 for (int programIndex = 0; programIndex < _programs.Count; programIndex++)
                 {

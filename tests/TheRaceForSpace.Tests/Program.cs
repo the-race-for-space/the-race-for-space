@@ -20,6 +20,11 @@ namespace TheRaceForSpace.Tests
             Run("Achievement restore normalizes lifecycle", AchievementRestoreNormalizesLifecycle);
             Run("Prototype milestone definitions match v0.3", PrototypeMilestoneDefinitionsMatchV03);
             Run("Prototype milestone ids are unique", PrototypeMilestoneIdsAreUnique);
+            Run("Generic achievement state starts empty", GenericAchievementStateStartsEmpty);
+            Run("Generic achievement state records first timestamp", GenericAchievementStateRecordsFirstTimestamp);
+            Run("Generic achievement state preserves first timestamp", GenericAchievementStatePreservesFirstTimestamp);
+            Run("Generic achievement state accepts arbitrary ids", GenericAchievementStateAcceptsArbitraryIds);
+            Run("Generic achievement state validates timestamps", GenericAchievementStateValidatesTimestamps);
             Run("Rival launch costs match target type", RivalLaunchCostsMatchTargetType);
             Run("Rival ETA detects unaffordable mission", RivalEtaDetectsUnaffordableMission);
             Run("Unavailable rival target is abandoned", UnavailableRivalTargetIsAbandoned);
@@ -149,6 +154,67 @@ namespace TheRaceForSpace.Tests
                     milestoneIds.Add(milestone.Id),
                     "Duplicate milestone id found: " + milestone.Id);
             }
+        }
+
+        private static void GenericAchievementStateStartsEmpty()
+        {
+            var program = new SpaceProgramState("Program", false);
+
+            AssertTrue(
+                !program.HasAchievement(PrototypeMilestones.ProbeOrbitId),
+                "A new program should not have recorded achievements.");
+            AssertEqual(-1.0, program.GetAchievementUniversalTime(PrototypeMilestones.ProbeOrbitId));
+            AssertTrue(!program.HasAchievement("not-defined"), "Unknown milestone IDs should not appear achieved.");
+            AssertEqual(-1.0, program.GetAchievementUniversalTime("not-defined"));
+        }
+
+        private static void GenericAchievementStateRecordsFirstTimestamp()
+        {
+            var program = new SpaceProgramState("Program", false);
+
+            AssertTrue(
+                program.RecordAchievement(PrototypeMilestones.ProbeOrbitId, 1234.0),
+                "The first milestone observation should be recorded.");
+            AssertTrue(
+                program.HasAchievement("PROBE-ORBIT"),
+                "Milestone IDs should be matched case-insensitively.");
+            AssertEqual(1234.0, program.GetAchievementUniversalTime(PrototypeMilestones.ProbeOrbitId));
+        }
+
+        private static void GenericAchievementStatePreservesFirstTimestamp()
+        {
+            var program = new SpaceProgramState("Program", false);
+            program.RecordAchievement(PrototypeMilestones.ProbeOrbitId, 1234.0);
+
+            AssertTrue(
+                !program.RecordAchievement(PrototypeMilestones.ProbeOrbitId, 5678.0),
+                "A repeated observation should not replace the original milestone time.");
+            AssertEqual(1234.0, program.GetAchievementUniversalTime(PrototypeMilestones.ProbeOrbitId));
+        }
+
+        private static void GenericAchievementStateAcceptsArbitraryIds()
+        {
+            var program = new SpaceProgramState("Program", false);
+
+            AssertTrue(
+                program.RecordAchievement("future-duna-probe-orbit", 4321.0),
+                "Program state should accept milestone IDs that were not hardcoded into the class.");
+            AssertTrue(program.HasAchievement("future-duna-probe-orbit"), "Arbitrary milestone should be recorded.");
+            AssertEqual(4321.0, program.GetAchievementUniversalTime("future-duna-probe-orbit"));
+        }
+
+        private static void GenericAchievementStateValidatesTimestamps()
+        {
+            var program = new SpaceProgramState("Program", false);
+
+            AssertTrue(!program.RecordAchievement(null, 10.0), "Null milestone IDs should be ignored.");
+            AssertTrue(!program.RecordAchievement(string.Empty, 10.0), "Empty milestone IDs should be ignored.");
+            AssertTrue(!program.RecordAchievement("nan", double.NaN), "NaN achievement times should be ignored.");
+            AssertTrue(
+                !program.RecordAchievement("infinite", double.PositiveInfinity),
+                "Infinite achievement times should be ignored.");
+            AssertTrue(program.RecordAchievement("early", -10.0), "Finite negative times should be normalized.");
+            AssertEqual(0.0, program.GetAchievementUniversalTime("early"));
         }
 
         private static void RivalLaunchCostsMatchTargetType()

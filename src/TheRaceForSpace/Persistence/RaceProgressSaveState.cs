@@ -1,269 +1,181 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using TheRaceForSpace.Funding;
-using TheRaceForSpace.Milestones;
 using TheRaceForSpace.Programs;
 
 namespace TheRaceForSpace.Persistence
 {
     /// <summary>
-    /// Serializable 0.3 campaign progression that is not owned directly by KSP vessel state.
-    /// This class stores values only; unlock and payout calculations remain in gameplay modules.
+    /// Serializable campaign progression that is not owned directly by KSP vessel state.
+    /// Stable IDs are persisted in repeated child nodes so new milestones and programmes do not
+    /// require another fixed save field.
     /// </summary>
     public sealed class RaceProgressSaveState
     {
+        private const string AchievementNodeName = "ACHIEVEMENT";
+        private const string FundingProgrammeNodeName = "FUNDING_PROGRAMME";
+        private const string ContractNodeName = "CONTRACT";
+        private const string IdValueName = "id";
+        private const string UniversalTimeValueName = "universalTime";
+        private const string StartedValueName = "started";
+        private const string PaymentsProcessedValueName = "paymentsProcessed";
+
+        private readonly Dictionary<string, double> _achievementTimesById =
+            new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
+        private readonly HashSet<string> _unlockedFundingProgrammeIds =
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, bool> _contractStartedById =
+            new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, int> _contractPaymentsProcessedById =
+            new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+
         public bool HasData { get; private set; }
-        public bool PlayerProbeOrbit { get; private set; }
-        public double PlayerProbeOrbitUniversalTime { get; private set; }
-        public bool PlayerCrewedOrbit { get; private set; }
-        public double PlayerCrewedOrbitUniversalTime { get; private set; }
-        public bool PlayerMunProbeOrbit { get; private set; }
-        public double PlayerMunProbeOrbitUniversalTime { get; private set; }
-        public bool PlayerMinmusProbeOrbit { get; private set; }
-        public double PlayerMinmusProbeOrbitUniversalTime { get; private set; }
-        public bool PlayerMunCrewedOrbit { get; private set; }
-        public double PlayerMunCrewedOrbitUniversalTime { get; private set; }
-        public bool PlayerMinmusCrewedOrbit { get; private set; }
-        public double PlayerMinmusCrewedOrbitUniversalTime { get; private set; }
-        public bool KerbinNetworkUnlocked { get; private set; }
-        public bool MunNetworkUnlocked { get; private set; }
-        public bool MinmusNetworkUnlocked { get; private set; }
-        public bool ProbeContractStarted { get; private set; }
-        public int ProbePaymentsProcessed { get; private set; }
-        public bool CrewedContractStarted { get; private set; }
-        public int CrewedPaymentsProcessed { get; private set; }
-        public bool MunProbeContractStarted { get; private set; }
-        public int MunProbePaymentsProcessed { get; private set; }
-        public bool MinmusProbeContractStarted { get; private set; }
-        public int MinmusProbePaymentsProcessed { get; private set; }
-        public bool MunCrewedContractStarted { get; private set; }
-        public int MunCrewedPaymentsProcessed { get; private set; }
-        public bool MinmusCrewedContractStarted { get; private set; }
-        public int MinmusCrewedPaymentsProcessed { get; private set; }
 
         public void Capture(
             SpaceProgramState playerProgram,
-            FundingProgramme kerbinProgramme,
-            FundingProgramme munProgramme,
-            FundingProgramme minmusProgramme,
-            AchievementFundingProgramme probeOrbitProgramme,
-            AchievementFundingProgramme crewedOrbitProgramme,
-            AchievementFundingProgramme munProbeOrbitProgramme,
-            AchievementFundingProgramme minmusProbeOrbitProgramme,
-            AchievementFundingProgramme munCrewedOrbitProgramme,
-            AchievementFundingProgramme minmusCrewedOrbitProgramme)
+            IList<FundingProgramme> fundingProgrammes,
+            IList<AchievementFundingProgramme> achievementProgrammes)
         {
-            if (playerProgram == null
-                || kerbinProgramme == null
-                || munProgramme == null
-                || minmusProgramme == null
-                || probeOrbitProgramme == null
-                || crewedOrbitProgramme == null
-                || munProbeOrbitProgramme == null
-                || minmusProbeOrbitProgramme == null
-                || munCrewedOrbitProgramme == null
-                || minmusCrewedOrbitProgramme == null)
+            if (playerProgram == null || fundingProgrammes == null || achievementProgrammes == null)
             {
                 return;
             }
 
+            ClearState();
             HasData = true;
-            PlayerProbeOrbit = playerProgram.HasAchievement(PrototypeMilestones.ProbeOrbitId);
-            PlayerProbeOrbitUniversalTime = NormalizeAchievementTime(
-                PlayerProbeOrbit,
-                playerProgram.GetAchievementUniversalTime(PrototypeMilestones.ProbeOrbitId));
-            PlayerCrewedOrbit = playerProgram.HasAchievement(PrototypeMilestones.CrewedOrbitId);
-            PlayerCrewedOrbitUniversalTime = NormalizeAchievementTime(
-                PlayerCrewedOrbit,
-                playerProgram.GetAchievementUniversalTime(PrototypeMilestones.CrewedOrbitId));
-            PlayerMunProbeOrbit = playerProgram.HasAchievement(PrototypeMilestones.MunProbeOrbitId);
-            PlayerMunProbeOrbitUniversalTime = NormalizeAchievementTime(
-                PlayerMunProbeOrbit,
-                playerProgram.GetAchievementUniversalTime(PrototypeMilestones.MunProbeOrbitId));
-            PlayerMinmusProbeOrbit = playerProgram.HasAchievement(PrototypeMilestones.MinmusProbeOrbitId);
-            PlayerMinmusProbeOrbitUniversalTime = NormalizeAchievementTime(
-                PlayerMinmusProbeOrbit,
-                playerProgram.GetAchievementUniversalTime(PrototypeMilestones.MinmusProbeOrbitId));
-            PlayerMunCrewedOrbit = playerProgram.HasAchievement(PrototypeMilestones.MunCrewedOrbitId);
-            PlayerMunCrewedOrbitUniversalTime = NormalizeAchievementTime(
-                PlayerMunCrewedOrbit,
-                playerProgram.GetAchievementUniversalTime(PrototypeMilestones.MunCrewedOrbitId));
-            PlayerMinmusCrewedOrbit = playerProgram.HasAchievement(PrototypeMilestones.MinmusCrewedOrbitId);
-            PlayerMinmusCrewedOrbitUniversalTime = NormalizeAchievementTime(
-                PlayerMinmusCrewedOrbit,
-                playerProgram.GetAchievementUniversalTime(PrototypeMilestones.MinmusCrewedOrbitId));
-            KerbinNetworkUnlocked = kerbinProgramme.IsAvailable;
-            MunNetworkUnlocked = munProgramme.IsAvailable;
-            MinmusNetworkUnlocked = minmusProgramme.IsAvailable;
-            ProbeContractStarted = probeOrbitProgramme.HasStarted;
-            ProbePaymentsProcessed = probeOrbitProgramme.PaymentsProcessed;
-            CrewedContractStarted = crewedOrbitProgramme.HasStarted;
-            CrewedPaymentsProcessed = crewedOrbitProgramme.PaymentsProcessed;
-            MunProbeContractStarted = munProbeOrbitProgramme.HasStarted;
-            MunProbePaymentsProcessed = munProbeOrbitProgramme.PaymentsProcessed;
-            MinmusProbeContractStarted = minmusProbeOrbitProgramme.HasStarted;
-            MinmusProbePaymentsProcessed = minmusProbeOrbitProgramme.PaymentsProcessed;
-            MunCrewedContractStarted = munCrewedOrbitProgramme.HasStarted;
-            MunCrewedPaymentsProcessed = munCrewedOrbitProgramme.PaymentsProcessed;
-            MinmusCrewedContractStarted = minmusCrewedOrbitProgramme.HasStarted;
-            MinmusCrewedPaymentsProcessed = minmusCrewedOrbitProgramme.PaymentsProcessed;
+
+            foreach (KeyValuePair<string, double> achievement in playerProgram.RecordedAchievements)
+            {
+                if (!string.IsNullOrEmpty(achievement.Key)
+                    && !double.IsNaN(achievement.Value)
+                    && !double.IsInfinity(achievement.Value))
+                {
+                    _achievementTimesById[achievement.Key] = Math.Max(0.0, achievement.Value);
+                }
+            }
+
+            for (int programmeIndex = 0; programmeIndex < fundingProgrammes.Count; programmeIndex++)
+            {
+                FundingProgramme programme = fundingProgrammes[programmeIndex];
+                if (programme != null && programme.IsAvailable && !string.IsNullOrEmpty(programme.Id))
+                {
+                    _unlockedFundingProgrammeIds.Add(programme.Id);
+                }
+            }
+
+            for (int programmeIndex = 0; programmeIndex < achievementProgrammes.Count; programmeIndex++)
+            {
+                AchievementFundingProgramme programme = achievementProgrammes[programmeIndex];
+                if (programme == null || string.IsNullOrEmpty(programme.Id))
+                {
+                    continue;
+                }
+
+                _contractStartedById[programme.Id] = programme.HasStarted;
+                _contractPaymentsProcessedById[programme.Id] = Math.Max(
+                    0,
+                    Math.Min(10, programme.PaymentsProcessed));
+            }
         }
 
         public void ApplyTo(
             SpaceProgramState playerProgram,
-            FundingProgramme kerbinProgramme,
-            FundingProgramme munProgramme,
-            FundingProgramme minmusProgramme,
-            AchievementFundingProgramme probeOrbitProgramme,
-            AchievementFundingProgramme crewedOrbitProgramme,
-            AchievementFundingProgramme munProbeOrbitProgramme,
-            AchievementFundingProgramme minmusProbeOrbitProgramme,
-            AchievementFundingProgramme munCrewedOrbitProgramme,
-            AchievementFundingProgramme minmusCrewedOrbitProgramme)
+            IList<FundingProgramme> fundingProgrammes,
+            IList<AchievementFundingProgramme> achievementProgrammes)
         {
-            if (!HasData
-                || playerProgram == null
-                || kerbinProgramme == null
-                || munProgramme == null
-                || minmusProgramme == null
-                || probeOrbitProgramme == null
-                || crewedOrbitProgramme == null
-                || munProbeOrbitProgramme == null
-                || minmusProbeOrbitProgramme == null
-                || munCrewedOrbitProgramme == null
-                || minmusCrewedOrbitProgramme == null)
+            if (!HasData || playerProgram == null || fundingProgrammes == null || achievementProgrammes == null)
             {
                 return;
             }
 
-            if (PlayerProbeOrbit)
+            foreach (KeyValuePair<string, double> achievement in _achievementTimesById)
             {
-                playerProgram.RecordAchievement(PrototypeMilestones.ProbeOrbitId, PlayerProbeOrbitUniversalTime);
+                playerProgram.RecordAchievement(achievement.Key, achievement.Value);
             }
 
-            if (PlayerCrewedOrbit)
+            for (int programmeIndex = 0; programmeIndex < fundingProgrammes.Count; programmeIndex++)
             {
-                playerProgram.RecordAchievement(PrototypeMilestones.CrewedOrbitId, PlayerCrewedOrbitUniversalTime);
+                FundingProgramme programme = fundingProgrammes[programmeIndex];
+                if (programme != null
+                    && !string.IsNullOrEmpty(programme.Id)
+                    && _unlockedFundingProgrammeIds.Contains(programme.Id))
+                {
+                    programme.Unlock();
+                }
             }
 
-            if (PlayerMunProbeOrbit)
+            for (int programmeIndex = 0; programmeIndex < achievementProgrammes.Count; programmeIndex++)
             {
-                playerProgram.RecordAchievement(PrototypeMilestones.MunProbeOrbitId, PlayerMunProbeOrbitUniversalTime);
-            }
+                AchievementFundingProgramme programme = achievementProgrammes[programmeIndex];
+                if (programme == null || string.IsNullOrEmpty(programme.Id))
+                {
+                    continue;
+                }
 
-            if (PlayerMinmusProbeOrbit)
-            {
-                playerProgram.RecordAchievement(PrototypeMilestones.MinmusProbeOrbitId, PlayerMinmusProbeOrbitUniversalTime);
+                bool started;
+                int paymentsProcessed;
+                if (_contractStartedById.TryGetValue(programme.Id, out started)
+                    && _contractPaymentsProcessedById.TryGetValue(programme.Id, out paymentsProcessed))
+                {
+                    programme.RestoreState(started, paymentsProcessed);
+                }
             }
-
-            if (PlayerMunCrewedOrbit)
-            {
-                playerProgram.RecordAchievement(PrototypeMilestones.MunCrewedOrbitId, PlayerMunCrewedOrbitUniversalTime);
-            }
-
-            if (PlayerMinmusCrewedOrbit)
-            {
-                playerProgram.RecordAchievement(PrototypeMilestones.MinmusCrewedOrbitId, PlayerMinmusCrewedOrbitUniversalTime);
-            }
-
-            if (KerbinNetworkUnlocked)
-            {
-                kerbinProgramme.Unlock();
-            }
-
-            if (MunNetworkUnlocked)
-            {
-                munProgramme.Unlock();
-            }
-
-            if (MinmusNetworkUnlocked)
-            {
-                minmusProgramme.Unlock();
-            }
-
-            probeOrbitProgramme.RestoreState(ProbeContractStarted, ProbePaymentsProcessed);
-            crewedOrbitProgramme.RestoreState(CrewedContractStarted, CrewedPaymentsProcessed);
-            munProbeOrbitProgramme.RestoreState(MunProbeContractStarted, MunProbePaymentsProcessed);
-            minmusProbeOrbitProgramme.RestoreState(MinmusProbeContractStarted, MinmusProbePaymentsProcessed);
-            munCrewedOrbitProgramme.RestoreState(MunCrewedContractStarted, MunCrewedPaymentsProcessed);
-            minmusCrewedOrbitProgramme.RestoreState(MinmusCrewedContractStarted, MinmusCrewedPaymentsProcessed);
         }
 
         public void Load(ConfigNode node)
         {
+            ClearState();
             HasData = node != null;
-            PlayerProbeOrbit = false;
-            PlayerProbeOrbitUniversalTime = -1.0;
-            PlayerCrewedOrbit = false;
-            PlayerCrewedOrbitUniversalTime = -1.0;
-            PlayerMunProbeOrbit = false;
-            PlayerMunProbeOrbitUniversalTime = -1.0;
-            PlayerMinmusProbeOrbit = false;
-            PlayerMinmusProbeOrbitUniversalTime = -1.0;
-            PlayerMunCrewedOrbit = false;
-            PlayerMunCrewedOrbitUniversalTime = -1.0;
-            PlayerMinmusCrewedOrbit = false;
-            PlayerMinmusCrewedOrbitUniversalTime = -1.0;
-            KerbinNetworkUnlocked = false;
-            MunNetworkUnlocked = false;
-            MinmusNetworkUnlocked = false;
-            ProbeContractStarted = false;
-            ProbePaymentsProcessed = 0;
-            CrewedContractStarted = false;
-            CrewedPaymentsProcessed = 0;
-            MunProbeContractStarted = false;
-            MunProbePaymentsProcessed = 0;
-            MinmusProbeContractStarted = false;
-            MinmusProbePaymentsProcessed = 0;
-            MunCrewedContractStarted = false;
-            MunCrewedPaymentsProcessed = 0;
-            MinmusCrewedContractStarted = false;
-            MinmusCrewedPaymentsProcessed = 0;
-
             if (!HasData)
             {
                 return;
             }
 
-            PlayerProbeOrbit = ParseBool(node.GetValue("playerProbeOrbit"));
-            PlayerProbeOrbitUniversalTime = ParseAchievementTime(
-                node.GetValue("playerProbeOrbitUniversalTime"),
-                PlayerProbeOrbit);
-            PlayerCrewedOrbit = ParseBool(node.GetValue("playerCrewedOrbit"));
-            PlayerCrewedOrbitUniversalTime = ParseAchievementTime(
-                node.GetValue("playerCrewedOrbitUniversalTime"),
-                PlayerCrewedOrbit);
-            PlayerMunProbeOrbit = ParseBool(node.GetValue("playerMunProbeOrbit"));
-            PlayerMunProbeOrbitUniversalTime = ParseAchievementTime(
-                node.GetValue("playerMunProbeOrbitUniversalTime"),
-                PlayerMunProbeOrbit);
-            PlayerMinmusProbeOrbit = ParseBool(node.GetValue("playerMinmusProbeOrbit"));
-            PlayerMinmusProbeOrbitUniversalTime = ParseAchievementTime(
-                node.GetValue("playerMinmusProbeOrbitUniversalTime"),
-                PlayerMinmusProbeOrbit);
-            PlayerMunCrewedOrbit = ParseBool(node.GetValue("playerMunCrewedOrbit"));
-            PlayerMunCrewedOrbitUniversalTime = ParseAchievementTime(
-                node.GetValue("playerMunCrewedOrbitUniversalTime"),
-                PlayerMunCrewedOrbit);
-            PlayerMinmusCrewedOrbit = ParseBool(node.GetValue("playerMinmusCrewedOrbit"));
-            PlayerMinmusCrewedOrbitUniversalTime = ParseAchievementTime(
-                node.GetValue("playerMinmusCrewedOrbitUniversalTime"),
-                PlayerMinmusCrewedOrbit);
-            KerbinNetworkUnlocked = ParseBool(node.GetValue("kerbinNetworkUnlocked"));
-            MunNetworkUnlocked = ParseBool(node.GetValue("munNetworkUnlocked"));
-            MinmusNetworkUnlocked = ParseBool(node.GetValue("minmusNetworkUnlocked"));
-            ProbeContractStarted = ParseBool(node.GetValue("probeContractStarted"));
-            ProbePaymentsProcessed = ParsePaymentCount(node.GetValue("probePaymentsProcessed"));
-            CrewedContractStarted = ParseBool(node.GetValue("crewedContractStarted"));
-            CrewedPaymentsProcessed = ParsePaymentCount(node.GetValue("crewedPaymentsProcessed"));
-            MunProbeContractStarted = ParseBool(node.GetValue("munProbeContractStarted"));
-            MunProbePaymentsProcessed = ParsePaymentCount(node.GetValue("munProbePaymentsProcessed"));
-            MinmusProbeContractStarted = ParseBool(node.GetValue("minmusProbeContractStarted"));
-            MinmusProbePaymentsProcessed = ParsePaymentCount(node.GetValue("minmusProbePaymentsProcessed"));
-            MunCrewedContractStarted = ParseBool(node.GetValue("munCrewedContractStarted"));
-            MunCrewedPaymentsProcessed = ParsePaymentCount(node.GetValue("munCrewedPaymentsProcessed"));
-            MinmusCrewedContractStarted = ParseBool(node.GetValue("minmusCrewedContractStarted"));
-            MinmusCrewedPaymentsProcessed = ParsePaymentCount(node.GetValue("minmusCrewedPaymentsProcessed"));
+            ConfigNode[] achievementNodes = node.GetNodes(AchievementNodeName);
+            for (int nodeIndex = 0; nodeIndex < achievementNodes.Length; nodeIndex++)
+            {
+                ConfigNode achievementNode = achievementNodes[nodeIndex];
+                string id = achievementNode.GetValue(IdValueName);
+                double universalTime;
+                if (string.IsNullOrEmpty(id)
+                    || !TryParseFiniteDouble(achievementNode.GetValue(UniversalTimeValueName), out universalTime))
+                {
+                    continue;
+                }
+
+                universalTime = Math.Max(0.0, universalTime);
+                double existingTime;
+                if (!_achievementTimesById.TryGetValue(id, out existingTime) || universalTime < existingTime)
+                {
+                    _achievementTimesById[id] = universalTime;
+                }
+            }
+
+            ConfigNode[] fundingNodes = node.GetNodes(FundingProgrammeNodeName);
+            for (int nodeIndex = 0; nodeIndex < fundingNodes.Length; nodeIndex++)
+            {
+                string id = fundingNodes[nodeIndex].GetValue(IdValueName);
+                if (!string.IsNullOrEmpty(id))
+                {
+                    _unlockedFundingProgrammeIds.Add(id);
+                }
+            }
+
+            ConfigNode[] contractNodes = node.GetNodes(ContractNodeName);
+            for (int nodeIndex = 0; nodeIndex < contractNodes.Length; nodeIndex++)
+            {
+                ConfigNode contractNode = contractNodes[nodeIndex];
+                string id = contractNode.GetValue(IdValueName);
+                if (string.IsNullOrEmpty(id))
+                {
+                    continue;
+                }
+
+                _contractStartedById[id] = ParseBool(contractNode.GetValue(StartedValueName));
+                _contractPaymentsProcessedById[id] = ParsePaymentCount(
+                    contractNode.GetValue(PaymentsProcessedValueName));
+            }
         }
 
         public void Save(ConfigNode node)
@@ -273,54 +185,47 @@ namespace TheRaceForSpace.Persistence
                 return;
             }
 
-            // Keep the 0.3 key names stable while the in-memory programme state is now ID-based.
-            node.AddValue("playerProbeOrbit", PlayerProbeOrbit);
-            node.AddValue(
-                "playerProbeOrbitUniversalTime",
-                PlayerProbeOrbitUniversalTime.ToString("R", CultureInfo.InvariantCulture));
-            node.AddValue("playerCrewedOrbit", PlayerCrewedOrbit);
-            node.AddValue(
-                "playerCrewedOrbitUniversalTime",
-                PlayerCrewedOrbitUniversalTime.ToString("R", CultureInfo.InvariantCulture));
-            node.AddValue("playerMunProbeOrbit", PlayerMunProbeOrbit);
-            node.AddValue(
-                "playerMunProbeOrbitUniversalTime",
-                PlayerMunProbeOrbitUniversalTime.ToString("R", CultureInfo.InvariantCulture));
-            node.AddValue("playerMinmusProbeOrbit", PlayerMinmusProbeOrbit);
-            node.AddValue(
-                "playerMinmusProbeOrbitUniversalTime",
-                PlayerMinmusProbeOrbitUniversalTime.ToString("R", CultureInfo.InvariantCulture));
-            node.AddValue("playerMunCrewedOrbit", PlayerMunCrewedOrbit);
-            node.AddValue(
-                "playerMunCrewedOrbitUniversalTime",
-                PlayerMunCrewedOrbitUniversalTime.ToString("R", CultureInfo.InvariantCulture));
-            node.AddValue("playerMinmusCrewedOrbit", PlayerMinmusCrewedOrbit);
-            node.AddValue(
-                "playerMinmusCrewedOrbitUniversalTime",
-                PlayerMinmusCrewedOrbitUniversalTime.ToString("R", CultureInfo.InvariantCulture));
-            node.AddValue("kerbinNetworkUnlocked", KerbinNetworkUnlocked);
-            node.AddValue("munNetworkUnlocked", MunNetworkUnlocked);
-            node.AddValue("minmusNetworkUnlocked", MinmusNetworkUnlocked);
-            node.AddValue("probeContractStarted", ProbeContractStarted);
-            node.AddValue("probePaymentsProcessed", ProbePaymentsProcessed.ToString(CultureInfo.InvariantCulture));
-            node.AddValue("crewedContractStarted", CrewedContractStarted);
-            node.AddValue("crewedPaymentsProcessed", CrewedPaymentsProcessed.ToString(CultureInfo.InvariantCulture));
-            node.AddValue("munProbeContractStarted", MunProbeContractStarted);
-            node.AddValue(
-                "munProbePaymentsProcessed",
-                MunProbePaymentsProcessed.ToString(CultureInfo.InvariantCulture));
-            node.AddValue("minmusProbeContractStarted", MinmusProbeContractStarted);
-            node.AddValue(
-                "minmusProbePaymentsProcessed",
-                MinmusProbePaymentsProcessed.ToString(CultureInfo.InvariantCulture));
-            node.AddValue("munCrewedContractStarted", MunCrewedContractStarted);
-            node.AddValue(
-                "munCrewedPaymentsProcessed",
-                MunCrewedPaymentsProcessed.ToString(CultureInfo.InvariantCulture));
-            node.AddValue("minmusCrewedContractStarted", MinmusCrewedContractStarted);
-            node.AddValue(
-                "minmusCrewedPaymentsProcessed",
-                MinmusCrewedPaymentsProcessed.ToString(CultureInfo.InvariantCulture));
+            var achievementIds = new List<string>(_achievementTimesById.Keys);
+            achievementIds.Sort(StringComparer.OrdinalIgnoreCase);
+            for (int idIndex = 0; idIndex < achievementIds.Count; idIndex++)
+            {
+                string id = achievementIds[idIndex];
+                ConfigNode achievementNode = node.AddNode(AchievementNodeName);
+                achievementNode.AddValue(IdValueName, id);
+                achievementNode.AddValue(
+                    UniversalTimeValueName,
+                    _achievementTimesById[id].ToString("R", CultureInfo.InvariantCulture));
+            }
+
+            var fundingProgrammeIds = new List<string>(_unlockedFundingProgrammeIds);
+            fundingProgrammeIds.Sort(StringComparer.OrdinalIgnoreCase);
+            for (int idIndex = 0; idIndex < fundingProgrammeIds.Count; idIndex++)
+            {
+                ConfigNode fundingNode = node.AddNode(FundingProgrammeNodeName);
+                fundingNode.AddValue(IdValueName, fundingProgrammeIds[idIndex]);
+            }
+
+            var contractIds = new List<string>(_contractStartedById.Keys);
+            contractIds.Sort(StringComparer.OrdinalIgnoreCase);
+            for (int idIndex = 0; idIndex < contractIds.Count; idIndex++)
+            {
+                string id = contractIds[idIndex];
+                ConfigNode contractNode = node.AddNode(ContractNodeName);
+                contractNode.AddValue(IdValueName, id);
+                contractNode.AddValue(StartedValueName, _contractStartedById[id]);
+                contractNode.AddValue(
+                    PaymentsProcessedValueName,
+                    _contractPaymentsProcessedById[id].ToString(CultureInfo.InvariantCulture));
+            }
+        }
+
+        private void ClearState()
+        {
+            HasData = false;
+            _achievementTimesById.Clear();
+            _unlockedFundingProgrammeIds.Clear();
+            _contractStartedById.Clear();
+            _contractPaymentsProcessedById.Clear();
         }
 
         private static bool ParseBool(string value)
@@ -341,26 +246,13 @@ namespace TheRaceForSpace.Persistence
             return Math.Max(0, Math.Min(10, parsedValue));
         }
 
-        private static double ParseAchievementTime(string value, bool hasAchievement)
+        private static bool TryParseFiniteDouble(string value, out double parsedValue)
         {
-            if (!hasAchievement)
-            {
-                return -1.0;
-            }
-
-            double parsedValue;
-            if (!string.IsNullOrEmpty(value)
-                && double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out parsedValue))
-            {
-                return Math.Max(0.0, parsedValue);
-            }
-
-            return 0.0;
-        }
-
-        private static double NormalizeAchievementTime(bool hasAchievement, double achievementUniversalTime)
-        {
-            return hasAchievement ? Math.Max(0.0, achievementUniversalTime) : -1.0;
+            parsedValue = 0.0;
+            return !string.IsNullOrEmpty(value)
+                && double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out parsedValue)
+                && !double.IsNaN(parsedValue)
+                && !double.IsInfinity(parsedValue);
         }
     }
 }

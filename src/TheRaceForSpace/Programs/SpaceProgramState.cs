@@ -47,8 +47,10 @@ namespace TheRaceForSpace.Programs
         public bool HasAchievedMinmusCrewedOrbit { get; set; }
         public double MinmusCrewedOrbitAchievementUniversalTime { get; set; }
 
-        // NextLaunchBodyName is retained for save compatibility with 0.2. In 0.3 it may also
-        // contain a named one-off achievement mission while a rival develops it.
+        // Stable mission IDs are authoritative for rival simulation. NextLaunchBodyName remains
+        // temporarily as a compatibility mirror for the current save format and will be removed
+        // when persistence is migrated to ID-based collections.
+        public string NextMissionTargetId { get; set; }
         public string NextLaunchBodyName { get; set; }
         public int LaunchProgressPercent { get; set; }
         public double NextLaunchProgressCheckUniversalTime { get; set; }

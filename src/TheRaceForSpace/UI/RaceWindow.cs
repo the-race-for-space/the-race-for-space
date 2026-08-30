@@ -584,6 +584,36 @@ namespace TheRaceForSpace.UI
             int? launchEtaDays,
             double launchProgressCostFunds)
         {
+            int kerbinSatelliteCount = program.GetSatelliteCount("Kerbin");
+            int munSatelliteCount = program.GetSatelliteCount("Mun");
+            int minmusSatelliteCount = program.GetSatelliteCount("Minmus");
+
+            int totalKerbinSatelliteCount = _raceController.PlayerProgram.GetSatelliteCount("Kerbin")
+                + _raceController.AsterProgram.GetSatelliteCount("Kerbin")
+                + _raceController.CobaltProgram.GetSatelliteCount("Kerbin");
+            int totalMunSatelliteCount = _raceController.PlayerProgram.GetSatelliteCount("Mun")
+                + _raceController.AsterProgram.GetSatelliteCount("Mun")
+                + _raceController.CobaltProgram.GetSatelliteCount("Mun");
+            int totalMinmusSatelliteCount = _raceController.PlayerProgram.GetSatelliteCount("Minmus")
+                + _raceController.AsterProgram.GetSatelliteCount("Minmus")
+                + _raceController.CobaltProgram.GetSatelliteCount("Minmus");
+
+            double probeOrbitNextPayout = _raceController.GetAchievementCurrentPayout(
+                program,
+                _raceController.ProbeOrbitProgramme);
+            double crewedOrbitNextPayout = _raceController.GetAchievementCurrentPayout(
+                program,
+                _raceController.CrewedOrbitProgramme);
+            double kerbinSatelliteNextPayout = _raceController.KerbinNetworkProgramme.CalculateCurrentPayout(
+                kerbinSatelliteCount,
+                totalKerbinSatelliteCount);
+            double munSatelliteNextPayout = _raceController.MunNetworkProgramme.CalculateCurrentPayout(
+                munSatelliteCount,
+                totalMunSatelliteCount);
+            double minmusSatelliteNextPayout = _raceController.MinmusNetworkProgramme.CalculateCurrentPayout(
+                minmusSatelliteCount,
+                totalMinmusSatelliteCount);
+
             GUILayout.BeginVertical("box");
             DrawCenteredCardTitle(program.Name);
 
@@ -610,11 +640,59 @@ namespace TheRaceForSpace.UI
 
             GUILayout.Space(24.0f);
             GUILayout.BeginVertical(GUILayout.ExpandWidth(true));
-            GUILayout.Label("Probe Orbit: " + (program.HasAchievedProbeOrbit ? "ACHIEVED" : "NOT ACHIEVED"));
-            GUILayout.Label("Crewed Orbit: " + (program.HasAchievedCrewedOrbit ? "ACHIEVED" : "NOT ACHIEVED"));
-            GUILayout.Label("Kerbin satellites: " + program.GetSatelliteCount("Kerbin"));
-            GUILayout.Label("Mun satellites: " + program.GetSatelliteCount("Mun"));
-            GUILayout.Label("Minmus satellites: " + program.GetSatelliteCount("Minmus"));
+            GUILayout.Label(
+                "Base Income: "
+                + _raceController.RivalBaseIncomePerFundingPeriod.ToString("N0"));
+
+            string probeOrbitStatus = program.HasAchievedProbeOrbit ? "Completed" : "Not Completed";
+            if (program.HasAchievedProbeOrbit && probeOrbitNextPayout > 0.0)
+            {
+                probeOrbitStatus += " - Next Payout " + probeOrbitNextPayout.ToString("N0");
+            }
+
+            GUILayout.Label("Probe Orbit: " + probeOrbitStatus);
+
+            string crewedOrbitStatus = program.HasAchievedCrewedOrbit ? "Completed" : "Not Completed";
+            if (program.HasAchievedCrewedOrbit && crewedOrbitNextPayout > 0.0)
+            {
+                crewedOrbitStatus += " - Next Payout " + crewedOrbitNextPayout.ToString("N0");
+            }
+
+            GUILayout.Label("Crewed Orbit: " + crewedOrbitStatus);
+
+            if (kerbinSatelliteCount > 0)
+            {
+                string kerbinSatelliteText = "Kerbin Satellites " + kerbinSatelliteCount;
+                if (kerbinSatelliteNextPayout > 0.0)
+                {
+                    kerbinSatelliteText += " - Next Payout " + kerbinSatelliteNextPayout.ToString("N0");
+                }
+
+                GUILayout.Label(kerbinSatelliteText);
+            }
+
+            if (munSatelliteCount > 0)
+            {
+                string munSatelliteText = "Mun Satellites " + munSatelliteCount;
+                if (munSatelliteNextPayout > 0.0)
+                {
+                    munSatelliteText += " - Next Payout " + munSatelliteNextPayout.ToString("N0");
+                }
+
+                GUILayout.Label(munSatelliteText);
+            }
+
+            if (minmusSatelliteCount > 0)
+            {
+                string minmusSatelliteText = "Minmus Satellites " + minmusSatelliteCount;
+                if (minmusSatelliteNextPayout > 0.0)
+                {
+                    minmusSatelliteText += " - Next Payout " + minmusSatelliteNextPayout.ToString("N0");
+                }
+
+                GUILayout.Label(minmusSatelliteText);
+            }
+
             GUILayout.EndVertical();
 
             GUILayout.EndHorizontal();

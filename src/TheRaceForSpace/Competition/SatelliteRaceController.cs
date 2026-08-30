@@ -151,9 +151,8 @@ namespace TheRaceForSpace.Competition
         }
 
         /// <summary>
-        /// Returns the current expected Kerbin days until a rival mission completes. The ETA
-        /// uses the existing projected-income approximation rather than modelling every orbit-contract
-        /// payment timestamp separately.
+        /// Returns the current expected Kerbin days until a rival mission completes, using the
+        /// same shared 90-day funding date shown in the command center for projected income.
         /// </summary>
         public int? GetEstimatedRivalLaunchDays(SpaceProgramState program)
         {
@@ -181,18 +180,26 @@ namespace TheRaceForSpace.Competition
             return GetAchievementAgencyCountAtTime(achievementProgramme, double.PositiveInfinity);
         }
 
+        /// <summary>
+        /// Returns this agency's expected share of the achievement contract on the next global
+        /// funding date. All live contracts pay together on that shared 90-day schedule.
+        /// </summary>
         public double GetAchievementCurrentPayout(
             SpaceProgramState program,
             AchievementFundingProgramme achievementProgramme)
         {
-            if (achievementProgramme == null)
+            if (achievementProgramme == null || _nextFundingUniversalTime < 0.0)
             {
                 return 0.0;
             }
 
+            int eligibleAgencyCount = GetAchievementAgencyCountAtTime(
+                achievementProgramme,
+                _nextFundingUniversalTime);
+
             return achievementProgramme.CalculateCurrentPayout(
-                HasProgramAchieved(program, achievementProgramme),
-                GetAchievementAgencyCount(achievementProgramme));
+                HasProgramAchievedByTime(program, achievementProgramme, _nextFundingUniversalTime),
+                eligibleAgencyCount);
         }
 
         public void Refresh()
@@ -229,8 +236,8 @@ namespace TheRaceForSpace.Competition
 
             if (_nextFundingUniversalTime < 0.0)
             {
-                // Permanent satellite-network funding remains aligned to the global 90-day
-                // Kerbin calendar boundaries used by the 0.2 prototype.
+                // Every contract uses the same 90-day Kerbin calendar boundary. Orbit
+                // achievements change eligibility and interest but never create their own date.
                 _nextFundingUniversalTime =
                     (Math.Floor(currentUniversalTime / FundingIntervalSeconds) + 1.0)
                     * FundingIntervalSeconds;
@@ -239,9 +246,8 @@ namespace TheRaceForSpace.Competition
             SatelliteTracker.RefreshPlayerSatelliteCounts(PlayerProgram);
             UpdateFundingAvailability();
 
-            // Catch rivals up before starting any newly discovered contract. Their simulated
-            // completion timestamps may predate the player's current refresh and therefore
-            // determine the actual first achiever and the contract's independent schedule.
+            // Catch rivals up before processing funding so their recorded achievement timestamps
+            // determine whether they were eligible at each shared funding boundary crossed by time-warp.
             RivalSimulation.Refresh(
                 PlayerProgram,
                 AsterProgram,
@@ -250,13 +256,12 @@ namespace TheRaceForSpace.Competition
                 KerbinNetworkProgramme.IsAvailable,
                 MunNetworkProgramme.IsAvailable,
                 MinmusNetworkProgramme.IsAvailable,
-                IsAchievementTargetStillLive(ProbeOrbitProgramme, currentUniversalTime),
-                IsAchievementTargetStillLive(CrewedOrbitProgramme, currentUniversalTime));
+                !ProbeOrbitProgramme.IsExpired,
+                !CrewedOrbitProgramme.IsExpired);
 
             UpdateFundingAvailability();
             StartAchievementContracts();
-            ProcessDueAchievementFunding(currentUniversalTime);
-            ProcessDueNetworkFunding(currentUniversalTime);
+            ProcessDueFunding(currentUniversalTime);
             EvaluateFundingProgrammes();
 
             RacePersistenceScenario.CaptureRivalState(AsterProgram, CobaltProgram);
@@ -337,65 +342,48 @@ namespace TheRaceForSpace.Competition
             for (int programmeIndex = 0; programmeIndex < _achievementFundingProgrammes.Count; programmeIndex++)
             {
                 AchievementFundingProgramme programme = _achievementFundingProgrammes[programmeIndex];
-                double firstAchievementUniversalTime = GetFirstAchievementUniversalTime(programme);
-
-                if (!programme.HasStarted && firstAchievementUniversalTime >= 0.0)
+                if (!programme.HasStarted && GetAchievementAgencyCount(programme) > 0)
                 {
-                    programme.Start(firstAchievementUniversalTime);
-                    continue;
-                }
-
-                // Repair the short-lived first 0.3 implementation-pass format, which persisted
-                // a started/payment count before independent next-payout timestamps were added.
-                if (programme.HasStarted
-                    && !programme.IsExpired
-                    && programme.NextPayoutUniversalTime < 0.0
-                    && firstAchievementUniversalTime >= 0.0)
-                {
-                    programme.RestoreState(
-                        true,
-                        programme.PaymentsProcessed,
-                        firstAchievementUniversalTime + (programme.PaymentsProcessed * FundingIntervalSeconds));
+                    programme.Start();
                 }
             }
         }
 
-        private bool IsAchievementTargetStillLive(
-            AchievementFundingProgramme programme,
-            double currentUniversalTime)
+        /// <summary>
+        /// Processes every crossed global 90-day funding boundary. Satellite programmes and
+        /// achievement programmes are deliberately paid in the same loop so every contract
+        /// shares one funding date. Achievement interest only advances when at least one agency
+        /// had qualified by that exact boundary.
+        /// </summary>
+        private void ProcessDueFunding(double currentUniversalTime)
         {
-            if (programme == null || programme.IsExpired)
+            while (_nextFundingUniversalTime >= 0.0 && currentUniversalTime >= _nextFundingUniversalTime)
             {
-                return false;
-            }
+                double payoutUniversalTime = _nextFundingUniversalTime;
 
-            if (!programme.HasStarted || programme.NextPayoutUniversalTime < 0.0)
-            {
-                return true;
-            }
+                EvaluateSatelliteRaceClaims();
 
-            int paymentsRemaining = 10 - programme.PaymentsProcessed;
-            double finalPayoutUniversalTime = programme.NextPayoutUniversalTime
-                + ((paymentsRemaining - 1) * FundingIntervalSeconds);
-
-            // A mission completed exactly on the final payout boundary may still qualify
-            // for that payment. After that timestamp the contract is no longer a valid target.
-            return currentUniversalTime <= finalPayoutUniversalTime;
-        }
-
-        private void ProcessDueAchievementFunding(double currentUniversalTime)
-        {
-            for (int programmeIndex = 0; programmeIndex < _achievementFundingProgrammes.Count; programmeIndex++)
-            {
-                AchievementFundingProgramme programme = _achievementFundingProgrammes[programmeIndex];
-
-                while (programme.HasStarted
-                    && !programme.IsExpired
-                    && programme.NextPayoutUniversalTime >= 0.0
-                    && currentUniversalTime >= programme.NextPayoutUniversalTime)
+                for (int programIndex = 0; programIndex < _programs.Count; programIndex++)
                 {
-                    double payoutUniversalTime = programme.NextPayoutUniversalTime;
+                    SpaceProgramState program = _programs[programIndex];
+                    AwardProgramFunds(program, CalculateSatelliteFundingForProgram(program));
+                }
+
+                for (int programmeIndex = 0; programmeIndex < _achievementFundingProgrammes.Count; programmeIndex++)
+                {
+                    AchievementFundingProgramme programme = _achievementFundingProgrammes[programmeIndex];
+                    if (!programme.HasStarted || programme.IsExpired)
+                    {
+                        continue;
+                    }
+
                     int eligibleAgencyCount = GetAchievementAgencyCountAtTime(programme, payoutUniversalTime);
+                    if (eligibleAgencyCount <= 0)
+                    {
+                        // The first achievement occurred after this historical funding boundary,
+                        // so this contract must wait for the next global date at the same 100% stage.
+                        continue;
+                    }
 
                     for (int programIndex = 0; programIndex < _programs.Count; programIndex++)
                     {
@@ -405,19 +393,7 @@ namespace TheRaceForSpace.Competition
                         AwardProgramFunds(program, payout);
                     }
 
-                    programme.AdvancePayout(FundingIntervalSeconds);
-                }
-            }
-        }
-
-        private void ProcessDueNetworkFunding(double currentUniversalTime)
-        {
-            while (_nextFundingUniversalTime >= 0.0 && currentUniversalTime >= _nextFundingUniversalTime)
-            {
-                for (int programIndex = 0; programIndex < _programs.Count; programIndex++)
-                {
-                    SpaceProgramState program = _programs[programIndex];
-                    AwardProgramFunds(program, CalculateSatelliteFundingForProgram(program));
+                    programme.AdvancePayout();
                 }
 
                 _nextFundingUniversalTime += FundingIntervalSeconds;
@@ -457,20 +433,31 @@ namespace TheRaceForSpace.Competition
                 program.NextPayoutFunds = CalculateSatelliteFundingForProgram(program);
             }
 
-            // NextPayoutFunds is a convenient current projection for the command center and
-            // rival ETA. Orbit contracts have independent dates, so this is deliberately an
-            // aggregate estimate rather than a promise that every component pays simultaneously.
+            if (_nextFundingUniversalTime < 0.0)
+            {
+                return;
+            }
+
+            // All projected amounts below are due on the same next funding date. Achievement
+            // eligibility is evaluated against that date, matching the actual payment path.
             for (int programmeIndex = 0; programmeIndex < _achievementFundingProgrammes.Count; programmeIndex++)
             {
                 AchievementFundingProgramme programme = _achievementFundingProgrammes[programmeIndex];
-                int achievedAgencyCount = GetAchievementAgencyCount(programme);
+                if (!programme.HasStarted || programme.IsExpired)
+                {
+                    continue;
+                }
+
+                int eligibleAgencyCount = GetAchievementAgencyCountAtTime(
+                    programme,
+                    _nextFundingUniversalTime);
 
                 for (int programIndex = 0; programIndex < _programs.Count; programIndex++)
                 {
                     SpaceProgramState program = _programs[programIndex];
                     program.NextPayoutFunds += programme.CalculateCurrentPayout(
-                        HasProgramAchieved(program, programme),
-                        achievedAgencyCount);
+                        HasProgramAchievedByTime(program, programme, _nextFundingUniversalTime),
+                        eligibleAgencyCount);
                 }
             }
         }
@@ -529,25 +516,6 @@ namespace TheRaceForSpace.Competition
             }
 
             return payout;
-        }
-
-        private double GetFirstAchievementUniversalTime(AchievementFundingProgramme achievementProgramme)
-        {
-            double earliestUniversalTime = double.PositiveInfinity;
-
-            for (int programIndex = 0; programIndex < _programs.Count; programIndex++)
-            {
-                double achievementUniversalTime = GetAchievementUniversalTime(
-                    _programs[programIndex],
-                    achievementProgramme);
-
-                if (achievementUniversalTime >= 0.0 && achievementUniversalTime < earliestUniversalTime)
-                {
-                    earliestUniversalTime = achievementUniversalTime;
-                }
-            }
-
-            return double.IsPositiveInfinity(earliestUniversalTime) ? -1.0 : earliestUniversalTime;
         }
 
         private int GetAchievementAgencyCountAtTime(

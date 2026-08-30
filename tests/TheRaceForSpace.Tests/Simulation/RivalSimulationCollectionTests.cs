@@ -10,10 +10,11 @@ namespace TheRaceForSpace.Tests.Simulation
     {
         public static void SelectsOnlyAvailableAchievementFromCollection()
         {
-            var player = new SpaceProgramState("Player", true);
-            player.RecordAchievement(PrototypeMilestones.CrewedOrbitId, 1.0);
-            var aster = new SpaceProgramState("Aster", false);
-            var cobalt = new SpaceProgramState("Cobalt", false);
+            var player = new SpaceProgramState("player", "Player", true);
+            var aster = new SpaceProgramState("aster", "Aster", false);
+            var cobalt = new SpaceProgramState("cobalt", "Cobalt", false);
+            var delta = new SpaceProgramState("delta", "Delta", false);
+            delta.RecordAchievement(PrototypeMilestones.CrewedOrbitId, 1.0);
 
             MilestoneDefinition milestone = PrototypeMilestones.FindById(
                 PrototypeMilestones.MinmusCrewedOrbitId);
@@ -29,15 +30,14 @@ namespace TheRaceForSpace.Tests.Simulation
             };
 
             RivalSimulation.Refresh(
-                player,
-                aster,
-                cobalt,
+                new List<SpaceProgramState> { player, aster, cobalt, delta },
                 0.0,
                 achievementProgrammes,
                 new List<FundingProgramme>());
 
             TestAssert.Equal(PrototypeMilestones.MinmusCrewedOrbitId, aster.NextMissionTargetId);
             TestAssert.Equal("Minmus Crewed Orbit", aster.NextLaunchBodyName);
+            TestAssert.Equal(PrototypeMilestones.MinmusCrewedOrbitId, cobalt.NextMissionTargetId);
         }
 
         public static void LockedAchievementIsExcludedFromCollection()
@@ -104,13 +104,14 @@ namespace TheRaceForSpace.Tests.Simulation
 
         public static void CompletesArbitrarySatelliteProgramme()
         {
-            var player = new SpaceProgramState("Player", true);
-            var aster = new SpaceProgramState("Aster", false)
+            var player = new SpaceProgramState("player", "Player", true);
+            var aster = new SpaceProgramState("aster", "Aster", false);
+            var cobalt = new SpaceProgramState("cobalt", "Cobalt", false);
+            var delta = new SpaceProgramState("delta", "Delta", false)
             {
                 NextMissionTargetId = "duna-network",
                 LaunchProgressPercent = 100
             };
-            var cobalt = new SpaceProgramState("Cobalt", false);
 
             var fundingProgrammes = new List<FundingProgramme>
             {
@@ -126,16 +127,14 @@ namespace TheRaceForSpace.Tests.Simulation
             };
 
             RivalSimulation.Refresh(
-                player,
-                aster,
-                cobalt,
+                new List<SpaceProgramState> { player, aster, cobalt, delta },
                 1234.0,
                 new List<AchievementFundingProgramme>(),
                 fundingProgrammes);
 
-            TestAssert.Equal(1, aster.GetSatelliteCount("Duna"));
-            TestAssert.Equal(0, aster.LaunchProgressPercent);
-            TestAssert.Equal("duna-network", aster.NextMissionTargetId);
+            TestAssert.Equal(1, delta.GetSatelliteCount("Duna"));
+            TestAssert.Equal(0, delta.LaunchProgressPercent);
+            TestAssert.Equal("duna-network", delta.NextMissionTargetId);
         }
 
         public static void CollectionCostUsesProgrammeBody()
@@ -206,73 +205,6 @@ namespace TheRaceForSpace.Tests.Simulation
                 aster.GetAchievementUniversalTime(PrototypeMilestones.MunProbeOrbitId));
             TestAssert.Equal(1, aster.GetSatelliteCount("Mun"));
             TestAssert.Equal(null, aster.NextMissionTargetId);
-        }
-
-        public static void RefreshesFourthRivalFromProgramCollection()
-        {
-            var player = new SpaceProgramState("player", "Player", true);
-            var aster = new SpaceProgramState("aster", "Aster", false);
-            var cobalt = new SpaceProgramState("cobalt", "Cobalt", false);
-            var delta = new SpaceProgramState("delta", "Delta", false)
-            {
-                NextMissionTargetId = "duna-network",
-                LaunchProgressPercent = 100
-            };
-
-            var programs = new List<SpaceProgramState> { player, aster, cobalt, delta };
-            var fundingProgrammes = new List<FundingProgramme>
-            {
-                new FundingProgramme(
-                    "duna-network",
-                    "Duna Orbital Network",
-                    "Duna",
-                    5,
-                    100000.0,
-                    true,
-                    null,
-                    null)
-            };
-
-            RivalSimulation.Refresh(
-                programs,
-                1234.0,
-                new List<AchievementFundingProgramme>(),
-                fundingProgrammes);
-
-            TestAssert.Equal(1, delta.GetSatelliteCount("Duna"));
-            TestAssert.Equal(0, delta.LaunchProgressPercent);
-            TestAssert.Equal("duna-network", delta.NextMissionTargetId);
-        }
-
-        public static void FourthProgramCanSatisfySharedPrerequisite()
-        {
-            var player = new SpaceProgramState("player", "Player", true);
-            var aster = new SpaceProgramState("aster", "Aster", false);
-            var cobalt = new SpaceProgramState("cobalt", "Cobalt", false);
-            var delta = new SpaceProgramState("delta", "Delta", false);
-            delta.RecordAchievement(PrototypeMilestones.ProbeOrbitId, 1.0);
-
-            MilestoneDefinition milestone = PrototypeMilestones.FindById(
-                PrototypeMilestones.MunProbeOrbitId);
-            var achievementProgrammes = new List<AchievementFundingProgramme>
-            {
-                new AchievementFundingProgramme(
-                    milestone.Id,
-                    milestone.Name,
-                    milestone.ObjectiveDescription,
-                    200000.0,
-                    "Display text",
-                    milestone.PrerequisiteMilestoneId)
-            };
-
-            RivalSimulation.Refresh(
-                new List<SpaceProgramState> { player, aster, cobalt, delta },
-                0.0,
-                achievementProgrammes,
-                new List<FundingProgramme>());
-
-            TestAssert.Equal(PrototypeMilestones.MunProbeOrbitId, aster.NextMissionTargetId);
-            TestAssert.Equal(PrototypeMilestones.MunProbeOrbitId, cobalt.NextMissionTargetId);
         }
     }
 

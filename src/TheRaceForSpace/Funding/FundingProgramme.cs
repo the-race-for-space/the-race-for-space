@@ -70,6 +70,13 @@ namespace TheRaceForSpace.Funding
             IsAvailable = true;
         }
 
+        // Persistence replaces campaign state when another save is loaded. Gameplay still uses
+        // Unlock() as the only normal transition and never relocks a programme during a campaign.
+        internal void RestoreAvailability(bool isAvailable)
+        {
+            IsAvailable = isAvailable;
+        }
+
         /// <summary>
         /// Calculates one programme's current share of the fixed funding pool.
         /// Before the target is saturated, payout follows completion percentage.

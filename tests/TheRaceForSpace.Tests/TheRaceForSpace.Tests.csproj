@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>TheRaceForSpace.Tests</AssemblyName>
+    <RootNamespace>TheRaceForSpace.Tests</RootNamespace>
+    <LangVersion>7.3</LangVersion>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+
+  <!--
+    The prototype assembly depends on KSP and Unity, so these tests compile only
+    the domain source files that are intentionally independent of those APIs.
+    This keeps the regression suite runnable without a KSP installation or a
+    third-party test framework.
+  -->
+  <ItemGroup>
+    <Compile Include="../../src/TheRaceForSpace/Funding/FundingProgramme.cs" Link="Production/Funding/FundingProgramme.cs" />
+    <Compile Include="../../src/TheRaceForSpace/Funding/AchievementFundingProgramme.cs" Link="Production/Funding/AchievementFundingProgramme.cs" />
+    <Compile Include="../../src/TheRaceForSpace/Programs/SpaceProgramState.cs" Link="Production/Programs/SpaceProgramState.cs" />
+    <Compile Include="../../src/TheRaceForSpace/Simulation/RivalSimulation.cs" Link="Production/Simulation/RivalSimulation.cs" />
+    <Compile Include="../../src/TheRaceForSpace/Persistence/RaceProgressSaveState.cs" Link="Production/Persistence/RaceProgressSaveState.cs" />
+    <Compile Include="../../src/TheRaceForSpace/Persistence/RivalProgramSaveState.cs" Link="Production/Persistence/RivalProgramSaveState.cs" />
+  </ItemGroup>
+</Project>

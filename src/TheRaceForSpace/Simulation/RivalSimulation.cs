@@ -18,7 +18,7 @@ namespace TheRaceForSpace.Simulation
 
         private const double KerbinDaySeconds = 21600.0;
         private const double LaunchProgressIntervalSeconds = 5.0 * KerbinDaySeconds;
-        private const double LaunchProgressChance = 0.25;
+        private const double LaunchProgressChance = 0.30;
         private const int LaunchProgressIncrementPercent = 10;
         private const double LaunchProgressCostFunds = 20000.0;
         private const double MunMinmusLaunchProgressCostMultiplier = 2.0;

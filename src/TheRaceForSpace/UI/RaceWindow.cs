@@ -23,6 +23,7 @@ namespace TheRaceForSpace.UI
 
         private const float RefreshIntervalSeconds = 5.0f;
         private const int HighlightedCardTitleFontSize = 16;
+        private const int PayoutHeaderFontSize = 14;
         private const string LauncherIconTexturePath =
             "Squad/PartList/SimpleIcons/R&D_node_icon_basicprobes";
         private static SatelliteRaceController _raceController;
@@ -37,6 +38,8 @@ namespace TheRaceForSpace.UI
         private ActiveView _activeView = ActiveView.Overview;
         private ApplicationLauncherButton _launcherButton;
         private GUIStyle _highlightedCardTitleStyle;
+        private GUIStyle _boldLabelStyle;
+        private GUIStyle _payoutHeaderStyle;
         private bool _isDuplicateInstance;
         private bool _isVisible = true;
         private float _nextRefreshTime;
@@ -207,6 +210,18 @@ namespace TheRaceForSpace.UI
                 _highlightedCardTitleStyle.normal.textColor = Color.red;
             }
 
+            if (_boldLabelStyle == null)
+            {
+                _boldLabelStyle = new GUIStyle(GUI.skin.label);
+                _boldLabelStyle.fontStyle = FontStyle.Bold;
+            }
+
+            if (_payoutHeaderStyle == null)
+            {
+                _payoutHeaderStyle = new GUIStyle(_boldLabelStyle);
+                _payoutHeaderStyle.fontSize = PayoutHeaderFontSize;
+            }
+
             GUILayout.BeginHorizontal();
 
             if (GUILayout.Button("Overview", GUILayout.Height(40.0f)))
@@ -259,11 +274,11 @@ namespace TheRaceForSpace.UI
         private void DrawOverview()
         {
             SpaceProgramState player = _raceController.PlayerProgram;
+            int kerbinSatelliteCount = player.GetSatelliteCount("Kerbin");
+            int munSatelliteCount = player.GetSatelliteCount("Mun");
+            int minmusSatelliteCount = player.GetSatelliteCount("Minmus");
 
-            GUILayout.Label("OVERVIEW");
-            GUILayout.Space(6.0f);
-
-            GUILayout.Label("PROGRAM STATUS");
+            GUILayout.Label("Funding Information", _boldLabelStyle);
             if (_raceController.NextFundingYear > 0)
             {
                 GUILayout.Label(
@@ -281,15 +296,27 @@ namespace TheRaceForSpace.UI
             GUILayout.Label("Next payout: " + player.NextPayoutFunds.ToString("N0"));
 
             GUILayout.Space(10.0f);
-            GUILayout.Label("ORBIT ACHIEVEMENTS");
+            GUILayout.Label("Your Objectives", _boldLabelStyle);
             GUILayout.Label("Probe Orbit: " + (player.HasAchievedProbeOrbit ? "ACHIEVED" : "IN PROGRESS"));
             GUILayout.Label("Crewed Orbit: " + (player.HasAchievedCrewedOrbit ? "ACHIEVED" : "IN PROGRESS"));
 
             GUILayout.Space(10.0f);
-            GUILayout.Label("SATELLITE NETWORK");
-            GUILayout.Label("Kerbin orbit: " + player.GetSatelliteCount("Kerbin") + " qualifying satellite(s)");
-            GUILayout.Label("Mun orbit: " + player.GetSatelliteCount("Mun") + " qualifying satellite(s)");
-            GUILayout.Label("Minmus orbit: " + player.GetSatelliteCount("Minmus") + " qualifying satellite(s)");
+            GUILayout.Label("Your Satellite Networks", _boldLabelStyle);
+
+            if (kerbinSatelliteCount > 0)
+            {
+                GUILayout.Label("Kerbin orbit: " + kerbinSatelliteCount + " qualifying satellite(s)");
+            }
+
+            if (munSatelliteCount > 0)
+            {
+                GUILayout.Label("Mun orbit: " + munSatelliteCount + " qualifying satellite(s)");
+            }
+
+            if (minmusSatelliteCount > 0)
+            {
+                GUILayout.Label("Minmus orbit: " + minmusSatelliteCount + " qualifying satellite(s)");
+            }
         }
 
         private void DrawFundingTargets()
@@ -349,14 +376,13 @@ namespace TheRaceForSpace.UI
                 }
 
                 GUILayout.BeginVertical("box");
-                DrawCenteredCardTitle(programme.Name);
+                DrawCenteredCardTitle("Satellite Funding - " + programme.Name);
 
                 GUILayout.BeginHorizontal();
                 GUILayout.BeginVertical(GUILayout.Width(400.0f));
                 GUILayout.Label("Target: " + programme.CelestialBodyName);
                 GUILayout.Label("Requirement: " + programme.RequiredSatellites + " qualifying satellite(s) in orbit");
                 GUILayout.Label("Total Available Payout: " + programme.RewardFunds.ToString("N0"));
-                GUILayout.Label("Contract type: Fixed Contract");
                 GUILayout.EndVertical();
 
                 GUILayout.Space(24.0f);
@@ -489,12 +515,6 @@ namespace TheRaceForSpace.UI
                 _raceController.GetEstimatedRivalLaunchDays(_raceController.CobaltProgram),
                 _raceController.GetRivalLaunchProgressCost(_raceController.CobaltProgram));
 
-            GUILayout.Space(12.0f);
-            GUILayout.Label("RACE COMPARISON");
-            DrawComparisonRow(_raceController.PlayerProgram);
-            DrawComparisonRow(_raceController.AsterProgram);
-            DrawComparisonRow(_raceController.CobaltProgram);
-
             GUILayout.EndScrollView();
         }
 
@@ -614,11 +634,18 @@ namespace TheRaceForSpace.UI
                 minmusSatelliteCount,
                 totalMinmusSatelliteCount);
 
+            bool showProbeOrbitFunding = !_raceController.ProbeOrbitProgramme.IsExpired;
+            bool showCrewedOrbitFunding = !_raceController.CrewedOrbitProgramme.IsExpired;
+            bool showKerbinSatelliteFunding = kerbinSatelliteCount > 0 && kerbinSatelliteNextPayout > 0.0;
+            bool showMunSatelliteFunding = munSatelliteCount > 0 && munSatelliteNextPayout > 0.0;
+            bool showMinmusSatelliteFunding = minmusSatelliteCount > 0 && minmusSatelliteNextPayout > 0.0;
+
             GUILayout.BeginVertical("box");
             DrawCenteredCardTitle(program.Name);
 
             GUILayout.BeginHorizontal();
             GUILayout.BeginVertical(GUILayout.Width(320.0f));
+            GUILayout.Label(string.Empty, _payoutHeaderStyle);
             GUILayout.Label("Funds: " + program.Funds.ToString("N0"));
             GUILayout.Label(
                 "Next Mission Planned: "
@@ -629,73 +656,88 @@ namespace TheRaceForSpace.UI
             string launchEtaText = "Awaiting Funding";
             if (launchEtaDays.HasValue)
             {
-                launchEtaText = launchEtaDays.Value <= 10
-                    ? "Next launch imminent"
-                    : launchEtaDays.Value + " days";
+                if (launchEtaDays.Value <= 10)
+                {
+                    launchEtaText = "Next launch imminent";
+                }
+                else
+                {
+                    // Rival funding arrives in large scheduled steps, so displaying a rounded-up
+                    // ten-day estimate is clearer than implying day-level precision.
+                    int roundedLaunchEtaDays = ((launchEtaDays.Value + 9) / 10) * 10;
+                    launchEtaText = roundedLaunchEtaDays + " days";
+                }
             }
 
             GUILayout.Label("ETA till Completion: " + launchEtaText);
             GUILayout.EndVertical();
 
             GUILayout.Space(24.0f);
-            GUILayout.BeginVertical(GUILayout.Width(330.0f));
-            GUILayout.Label(string.Empty);
+            GUILayout.BeginVertical(GUILayout.Width(245.0f));
+            GUILayout.Label(string.Empty, _payoutHeaderStyle);
             GUILayout.Label("Base Income");
-            GUILayout.Label("Probe Orbit: " + (program.HasAchievedProbeOrbit ? "Completed" : "Not Completed"));
-            GUILayout.Label("Crewed Orbit: " + (program.HasAchievedCrewedOrbit ? "Completed" : "Not Completed"));
 
-            if (kerbinSatelliteCount > 0)
+            if (showProbeOrbitFunding)
+            {
+                GUILayout.Label("Probe Orbit: " + (program.HasAchievedProbeOrbit ? "Completed" : "Not Completed"));
+            }
+
+            if (showCrewedOrbitFunding)
+            {
+                GUILayout.Label("Crewed Orbit: " + (program.HasAchievedCrewedOrbit ? "Completed" : "Not Completed"));
+            }
+
+            if (showKerbinSatelliteFunding)
             {
                 GUILayout.Label("Kerbin Satellites " + kerbinSatelliteCount);
             }
 
-            if (munSatelliteCount > 0)
+            if (showMunSatelliteFunding)
             {
                 GUILayout.Label("Mun Satellites " + munSatelliteCount);
             }
 
-            if (minmusSatelliteCount > 0)
+            if (showMinmusSatelliteFunding)
             {
                 GUILayout.Label("Minmus Satellites " + minmusSatelliteCount);
             }
 
             GUILayout.Space(6.0f);
-            GUILayout.Label("Total Next Payout");
+            GUILayout.Label("Total Next Payout", _boldLabelStyle);
             GUILayout.EndVertical();
 
-            GUILayout.Space(12.0f);
-            GUILayout.BeginVertical(GUILayout.Width(145.0f));
-            GUILayout.Label("Next Payout");
+            GUILayout.Space(2.0f);
+            GUILayout.BeginVertical(GUILayout.Width(125.0f));
+            GUILayout.Label("Next Payout", _payoutHeaderStyle);
             GUILayout.Label(_raceController.RivalBaseIncomePerFundingPeriod.ToString("N0"));
-            GUILayout.Label(probeOrbitNextPayout > 0.0 ? probeOrbitNextPayout.ToString("N0") : string.Empty);
-            GUILayout.Label(crewedOrbitNextPayout > 0.0 ? crewedOrbitNextPayout.ToString("N0") : string.Empty);
 
-            if (kerbinSatelliteCount > 0)
+            if (showProbeOrbitFunding)
             {
-                GUILayout.Label(
-                    kerbinSatelliteNextPayout > 0.0
-                        ? kerbinSatelliteNextPayout.ToString("N0")
-                        : string.Empty);
+                GUILayout.Label(probeOrbitNextPayout > 0.0 ? probeOrbitNextPayout.ToString("N0") : string.Empty);
             }
 
-            if (munSatelliteCount > 0)
+            if (showCrewedOrbitFunding)
             {
-                GUILayout.Label(
-                    munSatelliteNextPayout > 0.0
-                        ? munSatelliteNextPayout.ToString("N0")
-                        : string.Empty);
+                GUILayout.Label(crewedOrbitNextPayout > 0.0 ? crewedOrbitNextPayout.ToString("N0") : string.Empty);
             }
 
-            if (minmusSatelliteCount > 0)
+            if (showKerbinSatelliteFunding)
             {
-                GUILayout.Label(
-                    minmusSatelliteNextPayout > 0.0
-                        ? minmusSatelliteNextPayout.ToString("N0")
-                        : string.Empty);
+                GUILayout.Label(kerbinSatelliteNextPayout.ToString("N0"));
+            }
+
+            if (showMunSatelliteFunding)
+            {
+                GUILayout.Label(munSatelliteNextPayout.ToString("N0"));
+            }
+
+            if (showMinmusSatelliteFunding)
+            {
+                GUILayout.Label(minmusSatelliteNextPayout.ToString("N0"));
             }
 
             GUILayout.Space(6.0f);
-            GUILayout.Label(program.NextPayoutFunds.ToString("N0"));
+            GUILayout.Label(program.NextPayoutFunds.ToString("N0"), _boldLabelStyle);
             GUILayout.EndVertical();
 
             GUILayout.EndHorizontal();
@@ -727,33 +769,6 @@ namespace TheRaceForSpace.UI
         private static string FormatSatelliteCount(int satelliteCount)
         {
             return satelliteCount + (satelliteCount == 1 ? " Satellite" : " Satellites");
-        }
-
-        private static void DrawComparisonRow(SpaceProgramState program)
-        {
-            int totalSatellites = program.GetSatelliteCount("Kerbin")
-                + program.GetSatelliteCount("Mun")
-                + program.GetSatelliteCount("Minmus");
-
-            if (program.IsPlayer)
-            {
-                GUILayout.Label(
-                    program.Name
-                    + " | next payout "
-                    + program.NextPayoutFunds.ToString("N0")
-                    + " | tracked satellites "
-                    + totalSatellites);
-                return;
-            }
-
-            GUILayout.Label(
-                program.Name
-                + " | funds "
-                + program.Funds.ToString("N0")
-                + " | next payout "
-                + program.NextPayoutFunds.ToString("N0")
-                + " | tracked satellites "
-                + totalSatellites);
         }
     }
 }

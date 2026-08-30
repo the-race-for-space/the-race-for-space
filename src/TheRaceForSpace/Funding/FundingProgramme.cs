@@ -8,7 +8,7 @@ namespace TheRaceForSpace.Funding
     public sealed class FundingProgramme
     {
         public FundingProgramme(string id, string name, string celestialBodyName, int requiredSatellites, double rewardFunds)
-            : this(id, name, celestialBodyName, requiredSatellites, rewardFunds, true, null)
+            : this(id, name, celestialBodyName, requiredSatellites, rewardFunds, true, null, null)
         {
         }
 
@@ -20,6 +20,27 @@ namespace TheRaceForSpace.Funding
             double rewardFunds,
             bool isAvailable,
             string unlockRequirement)
+            : this(
+                id,
+                name,
+                celestialBodyName,
+                requiredSatellites,
+                rewardFunds,
+                isAvailable,
+                unlockRequirement,
+                null)
+        {
+        }
+
+        public FundingProgramme(
+            string id,
+            string name,
+            string celestialBodyName,
+            int requiredSatellites,
+            double rewardFunds,
+            bool isAvailable,
+            string unlockRequirement,
+            string prerequisiteMilestoneId)
         {
             Id = id;
             Name = name;
@@ -28,6 +49,7 @@ namespace TheRaceForSpace.Funding
             RewardFunds = rewardFunds;
             IsAvailable = isAvailable;
             UnlockRequirement = unlockRequirement;
+            PrerequisiteMilestoneId = prerequisiteMilestoneId;
         }
 
         public string Id { get; private set; }
@@ -36,6 +58,7 @@ namespace TheRaceForSpace.Funding
         public int RequiredSatellites { get; private set; }
         public double RewardFunds { get; private set; }
         public string UnlockRequirement { get; private set; }
+        public string PrerequisiteMilestoneId { get; private set; }
         public bool IsAvailable { get; private set; }
 
         /// <summary>

@@ -162,32 +162,43 @@ namespace TheRaceForSpace.Tests.Persistence
             var raceState = new RaceProgressSaveState();
             raceState.Load(new ConfigNode());
             var player = new SpaceProgramState("Player", true);
+            player.RecordAchievement("stale-milestone", 55.0);
             var funding = new List<FundingProgramme>
             {
-                new FundingProgramme("future-network", "Future", "Duna", 5, 100000.0, false, null)
+                new FundingProgramme("future-network", "Future", "Duna", 5, 100000.0, true, null)
             };
             var achievements = new List<AchievementFundingProgramme>
             {
                 new AchievementFundingProgramme("future-contract", "Future", "Objective", 100000.0)
             };
+            achievements[0].Start();
+            achievements[0].AdvancePayout();
             raceState.ApplyTo(player, funding, achievements);
 
-            Require(!player.HasAchievement("future-milestone"), "Empty race state should not invent achievements.");
-            Require(!funding[0].IsAvailable, "Empty race state should not unlock funding programmes.");
-            Require(!achievements[0].HasStarted, "Empty race state should not start contracts.");
+            Require(!player.HasAchievement("stale-milestone"), "Empty race state should clear stale achievements.");
+            Require(!funding[0].IsAvailable, "Empty race state should restore funding programmes as locked.");
+            Require(!achievements[0].HasStarted, "Empty race state should reset contract lifecycle state.");
+            Equal(0, achievements[0].PaymentsProcessed);
 
             var rivalState = new RivalProgramSaveState();
             rivalState.Load(new ConfigNode());
             var rival = new SpaceProgramState("Aster", false)
             {
                 NextMissionTargetId = "constructor-default",
-                Funds = 100.0
+                Funds = 100.0,
+                LaunchProgressPercent = 80
             };
+            rival.RecordAchievement("stale-rival-achievement", 10.0);
+            rival.SetSatelliteCount("Duna", 5);
             rivalState.ApplyTo(rival);
 
             Equal(0.0, rival.Funds);
             Equal(null, rival.NextMissionTargetId);
             Equal(0, rival.LaunchProgressPercent);
+            Require(
+                !rival.HasAchievement("stale-rival-achievement"),
+                "Empty rival state should clear stale achievements.");
+            Equal(0, rival.GetSatelliteCount("Duna"));
         }
 
         private static void Require(bool condition, string message)

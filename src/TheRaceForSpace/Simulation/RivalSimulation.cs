@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using TheRaceForSpace.Milestones;
 using TheRaceForSpace.Programs;
 
 namespace TheRaceForSpace.Simulation
@@ -9,6 +10,14 @@ namespace TheRaceForSpace.Simulation
     /// </summary>
     public static class RivalSimulation
     {
+        // Satellite mission IDs deliberately match the funding-programme IDs so later rival
+        // selection can consume the same programme collection without translating identities.
+        public const string KerbinSatelliteTargetId = "kerbin-network";
+        public const string MunSatelliteTargetId = "mun-survey";
+        public const string MinmusSatelliteTargetId = "minmus-relay";
+
+        // These names remain for the current save format and UI compatibility only. Rival
+        // simulation decisions use stable IDs rather than comparing presentation strings.
         public const string ProbeOrbitTargetName = "Probe Orbit";
         public const string CrewedOrbitTargetName = "Crewed Orbit";
         public const string MunProbeOrbitTargetName = "Mun Probe Orbit";
@@ -116,6 +125,40 @@ namespace TheRaceForSpace.Simulation
         }
 
         /// <summary>
+        /// Returns the display text for a stable rival mission target ID, or null for an unknown ID.
+        /// </summary>
+        public static string GetMissionTargetDisplayName(string targetId)
+        {
+            if (string.IsNullOrEmpty(targetId))
+            {
+                return null;
+            }
+
+            MilestoneDefinition milestone = PrototypeMilestones.FindById(targetId);
+            if (milestone != null)
+            {
+                return milestone.Name;
+            }
+
+            if (string.Equals(targetId, KerbinSatelliteTargetId, StringComparison.OrdinalIgnoreCase))
+            {
+                return "Kerbin";
+            }
+
+            if (string.Equals(targetId, MunSatelliteTargetId, StringComparison.OrdinalIgnoreCase))
+            {
+                return "Mun";
+            }
+
+            if (string.Equals(targetId, MinmusSatelliteTargetId, StringComparison.OrdinalIgnoreCase))
+            {
+                return "Minmus";
+            }
+
+            return null;
+        }
+
+        /// <summary>
         /// Returns the funds required for the rival's next successful 10% mission-progress step.
         /// Probe Orbit uses the Kerbin satellite cost, while Crewed Orbit and all Mun/Minmus
         /// achievement or satellite launches cost twice the Kerbin base cost.
@@ -127,17 +170,19 @@ namespace TheRaceForSpace.Simulation
                 return LaunchProgressCostFunds;
             }
 
-            if (string.Equals(program.NextLaunchBodyName, CrewedOrbitTargetName, StringComparison.OrdinalIgnoreCase))
+            string targetId = SynchronizeMissionTargetIdentity(program);
+
+            if (string.Equals(targetId, PrototypeMilestones.CrewedOrbitId, StringComparison.OrdinalIgnoreCase))
             {
                 return LaunchProgressCostFunds * CrewedOrbitLaunchProgressCostMultiplier;
             }
 
-            if (string.Equals(program.NextLaunchBodyName, MunProbeOrbitTargetName, StringComparison.OrdinalIgnoreCase)
-                || string.Equals(program.NextLaunchBodyName, MinmusProbeOrbitTargetName, StringComparison.OrdinalIgnoreCase)
-                || string.Equals(program.NextLaunchBodyName, MunCrewedOrbitTargetName, StringComparison.OrdinalIgnoreCase)
-                || string.Equals(program.NextLaunchBodyName, MinmusCrewedOrbitTargetName, StringComparison.OrdinalIgnoreCase)
-                || string.Equals(program.NextLaunchBodyName, "Mun", StringComparison.OrdinalIgnoreCase)
-                || string.Equals(program.NextLaunchBodyName, "Minmus", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(targetId, PrototypeMilestones.MunProbeOrbitId, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(targetId, PrototypeMilestones.MinmusProbeOrbitId, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(targetId, PrototypeMilestones.MunCrewedOrbitId, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(targetId, PrototypeMilestones.MinmusCrewedOrbitId, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(targetId, MunSatelliteTargetId, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(targetId, MinmusSatelliteTargetId, StringComparison.OrdinalIgnoreCase))
             {
                 return LaunchProgressCostFunds * MunMinmusLaunchProgressCostMultiplier;
             }
@@ -232,18 +277,22 @@ namespace TheRaceForSpace.Simulation
             SpaceProgramState program,
             RivalSimulationContext context)
         {
-            if (!IsTargetAvailable(program.NextLaunchBodyName, program, context))
+            bool hadStoredTarget = !string.IsNullOrEmpty(program.NextMissionTargetId)
+                || !string.IsNullOrEmpty(program.NextLaunchBodyName);
+            string targetId = SynchronizeMissionTargetIdentity(program);
+
+            if ((hadStoredTarget && string.IsNullOrEmpty(targetId))
+                || !IsTargetAvailable(targetId, program, context))
             {
-                // If an achievement contract expires or becomes unavailable before this rival
-                // completes it, abandon that development rather than spending simulated funds
-                // on an objective that is not currently in play.
-                program.NextLaunchBodyName = null;
+                // Invalid legacy targets and targets whose contracts have expired are abandoned
+                // before any more simulated funds can be spent on them.
+                SetMissionTarget(program, null);
                 program.LaunchProgressPercent = 0;
             }
 
-            if (string.IsNullOrEmpty(program.NextLaunchBodyName))
+            if (string.IsNullOrEmpty(program.NextMissionTargetId))
             {
-                program.NextLaunchBodyName = ChooseNextLaunchTarget(program, context);
+                SetMissionTarget(program, ChooseNextLaunchTarget(program, context));
             }
 
             if (program.NextLaunchProgressCheckUniversalTime <= 0.0)
@@ -257,17 +306,17 @@ namespace TheRaceForSpace.Simulation
 
             if (TryCompleteLaunch(program, context.CurrentUniversalTime))
             {
-                program.NextLaunchBodyName = ChooseNextLaunchTarget(program, context);
+                SetMissionTarget(program, ChooseNextLaunchTarget(program, context));
             }
 
             while (context.CurrentUniversalTime >= program.NextLaunchProgressCheckUniversalTime)
             {
-                if (string.IsNullOrEmpty(program.NextLaunchBodyName))
+                if (string.IsNullOrEmpty(program.NextMissionTargetId))
                 {
-                    program.NextLaunchBodyName = ChooseNextLaunchTarget(program, context);
+                    SetMissionTarget(program, ChooseNextLaunchTarget(program, context));
                 }
 
-                if (!string.IsNullOrEmpty(program.NextLaunchBodyName))
+                if (!string.IsNullOrEmpty(program.NextMissionTargetId))
                 {
                     double launchProgressCostFunds = CalculateLaunchProgressCost(program);
 
@@ -283,7 +332,7 @@ namespace TheRaceForSpace.Simulation
 
                     if (TryCompleteLaunch(program, program.NextLaunchProgressCheckUniversalTime))
                     {
-                        program.NextLaunchBodyName = ChooseNextLaunchTarget(program, context);
+                        SetMissionTarget(program, ChooseNextLaunchTarget(program, context));
                     }
                 }
 
@@ -293,12 +342,13 @@ namespace TheRaceForSpace.Simulation
 
         private static bool TryCompleteLaunch(SpaceProgramState program, double completionUniversalTime)
         {
-            if (program.LaunchProgressPercent < 100 || string.IsNullOrEmpty(program.NextLaunchBodyName))
+            string targetId = SynchronizeMissionTargetIdentity(program);
+            if (program.LaunchProgressPercent < 100 || string.IsNullOrEmpty(targetId))
             {
                 return false;
             }
 
-            if (string.Equals(program.NextLaunchBodyName, ProbeOrbitTargetName, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(targetId, PrototypeMilestones.ProbeOrbitId, StringComparison.OrdinalIgnoreCase))
             {
                 if (!program.HasAchievedProbeOrbit)
                 {
@@ -313,7 +363,7 @@ namespace TheRaceForSpace.Simulation
                         program.GetSatelliteCount("Kerbin") + 1);
                 }
             }
-            else if (string.Equals(program.NextLaunchBodyName, CrewedOrbitTargetName, StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(targetId, PrototypeMilestones.CrewedOrbitId, StringComparison.OrdinalIgnoreCase))
             {
                 if (!program.HasAchievedCrewedOrbit)
                 {
@@ -321,7 +371,7 @@ namespace TheRaceForSpace.Simulation
                     program.CrewedOrbitAchievementUniversalTime = Math.Max(0.0, completionUniversalTime);
                 }
             }
-            else if (string.Equals(program.NextLaunchBodyName, MunProbeOrbitTargetName, StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(targetId, PrototypeMilestones.MunProbeOrbitId, StringComparison.OrdinalIgnoreCase))
             {
                 if (!program.HasAchievedMunProbeOrbit)
                 {
@@ -330,7 +380,7 @@ namespace TheRaceForSpace.Simulation
                     program.SetSatelliteCount("Mun", program.GetSatelliteCount("Mun") + 1);
                 }
             }
-            else if (string.Equals(program.NextLaunchBodyName, MinmusProbeOrbitTargetName, StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(targetId, PrototypeMilestones.MinmusProbeOrbitId, StringComparison.OrdinalIgnoreCase))
             {
                 if (!program.HasAchievedMinmusProbeOrbit)
                 {
@@ -339,7 +389,7 @@ namespace TheRaceForSpace.Simulation
                     program.SetSatelliteCount("Minmus", program.GetSatelliteCount("Minmus") + 1);
                 }
             }
-            else if (string.Equals(program.NextLaunchBodyName, MunCrewedOrbitTargetName, StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(targetId, PrototypeMilestones.MunCrewedOrbitId, StringComparison.OrdinalIgnoreCase))
             {
                 if (!program.HasAchievedMunCrewedOrbit)
                 {
@@ -347,7 +397,7 @@ namespace TheRaceForSpace.Simulation
                     program.MunCrewedOrbitAchievementUniversalTime = Math.Max(0.0, completionUniversalTime);
                 }
             }
-            else if (string.Equals(program.NextLaunchBodyName, MinmusCrewedOrbitTargetName, StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(targetId, PrototypeMilestones.MinmusCrewedOrbitId, StringComparison.OrdinalIgnoreCase))
             {
                 if (!program.HasAchievedMinmusCrewedOrbit)
                 {
@@ -355,15 +405,25 @@ namespace TheRaceForSpace.Simulation
                     program.MinmusCrewedOrbitAchievementUniversalTime = Math.Max(0.0, completionUniversalTime);
                 }
             }
+            else if (string.Equals(targetId, KerbinSatelliteTargetId, StringComparison.OrdinalIgnoreCase))
+            {
+                program.SetSatelliteCount("Kerbin", program.GetSatelliteCount("Kerbin") + 1);
+            }
+            else if (string.Equals(targetId, MunSatelliteTargetId, StringComparison.OrdinalIgnoreCase))
+            {
+                program.SetSatelliteCount("Mun", program.GetSatelliteCount("Mun") + 1);
+            }
+            else if (string.Equals(targetId, MinmusSatelliteTargetId, StringComparison.OrdinalIgnoreCase))
+            {
+                program.SetSatelliteCount("Minmus", program.GetSatelliteCount("Minmus") + 1);
+            }
             else
             {
-                program.SetSatelliteCount(
-                    program.NextLaunchBodyName,
-                    program.GetSatelliteCount(program.NextLaunchBodyName) + 1);
+                return false;
             }
 
             program.LaunchProgressPercent = 0;
-            program.NextLaunchBodyName = null;
+            SetMissionTarget(program, null);
             return true;
         }
 
@@ -372,11 +432,11 @@ namespace TheRaceForSpace.Simulation
         /// identical. The target list remains deliberately explicit for the narrow 0.3 prototype.
         /// </summary>
         private static bool IsTargetAvailable(
-            string targetName,
+            string targetId,
             SpaceProgramState program,
             RivalSimulationContext context)
         {
-            if (program == null || string.IsNullOrEmpty(targetName))
+            if (program == null || string.IsNullOrEmpty(targetId))
             {
                 return true;
             }
@@ -385,55 +445,55 @@ namespace TheRaceForSpace.Simulation
                 || context.AsterProgram.HasAchievedCrewedOrbit
                 || context.CobaltProgram.HasAchievedCrewedOrbit;
 
-            if (string.Equals(targetName, ProbeOrbitTargetName, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(targetId, PrototypeMilestones.ProbeOrbitId, StringComparison.OrdinalIgnoreCase))
             {
                 return context.ProbeOrbitContractLive && !program.HasAchievedProbeOrbit;
             }
 
-            if (string.Equals(targetName, CrewedOrbitTargetName, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(targetId, PrototypeMilestones.CrewedOrbitId, StringComparison.OrdinalIgnoreCase))
             {
                 return context.CrewedOrbitContractLive && !program.HasAchievedCrewedOrbit;
             }
 
-            if (string.Equals(targetName, MunProbeOrbitTargetName, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(targetId, PrototypeMilestones.MunProbeOrbitId, StringComparison.OrdinalIgnoreCase))
             {
                 return IsKerbinNetworkAvailable(context)
                     && context.MunProbeOrbitContractLive
                     && !program.HasAchievedMunProbeOrbit;
             }
 
-            if (string.Equals(targetName, MinmusProbeOrbitTargetName, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(targetId, PrototypeMilestones.MinmusProbeOrbitId, StringComparison.OrdinalIgnoreCase))
             {
                 return IsKerbinNetworkAvailable(context)
                     && context.MinmusProbeOrbitContractLive
                     && !program.HasAchievedMinmusProbeOrbit;
             }
 
-            if (string.Equals(targetName, MunCrewedOrbitTargetName, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(targetId, PrototypeMilestones.MunCrewedOrbitId, StringComparison.OrdinalIgnoreCase))
             {
                 return lunarCrewedAchievementsAvailable
                     && context.MunCrewedOrbitContractLive
                     && !program.HasAchievedMunCrewedOrbit;
             }
 
-            if (string.Equals(targetName, MinmusCrewedOrbitTargetName, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(targetId, PrototypeMilestones.MinmusCrewedOrbitId, StringComparison.OrdinalIgnoreCase))
             {
                 return lunarCrewedAchievementsAvailable
                     && context.MinmusCrewedOrbitContractLive
                     && !program.HasAchievedMinmusCrewedOrbit;
             }
 
-            if (string.Equals(targetName, "Kerbin", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(targetId, KerbinSatelliteTargetId, StringComparison.OrdinalIgnoreCase))
             {
                 return IsKerbinNetworkAvailable(context);
             }
 
-            if (string.Equals(targetName, "Mun", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(targetId, MunSatelliteTargetId, StringComparison.OrdinalIgnoreCase))
             {
                 return IsMunNetworkAvailable(context);
             }
 
-            if (string.Equals(targetName, "Minmus", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(targetId, MinmusSatelliteTargetId, StringComparison.OrdinalIgnoreCase))
             {
                 return IsMinmusNetworkAvailable(context);
             }
@@ -448,49 +508,49 @@ namespace TheRaceForSpace.Simulation
             var availableOneOffTargets = new List<string>();
             var availableSatelliteTargets = new List<string>();
 
-            if (IsTargetAvailable(ProbeOrbitTargetName, program, context))
+            if (IsTargetAvailable(PrototypeMilestones.ProbeOrbitId, program, context))
             {
-                availableOneOffTargets.Add(ProbeOrbitTargetName);
+                availableOneOffTargets.Add(PrototypeMilestones.ProbeOrbitId);
             }
 
-            if (IsTargetAvailable(CrewedOrbitTargetName, program, context))
+            if (IsTargetAvailable(PrototypeMilestones.CrewedOrbitId, program, context))
             {
-                availableOneOffTargets.Add(CrewedOrbitTargetName);
+                availableOneOffTargets.Add(PrototypeMilestones.CrewedOrbitId);
             }
 
-            if (IsTargetAvailable(MunProbeOrbitTargetName, program, context))
+            if (IsTargetAvailable(PrototypeMilestones.MunProbeOrbitId, program, context))
             {
-                availableOneOffTargets.Add(MunProbeOrbitTargetName);
+                availableOneOffTargets.Add(PrototypeMilestones.MunProbeOrbitId);
             }
 
-            if (IsTargetAvailable(MinmusProbeOrbitTargetName, program, context))
+            if (IsTargetAvailable(PrototypeMilestones.MinmusProbeOrbitId, program, context))
             {
-                availableOneOffTargets.Add(MinmusProbeOrbitTargetName);
+                availableOneOffTargets.Add(PrototypeMilestones.MinmusProbeOrbitId);
             }
 
-            if (IsTargetAvailable(MunCrewedOrbitTargetName, program, context))
+            if (IsTargetAvailable(PrototypeMilestones.MunCrewedOrbitId, program, context))
             {
-                availableOneOffTargets.Add(MunCrewedOrbitTargetName);
+                availableOneOffTargets.Add(PrototypeMilestones.MunCrewedOrbitId);
             }
 
-            if (IsTargetAvailable(MinmusCrewedOrbitTargetName, program, context))
+            if (IsTargetAvailable(PrototypeMilestones.MinmusCrewedOrbitId, program, context))
             {
-                availableOneOffTargets.Add(MinmusCrewedOrbitTargetName);
+                availableOneOffTargets.Add(PrototypeMilestones.MinmusCrewedOrbitId);
             }
 
-            if (IsTargetAvailable("Kerbin", program, context))
+            if (IsTargetAvailable(KerbinSatelliteTargetId, program, context))
             {
-                availableSatelliteTargets.Add("Kerbin");
+                availableSatelliteTargets.Add(KerbinSatelliteTargetId);
             }
 
-            if (IsTargetAvailable("Mun", program, context))
+            if (IsTargetAvailable(MunSatelliteTargetId, program, context))
             {
-                availableSatelliteTargets.Add("Mun");
+                availableSatelliteTargets.Add(MunSatelliteTargetId);
             }
 
-            if (IsTargetAvailable("Minmus", program, context))
+            if (IsTargetAvailable(MinmusSatelliteTargetId, program, context))
             {
-                availableSatelliteTargets.Add("Minmus");
+                availableSatelliteTargets.Add(MinmusSatelliteTargetId);
             }
 
             if (availableOneOffTargets.Count == 0 && availableSatelliteTargets.Count == 0)
@@ -517,6 +577,106 @@ namespace TheRaceForSpace.Simulation
             }
 
             return selectedTargetType[RandomGenerator.Next(selectedTargetType.Count)];
+        }
+
+        private static string SynchronizeMissionTargetIdentity(SpaceProgramState program)
+        {
+            if (program == null)
+            {
+                return null;
+            }
+
+            if (!string.IsNullOrEmpty(program.NextMissionTargetId))
+            {
+                // Stable IDs are authoritative. If the current save/display mirror disagrees,
+                // regenerate it rather than allowing presentation text to change simulation state.
+                program.NextLaunchBodyName = GetMissionTargetDisplayName(program.NextMissionTargetId);
+                return program.NextMissionTargetId;
+            }
+
+            string targetId = ResolveLegacyMissionTargetId(program.NextLaunchBodyName);
+            if (!string.IsNullOrEmpty(targetId))
+            {
+                program.NextMissionTargetId = targetId;
+                program.NextLaunchBodyName = GetMissionTargetDisplayName(targetId);
+            }
+
+            return targetId;
+        }
+
+        private static string ResolveLegacyMissionTargetId(string legacyTargetName)
+        {
+            if (string.IsNullOrEmpty(legacyTargetName))
+            {
+                return null;
+            }
+
+            MilestoneDefinition milestone = PrototypeMilestones.FindById(legacyTargetName);
+            if (milestone != null)
+            {
+                return milestone.Id;
+            }
+
+            if (string.Equals(legacyTargetName, ProbeOrbitTargetName, StringComparison.OrdinalIgnoreCase))
+            {
+                return PrototypeMilestones.ProbeOrbitId;
+            }
+
+            if (string.Equals(legacyTargetName, CrewedOrbitTargetName, StringComparison.OrdinalIgnoreCase))
+            {
+                return PrototypeMilestones.CrewedOrbitId;
+            }
+
+            if (string.Equals(legacyTargetName, MunProbeOrbitTargetName, StringComparison.OrdinalIgnoreCase))
+            {
+                return PrototypeMilestones.MunProbeOrbitId;
+            }
+
+            if (string.Equals(legacyTargetName, MinmusProbeOrbitTargetName, StringComparison.OrdinalIgnoreCase))
+            {
+                return PrototypeMilestones.MinmusProbeOrbitId;
+            }
+
+            if (string.Equals(legacyTargetName, MunCrewedOrbitTargetName, StringComparison.OrdinalIgnoreCase))
+            {
+                return PrototypeMilestones.MunCrewedOrbitId;
+            }
+
+            if (string.Equals(legacyTargetName, MinmusCrewedOrbitTargetName, StringComparison.OrdinalIgnoreCase))
+            {
+                return PrototypeMilestones.MinmusCrewedOrbitId;
+            }
+
+            if (string.Equals(legacyTargetName, KerbinSatelliteTargetId, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(legacyTargetName, "Kerbin", StringComparison.OrdinalIgnoreCase))
+            {
+                return KerbinSatelliteTargetId;
+            }
+
+            if (string.Equals(legacyTargetName, MunSatelliteTargetId, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(legacyTargetName, "Mun", StringComparison.OrdinalIgnoreCase))
+            {
+                return MunSatelliteTargetId;
+            }
+
+            if (string.Equals(legacyTargetName, MinmusSatelliteTargetId, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(legacyTargetName, "Minmus", StringComparison.OrdinalIgnoreCase))
+            {
+                return MinmusSatelliteTargetId;
+            }
+
+            return null;
+        }
+
+        private static void SetMissionTarget(SpaceProgramState program, string targetId)
+        {
+            if (program == null)
+            {
+                return;
+            }
+
+            program.NextMissionTargetId = targetId;
+            program.NextLaunchBodyName = GetMissionTargetDisplayName(targetId);
         }
 
         private static bool IsKerbinNetworkAvailable(RivalSimulationContext context)

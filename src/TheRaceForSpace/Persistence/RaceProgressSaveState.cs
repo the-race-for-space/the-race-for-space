@@ -20,6 +20,10 @@ namespace TheRaceForSpace.Persistence
         public double PlayerMunProbeOrbitUniversalTime { get; private set; }
         public bool PlayerMinmusProbeOrbit { get; private set; }
         public double PlayerMinmusProbeOrbitUniversalTime { get; private set; }
+        public bool PlayerMunCrewedOrbit { get; private set; }
+        public double PlayerMunCrewedOrbitUniversalTime { get; private set; }
+        public bool PlayerMinmusCrewedOrbit { get; private set; }
+        public double PlayerMinmusCrewedOrbitUniversalTime { get; private set; }
         public bool KerbinNetworkUnlocked { get; private set; }
         public bool MunNetworkUnlocked { get; private set; }
         public bool MinmusNetworkUnlocked { get; private set; }
@@ -31,6 +35,10 @@ namespace TheRaceForSpace.Persistence
         public int MunProbePaymentsProcessed { get; private set; }
         public bool MinmusProbeContractStarted { get; private set; }
         public int MinmusProbePaymentsProcessed { get; private set; }
+        public bool MunCrewedContractStarted { get; private set; }
+        public int MunCrewedPaymentsProcessed { get; private set; }
+        public bool MinmusCrewedContractStarted { get; private set; }
+        public int MinmusCrewedPaymentsProcessed { get; private set; }
 
         // Retained only so saves produced by the short-lived independent-schedule 0.3 pass
         // can still be read and rewritten safely. Gameplay no longer uses these timestamps.
@@ -45,7 +53,9 @@ namespace TheRaceForSpace.Persistence
             AchievementFundingProgramme probeOrbitProgramme,
             AchievementFundingProgramme crewedOrbitProgramme,
             AchievementFundingProgramme munProbeOrbitProgramme,
-            AchievementFundingProgramme minmusProbeOrbitProgramme)
+            AchievementFundingProgramme minmusProbeOrbitProgramme,
+            AchievementFundingProgramme munCrewedOrbitProgramme,
+            AchievementFundingProgramme minmusCrewedOrbitProgramme)
         {
             if (playerProgram == null
                 || kerbinProgramme == null
@@ -54,7 +64,9 @@ namespace TheRaceForSpace.Persistence
                 || probeOrbitProgramme == null
                 || crewedOrbitProgramme == null
                 || munProbeOrbitProgramme == null
-                || minmusProbeOrbitProgramme == null)
+                || minmusProbeOrbitProgramme == null
+                || munCrewedOrbitProgramme == null
+                || minmusCrewedOrbitProgramme == null)
             {
                 return;
             }
@@ -76,6 +88,14 @@ namespace TheRaceForSpace.Persistence
             PlayerMinmusProbeOrbitUniversalTime = NormalizeAchievementTime(
                 PlayerMinmusProbeOrbit,
                 playerProgram.MinmusProbeOrbitAchievementUniversalTime);
+            PlayerMunCrewedOrbit = playerProgram.HasAchievedMunCrewedOrbit;
+            PlayerMunCrewedOrbitUniversalTime = NormalizeAchievementTime(
+                PlayerMunCrewedOrbit,
+                playerProgram.MunCrewedOrbitAchievementUniversalTime);
+            PlayerMinmusCrewedOrbit = playerProgram.HasAchievedMinmusCrewedOrbit;
+            PlayerMinmusCrewedOrbitUniversalTime = NormalizeAchievementTime(
+                PlayerMinmusCrewedOrbit,
+                playerProgram.MinmusCrewedOrbitAchievementUniversalTime);
             KerbinNetworkUnlocked = kerbinProgramme.IsAvailable;
             MunNetworkUnlocked = munProgramme.IsAvailable;
             MinmusNetworkUnlocked = minmusProgramme.IsAvailable;
@@ -87,6 +107,10 @@ namespace TheRaceForSpace.Persistence
             MunProbePaymentsProcessed = munProbeOrbitProgramme.PaymentsProcessed;
             MinmusProbeContractStarted = minmusProbeOrbitProgramme.HasStarted;
             MinmusProbePaymentsProcessed = minmusProbeOrbitProgramme.PaymentsProcessed;
+            MunCrewedContractStarted = munCrewedOrbitProgramme.HasStarted;
+            MunCrewedPaymentsProcessed = munCrewedOrbitProgramme.PaymentsProcessed;
+            MinmusCrewedContractStarted = minmusCrewedOrbitProgramme.HasStarted;
+            MinmusCrewedPaymentsProcessed = minmusCrewedOrbitProgramme.PaymentsProcessed;
 
             // New saves deliberately do not track per-contract payout dates. The fields stay
             // present as -1 for compatibility with the earlier 0.3 prototype save format.
@@ -102,7 +126,9 @@ namespace TheRaceForSpace.Persistence
             AchievementFundingProgramme probeOrbitProgramme,
             AchievementFundingProgramme crewedOrbitProgramme,
             AchievementFundingProgramme munProbeOrbitProgramme,
-            AchievementFundingProgramme minmusProbeOrbitProgramme)
+            AchievementFundingProgramme minmusProbeOrbitProgramme,
+            AchievementFundingProgramme munCrewedOrbitProgramme,
+            AchievementFundingProgramme minmusCrewedOrbitProgramme)
         {
             if (!HasData
                 || playerProgram == null
@@ -112,7 +138,9 @@ namespace TheRaceForSpace.Persistence
                 || probeOrbitProgramme == null
                 || crewedOrbitProgramme == null
                 || munProbeOrbitProgramme == null
-                || minmusProbeOrbitProgramme == null)
+                || minmusProbeOrbitProgramme == null
+                || munCrewedOrbitProgramme == null
+                || minmusCrewedOrbitProgramme == null)
             {
                 return;
             }
@@ -125,6 +153,10 @@ namespace TheRaceForSpace.Persistence
             playerProgram.MunProbeOrbitAchievementUniversalTime = PlayerMunProbeOrbitUniversalTime;
             playerProgram.HasAchievedMinmusProbeOrbit = PlayerMinmusProbeOrbit;
             playerProgram.MinmusProbeOrbitAchievementUniversalTime = PlayerMinmusProbeOrbitUniversalTime;
+            playerProgram.HasAchievedMunCrewedOrbit = PlayerMunCrewedOrbit;
+            playerProgram.MunCrewedOrbitAchievementUniversalTime = PlayerMunCrewedOrbitUniversalTime;
+            playerProgram.HasAchievedMinmusCrewedOrbit = PlayerMinmusCrewedOrbit;
+            playerProgram.MinmusCrewedOrbitAchievementUniversalTime = PlayerMinmusCrewedOrbitUniversalTime;
 
             if (KerbinNetworkUnlocked)
             {
@@ -145,6 +177,8 @@ namespace TheRaceForSpace.Persistence
             crewedOrbitProgramme.RestoreState(CrewedContractStarted, CrewedPaymentsProcessed);
             munProbeOrbitProgramme.RestoreState(MunProbeContractStarted, MunProbePaymentsProcessed);
             minmusProbeOrbitProgramme.RestoreState(MinmusProbeContractStarted, MinmusProbePaymentsProcessed);
+            munCrewedOrbitProgramme.RestoreState(MunCrewedContractStarted, MunCrewedPaymentsProcessed);
+            minmusCrewedOrbitProgramme.RestoreState(MinmusCrewedContractStarted, MinmusCrewedPaymentsProcessed);
         }
 
         public void Load(ConfigNode node)
@@ -158,6 +192,10 @@ namespace TheRaceForSpace.Persistence
             PlayerMunProbeOrbitUniversalTime = -1.0;
             PlayerMinmusProbeOrbit = false;
             PlayerMinmusProbeOrbitUniversalTime = -1.0;
+            PlayerMunCrewedOrbit = false;
+            PlayerMunCrewedOrbitUniversalTime = -1.0;
+            PlayerMinmusCrewedOrbit = false;
+            PlayerMinmusCrewedOrbitUniversalTime = -1.0;
             KerbinNetworkUnlocked = false;
             MunNetworkUnlocked = false;
             MinmusNetworkUnlocked = false;
@@ -171,6 +209,10 @@ namespace TheRaceForSpace.Persistence
             MunProbePaymentsProcessed = 0;
             MinmusProbeContractStarted = false;
             MinmusProbePaymentsProcessed = 0;
+            MunCrewedContractStarted = false;
+            MunCrewedPaymentsProcessed = 0;
+            MinmusCrewedContractStarted = false;
+            MinmusCrewedPaymentsProcessed = 0;
 
             if (!HasData)
             {
@@ -193,6 +235,14 @@ namespace TheRaceForSpace.Persistence
             PlayerMinmusProbeOrbitUniversalTime = ParseAchievementTime(
                 node.GetValue("playerMinmusProbeOrbitUniversalTime"),
                 PlayerMinmusProbeOrbit);
+            PlayerMunCrewedOrbit = ParseBool(node.GetValue("playerMunCrewedOrbit"));
+            PlayerMunCrewedOrbitUniversalTime = ParseAchievementTime(
+                node.GetValue("playerMunCrewedOrbitUniversalTime"),
+                PlayerMunCrewedOrbit);
+            PlayerMinmusCrewedOrbit = ParseBool(node.GetValue("playerMinmusCrewedOrbit"));
+            PlayerMinmusCrewedOrbitUniversalTime = ParseAchievementTime(
+                node.GetValue("playerMinmusCrewedOrbitUniversalTime"),
+                PlayerMinmusCrewedOrbit);
             KerbinNetworkUnlocked = ParseBool(node.GetValue("kerbinNetworkUnlocked"));
             MunNetworkUnlocked = ParseBool(node.GetValue("munNetworkUnlocked"));
             MinmusNetworkUnlocked = ParseBool(node.GetValue("minmusNetworkUnlocked"));
@@ -206,6 +256,10 @@ namespace TheRaceForSpace.Persistence
             MunProbePaymentsProcessed = ParsePaymentCount(node.GetValue("munProbePaymentsProcessed"));
             MinmusProbeContractStarted = ParseBool(node.GetValue("minmusProbeContractStarted"));
             MinmusProbePaymentsProcessed = ParsePaymentCount(node.GetValue("minmusProbePaymentsProcessed"));
+            MunCrewedContractStarted = ParseBool(node.GetValue("munCrewedContractStarted"));
+            MunCrewedPaymentsProcessed = ParsePaymentCount(node.GetValue("munCrewedPaymentsProcessed"));
+            MinmusCrewedContractStarted = ParseBool(node.GetValue("minmusCrewedContractStarted"));
+            MinmusCrewedPaymentsProcessed = ParsePaymentCount(node.GetValue("minmusCrewedPaymentsProcessed"));
         }
 
         public void Save(ConfigNode node)
@@ -231,6 +285,14 @@ namespace TheRaceForSpace.Persistence
             node.AddValue(
                 "playerMinmusProbeOrbitUniversalTime",
                 PlayerMinmusProbeOrbitUniversalTime.ToString("R", CultureInfo.InvariantCulture));
+            node.AddValue("playerMunCrewedOrbit", PlayerMunCrewedOrbit);
+            node.AddValue(
+                "playerMunCrewedOrbitUniversalTime",
+                PlayerMunCrewedOrbitUniversalTime.ToString("R", CultureInfo.InvariantCulture));
+            node.AddValue("playerMinmusCrewedOrbit", PlayerMinmusCrewedOrbit);
+            node.AddValue(
+                "playerMinmusCrewedOrbitUniversalTime",
+                PlayerMinmusCrewedOrbitUniversalTime.ToString("R", CultureInfo.InvariantCulture));
             node.AddValue("kerbinNetworkUnlocked", KerbinNetworkUnlocked);
             node.AddValue("munNetworkUnlocked", MunNetworkUnlocked);
             node.AddValue("minmusNetworkUnlocked", MinmusNetworkUnlocked);
@@ -252,6 +314,14 @@ namespace TheRaceForSpace.Persistence
             node.AddValue(
                 "minmusProbePaymentsProcessed",
                 MinmusProbePaymentsProcessed.ToString(CultureInfo.InvariantCulture));
+            node.AddValue("munCrewedContractStarted", MunCrewedContractStarted);
+            node.AddValue(
+                "munCrewedPaymentsProcessed",
+                MunCrewedPaymentsProcessed.ToString(CultureInfo.InvariantCulture));
+            node.AddValue("minmusCrewedContractStarted", MinmusCrewedContractStarted);
+            node.AddValue(
+                "minmusCrewedPaymentsProcessed",
+                MinmusCrewedPaymentsProcessed.ToString(CultureInfo.InvariantCulture));
         }
 
         private static bool ParseBool(string value)

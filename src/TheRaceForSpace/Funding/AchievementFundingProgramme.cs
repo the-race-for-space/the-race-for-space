@@ -23,7 +23,8 @@ namespace TheRaceForSpace.Funding
                 name,
                 objectiveDescription,
                 baseRewardFunds,
-                DefaultUnlockRequirement)
+                DefaultUnlockRequirement,
+                null)
         {
         }
 
@@ -33,6 +34,23 @@ namespace TheRaceForSpace.Funding
             string objectiveDescription,
             double baseRewardFunds,
             string unlockRequirement)
+            : this(
+                id,
+                name,
+                objectiveDescription,
+                baseRewardFunds,
+                unlockRequirement,
+                null)
+        {
+        }
+
+        public AchievementFundingProgramme(
+            string id,
+            string name,
+            string objectiveDescription,
+            double baseRewardFunds,
+            string unlockRequirement,
+            string prerequisiteMilestoneId)
         {
             Id = id;
             Name = name;
@@ -41,12 +59,14 @@ namespace TheRaceForSpace.Funding
             UnlockRequirement = string.IsNullOrEmpty(unlockRequirement)
                 ? DefaultUnlockRequirement
                 : unlockRequirement;
+            PrerequisiteMilestoneId = prerequisiteMilestoneId;
         }
 
         public string Id { get; private set; }
         public string Name { get; private set; }
         public string ObjectiveDescription { get; private set; }
         public string UnlockRequirement { get; private set; }
+        public string PrerequisiteMilestoneId { get; private set; }
         public double BaseRewardFunds { get; private set; }
         public bool HasStarted { get; private set; }
         public int PaymentsProcessed { get; private set; }

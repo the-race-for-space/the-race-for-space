@@ -126,6 +126,19 @@ namespace TheRaceForSpace.KspIntegration
                 return false;
             }
 
+            // The current save format persists the legacy mission display string, not the new
+            // transient stable ID. Clear only when saved rival data exists so that saved missions
+            // override constructor defaults while brand-new games keep their opening Probe Orbit.
+            if (AsterState.HasData)
+            {
+                asterProgram.NextMissionTargetId = null;
+            }
+
+            if (CobaltState.HasData)
+            {
+                cobaltProgram.NextMissionTargetId = null;
+            }
+
             AsterState.ApplyTo(asterProgram);
             CobaltState.ApplyTo(cobaltProgram);
             return true;

@@ -8,18 +8,18 @@ The goal is to prove these systems with a narrow implementation before adding mo
 
 1. **Funding Target Unlocking**
    - Funding targets can be locked or available.
-   - Four one-off achievement contracts are active at the beginning of the campaign:
+   - Two one-off achievement contracts are active at the beginning of the campaign:
      - Probe Orbit;
-     - Crewed Orbit;
-     - Mun Probe Orbit;
-     - Minmus Probe Orbit.
+     - Crewed Orbit.
+   - Mun Probe Orbit and Minmus Probe Orbit begin locked.
+   - Both lunar probe-orbit contracts unlock once at least one agency has achieved Probe Orbit around Kerbin.
    - The Kerbin satellite-network contract begins locked and unlocks once at least one agency achieves Probe Orbit.
    - The Mun satellite-network contract begins locked and unlocks once at least one agency achieves Mun Probe Orbit.
    - The Minmus satellite-network contract begins locked and unlocks once at least one agency achieves Minmus Probe Orbit.
    - A qualifying uncrewed probe that completes a probe-orbit achievement also counts as one satellite around that same body.
    - Once a satellite-network contract unlocks it remains unlocked permanently for that save.
    - Satellite-network contracts do not use declining interest and do not expire.
-   - Locked targets do not contribute funding or projected payouts and are not valid rival satellite objectives.
+   - Locked targets do not contribute funding or projected payouts and are not valid rival objectives.
    - Locked targets are hidden from Funding Targets but remain visible in Space Race so the unlock requirement is clear.
 
 2. **Competitive Achievement Contracts**
@@ -29,7 +29,8 @@ The goal is to prove these systems with a narrow implementation before adding mo
      - **Crewed Orbit** — orbit Kerbin with at least one live Kerbal aboard;
      - **Mun Probe Orbit** — orbit Mun with a qualifying uncrewed Probe or Relay vessel;
      - **Minmus Probe Orbit** — orbit Minmus with a qualifying uncrewed Probe or Relay vessel.
-   - All four achievement contracts are available from campaign start.
+   - Probe Orbit and Crewed Orbit are available from campaign start.
+   - Mun Probe Orbit and Minmus Probe Orbit become available only after any agency has achieved Probe Orbit around Kerbin.
    - Probe Orbit has a base payout of **100,000 funds** at 100% interest.
    - Crewed Orbit has a base payout of **200,000 funds** at 100% interest.
    - Mun Probe Orbit has a base payout of **300,000 funds** at 100% interest.
@@ -47,6 +48,7 @@ The goal is to prove these systems with a narrow implementation before adding mo
    - Funding is paid every **90 Kerbin days** on the same funding date shown throughout the Command Center.
    - Each rival agency also receives a guaranteed **10,000 funds base income** on every global funding date.
    - Achievement contracts do not create independent payout dates and never pay immediately on completion.
+   - Locked achievement contracts do not start, project funding, or pay until their unlock requirement has been met.
    - The first payout for an achievement contract occurs on the next global funding date after at least one agency has achieved that objective.
    - The first scheduled payout is 100%, followed by 90%, 80%, 70%, 60%, 50%, 40%, 30%, 20%, and a final 10% payout.
    - After the final 10% payment the achievement contract expires.
@@ -69,29 +71,32 @@ The goal is to prove these systems with a narrow implementation before adding mo
    - Completing Crewed Orbit marks only the achievement.
    - Completing a normal satellite mission adds one satellite to the selected body.
    - After the fixed opening Probe Orbit mission, rivals choose randomly from currently valid live achievement and unlocked satellite objectives.
+   - Mun Probe Orbit and Minmus Probe Orbit are not valid rival targets until Probe Orbit around Kerbin has been achieved by any agency.
    - Kerbin satellite missions become valid after Probe Orbit unlocks the Kerbin network.
    - Mun satellite missions become valid after Mun Probe Orbit unlocks the Mun network.
    - Minmus satellite missions become valid after Minmus Probe Orbit unlocks the Minmus network.
-   - Locked satellite objectives cannot be selected.
+   - Locked objectives cannot be selected.
 
 5. **Space Race Information Centre**
    - Space Race is the main information and guidance view for the mod.
    - Its Help / Player Guide explains the overall competition, one-off achievements, satellite contracts, and unlock progression.
    - Funding entries are grouped as **Available Funding**, **Locked Funding**, and **Expired Funding**.
-   - Live achievement contracts and unlocked satellite contracts appear under Available Funding.
-   - Locked satellite contracts appear under Locked Funding with their unlock requirement.
+   - Live unlocked achievement contracts and unlocked satellite contracts appear under Available Funding.
+   - Mun Probe Orbit and Minmus Probe Orbit appear under Locked Funding until Probe Orbit around Kerbin has been achieved by any agency.
+   - Locked satellite contracts also appear under Locked Funding with their unlock requirement.
    - Achievement contracts move to Expired Funding after their final 10% payment.
    - Each objective entry explains its objective, current state, unlock requirement where applicable, and basic funding rule.
    - Where practical, descriptions and requirements come from the same definitions used by gameplay logic so the UI and rules do not drift apart.
 
 6. **Funding Targets Interface Rules**
    - Funding Targets shows only contracts currently in play.
-   - At campaign start the four one-off achievement contracts are visible while all three satellite contracts are locked and hidden.
+   - At campaign start Probe Orbit and Crewed Orbit are visible; Mun Probe Orbit, Minmus Probe Orbit, and all three satellite contracts are locked and hidden.
+   - Mun Probe Orbit and Minmus Probe Orbit appear after any agency achieves Probe Orbit around Kerbin.
    - The Kerbin satellite contract appears after any agency achieves Probe Orbit.
    - The Mun satellite contract appears after any agency achieves Mun Probe Orbit.
    - The Minmus satellite contract appears after any agency achieves Minmus Probe Orbit.
    - Satellite contracts remain visible permanently after unlocking because they continue participating in recurring funding.
-   - Achievement contracts remain visible while their declining-interest payment stages are live.
+   - Achievement contracts remain visible while unlocked and while their declining-interest payment stages are live.
    - All visible contracts use the same next funding date.
    - Achievement contracts disappear from Funding Targets after their final 10% payment.
    - Space Race remains the complete progression view for locked and expired targets.
@@ -99,6 +104,7 @@ The goal is to prove these systems with a narrow implementation before adding mo
 7. **Persistence and Save Compatibility**
    - Persist each agency's Probe Orbit, Crewed Orbit, Mun Probe Orbit, and Minmus Probe Orbit completion state and timestamps.
    - Persist each achievement contract's started state and current payment stage.
+   - Lunar probe-contract availability is derived from the existing persisted Kerbin Probe Orbit achievement state; no separate unlock field is required.
    - Do not maintain independent per-contract payout schedules; the controller's single global 90-day funding date owns payout timing.
    - Persist satellite-contract unlock state so an unlocked contract remains permanently available in that save.
    - Persist rival planned mission and development progress using the existing rival save model.
@@ -117,12 +123,12 @@ The goal is to prove these systems with a narrow implementation before adding mo
 
 The intended progression is:
 
-1. Probe Orbit, Crewed Orbit, Mun Probe Orbit, and Minmus Probe Orbit are live competitive one-off contracts from campaign start.
+1. Probe Orbit and Crewed Orbit are live competitive one-off contracts from campaign start; Mun Probe Orbit and Minmus Probe Orbit begin locked.
 2. Aster and Cobalt always begin by developing Probe Orbit first.
-3. Completing Probe Orbit also creates that agency's first Kerbin satellite and unlocks the Kerbin Orbital Network for everyone.
+3. Completing Probe Orbit also creates that agency's first Kerbin satellite, unlocks the Kerbin Orbital Network, and unlocks both Mun Probe Orbit and Minmus Probe Orbit for everyone.
 4. Completing Mun Probe Orbit also creates that agency's first Mun satellite and unlocks the Mun Survey Network for everyone.
 5. Completing Minmus Probe Orbit also creates that agency's first Minmus satellite and unlocks the Minmus Relay Initiative for everyone.
-6. Each one-off achievement becomes eligible for its first 100% payment on the next shared funding date after at least one agency completes it.
+6. Each unlocked one-off achievement becomes eligible for its first 100% payment on the next shared funding date after at least one agency completes it.
 7. Other agencies that complete the same achievement before that funding date join the split of that payment.
 8. After each achievement-contract payment, interest falls by 10 percentage points until the final 10% payment expires the contract.
 9. Unlocked satellite contracts use qualifying satellites from all agencies and never decline or expire.
@@ -136,7 +142,8 @@ The implementation uses these prototype values unless a later design change expl
 - Crewed Orbit base 100% payout: **200,000 funds**.
 - Mun Probe Orbit base 100% payout: **300,000 funds**.
 - Minmus Probe Orbit base 100% payout: **300,000 funds**.
-- All four achievement contracts: **available from campaign start**.
+- Probe Orbit and Crewed Orbit: **available from campaign start**.
+- Mun Probe Orbit and Minmus Probe Orbit unlock: **any agency achieves Probe Orbit around Kerbin**.
 - Probe Orbit rival development cost: **20,000 funds per successful 10% step / 200,000 total**.
 - Crewed Orbit rival development cost: **40,000 funds per successful 10% step / 400,000 total**.
 - Mun/Minmus probe and satellite development cost: **40,000 funds per successful 10% step / 400,000 total**.

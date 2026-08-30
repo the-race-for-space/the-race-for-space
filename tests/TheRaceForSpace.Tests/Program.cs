@@ -29,8 +29,6 @@ namespace TheRaceForSpace.Tests
             Run("Milestone crewed observation matches definition", MilestoneEvaluationTests.CrewedObservationMatchesDefinition);
             Run("Milestone rejects wrong body or situation", MilestoneEvaluationTests.WrongBodyOrSituationDoesNotMatch);
             Run("Milestone arbitrary body uses same rule", MilestoneEvaluationTests.ArbitraryBodyDefinitionUsesSameRule);
-            Run("Generic milestone state mirrors to legacy fields", MilestoneEvaluationTests.GenericStateMirrorsToLegacyFields);
-            Run("Legacy prototype achievements synchronize to generic state", LegacyPrototypeAchievementsSynchronizeToGenericState);
             Run("Generic achievement state starts empty", GenericAchievementStateStartsEmpty);
             Run("Generic achievement state records first timestamp", GenericAchievementStateRecordsFirstTimestamp);
             Run("Generic achievement state preserves first timestamp", GenericAchievementStatePreservesFirstTimestamp);
@@ -50,6 +48,8 @@ namespace TheRaceForSpace.Tests
             Run("Rival completes arbitrary satellite programme", RivalSimulationCollectionTests.CompletesArbitrarySatelliteProgramme);
             Run("Rival collection cost uses programme body", RivalSimulationCollectionTests.CollectionCostUsesProgrammeBody);
             Run("Rival achievement completion uses milestone definition", RivalSimulationCollectionTests.AchievementCompletionUsesMilestoneDefinition);
+            Run("Legacy player save keys restore generic achievement", RaceProgressLegacySaveKeysRestoreGenericState);
+            Run("Legacy rival save keys restore generic achievement", RivalLegacySaveKeysRestoreGenericState);
             Run("Race progress persistence round trip", RaceProgressPersistenceRoundTrip);
             Run("Rival persistence round trip", RivalPersistenceRoundTrip);
 
@@ -235,26 +235,6 @@ namespace TheRaceForSpace.Tests
             AssertEqual(null, PrototypeMilestones.FindById("not-a-milestone"));
         }
 
-        private static void LegacyPrototypeAchievementsSynchronizeToGenericState()
-        {
-            var program = new SpaceProgramState("Program", false)
-            {
-                HasAchievedProbeOrbit = true,
-                ProbeOrbitAchievementUniversalTime = 1234.0,
-                HasAchievedMunCrewedOrbit = true,
-                MunCrewedOrbitAchievementUniversalTime = 5678.0
-            };
-            program.RecordAchievement(PrototypeMilestones.ProbeOrbitId, 1000.0);
-
-            PrototypeMilestones.SynchronizeLegacyAchievementState(program);
-
-            AssertEqual(1000.0, program.GetAchievementUniversalTime(PrototypeMilestones.ProbeOrbitId));
-            AssertEqual(5678.0, program.GetAchievementUniversalTime(PrototypeMilestones.MunCrewedOrbitId));
-            AssertTrue(
-                !program.HasAchievement(PrototypeMilestones.CrewedOrbitId),
-                "Unachieved legacy fields should not create generic milestone state.");
-        }
-
         private static void GenericAchievementStateStartsEmpty()
         {
             var program = new SpaceProgramState("Program", false);
@@ -360,7 +340,11 @@ namespace TheRaceForSpace.Tests
                 NextPayoutFunds = 0.0
             };
 
-            int? estimatedDays = RivalSimulation.CalculateEstimatedLaunchDays(rival, 0.0, 90.0 * 21600.0, 90.0 * 21600.0);
+            int? estimatedDays = RivalSimulation.CalculateEstimatedLaunchDays(
+                rival,
+                0.0,
+                90.0 * 21600.0,
+                90.0 * 21600.0);
             AssertTrue(!estimatedDays.HasValue, "A mission with no current or future funds should have no ETA.");
         }
 
@@ -428,11 +412,8 @@ namespace TheRaceForSpace.Tests
         private static void RivalSelectsOnlyAvailableTarget()
         {
             SpaceProgramState player = new SpaceProgramState("Player", true);
-            SpaceProgramState aster = new SpaceProgramState("Aster", false)
-            {
-                HasAchievedCrewedOrbit = true,
-                CrewedOrbitAchievementUniversalTime = 1.0
-            };
+            SpaceProgramState aster = new SpaceProgramState("Aster", false);
+            aster.RecordAchievement(PrototypeMilestones.CrewedOrbitId, 1.0);
             SpaceProgramState cobalt = new SpaceProgramState("Cobalt", false);
 
             RivalSimulation.Refresh(
@@ -480,20 +461,75 @@ namespace TheRaceForSpace.Tests
                 false,
                 false);
 
-            AssertTrue(aster.HasAchievedProbeOrbit, "Completed rival mission should record its achievement.");
-            AssertEqual(replayUniversalTime, aster.ProbeOrbitAchievementUniversalTime);
+            AssertTrue(
+                aster.HasAchievement(PrototypeMilestones.ProbeOrbitId),
+                "Completed rival mission should record its achievement.");
+            AssertEqual(
+                replayUniversalTime,
+                aster.GetAchievementUniversalTime(PrototypeMilestones.ProbeOrbitId));
             AssertEqual(1, aster.GetSatelliteCount("Kerbin"));
+        }
+
+        private static void RaceProgressLegacySaveKeysRestoreGenericState()
+        {
+            var node = new ConfigNode();
+            node.AddValue("playerProbeOrbit", true);
+            node.AddValue("playerProbeOrbitUniversalTime", "1234");
+
+            var loaded = new RaceProgressSaveState();
+            loaded.Load(node);
+
+            SpaceProgramState player = new SpaceProgramState("Player", true);
+            FundingProgramme kerbin = Network("Kerbin", false);
+            FundingProgramme mun = Network("Mun", false);
+            FundingProgramme minmus = Network("Minmus", false);
+            AchievementFundingProgramme[] achievements = AchievementProgrammes();
+
+            loaded.ApplyTo(
+                player,
+                kerbin,
+                mun,
+                minmus,
+                achievements[0],
+                achievements[1],
+                achievements[2],
+                achievements[3],
+                achievements[4],
+                achievements[5]);
+
+            AssertTrue(
+                player.HasAchievement(PrototypeMilestones.ProbeOrbitId),
+                "Existing player achievement save keys should restore generic milestone state.");
+            AssertEqual(
+                1234.0,
+                player.GetAchievementUniversalTime(PrototypeMilestones.ProbeOrbitId));
+        }
+
+        private static void RivalLegacySaveKeysRestoreGenericState()
+        {
+            var node = new ConfigNode();
+            node.AddValue("hasAchievedMunProbeOrbit", true);
+            node.AddValue("munProbeOrbitAchievementUniversalTime", "4321");
+
+            var loaded = new RivalProgramSaveState();
+            loaded.Load(node);
+
+            SpaceProgramState rival = new SpaceProgramState("Aster", false);
+            loaded.ApplyTo(rival);
+
+            AssertTrue(
+                rival.HasAchievement(PrototypeMilestones.MunProbeOrbitId),
+                "Existing rival achievement save keys should restore generic milestone state.");
+            AssertEqual(
+                4321.0,
+                rival.GetAchievementUniversalTime(PrototypeMilestones.MunProbeOrbitId));
         }
 
         private static void RaceProgressPersistenceRoundTrip()
         {
-            SpaceProgramState sourcePlayer = new SpaceProgramState("Player", true)
-            {
-                HasAchievedProbeOrbit = true,
-                ProbeOrbitAchievementUniversalTime = 1234.0,
-                HasAchievedCrewedOrbit = true,
-                CrewedOrbitAchievementUniversalTime = 5678.0
-            };
+            SpaceProgramState sourcePlayer = new SpaceProgramState("Player", true);
+            sourcePlayer.RecordAchievement(PrototypeMilestones.ProbeOrbitId, 1234.0);
+            sourcePlayer.RecordAchievement(PrototypeMilestones.CrewedOrbitId, 5678.0);
             FundingProgramme sourceKerbin = Network("Kerbin", true);
             FundingProgramme sourceMun = Network("Mun", true);
             FundingProgramme sourceMinmus = Network("Minmus", false);
@@ -538,8 +574,12 @@ namespace TheRaceForSpace.Tests
                 restoredAchievements[4],
                 restoredAchievements[5]);
 
-            AssertTrue(restoredPlayer.HasAchievedProbeOrbit, "Probe Orbit should round trip.");
-            AssertEqual(1234.0, restoredPlayer.ProbeOrbitAchievementUniversalTime);
+            AssertTrue(
+                restoredPlayer.HasAchievement(PrototypeMilestones.ProbeOrbitId),
+                "Probe Orbit should round trip through generic milestone state.");
+            AssertEqual(
+                1234.0,
+                restoredPlayer.GetAchievementUniversalTime(PrototypeMilestones.ProbeOrbitId));
             AssertTrue(restoredMun.IsAvailable, "Mun network unlock should round trip.");
             AssertTrue(!restoredMinmus.IsAvailable, "Locked Minmus network should remain locked.");
             AssertEqual(2, restoredAchievements[0].PaymentsProcessed);
@@ -551,12 +591,11 @@ namespace TheRaceForSpace.Tests
             var source = new SpaceProgramState("Aster", false)
             {
                 Funds = 75000.0,
-                HasAchievedProbeOrbit = true,
-                ProbeOrbitAchievementUniversalTime = 2000.0,
                 NextLaunchBodyName = RivalSimulation.MunProbeOrbitTargetName,
                 LaunchProgressPercent = 40,
                 NextLaunchProgressCheckUniversalTime = 9000.0
             };
+            source.RecordAchievement(PrototypeMilestones.ProbeOrbitId, 2000.0);
             source.SetSatelliteCount("Kerbin", 3);
             source.SetSatelliteCount("Mun", 1);
 
@@ -573,7 +612,12 @@ namespace TheRaceForSpace.Tests
             AssertEqual(75000.0, restored.Funds);
             AssertEqual(3, restored.GetSatelliteCount("Kerbin"));
             AssertEqual(1, restored.GetSatelliteCount("Mun"));
-            AssertTrue(restored.HasAchievedProbeOrbit, "Rival achievement should round trip.");
+            AssertTrue(
+                restored.HasAchievement(PrototypeMilestones.ProbeOrbitId),
+                "Rival achievement should round trip through generic milestone state.");
+            AssertEqual(
+                2000.0,
+                restored.GetAchievementUniversalTime(PrototypeMilestones.ProbeOrbitId));
             AssertEqual(RivalSimulation.MunProbeOrbitTargetName, restored.NextLaunchBodyName);
             AssertEqual(40000.0, RivalSimulation.CalculateLaunchProgressCost(restored));
             AssertEqual(PrototypeMilestones.MunProbeOrbitId, restored.NextMissionTargetId);

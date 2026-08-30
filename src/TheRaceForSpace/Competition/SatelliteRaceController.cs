@@ -67,10 +67,14 @@ namespace TheRaceForSpace.Competition
                 PrototypeMilestones.MunProbeOrbitId);
             MilestoneDefinition minmusProbeOrbitMilestone = PrototypeMilestones.FindById(
                 PrototypeMilestones.MinmusProbeOrbitId);
+            MilestoneDefinition dunaProbeOrbitMilestone = PrototypeMilestones.FindById(
+                PrototypeMilestones.DunaProbeOrbitId);
             MilestoneDefinition munCrewedOrbitMilestone = PrototypeMilestones.FindById(
                 PrototypeMilestones.MunCrewedOrbitId);
             MilestoneDefinition minmusCrewedOrbitMilestone = PrototypeMilestones.FindById(
                 PrototypeMilestones.MinmusCrewedOrbitId);
+            MilestoneDefinition dunaCrewedOrbitMilestone = PrototypeMilestones.FindById(
+                PrototypeMilestones.DunaCrewedOrbitId);
 
             ProbeOrbitProgramme = new AchievementFundingProgramme(
                 probeOrbitMilestone.Id,
@@ -96,6 +100,13 @@ namespace TheRaceForSpace.Competition
                 200000.0,
                 "Any agency must achieve Probe Orbit.",
                 minmusProbeOrbitMilestone.PrerequisiteMilestoneId);
+            DunaProbeOrbitProgramme = new AchievementFundingProgramme(
+                dunaProbeOrbitMilestone.Id,
+                dunaProbeOrbitMilestone.Name,
+                dunaProbeOrbitMilestone.ObjectiveDescription,
+                200000.0,
+                "Any agency must achieve Probe Orbit.",
+                dunaProbeOrbitMilestone.PrerequisiteMilestoneId);
             MunCrewedOrbitProgramme = new AchievementFundingProgramme(
                 munCrewedOrbitMilestone.Id,
                 munCrewedOrbitMilestone.Name,
@@ -110,13 +121,22 @@ namespace TheRaceForSpace.Competition
                 300000.0,
                 "Any agency must achieve Crewed Orbit.",
                 minmusCrewedOrbitMilestone.PrerequisiteMilestoneId);
+            DunaCrewedOrbitProgramme = new AchievementFundingProgramme(
+                dunaCrewedOrbitMilestone.Id,
+                dunaCrewedOrbitMilestone.Name,
+                dunaCrewedOrbitMilestone.ObjectiveDescription,
+                300000.0,
+                "Any agency must achieve Crewed Orbit.",
+                dunaCrewedOrbitMilestone.PrerequisiteMilestoneId);
 
             _achievementFundingProgrammes.Add(ProbeOrbitProgramme);
             _achievementFundingProgrammes.Add(CrewedOrbitProgramme);
             _achievementFundingProgrammes.Add(MunProbeOrbitProgramme);
             _achievementFundingProgrammes.Add(MinmusProbeOrbitProgramme);
+            _achievementFundingProgrammes.Add(DunaProbeOrbitProgramme);
             _achievementFundingProgrammes.Add(MunCrewedOrbitProgramme);
             _achievementFundingProgrammes.Add(MinmusCrewedOrbitProgramme);
+            _achievementFundingProgrammes.Add(DunaCrewedOrbitProgramme);
 
             KerbinNetworkProgramme = new FundingProgramme(
                 "kerbin-network",
@@ -145,10 +165,20 @@ namespace TheRaceForSpace.Competition
                 false,
                 "Any agency must achieve Minmus Probe Orbit.",
                 PrototypeMilestones.MinmusProbeOrbitId);
+            DunaNetworkProgramme = new FundingProgramme(
+                "duna-network",
+                "Duna Orbital Network",
+                "Duna",
+                5,
+                100000.0,
+                false,
+                "Any agency must achieve Duna Probe Orbit.",
+                PrototypeMilestones.DunaProbeOrbitId);
 
             _fundingProgrammes.Add(KerbinNetworkProgramme);
             _fundingProgrammes.Add(MunNetworkProgramme);
             _fundingProgrammes.Add(MinmusNetworkProgramme);
+            _fundingProgrammes.Add(DunaNetworkProgramme);
 
             _programsView = _programs.AsReadOnly();
             _rivalProgramsView = _rivalPrograms.AsReadOnly();
@@ -162,12 +192,15 @@ namespace TheRaceForSpace.Competition
         public FundingProgramme KerbinNetworkProgramme { get; private set; }
         public FundingProgramme MunNetworkProgramme { get; private set; }
         public FundingProgramme MinmusNetworkProgramme { get; private set; }
+        public FundingProgramme DunaNetworkProgramme { get; private set; }
         public AchievementFundingProgramme ProbeOrbitProgramme { get; private set; }
         public AchievementFundingProgramme CrewedOrbitProgramme { get; private set; }
         public AchievementFundingProgramme MunProbeOrbitProgramme { get; private set; }
         public AchievementFundingProgramme MinmusProbeOrbitProgramme { get; private set; }
+        public AchievementFundingProgramme DunaProbeOrbitProgramme { get; private set; }
         public AchievementFundingProgramme MunCrewedOrbitProgramme { get; private set; }
         public AchievementFundingProgramme MinmusCrewedOrbitProgramme { get; private set; }
+        public AchievementFundingProgramme DunaCrewedOrbitProgramme { get; private set; }
         public IList<SpaceProgramState> Programs { get { return _programsView; } }
         public IList<SpaceProgramState> RivalPrograms { get { return _rivalProgramsView; } }
         public IList<FundingProgramme> FundingProgrammes { get { return _fundingProgrammesView; } }

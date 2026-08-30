@@ -22,6 +22,7 @@ namespace TheRaceForSpace.UI
         }
 
         private const float RefreshIntervalSeconds = 5.0f;
+        private const float WindowBackgroundOpacity = 0.82f;
         private const int HighlightedCardTitleFontSize = 16;
         private const string LauncherIconTexturePath =
             "Squad/PartList/SimpleIcons/R&D_node_icon_basicprobes";
@@ -191,6 +192,14 @@ namespace TheRaceForSpace.UI
             {
                 return;
             }
+
+            // KSP's stock window skin is translucent enough that bright scenes can reduce text
+            // contrast. A dark overlay behind the existing window keeps the stock controls and
+            // styling while making the interface background substantially less see-through.
+            Color previousGuiColor = GUI.color;
+            GUI.color = new Color(0.0f, 0.0f, 0.0f, WindowBackgroundOpacity);
+            GUI.DrawTexture(_windowRect, Texture2D.whiteTexture);
+            GUI.color = previousGuiColor;
 
             _windowRect = GUILayout.Window(
                 GetInstanceID(),
@@ -622,40 +631,131 @@ namespace TheRaceForSpace.UI
             GUILayout.BeginVertical("box");
             GUILayout.Label("HELP / PLAYER GUIDE");
             GUILayout.Label(
-                "Here below is a list of all the funding targets available. These are paid out by the Corporation and Nations of Kerbin. But there are rival companies out to get a piece of the funding. You will need to achieve the targets before they do to get the largest share of the funding.");
+                "Here below is a list of all the funding targets available. These are paid out by the Corporations and Nations of Kerbin. But there are rival companies out to get a piece of the funding. You will need to achieve the targets before they do to get the largest share of the funding.");
 
             GUILayout.Space(8.0f);
             GUILayout.Label("Types of Funding Contract", _boldLabelStyle);
-            GUILayout.Label("One off achievements - First orbit Kerbin/Mun etc either manned or unmanned.");
+            GUILayout.Label("1. One off achievements");
             GUILayout.Space(4.0f);
             GUILayout.Label(
-                "These Payout on the next payout date once it has been first achieved. If multiple agencies complete the achievement than the payout is split between those agencies. There are a total of 10 payouts. As interest in this achievement is lost overtime this is reflected in reduced funding overtime and each following payout is reduced by 10%. Whatever agencies can reach the achievement before the first payout will be able to maximise their funding.");
+                "Once any agency achieves this achievement there are 10 payouts given. As interest in this achievement is lost overtime each following payout is reduced by 10%. If multiple agencies complete the achievement than the next payout is split between those agencies. Being the first to reach the achievement will maximise your payout.");
 
             GUILayout.Space(8.0f);
-            GUILayout.Label("Satellite Contracts - Satellite/Probes in orbit of Kerbin/Mun unmanned");
+            GUILayout.Label("2. Satellite Contracts");
             GUILayout.Space(4.0f);
             GUILayout.Label(
-                "These are fixed contracts with a set required number of satellites funding is available for. Once the maximum number of satellites has been meet by the funding goal than further satellites will take a bigger split of the funding from other agencies. Interest in this contract is never lost as these satellites are always needed. But you will need to work hard to avoid the other agencies taking all of your funding away.");
+                "Funding is given for the number of satellite in orbit of the body. This is a fixed contract and will always pay out. Once the maximum number of satellites is meet which ever agencies has the biggest share of satellites will get the bigger share of the payout.");
 
             GUILayout.Space(8.0f);
             GUILayout.Label("Unlocking New Funding Target", _boldLabelStyle);
             GUILayout.Label(
-                "New funding targets can be unlocked by meeting the requirements of the funding targets currently available. Look down the list below to see all of the available funding targets that the Corporations and Countries of Kerbin are offering");
+                "New funding targets can be unlocked by meeting the requirements of the funding targets currently available. Look down the list below to see all of the available funding targets:");
             GUILayout.EndVertical();
 
             GUILayout.Space(12.0f);
-            GUILayout.Label("ORBIT CONTRACTS");
-            DrawAchievementInformationCard(_raceController.ProbeOrbitProgramme);
-            GUILayout.Space(8.0f);
-            DrawAchievementInformationCard(_raceController.CrewedOrbitProgramme);
+            GUILayout.Label("AVAILABLE FUNDING", _boldLabelStyle);
+            bool hasAvailableFunding = false;
+
+            for (int programmeIndex = 0;
+                programmeIndex < _raceController.AchievementFundingProgrammes.Count;
+                programmeIndex++)
+            {
+                AchievementFundingProgramme programme =
+                    _raceController.AchievementFundingProgrammes[programmeIndex];
+                if (programme.IsExpired)
+                {
+                    continue;
+                }
+
+                if (hasAvailableFunding)
+                {
+                    GUILayout.Space(8.0f);
+                }
+
+                DrawAchievementInformationCard(programme);
+                hasAvailableFunding = true;
+            }
+
+            for (int programmeIndex = 0;
+                programmeIndex < _raceController.FundingProgrammes.Count;
+                programmeIndex++)
+            {
+                FundingProgramme programme = _raceController.FundingProgrammes[programmeIndex];
+                if (!programme.IsAvailable)
+                {
+                    continue;
+                }
+
+                if (hasAvailableFunding)
+                {
+                    GUILayout.Space(8.0f);
+                }
+
+                DrawSatelliteInformationCard(programme);
+                hasAvailableFunding = true;
+            }
+
+            if (!hasAvailableFunding)
+            {
+                GUILayout.Label("None");
+            }
 
             GUILayout.Space(12.0f);
-            GUILayout.Label("SATELLITE CONTRACTS");
-            DrawSatelliteInformationCard(_raceController.KerbinNetworkProgramme);
-            GUILayout.Space(8.0f);
-            DrawSatelliteInformationCard(_raceController.MunNetworkProgramme);
-            GUILayout.Space(8.0f);
-            DrawSatelliteInformationCard(_raceController.MinmusNetworkProgramme);
+            GUILayout.Label("LOCKED FUNDING", _boldLabelStyle);
+            bool hasLockedFunding = false;
+
+            for (int programmeIndex = 0;
+                programmeIndex < _raceController.FundingProgrammes.Count;
+                programmeIndex++)
+            {
+                FundingProgramme programme = _raceController.FundingProgrammes[programmeIndex];
+                if (programme.IsAvailable)
+                {
+                    continue;
+                }
+
+                if (hasLockedFunding)
+                {
+                    GUILayout.Space(8.0f);
+                }
+
+                DrawSatelliteInformationCard(programme);
+                hasLockedFunding = true;
+            }
+
+            if (!hasLockedFunding)
+            {
+                GUILayout.Label("None");
+            }
+
+            GUILayout.Space(12.0f);
+            GUILayout.Label("EXPIRED FUNDING", _boldLabelStyle);
+            bool hasExpiredFunding = false;
+
+            for (int programmeIndex = 0;
+                programmeIndex < _raceController.AchievementFundingProgrammes.Count;
+                programmeIndex++)
+            {
+                AchievementFundingProgramme programme =
+                    _raceController.AchievementFundingProgrammes[programmeIndex];
+                if (!programme.IsExpired)
+                {
+                    continue;
+                }
+
+                if (hasExpiredFunding)
+                {
+                    GUILayout.Space(8.0f);
+                }
+
+                DrawAchievementInformationCard(programme);
+                hasExpiredFunding = true;
+            }
+
+            if (!hasExpiredFunding)
+            {
+                GUILayout.Label("None");
+            }
 
             GUILayout.EndScrollView();
         }

@@ -11,22 +11,42 @@ namespace TheRaceForSpace.Funding
     {
         private const int TotalPayments = 10;
         private const int InterestReductionPercentPerPayment = 10;
+        private const string DefaultUnlockRequirement = "Available from the start of the campaign";
 
         public AchievementFundingProgramme(
             string id,
             string name,
             string objectiveDescription,
             double baseRewardFunds)
+            : this(
+                id,
+                name,
+                objectiveDescription,
+                baseRewardFunds,
+                DefaultUnlockRequirement)
+        {
+        }
+
+        public AchievementFundingProgramme(
+            string id,
+            string name,
+            string objectiveDescription,
+            double baseRewardFunds,
+            string unlockRequirement)
         {
             Id = id;
             Name = name;
             ObjectiveDescription = objectiveDescription;
             BaseRewardFunds = Math.Max(0.0, baseRewardFunds);
+            UnlockRequirement = string.IsNullOrEmpty(unlockRequirement)
+                ? DefaultUnlockRequirement
+                : unlockRequirement;
         }
 
         public string Id { get; private set; }
         public string Name { get; private set; }
         public string ObjectiveDescription { get; private set; }
+        public string UnlockRequirement { get; private set; }
         public double BaseRewardFunds { get; private set; }
         public bool HasStarted { get; private set; }
         public int PaymentsProcessed { get; private set; }

@@ -147,22 +147,11 @@ namespace TheRaceForSpace.Tests
             SpaceProgramState player = new SpaceProgramState("Player", true);
             SpaceProgramState aster = new SpaceProgramState("Aster", false)
             {
-                HasAchievedProbeOrbit = true,
                 HasAchievedCrewedOrbit = true,
-                HasAchievedMunProbeOrbit = true,
-                HasAchievedMinmusProbeOrbit = true,
-                HasAchievedMunCrewedOrbit = true,
+                CrewedOrbitAchievementUniversalTime = 1.0,
                 NextLaunchBodyName = null
             };
-            SpaceProgramState cobalt = new SpaceProgramState("Cobalt", false)
-            {
-                HasAchievedProbeOrbit = true,
-                HasAchievedCrewedOrbit = true,
-                HasAchievedMunProbeOrbit = true,
-                HasAchievedMinmusProbeOrbit = true,
-                HasAchievedMunCrewedOrbit = true,
-                HasAchievedMinmusCrewedOrbit = true
-            };
+            SpaceProgramState cobalt = new SpaceProgramState("Cobalt", false);
 
             RivalSimulation.Refresh(
                 player,

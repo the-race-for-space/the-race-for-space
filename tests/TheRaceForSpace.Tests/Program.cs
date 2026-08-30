@@ -35,9 +35,12 @@ namespace TheRaceForSpace.Tests
             Run("Generic achievement state preserves first timestamp", GenericAchievementStatePreservesFirstTimestamp);
             Run("Generic achievement state accepts arbitrary ids", GenericAchievementStateAcceptsArbitraryIds);
             Run("Generic achievement state validates timestamps", GenericAchievementStateValidatesTimestamps);
+            Run("Rival mission target ids map to display names", RivalMissionTargetIdsMapToDisplayNames);
+            Run("Legacy rival target migrates to stable id", LegacyRivalTargetMigratesToStableId);
             Run("Rival launch costs match target type", RivalLaunchCostsMatchTargetType);
             Run("Rival ETA detects unaffordable mission", RivalEtaDetectsUnaffordableMission);
             Run("Unavailable rival target is abandoned", UnavailableRivalTargetIsAbandoned);
+            Run("Invalid rival target id is abandoned", InvalidRivalTargetIdIsAbandoned);
             Run("Rival selects the only available target", RivalSelectsOnlyAvailableTarget);
             Run("Rival completion uses replay timestamp", RivalCompletionUsesReplayTimestamp);
             Run("Race progress persistence round trip", RaceProgressPersistenceRoundTrip);
@@ -306,17 +309,38 @@ namespace TheRaceForSpace.Tests
             AssertEqual(0.0, program.GetAchievementUniversalTime("early"));
         }
 
+        private static void RivalMissionTargetIdsMapToDisplayNames()
+        {
+            AssertEqual(
+                RivalSimulation.ProbeOrbitTargetName,
+                RivalSimulation.GetMissionTargetDisplayName(PrototypeMilestones.ProbeOrbitId));
+            AssertEqual("Mun", RivalSimulation.GetMissionTargetDisplayName(RivalSimulation.MunSatelliteTargetId));
+            AssertEqual(null, RivalSimulation.GetMissionTargetDisplayName("not-a-target"));
+        }
+
+        private static void LegacyRivalTargetMigratesToStableId()
+        {
+            var rival = new SpaceProgramState("Rival", false)
+            {
+                NextLaunchBodyName = RivalSimulation.MinmusCrewedOrbitTargetName
+            };
+
+            AssertEqual(40000.0, RivalSimulation.CalculateLaunchProgressCost(rival));
+            AssertEqual(PrototypeMilestones.MinmusCrewedOrbitId, rival.NextMissionTargetId);
+            AssertEqual(RivalSimulation.MinmusCrewedOrbitTargetName, rival.NextLaunchBodyName);
+        }
+
         private static void RivalLaunchCostsMatchTargetType()
         {
             var rival = new SpaceProgramState("Rival", false);
 
-            rival.NextLaunchBodyName = RivalSimulation.ProbeOrbitTargetName;
+            rival.NextMissionTargetId = PrototypeMilestones.ProbeOrbitId;
             AssertEqual(20000.0, RivalSimulation.CalculateLaunchProgressCost(rival));
 
-            rival.NextLaunchBodyName = RivalSimulation.CrewedOrbitTargetName;
+            rival.NextMissionTargetId = PrototypeMilestones.CrewedOrbitId;
             AssertEqual(40000.0, RivalSimulation.CalculateLaunchProgressCost(rival));
 
-            rival.NextLaunchBodyName = "Mun";
+            rival.NextMissionTargetId = RivalSimulation.MunSatelliteTargetId;
             AssertEqual(40000.0, RivalSimulation.CalculateLaunchProgressCost(rival));
         }
 
@@ -324,7 +348,7 @@ namespace TheRaceForSpace.Tests
         {
             var rival = new SpaceProgramState("Rival", false)
             {
-                NextLaunchBodyName = RivalSimulation.ProbeOrbitTargetName,
+                NextMissionTargetId = PrototypeMilestones.ProbeOrbitId,
                 Funds = 0.0,
                 NextPayoutFunds = 0.0
             };
@@ -338,7 +362,7 @@ namespace TheRaceForSpace.Tests
             SpaceProgramState player = new SpaceProgramState("Player", true);
             SpaceProgramState aster = new SpaceProgramState("Aster", false)
             {
-                NextLaunchBodyName = RivalSimulation.MunProbeOrbitTargetName,
+                NextMissionTargetId = PrototypeMilestones.MunProbeOrbitId,
                 LaunchProgressPercent = 50
             };
             SpaceProgramState cobalt = new SpaceProgramState("Cobalt", false);
@@ -358,6 +382,38 @@ namespace TheRaceForSpace.Tests
                 false,
                 false);
 
+            AssertEqual(null, aster.NextMissionTargetId);
+            AssertEqual(null, aster.NextLaunchBodyName);
+            AssertEqual(0, aster.LaunchProgressPercent);
+        }
+
+        private static void InvalidRivalTargetIdIsAbandoned()
+        {
+            SpaceProgramState player = new SpaceProgramState("Player", true);
+            SpaceProgramState aster = new SpaceProgramState("Aster", false)
+            {
+                NextMissionTargetId = "not-a-target",
+                NextLaunchBodyName = "Mun",
+                LaunchProgressPercent = 50
+            };
+            SpaceProgramState cobalt = new SpaceProgramState("Cobalt", false);
+
+            RivalSimulation.Refresh(
+                player,
+                aster,
+                cobalt,
+                0.0,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false);
+
+            AssertEqual(null, aster.NextMissionTargetId);
             AssertEqual(null, aster.NextLaunchBodyName);
             AssertEqual(0, aster.LaunchProgressPercent);
         }
@@ -368,8 +424,7 @@ namespace TheRaceForSpace.Tests
             SpaceProgramState aster = new SpaceProgramState("Aster", false)
             {
                 HasAchievedCrewedOrbit = true,
-                CrewedOrbitAchievementUniversalTime = 1.0,
-                NextLaunchBodyName = null
+                CrewedOrbitAchievementUniversalTime = 1.0
             };
             SpaceProgramState cobalt = new SpaceProgramState("Cobalt", false);
 
@@ -388,6 +443,7 @@ namespace TheRaceForSpace.Tests
                 false,
                 true);
 
+            AssertEqual(PrototypeMilestones.MinmusCrewedOrbitId, aster.NextMissionTargetId);
             AssertEqual(RivalSimulation.MinmusCrewedOrbitTargetName, aster.NextLaunchBodyName);
         }
 
@@ -397,7 +453,7 @@ namespace TheRaceForSpace.Tests
             SpaceProgramState player = new SpaceProgramState("Player", true);
             SpaceProgramState aster = new SpaceProgramState("Aster", false)
             {
-                NextLaunchBodyName = RivalSimulation.ProbeOrbitTargetName,
+                NextMissionTargetId = PrototypeMilestones.ProbeOrbitId,
                 LaunchProgressPercent = 100
             };
             SpaceProgramState cobalt = new SpaceProgramState("Cobalt", false);
@@ -512,6 +568,8 @@ namespace TheRaceForSpace.Tests
             AssertEqual(1, restored.GetSatelliteCount("Mun"));
             AssertTrue(restored.HasAchievedProbeOrbit, "Rival achievement should round trip.");
             AssertEqual(RivalSimulation.MunProbeOrbitTargetName, restored.NextLaunchBodyName);
+            AssertEqual(40000.0, RivalSimulation.CalculateLaunchProgressCost(restored));
+            AssertEqual(PrototypeMilestones.MunProbeOrbitId, restored.NextMissionTargetId);
             AssertEqual(40, restored.LaunchProgressPercent);
             AssertEqual(9000.0, restored.NextLaunchProgressCheckUniversalTime);
         }

@@ -41,6 +41,8 @@ namespace TheRaceForSpace.Competition
             // development cycle. Probe Orbit is deliberately the fixed opening rival mission.
             AsterProgram.Funds = RivalStartingFunds;
             CobaltProgram.Funds = RivalStartingFunds;
+            AsterProgram.NextMissionTargetId = PrototypeMilestones.ProbeOrbitId;
+            CobaltProgram.NextMissionTargetId = PrototypeMilestones.ProbeOrbitId;
             AsterProgram.NextLaunchBodyName = RivalSimulation.ProbeOrbitTargetName;
             CobaltProgram.NextLaunchBodyName = RivalSimulation.ProbeOrbitTargetName;
 
@@ -230,7 +232,10 @@ namespace TheRaceForSpace.Competition
                 return 0.0;
             }
 
-            return RivalSimulation.CalculateLaunchProgressCost(program);
+            return RivalSimulation.CalculateLaunchProgressCost(
+                program,
+                _achievementFundingProgrammes,
+                _fundingProgrammes);
         }
 
         /// <summary>
@@ -248,7 +253,9 @@ namespace TheRaceForSpace.Competition
                 program,
                 Planetarium.GetUniversalTime(),
                 _nextFundingUniversalTime,
-                FundingIntervalSeconds);
+                FundingIntervalSeconds,
+                _achievementFundingProgrammes,
+                _fundingProgrammes);
         }
 
         public bool HasProgramAchieved(
@@ -452,15 +459,8 @@ namespace TheRaceForSpace.Competition
                 AsterProgram,
                 CobaltProgram,
                 currentUniversalTime,
-                KerbinNetworkProgramme.IsAvailable,
-                MunNetworkProgramme.IsAvailable,
-                MinmusNetworkProgramme.IsAvailable,
-                !ProbeOrbitProgramme.IsExpired,
-                !CrewedOrbitProgramme.IsExpired,
-                !MunProbeOrbitProgramme.IsExpired,
-                !MinmusProbeOrbitProgramme.IsExpired,
-                !MunCrewedOrbitProgramme.IsExpired,
-                !MinmusCrewedOrbitProgramme.IsExpired);
+                _achievementFundingProgrammes,
+                _fundingProgrammes);
 
             SynchronizeLegacyAchievementState();
         }

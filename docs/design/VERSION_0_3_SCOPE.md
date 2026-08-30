@@ -40,8 +40,8 @@ The goal is to prove these systems with a narrow implementation before adding mo
    - Crewed Orbit has a base payout of **200,000 funds** at 100% interest.
    - Mun Probe Orbit has a base payout of **200,000 funds** at 100% interest.
    - Minmus Probe Orbit has a base payout of **200,000 funds** at 100% interest.
-   - Mun Crewed Orbit has a base payout of **200,000 funds** at 100% interest.
-   - Minmus Crewed Orbit has a base payout of **200,000 funds** at 100% interest.
+   - Mun Crewed Orbit has a base payout of **300,000 funds** at 100% interest.
+   - Minmus Crewed Orbit has a base payout of **300,000 funds** at 100% interest.
    - Probe Orbit remains the fixed starting objective for both rival agencies.
    - Each achievement is recorded separately for the player, Aster, and Cobalt.
    - An agency only needs to achieve an objective once to qualify for that contract's future payouts.
@@ -155,8 +155,8 @@ The implementation uses these prototype values unless a later design change expl
 - Crewed Orbit base 100% payout: **200,000 funds**.
 - Mun Probe Orbit base 100% payout: **200,000 funds**.
 - Minmus Probe Orbit base 100% payout: **200,000 funds**.
-- Mun Crewed Orbit base 100% payout: **200,000 funds**.
-- Minmus Crewed Orbit base 100% payout: **200,000 funds**.
+- Mun Crewed Orbit base 100% payout: **300,000 funds**.
+- Minmus Crewed Orbit base 100% payout: **300,000 funds**.
 - Mun Survey Network total available payout: **100,000 funds**.
 - Minmus Relay Initiative total available payout: **100,000 funds**.
 - Probe Orbit and Crewed Orbit: **available from campaign start**.

@@ -40,11 +40,6 @@ namespace TheRaceForSpace.Persistence
         public bool MinmusCrewedContractStarted { get; private set; }
         public int MinmusCrewedPaymentsProcessed { get; private set; }
 
-        // Retained only so saves produced by the short-lived independent-schedule 0.3 pass
-        // can still be read and rewritten safely. Gameplay no longer uses these timestamps.
-        public double ProbeNextPayoutUniversalTime { get; private set; }
-        public double CrewedNextPayoutUniversalTime { get; private set; }
-
         public void Capture(
             SpaceProgramState playerProgram,
             FundingProgramme kerbinProgramme,
@@ -111,11 +106,6 @@ namespace TheRaceForSpace.Persistence
             MunCrewedPaymentsProcessed = munCrewedOrbitProgramme.PaymentsProcessed;
             MinmusCrewedContractStarted = minmusCrewedOrbitProgramme.HasStarted;
             MinmusCrewedPaymentsProcessed = minmusCrewedOrbitProgramme.PaymentsProcessed;
-
-            // New saves deliberately do not track per-contract payout dates. The fields stay
-            // present as -1 for compatibility with the earlier 0.3 prototype save format.
-            ProbeNextPayoutUniversalTime = -1.0;
-            CrewedNextPayoutUniversalTime = -1.0;
         }
 
         public void ApplyTo(
@@ -201,10 +191,8 @@ namespace TheRaceForSpace.Persistence
             MinmusNetworkUnlocked = false;
             ProbeContractStarted = false;
             ProbePaymentsProcessed = 0;
-            ProbeNextPayoutUniversalTime = -1.0;
             CrewedContractStarted = false;
             CrewedPaymentsProcessed = 0;
-            CrewedNextPayoutUniversalTime = -1.0;
             MunProbeContractStarted = false;
             MunProbePaymentsProcessed = 0;
             MinmusProbeContractStarted = false;
@@ -248,10 +236,8 @@ namespace TheRaceForSpace.Persistence
             MinmusNetworkUnlocked = ParseBool(node.GetValue("minmusNetworkUnlocked"));
             ProbeContractStarted = ParseBool(node.GetValue("probeContractStarted"));
             ProbePaymentsProcessed = ParsePaymentCount(node.GetValue("probePaymentsProcessed"));
-            ProbeNextPayoutUniversalTime = ParseUniversalTime(node.GetValue("probeNextPayoutUniversalTime"));
             CrewedContractStarted = ParseBool(node.GetValue("crewedContractStarted"));
             CrewedPaymentsProcessed = ParsePaymentCount(node.GetValue("crewedPaymentsProcessed"));
-            CrewedNextPayoutUniversalTime = ParseUniversalTime(node.GetValue("crewedNextPayoutUniversalTime"));
             MunProbeContractStarted = ParseBool(node.GetValue("munProbeContractStarted"));
             MunProbePaymentsProcessed = ParsePaymentCount(node.GetValue("munProbePaymentsProcessed"));
             MinmusProbeContractStarted = ParseBool(node.GetValue("minmusProbeContractStarted"));
@@ -298,14 +284,8 @@ namespace TheRaceForSpace.Persistence
             node.AddValue("minmusNetworkUnlocked", MinmusNetworkUnlocked);
             node.AddValue("probeContractStarted", ProbeContractStarted);
             node.AddValue("probePaymentsProcessed", ProbePaymentsProcessed.ToString(CultureInfo.InvariantCulture));
-            node.AddValue(
-                "probeNextPayoutUniversalTime",
-                ProbeNextPayoutUniversalTime.ToString("R", CultureInfo.InvariantCulture));
             node.AddValue("crewedContractStarted", CrewedContractStarted);
             node.AddValue("crewedPaymentsProcessed", CrewedPaymentsProcessed.ToString(CultureInfo.InvariantCulture));
-            node.AddValue(
-                "crewedNextPayoutUniversalTime",
-                CrewedNextPayoutUniversalTime.ToString("R", CultureInfo.InvariantCulture));
             node.AddValue("munProbeContractStarted", MunProbeContractStarted);
             node.AddValue(
                 "munProbePaymentsProcessed",
@@ -357,18 +337,6 @@ namespace TheRaceForSpace.Persistence
             }
 
             return 0.0;
-        }
-
-        private static double ParseUniversalTime(string value)
-        {
-            double parsedValue;
-            if (!string.IsNullOrEmpty(value)
-                && double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out parsedValue))
-            {
-                return parsedValue;
-            }
-
-            return -1.0;
         }
 
         private static double NormalizeAchievementTime(bool hasAchievement, double achievementUniversalTime)

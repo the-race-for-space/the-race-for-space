@@ -988,7 +988,7 @@ namespace TheRaceForSpace.UI
             string launchEtaText = "Awaiting Funding";
             if (launchEtaDays.HasValue)
             {
-                if (launchEtaDays.Value <= 10)
+                if (launchEtaDays.Value <= 20)
                 {
                     launchEtaText = "Next launch imminent";
                 }

@@ -301,6 +301,13 @@ namespace TheRaceForSpace.Simulation
                 {
                     program.HasAchievedProbeOrbit = true;
                     program.ProbeOrbitAchievementUniversalTime = Math.Max(0.0, completionUniversalTime);
+
+                    // The rival's first Probe Orbit mission represents a real unmanned probe in
+                    // Kerbin orbit, matching the player's qualifying probe which satisfies both
+                    // the achievement and one satellite-network slot.
+                    program.SetSatelliteCount(
+                        "Kerbin",
+                        program.GetSatelliteCount("Kerbin") + 1);
                 }
             }
             else if (string.Equals(program.NextLaunchBodyName, CrewedOrbitTargetName, StringComparison.OrdinalIgnoreCase))

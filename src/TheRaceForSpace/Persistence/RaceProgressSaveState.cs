@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using TheRaceForSpace.Funding;
+using TheRaceForSpace.Milestones;
 using TheRaceForSpace.Programs;
 
 namespace TheRaceForSpace.Persistence
@@ -79,6 +80,36 @@ namespace TheRaceForSpace.Persistence
             }
         }
 
+        /// <summary>
+        /// Compatibility overload for code compiled against the fixed 0.3 persistence API.
+        /// The live controller uses the collection overload above.
+        /// </summary>
+        public void Capture(
+            SpaceProgramState playerProgram,
+            FundingProgramme kerbinProgramme,
+            FundingProgramme munProgramme,
+            FundingProgramme minmusProgramme,
+            AchievementFundingProgramme probeOrbitProgramme,
+            AchievementFundingProgramme crewedOrbitProgramme,
+            AchievementFundingProgramme munProbeOrbitProgramme,
+            AchievementFundingProgramme minmusProbeOrbitProgramme,
+            AchievementFundingProgramme munCrewedOrbitProgramme,
+            AchievementFundingProgramme minmusCrewedOrbitProgramme)
+        {
+            Capture(
+                playerProgram,
+                new List<FundingProgramme> { kerbinProgramme, munProgramme, minmusProgramme },
+                new List<AchievementFundingProgramme>
+                {
+                    probeOrbitProgramme,
+                    crewedOrbitProgramme,
+                    munProbeOrbitProgramme,
+                    minmusProbeOrbitProgramme,
+                    munCrewedOrbitProgramme,
+                    minmusCrewedOrbitProgramme
+                });
+        }
+
         public void ApplyTo(
             SpaceProgramState playerProgram,
             IList<FundingProgramme> fundingProgrammes,
@@ -123,6 +154,35 @@ namespace TheRaceForSpace.Persistence
             }
         }
 
+        /// <summary>
+        /// Compatibility overload for code compiled against the fixed 0.3 persistence API.
+        /// </summary>
+        public void ApplyTo(
+            SpaceProgramState playerProgram,
+            FundingProgramme kerbinProgramme,
+            FundingProgramme munProgramme,
+            FundingProgramme minmusProgramme,
+            AchievementFundingProgramme probeOrbitProgramme,
+            AchievementFundingProgramme crewedOrbitProgramme,
+            AchievementFundingProgramme munProbeOrbitProgramme,
+            AchievementFundingProgramme minmusProbeOrbitProgramme,
+            AchievementFundingProgramme munCrewedOrbitProgramme,
+            AchievementFundingProgramme minmusCrewedOrbitProgramme)
+        {
+            ApplyTo(
+                playerProgram,
+                new List<FundingProgramme> { kerbinProgramme, munProgramme, minmusProgramme },
+                new List<AchievementFundingProgramme>
+                {
+                    probeOrbitProgramme,
+                    crewedOrbitProgramme,
+                    munProbeOrbitProgramme,
+                    minmusProbeOrbitProgramme,
+                    munCrewedOrbitProgramme,
+                    minmusCrewedOrbitProgramme
+                });
+        }
+
         public void Load(ConfigNode node)
         {
             ClearState();
@@ -144,12 +204,7 @@ namespace TheRaceForSpace.Persistence
                     continue;
                 }
 
-                universalTime = Math.Max(0.0, universalTime);
-                double existingTime;
-                if (!_achievementTimesById.TryGetValue(id, out existingTime) || universalTime < existingTime)
-                {
-                    _achievementTimesById[id] = universalTime;
-                }
+                StoreAchievement(id, universalTime);
             }
 
             ConfigNode[] fundingNodes = node.GetNodes(FundingProgrammeNodeName);
@@ -176,6 +231,49 @@ namespace TheRaceForSpace.Persistence
                 _contractPaymentsProcessedById[id] = ParsePaymentCount(
                     contractNode.GetValue(PaymentsProcessedValueName));
             }
+
+            // Read-only migration from the fixed 0.3 schema. New saves write only the collection format.
+            LoadLegacyAchievement(
+                node,
+                "playerProbeOrbit",
+                "playerProbeOrbitUniversalTime",
+                PrototypeMilestones.ProbeOrbitId);
+            LoadLegacyAchievement(
+                node,
+                "playerCrewedOrbit",
+                "playerCrewedOrbitUniversalTime",
+                PrototypeMilestones.CrewedOrbitId);
+            LoadLegacyAchievement(
+                node,
+                "playerMunProbeOrbit",
+                "playerMunProbeOrbitUniversalTime",
+                PrototypeMilestones.MunProbeOrbitId);
+            LoadLegacyAchievement(
+                node,
+                "playerMinmusProbeOrbit",
+                "playerMinmusProbeOrbitUniversalTime",
+                PrototypeMilestones.MinmusProbeOrbitId);
+            LoadLegacyAchievement(
+                node,
+                "playerMunCrewedOrbit",
+                "playerMunCrewedOrbitUniversalTime",
+                PrototypeMilestones.MunCrewedOrbitId);
+            LoadLegacyAchievement(
+                node,
+                "playerMinmusCrewedOrbit",
+                "playerMinmusCrewedOrbitUniversalTime",
+                PrototypeMilestones.MinmusCrewedOrbitId);
+
+            LoadLegacyFundingUnlock(node, "kerbinNetworkUnlocked", "kerbin-network");
+            LoadLegacyFundingUnlock(node, "munNetworkUnlocked", "mun-survey");
+            LoadLegacyFundingUnlock(node, "minmusNetworkUnlocked", "minmus-relay");
+
+            LoadLegacyContract(node, "probeContractStarted", "probePaymentsProcessed", PrototypeMilestones.ProbeOrbitId);
+            LoadLegacyContract(node, "crewedContractStarted", "crewedPaymentsProcessed", PrototypeMilestones.CrewedOrbitId);
+            LoadLegacyContract(node, "munProbeContractStarted", "munProbePaymentsProcessed", PrototypeMilestones.MunProbeOrbitId);
+            LoadLegacyContract(node, "minmusProbeContractStarted", "minmusProbePaymentsProcessed", PrototypeMilestones.MinmusProbeOrbitId);
+            LoadLegacyContract(node, "munCrewedContractStarted", "munCrewedPaymentsProcessed", PrototypeMilestones.MunCrewedOrbitId);
+            LoadLegacyContract(node, "minmusCrewedContractStarted", "minmusCrewedPaymentsProcessed", PrototypeMilestones.MinmusCrewedOrbitId);
         }
 
         public void Save(ConfigNode node)
@@ -226,6 +324,61 @@ namespace TheRaceForSpace.Persistence
             _unlockedFundingProgrammeIds.Clear();
             _contractStartedById.Clear();
             _contractPaymentsProcessedById.Clear();
+        }
+
+        private void StoreAchievement(string id, double universalTime)
+        {
+            universalTime = Math.Max(0.0, universalTime);
+            double existingTime;
+            if (!_achievementTimesById.TryGetValue(id, out existingTime) || universalTime < existingTime)
+            {
+                _achievementTimesById[id] = universalTime;
+            }
+        }
+
+        private void LoadLegacyAchievement(
+            ConfigNode node,
+            string achievedValueName,
+            string universalTimeValueName,
+            string milestoneId)
+        {
+            if (!ParseBool(node.GetValue(achievedValueName)))
+            {
+                return;
+            }
+
+            double universalTime;
+            if (!TryParseFiniteDouble(node.GetValue(universalTimeValueName), out universalTime))
+            {
+                universalTime = 0.0;
+            }
+
+            StoreAchievement(milestoneId, universalTime);
+        }
+
+        private void LoadLegacyFundingUnlock(ConfigNode node, string valueName, string programmeId)
+        {
+            if (ParseBool(node.GetValue(valueName)))
+            {
+                _unlockedFundingProgrammeIds.Add(programmeId);
+            }
+        }
+
+        private void LoadLegacyContract(
+            ConfigNode node,
+            string startedValueName,
+            string paymentsValueName,
+            string programmeId)
+        {
+            string startedValue = node.GetValue(startedValueName);
+            string paymentsValue = node.GetValue(paymentsValueName);
+            if (string.IsNullOrEmpty(startedValue) && string.IsNullOrEmpty(paymentsValue))
+            {
+                return;
+            }
+
+            _contractStartedById[programmeId] = ParseBool(startedValue);
+            _contractPaymentsProcessedById[programmeId] = ParsePaymentCount(paymentsValue);
         }
 
         private static bool ParseBool(string value)

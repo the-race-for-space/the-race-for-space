@@ -53,7 +53,7 @@ The goal is to prove these systems with a narrow implementation before adding mo
 3. **Shared Funding Dates, Declining Interest, and Competitive Payouts**
    - All contracts use one global funding calendar.
    - Funding is paid every **90 Kerbin days** on the same funding date shown throughout the Command Center.
-   - Each rival agency also receives a guaranteed **10,000 funds base income** on every global funding date.
+   - Each rival agency also receives a guaranteed **20,000 funds base income** on every global funding date.
    - Achievement contracts do not create independent payout dates and never pay immediately on completion.
    - Locked achievement contracts do not start, project funding, or pay until their unlock requirement has been met.
    - The first payout for an achievement contract occurs on the next global funding date after at least one agency has achieved that objective.
@@ -169,7 +169,7 @@ The implementation uses these prototype values unless a later design change expl
 - Rival progress success chance: **25%**.
 - Successful rival progress increment: **10 percentage points**.
 - Shared funding interval: **90 Kerbin days**.
-- Rival base income: **10,000 funds per rival agency on every shared funding date**.
+- Rival base income: **20,000 funds per rival agency on every shared funding date**.
 - Achievement-contract interest reduction: **10 percentage points after each paid funding date**.
 - Achievement-contract final payment: **10%**, after which the contract expires.
 - Kerbin satellite unlock: **any agency achieves Probe Orbit**.

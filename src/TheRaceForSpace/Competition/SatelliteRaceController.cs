@@ -9,7 +9,7 @@ using TheRaceForSpace.Tracking;
 namespace TheRaceForSpace.Competition
 {
     /// <summary>
-    /// Coordinates the narrow satellite race prototype without introducing a general race framework.
+    /// Coordinates the narrow 0.3 race prototype without introducing a general mission framework.
     /// </summary>
     public sealed class SatelliteRaceController
     {
@@ -17,12 +17,16 @@ namespace TheRaceForSpace.Competition
         private const int KerbinDaysPerYear = 426;
         private const double FundingIntervalSeconds = 90.0 * KerbinDaySeconds;
         private const double RivalStartingFunds = 200000.0;
-        private const string RivalInitialLaunchBodyName = "Kerbin";
+        private const int LunarNetworkUnlockKerbinSatelliteCount = 6;
+        private const string ProbeOrbitProgrammeId = "probe-orbit";
+        private const string CrewedOrbitProgrammeId = "crewed-orbit";
 
         private readonly List<SpaceProgramState> _programs = new List<SpaceProgramState>();
         private readonly List<FundingProgramme> _fundingProgrammes = new List<FundingProgramme>();
+        private readonly List<AchievementFundingProgramme> _achievementFundingProgrammes =
+            new List<AchievementFundingProgramme>();
         private double _nextFundingUniversalTime = -1.0;
-        private bool _hasRestoredPersistentRivalState;
+        private bool _hasRestoredPersistentState;
 
         public SatelliteRaceController()
         {
@@ -30,27 +34,75 @@ namespace TheRaceForSpace.Competition
             AsterProgram = new SpaceProgramState("Aster Aerospace Directorate", false);
             CobaltProgram = new SpaceProgramState("Cobalt Orbital Bureau", false);
 
-            // New/older saves without Race for Space persistence begin with enough simulated
-            // cash for one complete Kerbin development cycle, so Kerbin is always the first
-            // planned launch. Persisted saves overwrite these defaults with their saved state.
+            // New/older saves begin with enough simulated cash for one complete Probe Orbit
+            // development cycle. Probe Orbit is deliberately the fixed opening rival mission.
             AsterProgram.Funds = RivalStartingFunds;
             CobaltProgram.Funds = RivalStartingFunds;
-            AsterProgram.NextLaunchBodyName = RivalInitialLaunchBodyName;
-            CobaltProgram.NextLaunchBodyName = RivalInitialLaunchBodyName;
+            AsterProgram.NextLaunchBodyName = RivalSimulation.ProbeOrbitTargetName;
+            CobaltProgram.NextLaunchBodyName = RivalSimulation.ProbeOrbitTargetName;
 
             _programs.Add(PlayerProgram);
             _programs.Add(AsterProgram);
             _programs.Add(CobaltProgram);
 
-            _fundingProgrammes.Add(new FundingProgramme("kerbin-network", "Kerbin Orbital Network", "Kerbin", 10, 200000.0));
-            _fundingProgrammes.Add(new FundingProgramme("mun-survey", "Mun Survey Network", "Mun", 5, 300000.0));
-            _fundingProgrammes.Add(new FundingProgramme("minmus-relay", "Minmus Relay Initiative", "Minmus", 5, 300000.0));
+            ProbeOrbitProgramme = new AchievementFundingProgramme(
+                ProbeOrbitProgrammeId,
+                "Probe Orbit",
+                "Achieve orbit around Kerbin with an uncrewed Probe or Relay vessel.",
+                100000.0);
+            CrewedOrbitProgramme = new AchievementFundingProgramme(
+                CrewedOrbitProgrammeId,
+                "Crewed Orbit",
+                "Achieve orbit around Kerbin with at least one live Kerbal aboard.",
+                200000.0);
+
+            _achievementFundingProgrammes.Add(ProbeOrbitProgramme);
+            _achievementFundingProgrammes.Add(CrewedOrbitProgramme);
+
+            KerbinNetworkProgramme = new FundingProgramme(
+                "kerbin-network",
+                "Kerbin Orbital Network",
+                "Kerbin",
+                10,
+                200000.0,
+                false,
+                "Any agency must achieve Probe Orbit.");
+            MunNetworkProgramme = new FundingProgramme(
+                "mun-survey",
+                "Mun Survey Network",
+                "Mun",
+                5,
+                300000.0,
+                false,
+                "Reach 6 combined qualifying satellites in Kerbin orbit.");
+            MinmusNetworkProgramme = new FundingProgramme(
+                "minmus-relay",
+                "Minmus Relay Initiative",
+                "Minmus",
+                5,
+                300000.0,
+                false,
+                "Reach 6 combined qualifying satellites in Kerbin orbit.");
+
+            _fundingProgrammes.Add(KerbinNetworkProgramme);
+            _fundingProgrammes.Add(MunNetworkProgramme);
+            _fundingProgrammes.Add(MinmusNetworkProgramme);
         }
 
         public SpaceProgramState PlayerProgram { get; private set; }
         public SpaceProgramState AsterProgram { get; private set; }
         public SpaceProgramState CobaltProgram { get; private set; }
+        public FundingProgramme KerbinNetworkProgramme { get; private set; }
+        public FundingProgramme MunNetworkProgramme { get; private set; }
+        public FundingProgramme MinmusNetworkProgramme { get; private set; }
+        public AchievementFundingProgramme ProbeOrbitProgramme { get; private set; }
+        public AchievementFundingProgramme CrewedOrbitProgramme { get; private set; }
         public IList<FundingProgramme> FundingProgrammes { get { return _fundingProgrammes.AsReadOnly(); } }
+        public IList<AchievementFundingProgramme> AchievementFundingProgrammes
+        {
+            get { return _achievementFundingProgrammes.AsReadOnly(); }
+        }
+
         public double NextFundingUniversalTime { get { return _nextFundingUniversalTime; } }
 
         public int NextFundingYear
@@ -82,7 +134,7 @@ namespace TheRaceForSpace.Competition
         }
 
         /// <summary>
-        /// Returns the funds required for the rival's next successful 10% launch-progress step.
+        /// Returns the funds required for the rival's next successful 10% mission-progress step.
         /// </summary>
         public double GetRivalLaunchProgressCost(SpaceProgramState program)
         {
@@ -95,8 +147,8 @@ namespace TheRaceForSpace.Competition
         }
 
         /// <summary>
-        /// Returns the current expected Kerbin days until a rival launch, including projected
-        /// funding waits. A null result means the rival cannot currently finance completion.
+        /// Returns the current expected Kerbin days until a rival mission completes, including
+        /// projected funding waits. A null result means the rival cannot currently finance completion.
         /// </summary>
         public int? GetEstimatedRivalLaunchDays(SpaceProgramState program)
         {
@@ -112,6 +164,61 @@ namespace TheRaceForSpace.Competition
                 FundingIntervalSeconds);
         }
 
+        public bool HasProgramAchieved(
+            SpaceProgramState program,
+            AchievementFundingProgramme achievementProgramme)
+        {
+            if (program == null || achievementProgramme == null)
+            {
+                return false;
+            }
+
+            if (string.Equals(achievementProgramme.Id, ProbeOrbitProgrammeId, StringComparison.OrdinalIgnoreCase))
+            {
+                return program.HasAchievedProbeOrbit;
+            }
+
+            if (string.Equals(achievementProgramme.Id, CrewedOrbitProgrammeId, StringComparison.OrdinalIgnoreCase))
+            {
+                return program.HasAchievedCrewedOrbit;
+            }
+
+            return false;
+        }
+
+        public int GetAchievementAgencyCount(AchievementFundingProgramme achievementProgramme)
+        {
+            if (achievementProgramme == null)
+            {
+                return 0;
+            }
+
+            int achievedAgencyCount = 0;
+            for (int programIndex = 0; programIndex < _programs.Count; programIndex++)
+            {
+                if (HasProgramAchieved(_programs[programIndex], achievementProgramme))
+                {
+                    achievedAgencyCount++;
+                }
+            }
+
+            return achievedAgencyCount;
+        }
+
+        public double GetAchievementCurrentPayout(
+            SpaceProgramState program,
+            AchievementFundingProgramme achievementProgramme)
+        {
+            if (achievementProgramme == null)
+            {
+                return 0.0;
+            }
+
+            return achievementProgramme.CalculateCurrentPayout(
+                HasProgramAchieved(program, achievementProgramme),
+                GetAchievementAgencyCount(achievementProgramme));
+        }
+
         public void Refresh()
         {
             if (Planetarium.fetch == null)
@@ -119,37 +226,131 @@ namespace TheRaceForSpace.Competition
                 return;
             }
 
-            // Do not advance rivals until the ScenarioModule has loaded the current save.
-            // Old saves without persisted rival data retain the 200,000/Kerbin defaults.
-            if (!_hasRestoredPersistentRivalState)
+            // Do not advance gameplay until the ScenarioModule has loaded the current save.
+            // Old saves without 0.3 fields retain safe defaults and are migrated below.
+            if (!_hasRestoredPersistentState)
             {
-                _hasRestoredPersistentRivalState =
-                    RacePersistenceScenario.TryRestoreRivalState(AsterProgram, CobaltProgram);
+                bool restoredRivals = RacePersistenceScenario.TryRestoreRivalState(AsterProgram, CobaltProgram);
+                bool restoredRaceProgress = RacePersistenceScenario.TryRestoreRaceProgress(
+                    PlayerProgram,
+                    KerbinNetworkProgramme,
+                    MunNetworkProgramme,
+                    MinmusNetworkProgramme,
+                    ProbeOrbitProgramme,
+                    CrewedOrbitProgramme);
 
-                if (!_hasRestoredPersistentRivalState)
+                if (!restoredRivals || !restoredRaceProgress)
                 {
                     return;
                 }
+
+                ApplyLegacySaveCompatibility(AsterProgram);
+                ApplyLegacySaveCompatibility(CobaltProgram);
+                _hasRestoredPersistentState = true;
             }
 
             double currentUniversalTime = Planetarium.GetUniversalTime();
             if (_nextFundingUniversalTime < 0.0)
             {
-                // Funding dates align to the next 90-day Kerbin calendar boundary so the
-                // displayed Year/Day remains stable instead of depending on scene load time.
+                // Funding dates remain aligned to 90-day Kerbin calendar boundaries.
                 _nextFundingUniversalTime =
                     (Math.Floor(currentUniversalTime / FundingIntervalSeconds) + 1.0)
                     * FundingIntervalSeconds;
             }
 
             SatelliteTracker.RefreshPlayerSatelliteCounts(PlayerProgram);
-            RivalSimulation.Refresh(AsterProgram, CobaltProgram, currentUniversalTime);
+            UpdateFundingAvailability();
+            StartAchievementContracts();
+
+            RivalSimulation.Refresh(
+                PlayerProgram,
+                AsterProgram,
+                CobaltProgram,
+                currentUniversalTime,
+                KerbinNetworkProgramme.IsAvailable,
+                MunNetworkProgramme.IsAvailable,
+                MinmusNetworkProgramme.IsAvailable,
+                !ProbeOrbitProgramme.IsExpired,
+                !CrewedOrbitProgramme.IsExpired);
+
+            // Rival completion can unlock the Kerbin network or push combined Kerbin coverage
+            // across the 6-satellite lunar threshold during the same refresh.
+            UpdateFundingAvailability();
+            StartAchievementContracts();
             EvaluateFundingProgrammes();
             ProcessDueFunding(currentUniversalTime);
 
-            // ScenarioModule.OnSave can occur after any gameplay scene. Keep its in-memory
-            // snapshot synchronized with every rival change rather than reconstructing later.
             RacePersistenceScenario.CaptureRivalState(AsterProgram, CobaltProgram);
+            RacePersistenceScenario.CaptureRaceProgress(
+                PlayerProgram,
+                KerbinNetworkProgramme,
+                MunNetworkProgramme,
+                MinmusNetworkProgramme,
+                ProbeOrbitProgramme,
+                CrewedOrbitProgramme);
+        }
+
+        private void ApplyLegacySaveCompatibility(SpaceProgramState program)
+        {
+            if (program == null || program.IsPlayer)
+            {
+                return;
+            }
+
+            int existingSatelliteCount = program.GetSatelliteCount("Kerbin")
+                + program.GetSatelliteCount("Mun")
+                + program.GetSatelliteCount("Minmus");
+
+            // A 0.2 rival that already owns an orbital satellite necessarily demonstrated
+            // probe orbit before 0.3 added an explicit achievement flag.
+            if (!program.HasAchievedProbeOrbit && existingSatelliteCount > 0)
+            {
+                program.HasAchievedProbeOrbit = true;
+            }
+
+            // If an old rival had no completed satellites, reinterpret its current development
+            // progress as the new opening Probe Orbit mission instead of discarding that spending.
+            if (!program.HasAchievedProbeOrbit
+                && !string.Equals(
+                    program.NextLaunchBodyName,
+                    RivalSimulation.ProbeOrbitTargetName,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                program.NextLaunchBodyName = RivalSimulation.ProbeOrbitTargetName;
+            }
+        }
+
+        private void UpdateFundingAvailability()
+        {
+            if (!KerbinNetworkProgramme.IsAvailable
+                && (PlayerProgram.HasAchievedProbeOrbit
+                    || AsterProgram.HasAchievedProbeOrbit
+                    || CobaltProgram.HasAchievedProbeOrbit))
+            {
+                KerbinNetworkProgramme.Unlock();
+            }
+
+            int combinedKerbinSatelliteCount = PlayerProgram.GetSatelliteCount("Kerbin")
+                + AsterProgram.GetSatelliteCount("Kerbin")
+                + CobaltProgram.GetSatelliteCount("Kerbin");
+
+            if (combinedKerbinSatelliteCount >= LunarNetworkUnlockKerbinSatelliteCount)
+            {
+                MunNetworkProgramme.Unlock();
+                MinmusNetworkProgramme.Unlock();
+            }
+        }
+
+        private void StartAchievementContracts()
+        {
+            for (int programmeIndex = 0; programmeIndex < _achievementFundingProgrammes.Count; programmeIndex++)
+            {
+                AchievementFundingProgramme programme = _achievementFundingProgrammes[programmeIndex];
+                if (!programme.HasStarted && GetAchievementAgencyCount(programme) > 0)
+                {
+                    programme.Start();
+                }
+            }
         }
 
         private bool ProcessDueFunding(double currentUniversalTime)
@@ -183,8 +384,17 @@ namespace TheRaceForSpace.Competition
                     }
                 }
 
+                for (int programmeIndex = 0; programmeIndex < _achievementFundingProgrammes.Count; programmeIndex++)
+                {
+                    _achievementFundingProgrammes[programmeIndex].AdvancePayout();
+                }
+
                 _nextFundingUniversalTime += FundingIntervalSeconds;
                 processedFundingDate = true;
+
+                // Recalculate after every missed funding boundary so declining-interest contracts
+                // step 100%, 90%, 80% ... correctly during large time-warps or long save gaps.
+                EvaluateFundingProgrammes();
             }
 
             return processedFundingDate;
@@ -202,9 +412,13 @@ namespace TheRaceForSpace.Competition
             for (int programmeIndex = 0; programmeIndex < _fundingProgrammes.Count; programmeIndex++)
             {
                 FundingProgramme programme = _fundingProgrammes[programmeIndex];
+                if (!programme.IsAvailable)
+                {
+                    continue;
+                }
 
-                // First-to-requirement remains a separate race achievement, but it no longer
-                // grants exclusive ownership of the funding pool.
+                // First-to-requirement remains a separate race achievement, but it does not
+                // grant exclusive ownership of the recurring satellite funding pool.
                 if (!programme.IsClaimed)
                 {
                     for (int programIndex = 0; programIndex < _programs.Count; programIndex++)
@@ -232,6 +446,20 @@ namespace TheRaceForSpace.Competition
                     SpaceProgramState program = _programs[programIndex];
                     int programSatelliteCount = program.GetSatelliteCount(programme.CelestialBodyName);
                     program.NextPayoutFunds += programme.CalculateCurrentPayout(programSatelliteCount, totalSatelliteCount);
+                }
+            }
+
+            for (int programmeIndex = 0; programmeIndex < _achievementFundingProgrammes.Count; programmeIndex++)
+            {
+                AchievementFundingProgramme programme = _achievementFundingProgrammes[programmeIndex];
+                int achievedAgencyCount = GetAchievementAgencyCount(programme);
+
+                for (int programIndex = 0; programIndex < _programs.Count; programIndex++)
+                {
+                    SpaceProgramState program = _programs[programIndex];
+                    program.NextPayoutFunds += programme.CalculateCurrentPayout(
+                        HasProgramAchieved(program, programme),
+                        achievedAgencyCount);
                 }
             }
         }

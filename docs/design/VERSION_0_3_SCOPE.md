@@ -44,6 +44,7 @@ The goal is to prove these systems with a narrow implementation before adding mo
 3. **Shared Funding Dates, Declining Interest, and Competitive Payouts**
    - All contracts use one global funding calendar.
    - Funding is paid every **90 Kerbin days** on the same funding date shown on the Overview tab.
+   - Each rival agency also receives a guaranteed **10,000 funds base income** on every global 90-day funding date, independent of contract performance.
    - Probe Orbit and Crewed Orbit do not create independent payout dates.
    - Achieving an orbit objective does **not** pay immediately.
    - The first payout for an orbit contract occurs on the next global funding date after at least one agency has achieved that objective.
@@ -82,7 +83,7 @@ The goal is to prove these systems with a narrow implementation before adding mo
      - 20,000 funds for each successful 10% development step;
      - 200,000 funds for a complete 0-100% development cycle.
    - Crewed Orbit costs double the Probe Orbit/Kerbin satellite development amount:
-     - 40,000 funds for each successful 10% development step;
+     - 40,000 funds for each successful 10% step;
      - 400,000 funds for a complete 0-100% development cycle.
    - The existing five-Kerbin-day progress-check cadence, 50% success chance, and 10-percentage-point successful progress increment remain the prototype defaults unless separately changed later.
    - Completing an achievement mission marks that agency as having achieved the objective instead of adding a satellite count.
@@ -189,6 +190,7 @@ The implementation should use the following prototype values unless a later desi
 - Probe Orbit rival development cost: **20,000 funds per successful 10% step / 200,000 total**.
 - Crewed Orbit rival development cost: **40,000 funds per successful 10% step / 400,000 total**.
 - Shared funding interval for all contracts: **90 Kerbin days**.
+- Rival base income: **10,000 funds per rival agency on every global 90-day funding date, independent of contract payouts**.
 - First orbit-contract payout: **100% on the first global funding date after at least one agency achieves the objective**.
 - Orbit-contract interest reduction: **10 percentage points after each paid funding date**.
 - Orbit-contract final payment: **10%**, after which that contract expires.

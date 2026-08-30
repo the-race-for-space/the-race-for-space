@@ -1,10 +1,11 @@
+using TheRaceForSpace.Funding;
 using TheRaceForSpace.Persistence;
 using TheRaceForSpace.Programs;
 
 namespace TheRaceForSpace.KspIntegration
 {
     /// <summary>
-    /// Stores rival programme state inside the active KSP save through ScenarioModule.
+    /// Stores Race for Space campaign state inside the active KSP save through ScenarioModule.
     /// Static state is retained across normal gameplay scene changes for the same Game object,
     /// then replaced when KSP loads a different save.
     /// </summary>
@@ -15,10 +16,12 @@ namespace TheRaceForSpace.KspIntegration
     {
         private const string AsterNodeName = "ASTER";
         private const string CobaltNodeName = "COBALT";
-        private const string SchemaVersion = "1";
+        private const string RaceProgressNodeName = "RACE_PROGRESS";
+        private const string SchemaVersion = "2";
 
         private static readonly RivalProgramSaveState AsterState = new RivalProgramSaveState();
         private static readonly RivalProgramSaveState CobaltState = new RivalProgramSaveState();
+        private static readonly RaceProgressSaveState RaceProgressState = new RaceProgressSaveState();
         private static Game _loadedGame;
         private static bool _stateReady;
 
@@ -30,6 +33,7 @@ namespace TheRaceForSpace.KspIntegration
             {
                 AsterState.Load(node == null ? null : node.GetNode(AsterNodeName));
                 CobaltState.Load(node == null ? null : node.GetNode(CobaltNodeName));
+                RaceProgressState.Load(node == null ? null : node.GetNode(RaceProgressNodeName));
                 _loadedGame = HighLogic.CurrentGame;
             }
 
@@ -56,6 +60,12 @@ namespace TheRaceForSpace.KspIntegration
                 ConfigNode cobaltNode = node.AddNode(CobaltNodeName);
                 CobaltState.Save(cobaltNode);
             }
+
+            if (RaceProgressState.HasData)
+            {
+                ConfigNode raceProgressNode = node.AddNode(RaceProgressNodeName);
+                RaceProgressState.Save(raceProgressNode);
+            }
         }
 
         /// <summary>
@@ -80,8 +90,38 @@ namespace TheRaceForSpace.KspIntegration
         }
 
         /// <summary>
+        /// Restores 0.3 player achievements, satellite-contract unlocks, and declining-interest
+        /// payment stages. Old 0.2 saves have no RACE_PROGRESS node and therefore keep safe defaults.
+        /// </summary>
+        public static bool TryRestoreRaceProgress(
+            SpaceProgramState playerProgram,
+            FundingProgramme kerbinProgramme,
+            FundingProgramme munProgramme,
+            FundingProgramme minmusProgramme,
+            AchievementFundingProgramme probeOrbitProgramme,
+            AchievementFundingProgramme crewedOrbitProgramme)
+        {
+            if (!_stateReady
+                || _loadedGame == null
+                || _loadedGame != HighLogic.CurrentGame
+                || playerProgram == null)
+            {
+                return false;
+            }
+
+            RaceProgressState.ApplyTo(
+                playerProgram,
+                kerbinProgramme,
+                munProgramme,
+                minmusProgramme,
+                probeOrbitProgramme,
+                crewedOrbitProgramme);
+            return true;
+        }
+
+        /// <summary>
         /// Captures the latest live rival values so KSP's next ScenarioModule save writes
-        /// current balances, satellite counts, and in-progress launch state.
+        /// current balances, satellite counts, achievements, and in-progress launch state.
         /// </summary>
         public static void CaptureRivalState(SpaceProgramState asterProgram, SpaceProgramState cobaltProgram)
         {
@@ -96,6 +136,34 @@ namespace TheRaceForSpace.KspIntegration
 
             AsterState.Capture(asterProgram);
             CobaltState.Capture(cobaltProgram);
+        }
+
+        /// <summary>
+        /// Captures player achievement flags and global contract progression without duplicating
+        /// satellite counts that remain owned by the live KSP vessel tracker.
+        /// </summary>
+        public static void CaptureRaceProgress(
+            SpaceProgramState playerProgram,
+            FundingProgramme kerbinProgramme,
+            FundingProgramme munProgramme,
+            FundingProgramme minmusProgramme,
+            AchievementFundingProgramme probeOrbitProgramme,
+            AchievementFundingProgramme crewedOrbitProgramme)
+        {
+            if (!_stateReady
+                || _loadedGame == null
+                || _loadedGame != HighLogic.CurrentGame)
+            {
+                return;
+            }
+
+            RaceProgressState.Capture(
+                playerProgram,
+                kerbinProgramme,
+                munProgramme,
+                minmusProgramme,
+                probeOrbitProgramme,
+                crewedOrbitProgramme);
         }
     }
 }

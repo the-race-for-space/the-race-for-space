@@ -6,12 +6,43 @@ The prototype is built as a .NET Framework 4.7.2 class library against the assem
 
 - Kerbal Space Program 1.12.x installed locally.
 - A .NET SDK capable of building SDK-style projects.
-- On Linux, Mono reference assemblies compatible with .NET Framework 4.7.2.
-- The environment variable `KSP_ROOT` set to the KSP installation folder containing the KSP executable and `GameData`.
+- The environment variable `KSP_ROOT` set to the KSP installation folder containing the KSP executable and `GameData`, or a KSP installation in one of the standard Linux Steam locations detected by the test helper.
 
 Do not copy KSP or Unity DLLs into this repository. The project references them directly from the local KSP installation.
 
-## Linux
+## Quick Linux prototype test cycle
+
+For repeated prototype testing, use `tools/test-prototype.sh` instead of manually fetching, switching, pulling, building and deploying each version.
+
+From anywhere inside the repository, run:
+
+```bash
+bash tools/test-prototype.sh prototype/interface-v0.2
+```
+
+Replace the branch name with whichever prototype version you want to test. For example, when a later branch exists:
+
+```bash
+bash tools/test-prototype.sh prototype/interface-v0.3
+```
+
+The helper:
+
+1. refuses to switch versions if the working tree has uncommitted changes;
+2. fetches the latest branches from `origin`;
+3. creates a local tracking branch when the requested branch only exists on GitHub;
+4. switches to the requested branch and pulls it with fast-forward-only behaviour;
+5. uses `KSP_ROOT` when already set, otherwise checks the standard Linux Steam KSP locations;
+6. builds the current prototype with `DeployToKsp=true`;
+7. verifies that `TheRaceForSpace.dll` exists in the KSP plugin folder.
+
+If no branch is supplied, the helper updates, builds and deploys the currently checked-out branch:
+
+```bash
+bash tools/test-prototype.sh
+```
+
+## Linux manual build
 
 A typical Steam installation is found at one of these locations:
 
@@ -38,23 +69,10 @@ You should see:
 KSP references found
 ```
 
-Check the .NET SDK and Mono are installed:
+Check the .NET SDK is installed:
 
 ```bash
 dotnet --version
-mono --version
-```
-
-The project automatically uses `/usr/lib/mono/4.7.2-api` when that standard Mono reference-assembly path exists. Confirm it with:
-
-```bash
-test -f /usr/lib/mono/4.7.2-api/mscorlib.dll && echo "Mono net472 references found"
-```
-
-If your distribution installs Mono somewhere else, locate the 4.7.2 reference folder and set `FrameworkPathOverride` before building, for example:
-
-```bash
-export FrameworkPathOverride=/path/to/mono/4.7.2-api
 ```
 
 Build the prototype from the repository root:
@@ -139,15 +157,7 @@ On Windows, confirm this file exists:
 
 ### Missing .NET Framework reference assemblies on Linux
 
-KSP uses the .NET Framework-compatible Mono runtime rather than modern .NET. The project remains targeted at `net472`, so Linux builds need Mono's .NET Framework reference assemblies.
-
-The project detects this common path automatically:
-
-```text
-/usr/lib/mono/4.7.2-api
-```
-
-If your distribution stores them elsewhere, set `FrameworkPathOverride` to the directory containing `mscorlib.dll` before running `dotnet build`.
+If `dotnet build` reports missing .NET Framework 4.7.2 reference assemblies on a Linux installation, install or configure compatible reference assemblies for the SDK and retry the build. Do not copy framework or KSP DLLs into the repository as a workaround.
 
 ### Missing .NET Framework reference assemblies on Windows
 
@@ -161,6 +171,6 @@ After deploying the DLL:
 2. Load a disposable test save.
 3. Confirm the prototype window appears.
 4. Press F8 to hide/show it.
-5. Follow `docs/design/SATELLITE_PROTOTYPE_V1.md` for the satellite-race verification steps.
+5. Follow the design document for the prototype branch being tested.
 
-Automated unit-test project setup is intentionally separate from this first build harness. The existing `tests/TheRaceForSpace.Tests/` structure remains reserved for logic that can be tested without a live KSP installation.
+Automated unit-test project setup is intentionally separate from this build/deploy helper. The existing `tests/TheRaceForSpace.Tests/` structure remains reserved for logic that can be tested without a live KSP installation.

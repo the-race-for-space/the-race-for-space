@@ -9,7 +9,9 @@ namespace TheRaceForSpace.Tracking
     /// </summary>
     public static class SatelliteTracker
     {
-        public static void RefreshPlayerSatelliteCounts(SpaceProgramState playerProgram)
+        public static void RefreshPlayerSatelliteCounts(
+            SpaceProgramState playerProgram,
+            bool lunarProbeAchievementsAvailable)
         {
             if (playerProgram == null
                 || HighLogic.CurrentGame == null
@@ -90,14 +92,19 @@ namespace TheRaceForSpace.Tracking
                     }
                 }
                 else if (bodyName == "Mun"
+                    && (lunarProbeAchievementsAvailable || playerProgram.HasAchievedProbeOrbit)
                     && isPrototypeSatellite
                     && crewCount == 0
                     && !playerProgram.HasAchievedMunProbeOrbit)
                 {
+                    // Mun/Minmus probe achievements do not exist as active funding targets until
+                    // Kerbin Probe Orbit has been completed by an agency. Satellite counting is
+                    // still independent so existing craft are recognised once the target unlocks.
                     playerProgram.HasAchievedMunProbeOrbit = true;
                     playerProgram.MunProbeOrbitAchievementUniversalTime = currentUniversalTime;
                 }
                 else if (bodyName == "Minmus"
+                    && (lunarProbeAchievementsAvailable || playerProgram.HasAchievedProbeOrbit)
                     && isPrototypeSatellite
                     && crewCount == 0
                     && !playerProgram.HasAchievedMinmusProbeOrbit)

@@ -17,7 +17,7 @@ namespace TheRaceForSpace.Simulation
         private const double LaunchProgressChance = 0.50;
         private const int LaunchProgressIncrementPercent = 10;
         private const double LaunchProgressCostFunds = 20000.0;
-        private const double MunMinmusLaunchProgressCostMultiplier = 1.50;
+        private const double MunMinmusLaunchProgressCostMultiplier = 2.0;
         private const double CrewedOrbitLaunchProgressCostMultiplier = 2.0;
         private const int LunarNetworkUnlockKerbinSatelliteCount = 6;
 
@@ -66,8 +66,8 @@ namespace TheRaceForSpace.Simulation
 
         /// <summary>
         /// Returns the funds required for the rival's next successful 10% mission-progress step.
-        /// Probe Orbit uses the Kerbin satellite cost, Crewed Orbit costs twice that amount,
-        /// and Mun/Minmus satellite launches cost 50% more than the Kerbin base cost.
+        /// Probe Orbit uses the Kerbin satellite cost, while Crewed Orbit and Mun/Minmus
+        /// satellite launches cost twice the Kerbin base cost.
         /// </summary>
         public static double CalculateLaunchProgressCost(SpaceProgramState program)
         {

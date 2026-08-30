@@ -954,13 +954,19 @@ namespace TheRaceForSpace.UI
                 minmusSatelliteCount,
                 totalMinmusSatelliteCount);
 
-            bool showProbeOrbitFunding = !_raceController.ProbeOrbitProgramme.IsExpired;
-            bool showCrewedOrbitFunding = !_raceController.CrewedOrbitProgramme.IsExpired;
+            bool showProbeOrbitFunding =
+                program.HasAchievedProbeOrbit
+                && !_raceController.ProbeOrbitProgramme.IsExpired;
+            bool showCrewedOrbitFunding =
+                program.HasAchievedCrewedOrbit
+                && !_raceController.CrewedOrbitProgramme.IsExpired;
             bool showMunProbeOrbitFunding =
-                _raceController.IsAchievementProgrammeAvailable(_raceController.MunProbeOrbitProgramme)
+                program.HasAchievedMunProbeOrbit
+                && _raceController.IsAchievementProgrammeAvailable(_raceController.MunProbeOrbitProgramme)
                 && !_raceController.MunProbeOrbitProgramme.IsExpired;
             bool showMinmusProbeOrbitFunding =
-                _raceController.IsAchievementProgrammeAvailable(_raceController.MinmusProbeOrbitProgramme)
+                program.HasAchievedMinmusProbeOrbit
+                && _raceController.IsAchievementProgrammeAvailable(_raceController.MinmusProbeOrbitProgramme)
                 && !_raceController.MinmusProbeOrbitProgramme.IsExpired;
             bool showKerbinSatelliteFunding = kerbinSatelliteCount > 0 && kerbinSatelliteNextPayout > 0.0;
             bool showMunSatelliteFunding = munSatelliteCount > 0 && munSatelliteNextPayout > 0.0;
@@ -1005,26 +1011,22 @@ namespace TheRaceForSpace.UI
 
             if (showProbeOrbitFunding)
             {
-                GUILayout.Label("Probe Orbit: " + (program.HasAchievedProbeOrbit ? "Completed" : "Not Completed"));
+                GUILayout.Label("Probe Orbit: Completed");
             }
 
             if (showCrewedOrbitFunding)
             {
-                GUILayout.Label("Crewed Orbit: " + (program.HasAchievedCrewedOrbit ? "Completed" : "Not Completed"));
+                GUILayout.Label("Crewed Orbit: Completed");
             }
 
             if (showMunProbeOrbitFunding)
             {
-                GUILayout.Label(
-                    "Mun Probe Orbit: "
-                    + (program.HasAchievedMunProbeOrbit ? "Completed" : "Not Completed"));
+                GUILayout.Label("Mun Probe Orbit: Completed");
             }
 
             if (showMinmusProbeOrbitFunding)
             {
-                GUILayout.Label(
-                    "Minmus Probe Orbit: "
-                    + (program.HasAchievedMinmusProbeOrbit ? "Completed" : "Not Completed"));
+                GUILayout.Label("Minmus Probe Orbit: Completed");
             }
 
             if (showKerbinSatelliteFunding)

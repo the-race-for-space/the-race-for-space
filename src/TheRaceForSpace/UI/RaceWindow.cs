@@ -442,11 +442,16 @@ namespace TheRaceForSpace.UI
                 int playerProgress = _raceController.PlayerProgram.GetSatelliteCount(programme.CelestialBodyName);
                 int asterProgress = _raceController.AsterProgram.GetSatelliteCount(programme.CelestialBodyName);
                 int cobaltProgress = _raceController.CobaltProgram.GetSatelliteCount(programme.CelestialBodyName);
-                int totalSatelliteCount = playerProgress + asterProgress + cobaltProgress;
 
-                double playerNextPayout = programme.CalculateCurrentPayout(playerProgress, totalSatelliteCount);
-                double asterNextPayout = programme.CalculateCurrentPayout(asterProgress, totalSatelliteCount);
-                double cobaltNextPayout = programme.CalculateCurrentPayout(cobaltProgress, totalSatelliteCount);
+                double playerNextPayout = _raceController.GetSatelliteCurrentPayout(
+                    _raceController.PlayerProgram,
+                    programme);
+                double asterNextPayout = _raceController.GetSatelliteCurrentPayout(
+                    _raceController.AsterProgram,
+                    programme);
+                double cobaltNextPayout = _raceController.GetSatelliteCurrentPayout(
+                    _raceController.CobaltProgram,
+                    programme);
                 double unclaimedPayout = programme.RewardFunds
                     - playerNextPayout
                     - asterNextPayout
@@ -782,20 +787,11 @@ namespace TheRaceForSpace.UI
         private void DrawAchievementInformationCard(AchievementFundingProgramme programme)
         {
             bool isAvailable = _raceController.IsAchievementProgrammeAvailable(programme);
-            bool isLunarProbeProgramme = programme == _raceController.MunProbeOrbitProgramme
-                || programme == _raceController.MinmusProbeOrbitProgramme;
-            bool isLunarCrewedProgramme = programme == _raceController.MunCrewedOrbitProgramme
-                || programme == _raceController.MinmusCrewedOrbitProgramme;
 
             GUILayout.BeginVertical("box");
             GUILayout.Label(programme.Name);
             GUILayout.Label("Objective: " + programme.ObjectiveDescription);
-            GUILayout.Label(
-                isLunarProbeProgramme
-                    ? "Unlock: Any agency must achieve Probe Orbit."
-                    : isLunarCrewedProgramme
-                        ? "Unlock: Any agency must achieve Crewed Orbit."
-                        : "Unlock: Available from the start of the campaign");
+            GUILayout.Label("Unlock: " + programme.UnlockRequirement);
 
             if (programme.IsExpired)
             {

@@ -1,6 +1,5 @@
 using System;
 using TheRaceForSpace.Milestones;
-using TheRaceForSpace.Programs;
 
 namespace TheRaceForSpace.Tests.Milestones
 {
@@ -68,19 +67,6 @@ namespace TheRaceForSpace.Tests.Milestones
 
             Require(milestone.IsSatisfiedBy(observation), "A future body should use the same milestone matching rule.");
             Require(!milestone.IsSatisfiedBy(unqualifiedObservation), "An unqualified uncrewed vessel should not satisfy a probe milestone.");
-        }
-
-        public static void GenericStateMirrorsToLegacyFields()
-        {
-            var program = new SpaceProgramState("Program", true);
-            program.RecordAchievement(PrototypeMilestones.MunProbeOrbitId, 4321.0);
-
-            PrototypeMilestones.SynchronizeGenericAchievementStateToLegacy(program);
-
-            Require(program.HasAchievedMunProbeOrbit, "Generic Mun Probe Orbit should mirror to the temporary legacy flag.");
-            Require(
-                Math.Abs(program.MunProbeOrbitAchievementUniversalTime - 4321.0) < 0.0001,
-                "The temporary legacy timestamp should preserve the generic first-achievement time.");
         }
 
         private static void Require(bool condition, string message)

@@ -40,7 +40,7 @@ namespace TheRaceForSpace.Competition
             AsterProgram = new SpaceProgramState("Aster Aerospace Directorate", false);
             CobaltProgram = new SpaceProgramState("Cobalt Orbital Bureau", false);
 
-            // New/older saves begin with enough simulated cash for one complete Probe Orbit
+            // New games begin with enough simulated cash for one complete Probe Orbit
             // development cycle. Probe Orbit is deliberately the fixed opening rival mission.
             AsterProgram.Funds = RivalStartingFunds;
             CobaltProgram.Funds = RivalStartingFunds;
@@ -338,7 +338,7 @@ namespace TheRaceForSpace.Competition
             double currentUniversalTime = Planetarium.GetUniversalTime();
 
             // Do not advance gameplay until the ScenarioModule has loaded the current save.
-            // Old saves without 0.3 fields retain safe defaults and are migrated below.
+            // A new game has no saved Race for Space data, so the constructor defaults remain in use.
             if (!_hasRestoredPersistentState)
             {
                 bool restoredRivals = RacePersistenceScenario.TryRestoreRivalState(AsterProgram, CobaltProgram);
@@ -359,8 +359,6 @@ namespace TheRaceForSpace.Competition
                     return;
                 }
 
-                ApplyLegacySaveCompatibility(AsterProgram, currentUniversalTime);
-                ApplyLegacySaveCompatibility(CobaltProgram, currentUniversalTime);
                 _hasRestoredPersistentState = true;
             }
 
@@ -415,83 +413,6 @@ namespace TheRaceForSpace.Competition
                 MinmusProbeOrbitProgramme,
                 MunCrewedOrbitProgramme,
                 MinmusCrewedOrbitProgramme);
-        }
-
-        private void ApplyLegacySaveCompatibility(SpaceProgramState program, double currentUniversalTime)
-        {
-            if (program == null || program.IsPlayer)
-            {
-                return;
-            }
-
-            int existingSatelliteCount = program.GetSatelliteCount("Kerbin")
-                + program.GetSatelliteCount("Mun")
-                + program.GetSatelliteCount("Minmus");
-
-            // A 0.2 rival that already owns an orbital satellite necessarily demonstrated
-            // probe orbit. Treat the 0.3 achievement as newly recognised at the current save time
-            // instead of retroactively paying years of a contract that did not exist in 0.2.
-            if (!program.HasAchievedProbeOrbit && existingSatelliteCount > 0)
-            {
-                program.HasAchievedProbeOrbit = true;
-                program.ProbeOrbitAchievementUniversalTime = Math.Max(0.0, currentUniversalTime);
-            }
-
-            if (program.HasAchievedProbeOrbit && program.ProbeOrbitAchievementUniversalTime < 0.0)
-            {
-                program.ProbeOrbitAchievementUniversalTime = Math.Max(0.0, currentUniversalTime);
-            }
-
-            if (program.HasAchievedCrewedOrbit && program.CrewedOrbitAchievementUniversalTime < 0.0)
-            {
-                program.CrewedOrbitAchievementUniversalTime = Math.Max(0.0, currentUniversalTime);
-            }
-
-            // Existing lunar satellites prove the rival had already completed the corresponding
-            // unmanned probe orbit before these two one-off contracts were added. Recognise the
-            // achievement at load time rather than removing old satellite/network progress.
-            if (!program.HasAchievedMunProbeOrbit && program.GetSatelliteCount("Mun") > 0)
-            {
-                program.HasAchievedMunProbeOrbit = true;
-                program.MunProbeOrbitAchievementUniversalTime = Math.Max(0.0, currentUniversalTime);
-            }
-
-            if (!program.HasAchievedMinmusProbeOrbit && program.GetSatelliteCount("Minmus") > 0)
-            {
-                program.HasAchievedMinmusProbeOrbit = true;
-                program.MinmusProbeOrbitAchievementUniversalTime = Math.Max(0.0, currentUniversalTime);
-            }
-
-            if (program.HasAchievedMunProbeOrbit && program.MunProbeOrbitAchievementUniversalTime < 0.0)
-            {
-                program.MunProbeOrbitAchievementUniversalTime = Math.Max(0.0, currentUniversalTime);
-            }
-
-            if (program.HasAchievedMinmusProbeOrbit && program.MinmusProbeOrbitAchievementUniversalTime < 0.0)
-            {
-                program.MinmusProbeOrbitAchievementUniversalTime = Math.Max(0.0, currentUniversalTime);
-            }
-
-            if (program.HasAchievedMunCrewedOrbit && program.MunCrewedOrbitAchievementUniversalTime < 0.0)
-            {
-                program.MunCrewedOrbitAchievementUniversalTime = Math.Max(0.0, currentUniversalTime);
-            }
-
-            if (program.HasAchievedMinmusCrewedOrbit && program.MinmusCrewedOrbitAchievementUniversalTime < 0.0)
-            {
-                program.MinmusCrewedOrbitAchievementUniversalTime = Math.Max(0.0, currentUniversalTime);
-            }
-
-            // If an old rival had no completed satellites, reinterpret its current development
-            // progress as the new opening Probe Orbit mission instead of discarding that spending.
-            if (!program.HasAchievedProbeOrbit
-                && !string.Equals(
-                    program.NextLaunchBodyName,
-                    RivalSimulation.ProbeOrbitTargetName,
-                    StringComparison.OrdinalIgnoreCase))
-            {
-                program.NextLaunchBodyName = RivalSimulation.ProbeOrbitTargetName;
-            }
         }
 
         private void UpdateFundingAvailability()

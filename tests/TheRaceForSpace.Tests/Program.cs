@@ -5,6 +5,7 @@ using TheRaceForSpace.Milestones;
 using TheRaceForSpace.Persistence;
 using TheRaceForSpace.Programs;
 using TheRaceForSpace.Simulation;
+using TheRaceForSpace.Tests.Milestones;
 
 namespace TheRaceForSpace.Tests
 {
@@ -23,6 +24,11 @@ namespace TheRaceForSpace.Tests
             Run("Prototype milestone definitions match v0.3", PrototypeMilestoneDefinitionsMatchV03);
             Run("Prototype milestone ids are unique", PrototypeMilestoneIdsAreUnique);
             Run("Prototype milestone lookup uses stable ids", PrototypeMilestoneLookupUsesStableIds);
+            Run("Milestone probe observation matches definition", MilestoneEvaluationTests.ProbeObservationMatchesDefinition);
+            Run("Milestone crewed observation matches definition", MilestoneEvaluationTests.CrewedObservationMatchesDefinition);
+            Run("Milestone rejects wrong body or situation", MilestoneEvaluationTests.WrongBodyOrSituationDoesNotMatch);
+            Run("Milestone arbitrary body uses same rule", MilestoneEvaluationTests.ArbitraryBodyDefinitionUsesSameRule);
+            Run("Generic milestone state mirrors to legacy fields", MilestoneEvaluationTests.GenericStateMirrorsToLegacyFields);
             Run("Legacy prototype achievements synchronize to generic state", LegacyPrototypeAchievementsSynchronizeToGenericState);
             Run("Generic achievement state starts empty", GenericAchievementStateStartsEmpty);
             Run("Generic achievement state records first timestamp", GenericAchievementStateRecordsFirstTimestamp);

@@ -17,12 +17,6 @@ namespace TheRaceForSpace.Programs
         {
             Name = name;
             IsPlayer = isPlayer;
-            ProbeOrbitAchievementUniversalTime = -1.0;
-            CrewedOrbitAchievementUniversalTime = -1.0;
-            MunProbeOrbitAchievementUniversalTime = -1.0;
-            MinmusProbeOrbitAchievementUniversalTime = -1.0;
-            MunCrewedOrbitAchievementUniversalTime = -1.0;
-            MinmusCrewedOrbitAchievementUniversalTime = -1.0;
         }
 
         public string Name { get; private set; }
@@ -31,21 +25,6 @@ namespace TheRaceForSpace.Programs
         // Rival Funds is their simulated spendable balance; the player's real balance remains owned by KSP.
         public double Funds { get; set; }
         public double NextPayoutFunds { get; set; }
-
-        // Orbit achievements are permanent once observed. Their timestamps are retained so
-        // declining-interest payouts can exclude agencies that qualified after an earlier payment.
-        public bool HasAchievedProbeOrbit { get; set; }
-        public double ProbeOrbitAchievementUniversalTime { get; set; }
-        public bool HasAchievedCrewedOrbit { get; set; }
-        public double CrewedOrbitAchievementUniversalTime { get; set; }
-        public bool HasAchievedMunProbeOrbit { get; set; }
-        public double MunProbeOrbitAchievementUniversalTime { get; set; }
-        public bool HasAchievedMinmusProbeOrbit { get; set; }
-        public double MinmusProbeOrbitAchievementUniversalTime { get; set; }
-        public bool HasAchievedMunCrewedOrbit { get; set; }
-        public double MunCrewedOrbitAchievementUniversalTime { get; set; }
-        public bool HasAchievedMinmusCrewedOrbit { get; set; }
-        public double MinmusCrewedOrbitAchievementUniversalTime { get; set; }
 
         // Stable mission IDs are authoritative for rival simulation. NextLaunchBodyName remains
         // temporarily as a compatibility mirror for the current save format and will be removed

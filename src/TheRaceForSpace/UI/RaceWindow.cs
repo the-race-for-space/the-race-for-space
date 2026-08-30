@@ -1,3 +1,4 @@
+using System;
 using KSP.UI.Screens;
 using TheRaceForSpace.Competition;
 using TheRaceForSpace.Funding;

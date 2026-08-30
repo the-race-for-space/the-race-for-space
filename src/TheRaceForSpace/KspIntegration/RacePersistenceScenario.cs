@@ -17,12 +17,14 @@ namespace TheRaceForSpace.KspIntegration
         private const string AsterNodeName = "ASTER";
         private const string CobaltNodeName = "COBALT";
         private const string RaceProgressNodeName = "RACE_PROGRESS";
+        private const string CommandCenterVisibleValueName = "commandCenterVisible";
         private const string SchemaVersion = "3";
 
         private static readonly RivalProgramSaveState AsterState = new RivalProgramSaveState();
         private static readonly RivalProgramSaveState CobaltState = new RivalProgramSaveState();
         private static readonly RaceProgressSaveState RaceProgressState = new RaceProgressSaveState();
         private static Game _loadedGame;
+        private static bool _commandCenterVisible;
         private static bool _stateReady;
 
         public override void OnLoad(ConfigNode node)
@@ -34,6 +36,16 @@ namespace TheRaceForSpace.KspIntegration
                 AsterState.Load(node == null ? null : node.GetNode(AsterNodeName));
                 CobaltState.Load(node == null ? null : node.GetNode(CobaltNodeName));
                 RaceProgressState.Load(node == null ? null : node.GetNode(RaceProgressNodeName));
+
+                // Older saves have no UI visibility value. Defaulting those saves to closed
+                // matches new-save behaviour while keeping the added value backward compatible.
+                bool parsedCommandCenterVisible;
+                _commandCenterVisible = node != null
+                    && bool.TryParse(
+                        node.GetValue(CommandCenterVisibleValueName),
+                        out parsedCommandCenterVisible)
+                    && parsedCommandCenterVisible;
+
                 _loadedGame = HighLogic.CurrentGame;
             }
 
@@ -48,6 +60,7 @@ namespace TheRaceForSpace.KspIntegration
             }
 
             node.AddValue("schemaVersion", SchemaVersion);
+            node.AddValue(CommandCenterVisibleValueName, _commandCenterVisible);
 
             if (AsterState.HasData)
             {
@@ -66,6 +79,40 @@ namespace TheRaceForSpace.KspIntegration
                 ConfigNode raceProgressNode = node.AddNode(RaceProgressNodeName);
                 RaceProgressState.Save(raceProgressNode);
             }
+        }
+
+        /// <summary>
+        /// Restores the command-center visibility saved for this game. Static scenario state
+        /// also preserves the value while KSP changes scenes without saving in between.
+        /// </summary>
+        public static bool TryRestoreCommandCenterVisibility(out bool isVisible)
+        {
+            isVisible = false;
+
+            if (!_stateReady
+                || _loadedGame == null
+                || _loadedGame != HighLogic.CurrentGame)
+            {
+                return false;
+            }
+
+            isVisible = _commandCenterVisible;
+            return true;
+        }
+
+        /// <summary>
+        /// Captures the current command-center visibility for scene changes and the next save.
+        /// </summary>
+        public static void CaptureCommandCenterVisibility(bool isVisible)
+        {
+            if (!_stateReady
+                || _loadedGame == null
+                || _loadedGame != HighLogic.CurrentGame)
+            {
+                return;
+            }
+
+            _commandCenterVisible = isVisible;
         }
 
         /// <summary>

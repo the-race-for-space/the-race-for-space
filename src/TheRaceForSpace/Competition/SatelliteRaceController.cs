@@ -65,22 +65,26 @@ namespace TheRaceForSpace.Competition
                 MunProbeOrbitProgrammeId,
                 "Mun Probe Orbit",
                 "Achieve orbit around Mun with an uncrewed Probe or Relay vessel.",
-                200000.0);
+                200000.0,
+                "Any agency must achieve Probe Orbit.");
             MinmusProbeOrbitProgramme = new AchievementFundingProgramme(
                 MinmusProbeOrbitProgrammeId,
                 "Minmus Probe Orbit",
                 "Achieve orbit around Minmus with an uncrewed Probe or Relay vessel.",
-                200000.0);
+                200000.0,
+                "Any agency must achieve Probe Orbit.");
             MunCrewedOrbitProgramme = new AchievementFundingProgramme(
                 MunCrewedOrbitProgrammeId,
                 "Mun Crewed Orbit",
                 "Achieve orbit around Mun with at least one live Kerbal aboard.",
-                300000.0);
+                300000.0,
+                "Any agency must achieve Crewed Orbit.");
             MinmusCrewedOrbitProgramme = new AchievementFundingProgramme(
                 MinmusCrewedOrbitProgrammeId,
                 "Minmus Crewed Orbit",
                 "Achieve orbit around Minmus with at least one live Kerbal aboard.",
-                300000.0);
+                300000.0,
+                "Any agency must achieve Crewed Orbit.");
 
             _achievementFundingProgrammes.Add(ProbeOrbitProgramme);
             _achievementFundingProgrammes.Add(CrewedOrbitProgramme);

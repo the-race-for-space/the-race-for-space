@@ -26,33 +26,58 @@ namespace TheRaceForSpace.Tracking
             for (int i = 0; i < protoVessels.Count; i++)
             {
                 ProtoVessel protoVessel = protoVessels[i];
-                if (protoVessel == null || protoVessel.orbitSnapShot == null)
+                if (protoVessel == null)
                 {
                     continue;
                 }
 
-                if (protoVessel.situation != Vessel.Situations.ORBITING)
+                string bodyName;
+                VesselType vesselType;
+                int crewCount;
+                Vessel liveVessel = protoVessel.vesselRef;
+
+                // KSP can leave a loaded vessel's ProtoVessel snapshot describing the state
+                // from scene entry or the last save. When the live vessel exists, use its
+                // current situation/body/type so an active probe that has just reached orbit
+                // is counted immediately. Unloaded vessels continue to use persistent data.
+                if (liveVessel != null && liveVessel.loaded)
                 {
-                    continue;
+                    if (liveVessel.situation != Vessel.Situations.ORBITING
+                        || liveVessel.mainBody == null)
+                    {
+                        continue;
+                    }
+
+                    bodyName = liveVessel.mainBody.bodyName;
+                    vesselType = liveVessel.vesselType;
+                    crewCount = liveVessel.GetCrewCount();
+                }
+                else
+                {
+                    if (protoVessel.orbitSnapShot == null
+                        || protoVessel.situation != Vessel.Situations.ORBITING)
+                    {
+                        continue;
+                    }
+
+                    int bodyIndex = protoVessel.orbitSnapShot.ReferenceBodyIndex;
+                    if (bodyIndex < 0 || bodyIndex >= FlightGlobals.Bodies.Count)
+                    {
+                        continue;
+                    }
+
+                    bodyName = FlightGlobals.Bodies[bodyIndex].bodyName;
+                    vesselType = protoVessel.vesselType;
+                    crewCount = GetProtoCrewCount(protoVessel);
                 }
 
-                int bodyIndex = protoVessel.orbitSnapShot.ReferenceBodyIndex;
-                if (bodyIndex < 0 || bodyIndex >= FlightGlobals.Bodies.Count)
-                {
-                    continue;
-                }
-
-                string bodyName = FlightGlobals.Bodies[bodyIndex].bodyName;
-                bool isPrototypeSatellite =
-                    protoVessel.vesselType == VesselType.Probe || protoVessel.vesselType == VesselType.Relay;
+                bool isPrototypeSatellite = vesselType == VesselType.Probe || vesselType == VesselType.Relay;
 
                 if (bodyName == "Kerbin")
                 {
-                    int crewCount = GetProtoCrewCount(protoVessel);
-
                     // Orbit achievements are permanent once observed. Probe/Relay vessel types
                     // represent the prototype's uncrewed probe category, while any vessel with
-                    // at least one valid ProtoCrewMember can satisfy the crewed-orbit objective.
+                    // at least one live or persistent crew member can satisfy crewed orbit.
                     if (crewCount > 0 && !playerProgram.HasAchievedCrewedOrbit)
                     {
                         playerProgram.HasAchievedCrewedOrbit = true;

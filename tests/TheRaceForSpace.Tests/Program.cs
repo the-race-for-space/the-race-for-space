@@ -6,6 +6,7 @@ using TheRaceForSpace.Persistence;
 using TheRaceForSpace.Programs;
 using TheRaceForSpace.Simulation;
 using TheRaceForSpace.Tests.Milestones;
+using TheRaceForSpace.Tests.Persistence;
 using TheRaceForSpace.Tests.Simulation;
 
 namespace TheRaceForSpace.Tests
@@ -52,6 +53,10 @@ namespace TheRaceForSpace.Tests
             Run("Legacy rival save keys restore generic achievement", RivalLegacySaveKeysRestoreGenericState);
             Run("Race progress persistence round trip", RaceProgressPersistenceRoundTrip);
             Run("Rival persistence round trip", RivalPersistenceRoundTrip);
+            Run("Race progress persists arbitrary ids", CollectionPersistenceTests.RaceProgressRoundTripsArbitraryIds);
+            Run("Rival persistence handles arbitrary body and target", CollectionPersistenceTests.RivalRoundTripsArbitraryBodyAndTargetId);
+            Run("Malformed persistence nodes are safe", CollectionPersistenceTests.MalformedCollectionNodesAreHandledSafely);
+            Run("Empty persistence nodes stay empty", CollectionPersistenceTests.EmptyCollectionNodesRestoreWithoutInventingState);
 
             Console.WriteLine();
             Console.WriteLine(_failures == 0

@@ -17,8 +17,8 @@ namespace TheRaceForSpace.Simulation
         public const string MunSatelliteTargetId = "mun-survey";
         public const string MinmusSatelliteTargetId = "minmus-relay";
 
-        // These names remain for the current save format and UI compatibility only. Rival
-        // simulation decisions use stable IDs rather than comparing presentation strings.
+        // These names remain for UI and staged-call compatibility only. Rival simulation
+        // decisions use stable IDs rather than comparing presentation strings.
         public const string ProbeOrbitTargetName = "Probe Orbit";
         public const string CrewedOrbitTargetName = "Crewed Orbit";
         public const string MunProbeOrbitTargetName = "Mun Probe Orbit";
@@ -40,24 +40,18 @@ namespace TheRaceForSpace.Simulation
         private struct RivalSimulationContext
         {
             public RivalSimulationContext(
-                SpaceProgramState playerProgram,
-                SpaceProgramState asterProgram,
-                SpaceProgramState cobaltProgram,
+                IList<SpaceProgramState> programs,
                 double currentUniversalTime,
                 IList<AchievementFundingProgramme> achievementProgrammes,
                 IList<FundingProgramme> fundingProgrammes)
             {
-                PlayerProgram = playerProgram;
-                AsterProgram = asterProgram;
-                CobaltProgram = cobaltProgram;
+                Programs = programs;
                 CurrentUniversalTime = currentUniversalTime;
                 AchievementProgrammes = achievementProgrammes;
                 FundingProgrammes = fundingProgrammes;
             }
 
-            public readonly SpaceProgramState PlayerProgram;
-            public readonly SpaceProgramState AsterProgram;
-            public readonly SpaceProgramState CobaltProgram;
+            public readonly IList<SpaceProgramState> Programs;
             public readonly double CurrentUniversalTime;
             public readonly IList<AchievementFundingProgramme> AchievementProgrammes;
             public readonly IList<FundingProgramme> FundingProgrammes;
@@ -134,9 +128,8 @@ namespace TheRaceForSpace.Simulation
         }
 
         /// <summary>
-        /// Advances both prototype rivals using the live achievement and satellite programme
-        /// collections. Adding a new target to those collections does not require another target
-        /// branch in candidate selection.
+        /// Compatibility overload for the original three-program prototype call shape.
+        /// New code should pass the complete program collection.
         /// </summary>
         public static void Refresh(
             SpaceProgramState playerProgram,
@@ -146,30 +139,54 @@ namespace TheRaceForSpace.Simulation
             IList<AchievementFundingProgramme> achievementProgrammes,
             IList<FundingProgramme> fundingProgrammes)
         {
-            if (playerProgram == null
-                || asterProgram == null
-                || cobaltProgram == null
-                || achievementProgrammes == null
-                || fundingProgrammes == null)
+            if (playerProgram == null || asterProgram == null || cobaltProgram == null)
+            {
+                return;
+            }
+
+            Refresh(
+                new List<SpaceProgramState> { playerProgram, asterProgram, cobaltProgram },
+                currentUniversalTime,
+                achievementProgrammes,
+                fundingProgrammes);
+        }
+
+        /// <summary>
+        /// Advances every non-player program in the supplied collection. Target availability
+        /// checks also use the same collection, so adding another rival requires no simulation branch.
+        /// </summary>
+        public static void Refresh(
+            IList<SpaceProgramState> programs,
+            double currentUniversalTime,
+            IList<AchievementFundingProgramme> achievementProgrammes,
+            IList<FundingProgramme> fundingProgrammes)
+        {
+            if (programs == null || achievementProgrammes == null || fundingProgrammes == null)
             {
                 return;
             }
 
             var context = new RivalSimulationContext(
-                playerProgram,
-                asterProgram,
-                cobaltProgram,
+                programs,
                 currentUniversalTime,
                 achievementProgrammes,
                 fundingProgrammes);
 
-            RefreshProgram(asterProgram, context);
-            RefreshProgram(cobaltProgram, context);
+            for (int programIndex = 0; programIndex < programs.Count; programIndex++)
+            {
+                SpaceProgramState program = programs[programIndex];
+                if (program == null || program.IsPlayer)
+                {
+                    continue;
+                }
+
+                RefreshProgram(program, context);
+            }
         }
 
         /// <summary>
         /// Returns the display text for a stable rival mission target ID, or null for an unknown ID.
-        /// This overload remains for the current persistence format and the three prototype networks.
+        /// This overload remains for compatibility with the three prototype networks.
         /// </summary>
         public static string GetMissionTargetDisplayName(string targetId)
         {
@@ -657,9 +674,21 @@ namespace TheRaceForSpace.Simulation
             string milestoneId,
             RivalSimulationContext context)
         {
-            return context.PlayerProgram.HasAchievement(milestoneId)
-                || context.AsterProgram.HasAchievement(milestoneId)
-                || context.CobaltProgram.HasAchievement(milestoneId);
+            if (string.IsNullOrEmpty(milestoneId) || context.Programs == null)
+            {
+                return false;
+            }
+
+            for (int programIndex = 0; programIndex < context.Programs.Count; programIndex++)
+            {
+                SpaceProgramState program = context.Programs[programIndex];
+                if (program != null && program.HasAchievement(milestoneId))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private static string SynchronizeMissionTargetIdentity(SpaceProgramState program)

@@ -2,7 +2,7 @@
 
 Prototype development repository for **The Race for Space**, a Kerbal Space Program mod.
 
-The current vertical slice implements the first satellite funding race prototype with two simulated rival agencies, three funding programmes and player satellite tracking around Kerbin, Mun and Minmus.
+The current 0.3 vertical slice implements two competitive Kerbin orbit contracts, unlockable satellite-network funding around Kerbin, Mun and Minmus, two simulated rival agencies, scheduled funding, and persistent player/rival race progression.
 
 ## Repository layout
 
@@ -22,7 +22,7 @@ See `docs/BUILDING.md` for prerequisites, `KSP_ROOT` setup, build commands and o
 
 The primary interface target is a Steam Machine or conventional desktop PC using a normal PC-sized display. Prototype UI layouts should use the available desktop screen space rather than assume handheld-screen constraints.
 
-Version 0.2 introduces the Command Center overview plus independently openable Funding Programmes, Rival Agencies, and Milestones & Satellite Tracking windows.
+Version 0.3 keeps one Command Center window with Overview, Funding Targets, Rival Agencies and Space Race views. Funding Targets shows only contracts currently in play, while Space Race shows the complete progression and player-guide information, including locked objectives.
 
 ## Prototype architecture
 
@@ -37,4 +37,4 @@ The source structure separates:
 - User interface / presentation
 - Debug and prototype-only utilities
 
-The first gameplay implementation is intentionally narrow so the competitive satellite loop can be verified before persistence, stock Career funding integration and broader programme types are added.
+The gameplay implementation remains intentionally narrow so the progression, competitive achievement funding, rival mission simulation and satellite funding loop can be verified before broader programme types or celestial-body expansion are added.

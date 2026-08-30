@@ -308,8 +308,16 @@ namespace TheRaceForSpace.UI
             GUILayout.BeginHorizontal();
             GUILayout.BeginVertical(GUILayout.Width(350.0f));
             GUILayout.Label("Your Objectives", _boldLabelStyle);
-            GUILayout.Label("Probe Orbit: " + (player.HasAchievedProbeOrbit ? "ACHIEVED" : "IN PROGRESS"));
-            GUILayout.Label("Crewed Orbit: " + (player.HasAchievedCrewedOrbit ? "ACHIEVED" : "IN PROGRESS"));
+
+            if (!_raceController.ProbeOrbitProgramme.IsExpired)
+            {
+                GUILayout.Label("Probe Orbit: " + (player.HasAchievedProbeOrbit ? "ACHIEVED" : "IN PROGRESS"));
+            }
+
+            if (!_raceController.CrewedOrbitProgramme.IsExpired)
+            {
+                GUILayout.Label("Crewed Orbit: " + (player.HasAchievedCrewedOrbit ? "ACHIEVED" : "IN PROGRESS"));
+            }
 
             GUILayout.Space(10.0f);
             GUILayout.Label("Your Satellite Networks", _boldLabelStyle);

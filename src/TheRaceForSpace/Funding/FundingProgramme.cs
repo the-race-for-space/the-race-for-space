@@ -3,17 +3,31 @@ using System;
 namespace TheRaceForSpace.Funding
 {
     /// <summary>
-    /// One satellite funding target with a fixed total payout pool.
+    /// One persistent satellite-network funding target with a fixed total payout pool.
     /// </summary>
     public sealed class FundingProgramme
     {
         public FundingProgramme(string id, string name, string celestialBodyName, int requiredSatellites, double rewardFunds)
+            : this(id, name, celestialBodyName, requiredSatellites, rewardFunds, true, null)
+        {
+        }
+
+        public FundingProgramme(
+            string id,
+            string name,
+            string celestialBodyName,
+            int requiredSatellites,
+            double rewardFunds,
+            bool isAvailable,
+            string unlockRequirement)
         {
             Id = id;
             Name = name;
             CelestialBodyName = celestialBodyName;
             RequiredSatellites = requiredSatellites;
             RewardFunds = rewardFunds;
+            IsAvailable = isAvailable;
+            UnlockRequirement = unlockRequirement;
         }
 
         public string Id { get; private set; }
@@ -21,11 +35,22 @@ namespace TheRaceForSpace.Funding
         public string CelestialBodyName { get; private set; }
         public int RequiredSatellites { get; private set; }
         public double RewardFunds { get; private set; }
+        public string UnlockRequirement { get; private set; }
+        public bool IsAvailable { get; private set; }
         public string WinnerProgramName { get; set; }
 
         public bool IsClaimed
         {
             get { return !string.IsNullOrEmpty(WinnerProgramName); }
+        }
+
+        /// <summary>
+        /// Permanently unlocks this satellite contract for the current campaign.
+        /// Version 0.3 does not relock satellite contracts after they become available.
+        /// </summary>
+        public void Unlock()
+        {
+            IsAvailable = true;
         }
 
         /// <summary>
@@ -36,7 +61,11 @@ namespace TheRaceForSpace.Funding
         /// </summary>
         public double CalculateCurrentPayout(int programSatelliteCount, int totalSatelliteCount)
         {
-            if (RewardFunds <= 0.0 || RequiredSatellites <= 0 || programSatelliteCount <= 0 || totalSatelliteCount <= 0)
+            if (!IsAvailable
+                || RewardFunds <= 0.0
+                || RequiredSatellites <= 0
+                || programSatelliteCount <= 0
+                || totalSatelliteCount <= 0)
             {
                 return 0.0;
             }

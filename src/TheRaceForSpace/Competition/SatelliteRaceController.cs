@@ -104,6 +104,11 @@ namespace TheRaceForSpace.Competition
             get { return _achievementFundingProgrammes.AsReadOnly(); }
         }
 
+        /// <summary>
+        /// Guaranteed funds each rival receives on every shared 90-day funding date.
+        /// </summary>
+        public double RivalBaseIncomePerFundingPeriod { get { return RivalBaseIncomeFunds; } }
+
         public double NextFundingUniversalTime { get { return _nextFundingUniversalTime; } }
 
         public int NextFundingYear

@@ -16,8 +16,10 @@ namespace TheRaceForSpace.Tests
         {
             Run("Satellite funding before saturation", SatelliteFundingBeforeSaturation);
             Run("Satellite funding after saturation", SatelliteFundingAfterSaturation);
+            Run("Satellite funding stores structured prerequisite", SatelliteFundingStoresStructuredPrerequisite);
             Run("Achievement payout declines and expires", AchievementPayoutDeclinesAndExpires);
             Run("Achievement restore normalizes lifecycle", AchievementRestoreNormalizesLifecycle);
+            Run("Achievement funding stores structured prerequisite", AchievementFundingStoresStructuredPrerequisite);
             Run("Prototype milestone definitions match v0.3", PrototypeMilestoneDefinitionsMatchV03);
             Run("Prototype milestone ids are unique", PrototypeMilestoneIdsAreUnique);
             Run("Prototype milestone lookup uses stable ids", PrototypeMilestoneLookupUsesStableIds);
@@ -69,6 +71,33 @@ namespace TheRaceForSpace.Tests
             AssertEqual(50000.0, programme.CalculateCurrentPayout(3, 12));
         }
 
+        private static void SatelliteFundingStoresStructuredPrerequisite()
+        {
+            var programme = new FundingProgramme(
+                "mun-network",
+                "Mun Network",
+                "Mun",
+                5,
+                100000.0,
+                false,
+                "Display-only unlock text",
+                PrototypeMilestones.MunProbeOrbitId);
+
+            AssertEqual(PrototypeMilestones.MunProbeOrbitId, programme.PrerequisiteMilestoneId);
+            AssertEqual("Display-only unlock text", programme.UnlockRequirement);
+            AssertTrue(!programme.IsAvailable, "Structured prerequisites should not change initial availability.");
+
+            var legacyConstructor = new FundingProgramme(
+                "legacy-network",
+                "Legacy Network",
+                "Kerbin",
+                5,
+                100000.0,
+                false,
+                "Display-only unlock text");
+            AssertEqual(null, legacyConstructor.PrerequisiteMilestoneId);
+        }
+
         private static void AchievementPayoutDeclinesAndExpires()
         {
             var programme = new AchievementFundingProgramme("probe", "Probe", "Orbit", 100000.0);
@@ -96,6 +125,28 @@ namespace TheRaceForSpace.Tests
             AssertTrue(programme.HasStarted, "Processed payments imply a started contract.");
             AssertEqual(4, programme.PaymentsProcessed);
             AssertEqual(60, programme.CurrentInterestPercent);
+        }
+
+        private static void AchievementFundingStoresStructuredPrerequisite()
+        {
+            var programme = new AchievementFundingProgramme(
+                PrototypeMilestones.MunProbeOrbitId,
+                "Mun Probe Orbit",
+                "Orbit Mun",
+                200000.0,
+                "Display-only unlock text",
+                PrototypeMilestones.ProbeOrbitId);
+
+            AssertEqual(PrototypeMilestones.ProbeOrbitId, programme.PrerequisiteMilestoneId);
+            AssertEqual("Display-only unlock text", programme.UnlockRequirement);
+
+            var legacyConstructor = new AchievementFundingProgramme(
+                "legacy-achievement",
+                "Legacy Achievement",
+                "Objective",
+                100000.0,
+                "Display-only unlock text");
+            AssertEqual(null, legacyConstructor.PrerequisiteMilestoneId);
         }
 
         private static void PrototypeMilestoneDefinitionsMatchV03()

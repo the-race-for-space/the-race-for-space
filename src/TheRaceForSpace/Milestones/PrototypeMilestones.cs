@@ -98,8 +98,8 @@ namespace TheRaceForSpace.Milestones
 
         /// <summary>
         /// Imports the current six prototype achievement fields into generic milestone state.
-        /// Tracking, rival simulation, and persistence still write those fields during the staged
-        /// migration; this bridge can be removed once those subsystems write milestone IDs directly.
+        /// Rival simulation and persistence still write those fields during the staged migration;
+        /// this bridge can be removed once those subsystems write milestone IDs directly.
         /// </summary>
         public static void SynchronizeLegacyAchievementState(SpaceProgramState program)
         {
@@ -136,6 +136,54 @@ namespace TheRaceForSpace.Milestones
             if (program.HasAchievedMinmusCrewedOrbit)
             {
                 program.RecordAchievement(MinmusCrewedOrbitId, program.MinmusCrewedOrbitAchievementUniversalTime);
+            }
+        }
+
+        /// <summary>
+        /// Mirrors generic milestone state into the six temporary prototype fields still consumed
+        /// by rival simulation and persistence. Generic milestone state remains the source of truth.
+        /// </summary>
+        public static void SynchronizeGenericAchievementStateToLegacy(SpaceProgramState program)
+        {
+            if (program == null)
+            {
+                return;
+            }
+
+            if (program.HasAchievement(ProbeOrbitId))
+            {
+                program.HasAchievedProbeOrbit = true;
+                program.ProbeOrbitAchievementUniversalTime = program.GetAchievementUniversalTime(ProbeOrbitId);
+            }
+
+            if (program.HasAchievement(CrewedOrbitId))
+            {
+                program.HasAchievedCrewedOrbit = true;
+                program.CrewedOrbitAchievementUniversalTime = program.GetAchievementUniversalTime(CrewedOrbitId);
+            }
+
+            if (program.HasAchievement(MunProbeOrbitId))
+            {
+                program.HasAchievedMunProbeOrbit = true;
+                program.MunProbeOrbitAchievementUniversalTime = program.GetAchievementUniversalTime(MunProbeOrbitId);
+            }
+
+            if (program.HasAchievement(MinmusProbeOrbitId))
+            {
+                program.HasAchievedMinmusProbeOrbit = true;
+                program.MinmusProbeOrbitAchievementUniversalTime = program.GetAchievementUniversalTime(MinmusProbeOrbitId);
+            }
+
+            if (program.HasAchievement(MunCrewedOrbitId))
+            {
+                program.HasAchievedMunCrewedOrbit = true;
+                program.MunCrewedOrbitAchievementUniversalTime = program.GetAchievementUniversalTime(MunCrewedOrbitId);
+            }
+
+            if (program.HasAchievement(MinmusCrewedOrbitId))
+            {
+                program.HasAchievedMinmusCrewedOrbit = true;
+                program.MinmusCrewedOrbitAchievementUniversalTime = program.GetAchievementUniversalTime(MinmusCrewedOrbitId);
             }
         }
     }

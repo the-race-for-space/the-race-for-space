@@ -17,6 +17,7 @@ namespace TheRaceForSpace.Competition
         private const int KerbinDaysPerYear = 426;
         private const double FundingIntervalSeconds = 90.0 * KerbinDaySeconds;
         private const double RivalStartingFunds = 200000.0;
+        private const double RivalBaseIncomeFunds = 10000.0;
         private const int LunarNetworkUnlockKerbinSatelliteCount = 6;
         private const string ProbeOrbitProgrammeId = "probe-orbit";
         private const string CrewedOrbitProgrammeId = "crewed-orbit";
@@ -352,8 +353,9 @@ namespace TheRaceForSpace.Competition
         /// <summary>
         /// Processes every crossed global 90-day funding boundary. Satellite programmes and
         /// achievement programmes are deliberately paid in the same loop so every contract
-        /// shares one funding date. Achievement interest only advances when at least one agency
-        /// had qualified by that exact boundary.
+        /// shares one funding date. Rivals also receive their guaranteed base income at each
+        /// boundary. Achievement interest only advances when at least one agency had qualified
+        /// by that exact boundary.
         /// </summary>
         private void ProcessDueFunding(double currentUniversalTime)
         {
@@ -366,7 +368,16 @@ namespace TheRaceForSpace.Competition
                 for (int programIndex = 0; programIndex < _programs.Count; programIndex++)
                 {
                     SpaceProgramState program = _programs[programIndex];
-                    AwardProgramFunds(program, CalculateSatelliteFundingForProgram(program));
+                    double payout = CalculateSatelliteFundingForProgram(program);
+
+                    // Rival agencies always retain a minimal national/base budget even when
+                    // they currently qualify for no competitive contract funding.
+                    if (!program.IsPlayer)
+                    {
+                        payout += RivalBaseIncomeFunds;
+                    }
+
+                    AwardProgramFunds(program, payout);
                 }
 
                 for (int programmeIndex = 0; programmeIndex < _achievementFundingProgrammes.Count; programmeIndex++)
@@ -431,6 +442,13 @@ namespace TheRaceForSpace.Competition
             {
                 SpaceProgramState program = _programs[programIndex];
                 program.NextPayoutFunds = CalculateSatelliteFundingForProgram(program);
+
+                // Show the guaranteed rival base income in projected funding so the displayed
+                // next payout and rival launch ETA use the same value that will actually be paid.
+                if (!program.IsPlayer)
+                {
+                    program.NextPayoutFunds += RivalBaseIncomeFunds;
+                }
             }
 
             if (_nextFundingUniversalTime < 0.0)

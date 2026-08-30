@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using TheRaceForSpace.Programs;
 
 namespace TheRaceForSpace.Milestones
 {
@@ -94,22 +93,6 @@ namespace TheRaceForSpace.Milestones
             }
 
             return null;
-        }
-
-        /// <summary>
-        /// Staged source-compatibility shim for the pre-Pass-17 simulation overload.
-        /// Achievement state is already generic, so no synchronization is required.
-        /// </summary>
-        public static void SynchronizeLegacyAchievementState(SpaceProgramState program)
-        {
-        }
-
-        /// <summary>
-        /// Staged source-compatibility shim for the pre-Pass-17 simulation completion path.
-        /// Achievement state is already generic, so no synchronization is required.
-        /// </summary>
-        public static void SynchronizeGenericAchievementStateToLegacy(SpaceProgramState program)
-        {
         }
     }
 }

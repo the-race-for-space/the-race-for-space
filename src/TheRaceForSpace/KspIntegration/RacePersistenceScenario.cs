@@ -146,7 +146,9 @@ namespace TheRaceForSpace.KspIntegration
             FundingProgramme munProgramme,
             FundingProgramme minmusProgramme,
             AchievementFundingProgramme probeOrbitProgramme,
-            AchievementFundingProgramme crewedOrbitProgramme)
+            AchievementFundingProgramme crewedOrbitProgramme,
+            AchievementFundingProgramme munProbeOrbitProgramme,
+            AchievementFundingProgramme minmusProbeOrbitProgramme)
         {
             if (!_stateReady
                 || _loadedGame == null
@@ -162,7 +164,9 @@ namespace TheRaceForSpace.KspIntegration
                 munProgramme,
                 minmusProgramme,
                 probeOrbitProgramme,
-                crewedOrbitProgramme);
+                crewedOrbitProgramme,
+                munProbeOrbitProgramme,
+                minmusProbeOrbitProgramme);
             return true;
         }
 
@@ -195,7 +199,9 @@ namespace TheRaceForSpace.KspIntegration
             FundingProgramme munProgramme,
             FundingProgramme minmusProgramme,
             AchievementFundingProgramme probeOrbitProgramme,
-            AchievementFundingProgramme crewedOrbitProgramme)
+            AchievementFundingProgramme crewedOrbitProgramme,
+            AchievementFundingProgramme munProbeOrbitProgramme,
+            AchievementFundingProgramme minmusProbeOrbitProgramme)
         {
             if (!_stateReady
                 || _loadedGame == null
@@ -210,7 +216,9 @@ namespace TheRaceForSpace.KspIntegration
                 munProgramme,
                 minmusProgramme,
                 probeOrbitProgramme,
-                crewedOrbitProgramme);
+                crewedOrbitProgramme,
+                munProbeOrbitProgramme,
+                minmusProbeOrbitProgramme);
         }
     }
 }

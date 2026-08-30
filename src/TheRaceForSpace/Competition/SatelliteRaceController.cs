@@ -22,6 +22,8 @@ namespace TheRaceForSpace.Competition
         private const string CrewedOrbitProgrammeId = "crewed-orbit";
         private const string MunProbeOrbitProgrammeId = "mun-probe-orbit";
         private const string MinmusProbeOrbitProgrammeId = "minmus-probe-orbit";
+        private const string MunCrewedOrbitProgrammeId = "mun-crewed-orbit";
+        private const string MinmusCrewedOrbitProgrammeId = "minmus-crewed-orbit";
 
         private readonly List<SpaceProgramState> _programs = new List<SpaceProgramState>();
         private readonly List<FundingProgramme> _fundingProgrammes = new List<FundingProgramme>();
@@ -67,11 +69,23 @@ namespace TheRaceForSpace.Competition
                 "Minmus Probe Orbit",
                 "Achieve orbit around Minmus with an uncrewed Probe or Relay vessel.",
                 200000.0);
+            MunCrewedOrbitProgramme = new AchievementFundingProgramme(
+                MunCrewedOrbitProgrammeId,
+                "Mun Crewed Orbit",
+                "Achieve orbit around Mun with at least one live Kerbal aboard.",
+                200000.0);
+            MinmusCrewedOrbitProgramme = new AchievementFundingProgramme(
+                MinmusCrewedOrbitProgrammeId,
+                "Minmus Crewed Orbit",
+                "Achieve orbit around Minmus with at least one live Kerbal aboard.",
+                200000.0);
 
             _achievementFundingProgrammes.Add(ProbeOrbitProgramme);
             _achievementFundingProgrammes.Add(CrewedOrbitProgramme);
             _achievementFundingProgrammes.Add(MunProbeOrbitProgramme);
             _achievementFundingProgrammes.Add(MinmusProbeOrbitProgramme);
+            _achievementFundingProgrammes.Add(MunCrewedOrbitProgramme);
+            _achievementFundingProgrammes.Add(MinmusCrewedOrbitProgramme);
 
             KerbinNetworkProgramme = new FundingProgramme(
                 "kerbin-network",
@@ -113,6 +127,8 @@ namespace TheRaceForSpace.Competition
         public AchievementFundingProgramme CrewedOrbitProgramme { get; private set; }
         public AchievementFundingProgramme MunProbeOrbitProgramme { get; private set; }
         public AchievementFundingProgramme MinmusProbeOrbitProgramme { get; private set; }
+        public AchievementFundingProgramme MunCrewedOrbitProgramme { get; private set; }
+        public AchievementFundingProgramme MinmusCrewedOrbitProgramme { get; private set; }
         public IList<FundingProgramme> FundingProgrammes { get { return _fundingProgrammes.AsReadOnly(); } }
         public IList<AchievementFundingProgramme> AchievementFundingProgrammes
         {
@@ -218,8 +234,8 @@ namespace TheRaceForSpace.Competition
 
         /// <summary>
         /// Returns whether an achievement funding target is currently unlocked. Kerbin Probe
-        /// and Crewed Orbit are always available; Mun/Minmus Probe Orbit unlock once any agency
-        /// has completed Kerbin Probe Orbit.
+        /// and Crewed Orbit are available from the start. Lunar probe targets require any
+        /// agency's Kerbin Probe Orbit; lunar crewed targets require any agency's Kerbin Crewed Orbit.
         /// </summary>
         public bool IsAchievementProgrammeAvailable(AchievementFundingProgramme achievementProgramme)
         {
@@ -235,6 +251,15 @@ namespace TheRaceForSpace.Competition
                     StringComparison.OrdinalIgnoreCase))
             {
                 return GetAchievementAgencyCount(ProbeOrbitProgramme) > 0;
+            }
+
+            if (string.Equals(achievementProgramme.Id, MunCrewedOrbitProgrammeId, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(
+                    achievementProgramme.Id,
+                    MinmusCrewedOrbitProgrammeId,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return GetAchievementAgencyCount(CrewedOrbitProgramme) > 0;
             }
 
             return true;
@@ -291,7 +316,9 @@ namespace TheRaceForSpace.Competition
                     ProbeOrbitProgramme,
                     CrewedOrbitProgramme,
                     MunProbeOrbitProgramme,
-                    MinmusProbeOrbitProgramme);
+                    MinmusProbeOrbitProgramme,
+                    MunCrewedOrbitProgramme,
+                    MinmusCrewedOrbitProgramme);
 
                 if (!restoredRivals || !restoredRaceProgress)
                 {
@@ -313,9 +340,11 @@ namespace TheRaceForSpace.Competition
             }
 
             bool lunarProbeAchievementsAvailable = IsAchievementProgrammeAvailable(MunProbeOrbitProgramme);
+            bool lunarCrewedAchievementsAvailable = IsAchievementProgrammeAvailable(MunCrewedOrbitProgramme);
             SatelliteTracker.RefreshPlayerSatelliteCounts(
                 PlayerProgram,
-                lunarProbeAchievementsAvailable);
+                lunarProbeAchievementsAvailable,
+                lunarCrewedAchievementsAvailable);
             UpdateFundingAvailability();
 
             // Catch rivals up before processing funding so their recorded achievement timestamps
@@ -331,7 +360,9 @@ namespace TheRaceForSpace.Competition
                 !ProbeOrbitProgramme.IsExpired,
                 !CrewedOrbitProgramme.IsExpired,
                 !MunProbeOrbitProgramme.IsExpired,
-                !MinmusProbeOrbitProgramme.IsExpired);
+                !MinmusProbeOrbitProgramme.IsExpired,
+                !MunCrewedOrbitProgramme.IsExpired,
+                !MinmusCrewedOrbitProgramme.IsExpired);
 
             UpdateFundingAvailability();
             StartAchievementContracts();
@@ -347,7 +378,9 @@ namespace TheRaceForSpace.Competition
                 ProbeOrbitProgramme,
                 CrewedOrbitProgramme,
                 MunProbeOrbitProgramme,
-                MinmusProbeOrbitProgramme);
+                MinmusProbeOrbitProgramme,
+                MunCrewedOrbitProgramme,
+                MinmusCrewedOrbitProgramme);
         }
 
         private void ApplyLegacySaveCompatibility(SpaceProgramState program, double currentUniversalTime)
@@ -403,6 +436,16 @@ namespace TheRaceForSpace.Competition
             if (program.HasAchievedMinmusProbeOrbit && program.MinmusProbeOrbitAchievementUniversalTime < 0.0)
             {
                 program.MinmusProbeOrbitAchievementUniversalTime = Math.Max(0.0, currentUniversalTime);
+            }
+
+            if (program.HasAchievedMunCrewedOrbit && program.MunCrewedOrbitAchievementUniversalTime < 0.0)
+            {
+                program.MunCrewedOrbitAchievementUniversalTime = Math.Max(0.0, currentUniversalTime);
+            }
+
+            if (program.HasAchievedMinmusCrewedOrbit && program.MinmusCrewedOrbitAchievementUniversalTime < 0.0)
+            {
+                program.MinmusCrewedOrbitAchievementUniversalTime = Math.Max(0.0, currentUniversalTime);
             }
 
             // If an old rival had no completed satellites, reinterpret its current development
@@ -715,6 +758,20 @@ namespace TheRaceForSpace.Competition
             {
                 return program.HasAchievedMinmusProbeOrbit
                     ? Math.Max(0.0, program.MinmusProbeOrbitAchievementUniversalTime)
+                    : -1.0;
+            }
+
+            if (string.Equals(achievementProgramme.Id, MunCrewedOrbitProgrammeId, StringComparison.OrdinalIgnoreCase))
+            {
+                return program.HasAchievedMunCrewedOrbit
+                    ? Math.Max(0.0, program.MunCrewedOrbitAchievementUniversalTime)
+                    : -1.0;
+            }
+
+            if (string.Equals(achievementProgramme.Id, MinmusCrewedOrbitProgrammeId, StringComparison.OrdinalIgnoreCase))
+            {
+                return program.HasAchievedMinmusCrewedOrbit
+                    ? Math.Max(0.0, program.MinmusCrewedOrbitAchievementUniversalTime)
                     : -1.0;
             }
 

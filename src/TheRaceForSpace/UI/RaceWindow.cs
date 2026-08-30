@@ -357,28 +357,12 @@ namespace TheRaceForSpace.UI
                 GUILayout.Label("Requirement: " + programme.RequiredSatellites + " qualifying satellite(s) in orbit");
                 GUILayout.Label("Total Available Payout: " + programme.RewardFunds.ToString("N0"));
                 GUILayout.Label("Contract type: Fixed Contract");
-                GUILayout.Label("Next Payout: " + FormatKerbinDate(_raceController.NextFundingUniversalTime));
                 GUILayout.EndVertical();
 
                 GUILayout.Space(24.0f);
                 GUILayout.BeginVertical(GUILayout.ExpandWidth(true));
                 GUILayout.Label("Satellites: " + (satelliteSummary.Length > 0 ? satelliteSummary : "None"));
-
-                if (playerNextPayout > 0.0)
-                {
-                    GUILayout.Label("Player Next Payout: " + playerNextPayout.ToString("N0"));
-                }
-
-                if (asterNextPayout > 0.0)
-                {
-                    GUILayout.Label("Aster Next Payout: " + asterNextPayout.ToString("N0"));
-                }
-
-                if (cobaltNextPayout > 0.0)
-                {
-                    GUILayout.Label("Cobalt Next Payout: " + cobaltNextPayout.ToString("N0"));
-                }
-
+                DrawPayoutLinesByAmount(playerNextPayout, asterNextPayout, cobaltNextPayout);
                 GUILayout.EndVertical();
 
                 GUILayout.EndHorizontal();
@@ -391,16 +375,31 @@ namespace TheRaceForSpace.UI
 
         private void DrawAchievementFundingCard(AchievementFundingProgramme programme)
         {
+            double playerNextPayout = _raceController.GetAchievementCurrentPayout(
+                _raceController.PlayerProgram,
+                programme);
+            double asterNextPayout = _raceController.GetAchievementCurrentPayout(
+                _raceController.AsterProgram,
+                programme);
+            double cobaltNextPayout = _raceController.GetAchievementCurrentPayout(
+                _raceController.CobaltProgram,
+                programme);
+
             GUILayout.BeginVertical("box");
             DrawCenteredCardTitle(programme.Name);
 
             GUILayout.BeginHorizontal();
             GUILayout.BeginVertical(GUILayout.Width(400.0f));
-            GUILayout.Label("Objective: " + programme.ObjectiveDescription);
+            GUILayout.Label(
+                "Objective: "
+                + programme.ObjectiveDescription
+                + " Interest in funding decreases by 10% after each payout.");
             GUILayout.Label("Base Payout: " + programme.BaseRewardFunds.ToString("N0"));
-            GUILayout.Label("Current Interest: " + programme.CurrentInterestPercent + "%");
-            GUILayout.Label("Current Total Payout: " + programme.CurrentTotalPayoutFunds.ToString("N0"));
-            GUILayout.Label("Contract Status: " + (programme.HasStarted ? "Completed" : "Not yet Completed"));
+            GUILayout.Label("Current Interest in Contract: " + programme.CurrentInterestPercent + "%");
+            GUILayout.Label("Next Total Payout: " + programme.CurrentTotalPayoutFunds.ToString("N0"));
+            GUILayout.Label(
+                "Contract Status: "
+                + (programme.HasStarted ? "Completed - Paying Out" : "Not yet Completed"));
             GUILayout.EndVertical();
 
             GUILayout.Space(24.0f);
@@ -423,27 +422,54 @@ namespace TheRaceForSpace.UI
             }
 
             GUILayout.Label("Completed by: " + (completedBy.Length > 0 ? completedBy : "None"));
-            DrawAchievementAgencyLine("Player", _raceController.PlayerProgram, programme);
-            DrawAchievementAgencyLine("Aster", _raceController.AsterProgram, programme);
-            DrawAchievementAgencyLine("Cobalt", _raceController.CobaltProgram, programme);
+            DrawPayoutLinesByAmount(playerNextPayout, asterNextPayout, cobaltNextPayout);
             GUILayout.EndVertical();
 
             GUILayout.EndHorizontal();
             GUILayout.EndVertical();
         }
 
-        private void DrawAchievementAgencyLine(
-            string displayName,
-            SpaceProgramState program,
-            AchievementFundingProgramme programme)
+        private static void DrawPayoutLinesByAmount(
+            double playerNextPayout,
+            double asterNextPayout,
+            double cobaltNextPayout)
         {
-            double nextPayout = _raceController.GetAchievementCurrentPayout(program, programme);
-            if (nextPayout <= 0.0)
+            string[] agencyNames = { "Player", "Aster", "Cobalt" };
+            double[] nextPayouts = { playerNextPayout, asterNextPayout, cobaltNextPayout };
+
+            // Only three agencies are shown in 0.3, so a small in-place sort keeps the display
+            // straightforward while putting the agency with the strongest next payout first.
+            for (int payoutIndex = 0; payoutIndex < nextPayouts.Length - 1; payoutIndex++)
             {
-                return;
+                for (int compareIndex = payoutIndex + 1; compareIndex < nextPayouts.Length; compareIndex++)
+                {
+                    if (nextPayouts[compareIndex] <= nextPayouts[payoutIndex])
+                    {
+                        continue;
+                    }
+
+                    double payoutToSwap = nextPayouts[payoutIndex];
+                    nextPayouts[payoutIndex] = nextPayouts[compareIndex];
+                    nextPayouts[compareIndex] = payoutToSwap;
+
+                    string agencyNameToSwap = agencyNames[payoutIndex];
+                    agencyNames[payoutIndex] = agencyNames[compareIndex];
+                    agencyNames[compareIndex] = agencyNameToSwap;
+                }
             }
 
-            GUILayout.Label(displayName + " Next Payout: " + nextPayout.ToString("N0"));
+            for (int payoutIndex = 0; payoutIndex < nextPayouts.Length; payoutIndex++)
+            {
+                if (nextPayouts[payoutIndex] <= 0.0)
+                {
+                    continue;
+                }
+
+                GUILayout.Label(
+                    agencyNames[payoutIndex]
+                    + " Next Payout: "
+                    + nextPayouts[payoutIndex].ToString("N0"));
+            }
         }
 
         private void DrawRivalAgencies()

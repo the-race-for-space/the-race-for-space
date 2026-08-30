@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using TheRaceForSpace.Funding;
+using TheRaceForSpace.Milestones;
 using TheRaceForSpace.Persistence;
 using TheRaceForSpace.Programs;
 using TheRaceForSpace.Simulation;
@@ -16,6 +18,8 @@ namespace TheRaceForSpace.Tests
             Run("Satellite funding after saturation", SatelliteFundingAfterSaturation);
             Run("Achievement payout declines and expires", AchievementPayoutDeclinesAndExpires);
             Run("Achievement restore normalizes lifecycle", AchievementRestoreNormalizesLifecycle);
+            Run("Prototype milestone definitions match v0.3", PrototypeMilestoneDefinitionsMatchV03);
+            Run("Prototype milestone ids are unique", PrototypeMilestoneIdsAreUnique);
             Run("Rival launch costs match target type", RivalLaunchCostsMatchTargetType);
             Run("Rival ETA detects unaffordable mission", RivalEtaDetectsUnaffordableMission);
             Run("Unavailable rival target is abandoned", UnavailableRivalTargetIsAbandoned);
@@ -85,6 +89,66 @@ namespace TheRaceForSpace.Tests
             AssertTrue(programme.HasStarted, "Processed payments imply a started contract.");
             AssertEqual(4, programme.PaymentsProcessed);
             AssertEqual(60, programme.CurrentInterestPercent);
+        }
+
+        private static void PrototypeMilestoneDefinitionsMatchV03()
+        {
+            AssertEqual(6, PrototypeMilestones.All.Count);
+
+            AssertMilestone(
+                PrototypeMilestones.All[0],
+                PrototypeMilestones.ProbeOrbitId,
+                "Probe Orbit",
+                "Kerbin",
+                MilestoneCrewRequirement.UncrewedProbe,
+                null);
+            AssertMilestone(
+                PrototypeMilestones.All[1],
+                PrototypeMilestones.CrewedOrbitId,
+                "Crewed Orbit",
+                "Kerbin",
+                MilestoneCrewRequirement.Crewed,
+                null);
+            AssertMilestone(
+                PrototypeMilestones.All[2],
+                PrototypeMilestones.MunProbeOrbitId,
+                "Mun Probe Orbit",
+                "Mun",
+                MilestoneCrewRequirement.UncrewedProbe,
+                PrototypeMilestones.ProbeOrbitId);
+            AssertMilestone(
+                PrototypeMilestones.All[3],
+                PrototypeMilestones.MinmusProbeOrbitId,
+                "Minmus Probe Orbit",
+                "Minmus",
+                MilestoneCrewRequirement.UncrewedProbe,
+                PrototypeMilestones.ProbeOrbitId);
+            AssertMilestone(
+                PrototypeMilestones.All[4],
+                PrototypeMilestones.MunCrewedOrbitId,
+                "Mun Crewed Orbit",
+                "Mun",
+                MilestoneCrewRequirement.Crewed,
+                PrototypeMilestones.CrewedOrbitId);
+            AssertMilestone(
+                PrototypeMilestones.All[5],
+                PrototypeMilestones.MinmusCrewedOrbitId,
+                "Minmus Crewed Orbit",
+                "Minmus",
+                MilestoneCrewRequirement.Crewed,
+                PrototypeMilestones.CrewedOrbitId);
+        }
+
+        private static void PrototypeMilestoneIdsAreUnique()
+        {
+            var milestoneIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            for (int milestoneIndex = 0; milestoneIndex < PrototypeMilestones.All.Count; milestoneIndex++)
+            {
+                MilestoneDefinition milestone = PrototypeMilestones.All[milestoneIndex];
+                AssertTrue(
+                    milestoneIds.Add(milestone.Id),
+                    "Duplicate milestone id found: " + milestone.Id);
+            }
         }
 
         private static void RivalLaunchCostsMatchTargetType()
@@ -320,6 +384,25 @@ namespace TheRaceForSpace.Tests
                 new AchievementFundingProgramme("mun-crewed", "Mun Crewed", "Mun Crewed", 300000.0),
                 new AchievementFundingProgramme("minmus-crewed", "Minmus Crewed", "Minmus Crewed", 300000.0)
             };
+        }
+
+        private static void AssertMilestone(
+            MilestoneDefinition milestone,
+            string expectedId,
+            string expectedName,
+            string expectedBodyName,
+            MilestoneCrewRequirement expectedCrewRequirement,
+            string expectedPrerequisiteId)
+        {
+            AssertEqual(expectedId, milestone.Id);
+            AssertEqual(expectedName, milestone.Name);
+            AssertEqual(expectedBodyName, milestone.CelestialBodyName);
+            AssertEqual(MilestoneSituation.Orbit, milestone.Situation);
+            AssertEqual(expectedCrewRequirement, milestone.CrewRequirement);
+            AssertEqual(expectedPrerequisiteId, milestone.PrerequisiteMilestoneId);
+            AssertTrue(
+                !string.IsNullOrEmpty(milestone.ObjectiveDescription),
+                "Milestone objective description should not be empty.");
         }
 
         private static void AssertTrue(bool condition, string message)

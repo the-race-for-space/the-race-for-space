@@ -6,6 +6,7 @@ using TheRaceForSpace.Persistence;
 using TheRaceForSpace.Programs;
 using TheRaceForSpace.Simulation;
 using TheRaceForSpace.Tests.Milestones;
+using TheRaceForSpace.Tests.Simulation;
 
 namespace TheRaceForSpace.Tests
 {
@@ -43,6 +44,12 @@ namespace TheRaceForSpace.Tests
             Run("Invalid rival target id is abandoned", InvalidRivalTargetIdIsAbandoned);
             Run("Rival selects the only available target", RivalSelectsOnlyAvailableTarget);
             Run("Rival completion uses replay timestamp", RivalCompletionUsesReplayTimestamp);
+            Run("Rival collection selects available achievement", RivalSimulationCollectionTests.SelectsOnlyAvailableAchievementFromCollection);
+            Run("Rival collection excludes locked achievement", RivalSimulationCollectionTests.LockedAchievementIsExcludedFromCollection);
+            Run("Rival satellite programme remains repeatable", RivalSimulationCollectionTests.SatelliteProgrammeRemainsRepeatable);
+            Run("Rival completes arbitrary satellite programme", RivalSimulationCollectionTests.CompletesArbitrarySatelliteProgramme);
+            Run("Rival collection cost uses programme body", RivalSimulationCollectionTests.CollectionCostUsesProgrammeBody);
+            Run("Rival achievement completion uses milestone definition", RivalSimulationCollectionTests.AchievementCompletionUsesMilestoneDefinition);
             Run("Race progress persistence round trip", RaceProgressPersistenceRoundTrip);
             Run("Rival persistence round trip", RivalPersistenceRoundTrip);
 

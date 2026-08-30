@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using TheRaceForSpace.Milestones;
 using TheRaceForSpace.Programs;
 
 namespace TheRaceForSpace.Persistence
@@ -45,9 +46,9 @@ namespace TheRaceForSpace.Persistence
             ClearState();
             HasData = true;
             Funds = Math.Max(0.0, program.Funds);
-            NextMissionTargetId = string.IsNullOrEmpty(program.NextMissionTargetId)
-                ? null
-                : program.NextMissionTargetId;
+            NextMissionTargetId = !string.IsNullOrEmpty(program.NextMissionTargetId)
+                ? program.NextMissionTargetId
+                : ResolveLegacyMissionTargetId(program.NextLaunchBodyName);
             LaunchProgressPercent = Math.Max(0, Math.Min(100, program.LaunchProgressPercent));
             NextLaunchProgressCheckUniversalTime = Math.Max(
                 0.0,
@@ -92,8 +93,9 @@ namespace TheRaceForSpace.Persistence
             }
 
             program.NextMissionTargetId = NextMissionTargetId;
-            // Display text is derived from the live programme collections by RivalSimulation.
-            program.NextLaunchBodyName = null;
+            // The prototype display mirror is reconstructed for immediate UI continuity. Future
+            // target IDs can leave it null and RivalSimulation will derive text from live collections.
+            program.NextLaunchBodyName = GetPrototypeTargetDisplayName(NextMissionTargetId);
             program.LaunchProgressPercent = Math.Max(0, Math.Min(100, LaunchProgressPercent));
             program.NextLaunchProgressCheckUniversalTime = Math.Max(
                 0.0,
@@ -116,7 +118,15 @@ namespace TheRaceForSpace.Persistence
             }
 
             string targetId = node.GetValue(NextMissionTargetIdValueName);
-            NextMissionTargetId = string.IsNullOrEmpty(targetId) ? null : targetId;
+            if (!string.IsNullOrEmpty(targetId))
+            {
+                NextMissionTargetId = targetId;
+            }
+            else
+            {
+                // Read-only migration from the pre-Pass-18 display-name field.
+                NextMissionTargetId = ResolveLegacyMissionTargetId(node.GetValue("nextLaunchBodyName"));
+            }
 
             int parsedInt;
             if (int.TryParse(
@@ -147,12 +157,7 @@ namespace TheRaceForSpace.Persistence
                     continue;
                 }
 
-                universalTime = Math.Max(0.0, universalTime);
-                double existingTime;
-                if (!_achievementTimesById.TryGetValue(id, out existingTime) || universalTime < existingTime)
-                {
-                    _achievementTimesById[id] = universalTime;
-                }
+                StoreAchievement(id, universalTime);
             }
 
             ConfigNode[] satelliteNodes = node.GetNodes(SatelliteNodeName);
@@ -173,6 +178,41 @@ namespace TheRaceForSpace.Persistence
 
                 _satellitesByBody[bodyName] = Math.Max(0, count);
             }
+
+            LoadLegacyAchievement(
+                node,
+                "hasAchievedProbeOrbit",
+                "probeOrbitAchievementUniversalTime",
+                PrototypeMilestones.ProbeOrbitId);
+            LoadLegacyAchievement(
+                node,
+                "hasAchievedCrewedOrbit",
+                "crewedOrbitAchievementUniversalTime",
+                PrototypeMilestones.CrewedOrbitId);
+            LoadLegacyAchievement(
+                node,
+                "hasAchievedMunProbeOrbit",
+                "munProbeOrbitAchievementUniversalTime",
+                PrototypeMilestones.MunProbeOrbitId);
+            LoadLegacyAchievement(
+                node,
+                "hasAchievedMinmusProbeOrbit",
+                "minmusProbeOrbitAchievementUniversalTime",
+                PrototypeMilestones.MinmusProbeOrbitId);
+            LoadLegacyAchievement(
+                node,
+                "hasAchievedMunCrewedOrbit",
+                "munCrewedOrbitAchievementUniversalTime",
+                PrototypeMilestones.MunCrewedOrbitId);
+            LoadLegacyAchievement(
+                node,
+                "hasAchievedMinmusCrewedOrbit",
+                "minmusCrewedOrbitAchievementUniversalTime",
+                PrototypeMilestones.MinmusCrewedOrbitId);
+
+            LoadLegacySatelliteCount(node, "kerbinSatellites", "Kerbin");
+            LoadLegacySatelliteCount(node, "munSatellites", "Mun");
+            LoadLegacySatelliteCount(node, "minmusSatellites", "Minmus");
         }
 
         public void Save(ConfigNode node)
@@ -229,6 +269,136 @@ namespace TheRaceForSpace.Persistence
             NextLaunchProgressCheckUniversalTime = 0.0;
             _achievementTimesById.Clear();
             _satellitesByBody.Clear();
+        }
+
+        private void StoreAchievement(string id, double universalTime)
+        {
+            universalTime = Math.Max(0.0, universalTime);
+            double existingTime;
+            if (!_achievementTimesById.TryGetValue(id, out existingTime) || universalTime < existingTime)
+            {
+                _achievementTimesById[id] = universalTime;
+            }
+        }
+
+        private void LoadLegacyAchievement(
+            ConfigNode node,
+            string achievedValueName,
+            string universalTimeValueName,
+            string milestoneId)
+        {
+            if (!ParseBool(node.GetValue(achievedValueName)))
+            {
+                return;
+            }
+
+            double universalTime;
+            if (!TryParseFiniteDouble(node.GetValue(universalTimeValueName), out universalTime))
+            {
+                universalTime = 0.0;
+            }
+
+            StoreAchievement(milestoneId, universalTime);
+        }
+
+        private void LoadLegacySatelliteCount(ConfigNode node, string valueName, string bodyName)
+        {
+            int count;
+            if (int.TryParse(
+                node.GetValue(valueName),
+                NumberStyles.Integer,
+                CultureInfo.InvariantCulture,
+                out count))
+            {
+                _satellitesByBody[bodyName] = Math.Max(0, count);
+            }
+        }
+
+        private static string ResolveLegacyMissionTargetId(string legacyTargetName)
+        {
+            if (string.IsNullOrEmpty(legacyTargetName))
+            {
+                return null;
+            }
+
+            if (string.Equals(legacyTargetName, "Probe Orbit", StringComparison.OrdinalIgnoreCase))
+            {
+                return PrototypeMilestones.ProbeOrbitId;
+            }
+
+            if (string.Equals(legacyTargetName, "Crewed Orbit", StringComparison.OrdinalIgnoreCase))
+            {
+                return PrototypeMilestones.CrewedOrbitId;
+            }
+
+            if (string.Equals(legacyTargetName, "Mun Probe Orbit", StringComparison.OrdinalIgnoreCase))
+            {
+                return PrototypeMilestones.MunProbeOrbitId;
+            }
+
+            if (string.Equals(legacyTargetName, "Minmus Probe Orbit", StringComparison.OrdinalIgnoreCase))
+            {
+                return PrototypeMilestones.MinmusProbeOrbitId;
+            }
+
+            if (string.Equals(legacyTargetName, "Mun Crewed Orbit", StringComparison.OrdinalIgnoreCase))
+            {
+                return PrototypeMilestones.MunCrewedOrbitId;
+            }
+
+            if (string.Equals(legacyTargetName, "Minmus Crewed Orbit", StringComparison.OrdinalIgnoreCase))
+            {
+                return PrototypeMilestones.MinmusCrewedOrbitId;
+            }
+
+            if (string.Equals(legacyTargetName, "Kerbin", StringComparison.OrdinalIgnoreCase))
+            {
+                return "kerbin-network";
+            }
+
+            if (string.Equals(legacyTargetName, "Mun", StringComparison.OrdinalIgnoreCase))
+            {
+                return "mun-survey";
+            }
+
+            if (string.Equals(legacyTargetName, "Minmus", StringComparison.OrdinalIgnoreCase))
+            {
+                return "minmus-relay";
+            }
+
+            return legacyTargetName;
+        }
+
+        private static string GetPrototypeTargetDisplayName(string targetId)
+        {
+            MilestoneDefinition milestone = PrototypeMilestones.FindById(targetId);
+            if (milestone != null)
+            {
+                return milestone.Name;
+            }
+
+            if (string.Equals(targetId, "kerbin-network", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Kerbin";
+            }
+
+            if (string.Equals(targetId, "mun-survey", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Mun";
+            }
+
+            if (string.Equals(targetId, "minmus-relay", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Minmus";
+            }
+
+            return null;
+        }
+
+        private static bool ParseBool(string value)
+        {
+            bool parsedValue;
+            return !string.IsNullOrEmpty(value) && bool.TryParse(value, out parsedValue) && parsedValue;
         }
 
         private static bool TryParseFiniteDouble(string value, out double parsedValue)

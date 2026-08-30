@@ -16,6 +16,8 @@ namespace TheRaceForSpace.Programs
             IsPlayer = isPlayer;
             ProbeOrbitAchievementUniversalTime = -1.0;
             CrewedOrbitAchievementUniversalTime = -1.0;
+            MunProbeOrbitAchievementUniversalTime = -1.0;
+            MinmusProbeOrbitAchievementUniversalTime = -1.0;
         }
 
         public string Name { get; private set; }
@@ -34,9 +36,13 @@ namespace TheRaceForSpace.Programs
         public double ProbeOrbitAchievementUniversalTime { get; set; }
         public bool HasAchievedCrewedOrbit { get; set; }
         public double CrewedOrbitAchievementUniversalTime { get; set; }
+        public bool HasAchievedMunProbeOrbit { get; set; }
+        public double MunProbeOrbitAchievementUniversalTime { get; set; }
+        public bool HasAchievedMinmusProbeOrbit { get; set; }
+        public double MinmusProbeOrbitAchievementUniversalTime { get; set; }
 
         // NextLaunchBodyName is retained for save compatibility with 0.2. In 0.3 it may also
-        // contain the named Probe Orbit or Crewed Orbit mission while a rival develops it.
+        // contain a named one-off achievement mission while a rival develops it.
         public string NextLaunchBodyName { get; set; }
         public int LaunchProgressPercent { get; set; }
         public double NextLaunchProgressCheckUniversalTime { get; set; }

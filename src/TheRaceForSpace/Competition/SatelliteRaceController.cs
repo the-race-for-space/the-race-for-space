@@ -238,12 +238,11 @@ namespace TheRaceForSpace.Competition
 
             SatelliteTracker.RefreshPlayerSatelliteCounts(PlayerProgram);
             UpdateFundingAvailability();
-
-            // Existing contracts may have payments due before rival catch-up. Process them first
-            // so an expired achievement cannot remain a valid rival target during a large time-warp.
             StartAchievementContracts();
-            ProcessDueAchievementFunding(currentUniversalTime);
 
+            // Catch rivals up before paying achievement contracts. Their simulated completion
+            // timestamps may fall before one or more overdue payout dates, and those agencies
+            // must receive only the historical payments for which they were already eligible.
             RivalSimulation.Refresh(
                 PlayerProgram,
                 AsterProgram,
@@ -252,11 +251,9 @@ namespace TheRaceForSpace.Competition
                 KerbinNetworkProgramme.IsAvailable,
                 MunNetworkProgramme.IsAvailable,
                 MinmusNetworkProgramme.IsAvailable,
-                !ProbeOrbitProgramme.IsExpired,
-                !CrewedOrbitProgramme.IsExpired);
+                IsAchievementTargetStillLive(ProbeOrbitProgramme, currentUniversalTime),
+                IsAchievementTargetStillLive(CrewedOrbitProgramme, currentUniversalTime));
 
-            // Rival completion can unlock the Kerbin network, push combined Kerbin coverage
-            // across the 6-satellite lunar threshold, or start an orbit contract during this refresh.
             UpdateFundingAvailability();
             StartAchievementContracts();
             ProcessDueAchievementFunding(currentUniversalTime);
@@ -362,6 +359,29 @@ namespace TheRaceForSpace.Competition
                         firstAchievementUniversalTime + (programme.PaymentsProcessed * FundingIntervalSeconds));
                 }
             }
+        }
+
+        private bool IsAchievementTargetStillLive(
+            AchievementFundingProgramme programme,
+            double currentUniversalTime)
+        {
+            if (programme == null || programme.IsExpired)
+            {
+                return false;
+            }
+
+            if (!programme.HasStarted || programme.NextPayoutUniversalTime < 0.0)
+            {
+                return true;
+            }
+
+            int paymentsRemaining = 10 - programme.PaymentsProcessed;
+            double finalPayoutUniversalTime = programme.NextPayoutUniversalTime
+                + ((paymentsRemaining - 1) * FundingIntervalSeconds);
+
+            // A mission completed exactly on the final payout boundary may still qualify
+            // for that payment. After that timestamp the contract is no longer a valid target.
+            return currentUniversalTime <= finalPayoutUniversalTime;
         }
 
         private void ProcessDueAchievementFunding(double currentUniversalTime)

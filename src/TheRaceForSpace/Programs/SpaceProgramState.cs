@@ -26,13 +26,22 @@ namespace TheRaceForSpace.Programs
         public double Funds { get; set; }
         public double NextPayoutFunds { get; set; }
 
-        // Stable mission IDs are authoritative for rival simulation. NextLaunchBodyName remains
-        // temporarily as a compatibility mirror for the current save format and will be removed
-        // when persistence is migrated to ID-based collections.
         public string NextMissionTargetId { get; set; }
         public string NextLaunchBodyName { get; set; }
         public int LaunchProgressPercent { get; set; }
         public double NextLaunchProgressCheckUniversalTime { get; set; }
+
+        // Persistence enumerates these project-owned collections directly so future milestone IDs
+        // and celestial bodies do not require another fixed field on SpaceProgramState.
+        internal IEnumerable<KeyValuePair<string, double>> RecordedAchievements
+        {
+            get { return _achievementTimesById; }
+        }
+
+        internal IEnumerable<KeyValuePair<string, int>> SatelliteCountsByBody
+        {
+            get { return _satellitesByBody; }
+        }
 
         /// <summary>
         /// Returns whether this program has permanently recorded the milestone ID.
@@ -89,6 +98,11 @@ namespace TheRaceForSpace.Programs
 
         public void SetSatelliteCount(string celestialBodyName, int count)
         {
+            if (string.IsNullOrEmpty(celestialBodyName))
+            {
+                return;
+            }
+
             _satellitesByBody[celestialBodyName] = Math.Max(0, count);
         }
     }

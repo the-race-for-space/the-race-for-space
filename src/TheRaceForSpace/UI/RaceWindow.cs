@@ -348,14 +348,16 @@ namespace TheRaceForSpace.UI
                 GUILayout.Label("Crewed Orbit: " + (player.HasAchievedCrewedOrbit ? "ACHIEVED" : "IN PROGRESS"));
             }
 
-            if (!_raceController.MunProbeOrbitProgramme.IsExpired)
+            if (_raceController.IsAchievementProgrammeAvailable(_raceController.MunProbeOrbitProgramme)
+                && !_raceController.MunProbeOrbitProgramme.IsExpired)
             {
                 GUILayout.Label(
                     "Mun Probe Orbit: "
                     + (player.HasAchievedMunProbeOrbit ? "ACHIEVED" : "IN PROGRESS"));
             }
 
-            if (!_raceController.MinmusProbeOrbitProgramme.IsExpired)
+            if (_raceController.IsAchievementProgrammeAvailable(_raceController.MinmusProbeOrbitProgramme)
+                && !_raceController.MinmusProbeOrbitProgramme.IsExpired)
             {
                 GUILayout.Label(
                     "Minmus Probe Orbit: "
@@ -492,7 +494,7 @@ namespace TheRaceForSpace.UI
             for (int i = 0; i < _raceController.AchievementFundingProgrammes.Count; i++)
             {
                 AchievementFundingProgramme programme = _raceController.AchievementFundingProgrammes[i];
-                if (programme.IsExpired)
+                if (programme.IsExpired || !_raceController.IsAchievementProgrammeAvailable(programme))
                 {
                     continue;
                 }
@@ -731,7 +733,7 @@ namespace TheRaceForSpace.UI
             {
                 AchievementFundingProgramme programme =
                     _raceController.AchievementFundingProgrammes[programmeIndex];
-                if (programme.IsExpired)
+                if (programme.IsExpired || !_raceController.IsAchievementProgrammeAvailable(programme))
                 {
                     continue;
                 }
@@ -772,6 +774,26 @@ namespace TheRaceForSpace.UI
             GUILayout.Space(12.0f);
             GUILayout.Label("LOCKED FUNDING", _boldLabelStyle);
             bool hasLockedFunding = false;
+
+            for (int programmeIndex = 0;
+                programmeIndex < _raceController.AchievementFundingProgrammes.Count;
+                programmeIndex++)
+            {
+                AchievementFundingProgramme programme =
+                    _raceController.AchievementFundingProgrammes[programmeIndex];
+                if (programme.IsExpired || _raceController.IsAchievementProgrammeAvailable(programme))
+                {
+                    continue;
+                }
+
+                if (hasLockedFunding)
+                {
+                    GUILayout.Space(8.0f);
+                }
+
+                DrawAchievementInformationCard(programme);
+                hasLockedFunding = true;
+            }
 
             for (int programmeIndex = 0;
                 programmeIndex < _raceController.FundingProgrammes.Count;
@@ -831,14 +853,25 @@ namespace TheRaceForSpace.UI
 
         private void DrawAchievementInformationCard(AchievementFundingProgramme programme)
         {
+            bool isAvailable = _raceController.IsAchievementProgrammeAvailable(programme);
+            bool isLunarProbeProgramme = programme == _raceController.MunProbeOrbitProgramme
+                || programme == _raceController.MinmusProbeOrbitProgramme;
+
             GUILayout.BeginVertical("box");
             GUILayout.Label(programme.Name);
             GUILayout.Label("Objective: " + programme.ObjectiveDescription);
-            GUILayout.Label("Unlock: Available from the start of the campaign");
+            GUILayout.Label(
+                isLunarProbeProgramme
+                    ? "Unlock: Any agency must achieve Probe Orbit."
+                    : "Unlock: Available from the start of the campaign");
 
             if (programme.IsExpired)
             {
                 GUILayout.Label("State: EXPIRED");
+            }
+            else if (!isAvailable)
+            {
+                GUILayout.Label("State: LOCKED");
             }
             else if (!programme.HasStarted)
             {
@@ -923,8 +956,12 @@ namespace TheRaceForSpace.UI
 
             bool showProbeOrbitFunding = !_raceController.ProbeOrbitProgramme.IsExpired;
             bool showCrewedOrbitFunding = !_raceController.CrewedOrbitProgramme.IsExpired;
-            bool showMunProbeOrbitFunding = !_raceController.MunProbeOrbitProgramme.IsExpired;
-            bool showMinmusProbeOrbitFunding = !_raceController.MinmusProbeOrbitProgramme.IsExpired;
+            bool showMunProbeOrbitFunding =
+                _raceController.IsAchievementProgrammeAvailable(_raceController.MunProbeOrbitProgramme)
+                && !_raceController.MunProbeOrbitProgramme.IsExpired;
+            bool showMinmusProbeOrbitFunding =
+                _raceController.IsAchievementProgrammeAvailable(_raceController.MinmusProbeOrbitProgramme)
+                && !_raceController.MinmusProbeOrbitProgramme.IsExpired;
             bool showKerbinSatelliteFunding = kerbinSatelliteCount > 0 && kerbinSatelliteNextPayout > 0.0;
             bool showMunSatelliteFunding = munSatelliteCount > 0 && munSatelliteNextPayout > 0.0;
             bool showMinmusSatelliteFunding = minmusSatelliteCount > 0 && minmusSatelliteNextPayout > 0.0;

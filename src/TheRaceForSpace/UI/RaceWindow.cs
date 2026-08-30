@@ -324,6 +324,12 @@ namespace TheRaceForSpace.UI
             double minmusProbeOrbitNextPayout = _raceController.GetAchievementCurrentPayout(
                 player,
                 _raceController.MinmusProbeOrbitProgramme);
+            double munCrewedOrbitNextPayout = _raceController.GetAchievementCurrentPayout(
+                player,
+                _raceController.MunCrewedOrbitProgramme);
+            double minmusCrewedOrbitNextPayout = _raceController.GetAchievementCurrentPayout(
+                player,
+                _raceController.MinmusCrewedOrbitProgramme);
             double kerbinSatelliteNextPayout = _raceController.KerbinNetworkProgramme.CalculateCurrentPayout(
                 kerbinSatelliteCount,
                 totalKerbinSatelliteCount);
@@ -362,6 +368,22 @@ namespace TheRaceForSpace.UI
                 GUILayout.Label(
                     "Minmus Probe Orbit: "
                     + (player.HasAchievedMinmusProbeOrbit ? "ACHIEVED" : "IN PROGRESS"));
+            }
+
+            if (_raceController.IsAchievementProgrammeAvailable(_raceController.MunCrewedOrbitProgramme)
+                && !_raceController.MunCrewedOrbitProgramme.IsExpired)
+            {
+                GUILayout.Label(
+                    "Mun Crewed Orbit: "
+                    + (player.HasAchievedMunCrewedOrbit ? "ACHIEVED" : "IN PROGRESS"));
+            }
+
+            if (_raceController.IsAchievementProgrammeAvailable(_raceController.MinmusCrewedOrbitProgramme)
+                && !_raceController.MinmusCrewedOrbitProgramme.IsExpired)
+            {
+                GUILayout.Label(
+                    "Minmus Crewed Orbit: "
+                    + (player.HasAchievedMinmusCrewedOrbit ? "ACHIEVED" : "IN PROGRESS"));
             }
 
             GUILayout.Space(10.0f);
@@ -428,6 +450,24 @@ namespace TheRaceForSpace.UI
                 GUILayout.Label("Minmus Probe Orbit: Completed", GUILayout.Width(245.0f));
                 GUILayout.Space(2.0f);
                 GUILayout.Label(minmusProbeOrbitNextPayout.ToString("N0"), GUILayout.Width(100.0f));
+                GUILayout.EndHorizontal();
+            }
+
+            if (munCrewedOrbitNextPayout > 0.0)
+            {
+                GUILayout.BeginHorizontal();
+                GUILayout.Label("Mun Crewed Orbit: Completed", GUILayout.Width(245.0f));
+                GUILayout.Space(2.0f);
+                GUILayout.Label(munCrewedOrbitNextPayout.ToString("N0"), GUILayout.Width(100.0f));
+                GUILayout.EndHorizontal();
+            }
+
+            if (minmusCrewedOrbitNextPayout > 0.0)
+            {
+                GUILayout.BeginHorizontal();
+                GUILayout.Label("Minmus Crewed Orbit: Completed", GUILayout.Width(245.0f));
+                GUILayout.Space(2.0f);
+                GUILayout.Label(minmusCrewedOrbitNextPayout.ToString("N0"), GUILayout.Width(100.0f));
                 GUILayout.EndHorizontal();
             }
 
@@ -856,6 +896,8 @@ namespace TheRaceForSpace.UI
             bool isAvailable = _raceController.IsAchievementProgrammeAvailable(programme);
             bool isLunarProbeProgramme = programme == _raceController.MunProbeOrbitProgramme
                 || programme == _raceController.MinmusProbeOrbitProgramme;
+            bool isLunarCrewedProgramme = programme == _raceController.MunCrewedOrbitProgramme
+                || programme == _raceController.MinmusCrewedOrbitProgramme;
 
             GUILayout.BeginVertical("box");
             GUILayout.Label(programme.Name);
@@ -863,7 +905,9 @@ namespace TheRaceForSpace.UI
             GUILayout.Label(
                 isLunarProbeProgramme
                     ? "Unlock: Any agency must achieve Probe Orbit."
-                    : "Unlock: Available from the start of the campaign");
+                    : isLunarCrewedProgramme
+                        ? "Unlock: Any agency must achieve Crewed Orbit."
+                        : "Unlock: Available from the start of the campaign");
 
             if (programme.IsExpired)
             {
@@ -944,6 +988,12 @@ namespace TheRaceForSpace.UI
             double minmusProbeOrbitNextPayout = _raceController.GetAchievementCurrentPayout(
                 program,
                 _raceController.MinmusProbeOrbitProgramme);
+            double munCrewedOrbitNextPayout = _raceController.GetAchievementCurrentPayout(
+                program,
+                _raceController.MunCrewedOrbitProgramme);
+            double minmusCrewedOrbitNextPayout = _raceController.GetAchievementCurrentPayout(
+                program,
+                _raceController.MinmusCrewedOrbitProgramme);
             double kerbinSatelliteNextPayout = _raceController.KerbinNetworkProgramme.CalculateCurrentPayout(
                 kerbinSatelliteCount,
                 totalKerbinSatelliteCount);
@@ -968,6 +1018,14 @@ namespace TheRaceForSpace.UI
                 program.HasAchievedMinmusProbeOrbit
                 && _raceController.IsAchievementProgrammeAvailable(_raceController.MinmusProbeOrbitProgramme)
                 && !_raceController.MinmusProbeOrbitProgramme.IsExpired;
+            bool showMunCrewedOrbitFunding =
+                program.HasAchievedMunCrewedOrbit
+                && _raceController.IsAchievementProgrammeAvailable(_raceController.MunCrewedOrbitProgramme)
+                && !_raceController.MunCrewedOrbitProgramme.IsExpired;
+            bool showMinmusCrewedOrbitFunding =
+                program.HasAchievedMinmusCrewedOrbit
+                && _raceController.IsAchievementProgrammeAvailable(_raceController.MinmusCrewedOrbitProgramme)
+                && !_raceController.MinmusCrewedOrbitProgramme.IsExpired;
             bool showKerbinSatelliteFunding = kerbinSatelliteCount > 0 && kerbinSatelliteNextPayout > 0.0;
             bool showMunSatelliteFunding = munSatelliteCount > 0 && munSatelliteNextPayout > 0.0;
             bool showMinmusSatelliteFunding = minmusSatelliteCount > 0 && minmusSatelliteNextPayout > 0.0;
@@ -1029,6 +1087,16 @@ namespace TheRaceForSpace.UI
                 GUILayout.Label("Minmus Probe Orbit: Completed");
             }
 
+            if (showMunCrewedOrbitFunding)
+            {
+                GUILayout.Label("Mun Crewed Orbit: Completed");
+            }
+
+            if (showMinmusCrewedOrbitFunding)
+            {
+                GUILayout.Label("Minmus Crewed Orbit: Completed");
+            }
+
             if (showKerbinSatelliteFunding)
             {
                 GUILayout.Label("Kerbin Satellites " + kerbinSatelliteCount);
@@ -1073,6 +1141,19 @@ namespace TheRaceForSpace.UI
                 GUILayout.Label(
                     minmusProbeOrbitNextPayout > 0.0
                         ? minmusProbeOrbitNextPayout.ToString("N0")
+                        : string.Empty);
+            }
+
+            if (showMunCrewedOrbitFunding)
+            {
+                GUILayout.Label(munCrewedOrbitNextPayout > 0.0 ? munCrewedOrbitNextPayout.ToString("N0") : string.Empty);
+            }
+
+            if (showMinmusCrewedOrbitFunding)
+            {
+                GUILayout.Label(
+                    minmusCrewedOrbitNextPayout > 0.0
+                        ? minmusCrewedOrbitNextPayout.ToString("N0")
                         : string.Empty);
             }
 

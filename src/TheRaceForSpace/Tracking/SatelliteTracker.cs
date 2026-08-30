@@ -42,7 +42,6 @@ namespace TheRaceForSpace.Tracking
                 playerProgram,
                 PrototypeMilestones.All,
                 availableMilestoneIds);
-            PrototypeMilestones.SynchronizeGenericAchievementStateToLegacy(playerProgram);
         }
 
         /// <summary>

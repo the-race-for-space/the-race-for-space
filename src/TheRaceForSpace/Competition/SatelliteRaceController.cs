@@ -17,7 +17,7 @@ namespace TheRaceForSpace.Competition
         private const int KerbinDaysPerYear = 426;
         private const double FundingIntervalSeconds = 90.0 * KerbinDaySeconds;
         private const double RivalStartingFunds = 200000.0;
-        private const double RivalBaseIncomeFunds = 10000.0;
+        private const double RivalBaseIncomeFunds = 20000.0;
         private const string ProbeOrbitProgrammeId = "probe-orbit";
         private const string CrewedOrbitProgrammeId = "crewed-orbit";
         private const string MunProbeOrbitProgrammeId = "mun-probe-orbit";

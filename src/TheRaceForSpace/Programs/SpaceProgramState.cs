@@ -14,6 +14,8 @@ namespace TheRaceForSpace.Programs
         {
             Name = name;
             IsPlayer = isPlayer;
+            ProbeOrbitAchievementUniversalTime = -1.0;
+            CrewedOrbitAchievementUniversalTime = -1.0;
         }
 
         public string Name { get; private set; }
@@ -26,10 +28,12 @@ namespace TheRaceForSpace.Programs
         public double NextPayoutFunds { get; set; }
         public int RacePoints { get; set; }
 
-        // Orbit achievements are permanent once observed. Rival values and the player's
-        // achievement flags are persisted so a completed race cannot be lost on save/load.
+        // Orbit achievements are permanent once observed. Their timestamps are retained so
+        // declining-interest payouts can exclude agencies that qualified after an earlier payment.
         public bool HasAchievedProbeOrbit { get; set; }
+        public double ProbeOrbitAchievementUniversalTime { get; set; }
         public bool HasAchievedCrewedOrbit { get; set; }
+        public double CrewedOrbitAchievementUniversalTime { get; set; }
 
         // NextLaunchBodyName is retained for save compatibility with 0.2. In 0.3 it may also
         // contain the named Probe Orbit or Crewed Orbit mission while a rival develops it.

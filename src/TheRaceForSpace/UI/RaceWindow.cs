@@ -23,7 +23,6 @@ namespace TheRaceForSpace.UI
 
         private const float RefreshIntervalSeconds = 5.0f;
         private const int HighlightedCardTitleFontSize = 16;
-        private const int PayoutHeaderFontSize = 14;
         private const string LauncherIconTexturePath =
             "Squad/PartList/SimpleIcons/R&D_node_icon_basicprobes";
         private static SatelliteRaceController _raceController;
@@ -39,7 +38,6 @@ namespace TheRaceForSpace.UI
         private ApplicationLauncherButton _launcherButton;
         private GUIStyle _highlightedCardTitleStyle;
         private GUIStyle _boldLabelStyle;
-        private GUIStyle _payoutHeaderStyle;
         private bool _isDuplicateInstance;
         private bool _isVisible = true;
         private float _nextRefreshTime;
@@ -216,12 +214,6 @@ namespace TheRaceForSpace.UI
                 _boldLabelStyle.fontStyle = FontStyle.Bold;
             }
 
-            if (_payoutHeaderStyle == null)
-            {
-                _payoutHeaderStyle = new GUIStyle(_boldLabelStyle);
-                _payoutHeaderStyle.fontSize = PayoutHeaderFontSize;
-            }
-
             GUILayout.BeginHorizontal();
 
             if (GUILayout.Button("Overview", GUILayout.Height(40.0f)))
@@ -281,15 +273,22 @@ namespace TheRaceForSpace.UI
             GUILayout.Label("Funding Information", _boldLabelStyle);
             if (_raceController.NextFundingYear > 0)
             {
+                int daysUntilNextFunding = _raceController.DaysUntilNextFunding;
+                string daysUntilNextFundingText = daysUntilNextFunding == 1
+                    ? "1 Day to go"
+                    : daysUntilNextFunding + " Days to go";
+
                 GUILayout.Label(
-                    "Next funding date: Year "
+                    "Next Funding Date: Year "
                     + _raceController.NextFundingYear
                     + ", Day "
-                    + _raceController.NextFundingDay);
+                    + _raceController.NextFundingDay
+                    + " - "
+                    + daysUntilNextFundingText);
             }
             else
             {
-                GUILayout.Label("Next funding date: Pending");
+                GUILayout.Label("Next Funding Date: Pending");
             }
 
             // Every live contract is included because all funding now pays on the same date.
@@ -645,7 +644,7 @@ namespace TheRaceForSpace.UI
 
             GUILayout.BeginHorizontal();
             GUILayout.BeginVertical(GUILayout.Width(320.0f));
-            GUILayout.Label(string.Empty, _payoutHeaderStyle);
+            GUILayout.Label(string.Empty);
             GUILayout.Label("Funds: " + program.Funds.ToString("N0"));
             GUILayout.Label(
                 "Next Mission Planned: "
@@ -674,7 +673,7 @@ namespace TheRaceForSpace.UI
 
             GUILayout.Space(24.0f);
             GUILayout.BeginVertical(GUILayout.Width(245.0f));
-            GUILayout.Label(string.Empty, _payoutHeaderStyle);
+            GUILayout.Label(string.Empty);
             GUILayout.Label("Base Income");
 
             if (showProbeOrbitFunding)
@@ -708,7 +707,7 @@ namespace TheRaceForSpace.UI
 
             GUILayout.Space(2.0f);
             GUILayout.BeginVertical(GUILayout.Width(125.0f));
-            GUILayout.Label("Next Payout", _payoutHeaderStyle);
+            GUILayout.Label(string.Empty);
             GUILayout.Label(_raceController.RivalBaseIncomePerFundingPeriod.ToString("N0"));
 
             if (showProbeOrbitFunding)

@@ -18,7 +18,6 @@ namespace TheRaceForSpace.KspIntegration
         private const string CobaltNodeName = "COBALT";
         private const string RaceProgressNodeName = "RACE_PROGRESS";
         private const string CommandCenterVisibleValueName = "commandCenterVisible";
-        private const string SchemaVersion = "3";
 
         private static readonly RivalProgramSaveState AsterState = new RivalProgramSaveState();
         private static readonly RivalProgramSaveState CobaltState = new RivalProgramSaveState();
@@ -37,8 +36,6 @@ namespace TheRaceForSpace.KspIntegration
                 CobaltState.Load(node == null ? null : node.GetNode(CobaltNodeName));
                 RaceProgressState.Load(node == null ? null : node.GetNode(RaceProgressNodeName));
 
-                // Older saves have no UI visibility value. Defaulting those saves to closed
-                // matches new-save behaviour while keeping the added value backward compatible.
                 bool parsedCommandCenterVisible;
                 _commandCenterVisible = node != null
                     && bool.TryParse(
@@ -59,7 +56,6 @@ namespace TheRaceForSpace.KspIntegration
                 return;
             }
 
-            node.AddValue("schemaVersion", SchemaVersion);
             node.AddValue(CommandCenterVisibleValueName, _commandCenterVisible);
 
             if (AsterState.HasData)
@@ -117,8 +113,7 @@ namespace TheRaceForSpace.KspIntegration
 
         /// <summary>
         /// Restores saved rival state once KSP has finished loading the current save.
-        /// A true result also covers old saves with no Race for Space node, allowing the
-        /// controller to keep its current safe defaults for that first persisted session.
+        /// A new game has no rival nodes, so the controller's constructor defaults remain in use.
         /// </summary>
         public static bool TryRestoreRivalState(SpaceProgramState asterProgram, SpaceProgramState cobaltProgram)
         {
@@ -137,8 +132,8 @@ namespace TheRaceForSpace.KspIntegration
         }
 
         /// <summary>
-        /// Restores 0.3 player achievements, satellite-contract unlocks, and declining-interest
-        /// payment stages. Old 0.2 saves have no RACE_PROGRESS node and therefore keep safe defaults.
+        /// Restores saved player achievements, satellite-contract unlocks, and declining-interest
+        /// payment stages. A new game has no race-progress node and keeps the controller defaults.
         /// </summary>
         public static bool TryRestoreRaceProgress(
             SpaceProgramState playerProgram,

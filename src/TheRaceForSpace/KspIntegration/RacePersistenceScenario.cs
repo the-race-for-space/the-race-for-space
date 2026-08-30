@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using TheRaceForSpace.Funding;
 using TheRaceForSpace.Persistence;
 using TheRaceForSpace.Programs;
@@ -60,34 +61,24 @@ namespace TheRaceForSpace.KspIntegration
 
             if (AsterState.HasData)
             {
-                ConfigNode asterNode = node.AddNode(AsterNodeName);
-                AsterState.Save(asterNode);
+                AsterState.Save(node.AddNode(AsterNodeName));
             }
 
             if (CobaltState.HasData)
             {
-                ConfigNode cobaltNode = node.AddNode(CobaltNodeName);
-                CobaltState.Save(cobaltNode);
+                CobaltState.Save(node.AddNode(CobaltNodeName));
             }
 
             if (RaceProgressState.HasData)
             {
-                ConfigNode raceProgressNode = node.AddNode(RaceProgressNodeName);
-                RaceProgressState.Save(raceProgressNode);
+                RaceProgressState.Save(node.AddNode(RaceProgressNodeName));
             }
         }
 
-        /// <summary>
-        /// Restores the command-center visibility saved for this game. Static scenario state
-        /// also preserves the value while KSP changes scenes without saving in between.
-        /// </summary>
         public static bool TryRestoreCommandCenterVisibility(out bool isVisible)
         {
             isVisible = false;
-
-            if (!_stateReady
-                || _loadedGame == null
-                || _loadedGame != HighLogic.CurrentGame)
+            if (!_stateReady || _loadedGame == null || _loadedGame != HighLogic.CurrentGame)
             {
                 return false;
             }
@@ -96,14 +87,9 @@ namespace TheRaceForSpace.KspIntegration
             return true;
         }
 
-        /// <summary>
-        /// Captures the current command-center visibility for scene changes and the next save.
-        /// </summary>
         public static void CaptureCommandCenterVisibility(bool isVisible)
         {
-            if (!_stateReady
-                || _loadedGame == null
-                || _loadedGame != HighLogic.CurrentGame)
+            if (!_stateReady || _loadedGame == null || _loadedGame != HighLogic.CurrentGame)
             {
                 return;
             }
@@ -126,39 +112,19 @@ namespace TheRaceForSpace.KspIntegration
                 return false;
             }
 
-            // The current save format persists the legacy mission display string, not the new
-            // transient stable ID. Clear only when saved rival data exists so that saved missions
-            // override constructor defaults while brand-new games keep their opening Probe Orbit.
-            if (AsterState.HasData)
-            {
-                asterProgram.NextMissionTargetId = null;
-            }
-
-            if (CobaltState.HasData)
-            {
-                cobaltProgram.NextMissionTargetId = null;
-            }
-
             AsterState.ApplyTo(asterProgram);
             CobaltState.ApplyTo(cobaltProgram);
             return true;
         }
 
         /// <summary>
-        /// Restores saved player achievements, satellite-contract unlocks, and declining-interest
-        /// payment stages. A new game has no race-progress node and keeps the controller defaults.
+        /// Restores player achievements, programme unlocks, and achievement-contract lifecycle
+        /// state by stable ID rather than by a fixed prototype parameter list.
         /// </summary>
         public static bool TryRestoreRaceProgress(
             SpaceProgramState playerProgram,
-            FundingProgramme kerbinProgramme,
-            FundingProgramme munProgramme,
-            FundingProgramme minmusProgramme,
-            AchievementFundingProgramme probeOrbitProgramme,
-            AchievementFundingProgramme crewedOrbitProgramme,
-            AchievementFundingProgramme munProbeOrbitProgramme,
-            AchievementFundingProgramme minmusProbeOrbitProgramme,
-            AchievementFundingProgramme munCrewedOrbitProgramme,
-            AchievementFundingProgramme minmusCrewedOrbitProgramme)
+            IList<FundingProgramme> fundingProgrammes,
+            IList<AchievementFundingProgramme> achievementProgrammes)
         {
             if (!_stateReady
                 || _loadedGame == null
@@ -168,24 +134,10 @@ namespace TheRaceForSpace.KspIntegration
                 return false;
             }
 
-            RaceProgressState.ApplyTo(
-                playerProgram,
-                kerbinProgramme,
-                munProgramme,
-                minmusProgramme,
-                probeOrbitProgramme,
-                crewedOrbitProgramme,
-                munProbeOrbitProgramme,
-                minmusProbeOrbitProgramme,
-                munCrewedOrbitProgramme,
-                minmusCrewedOrbitProgramme);
+            RaceProgressState.ApplyTo(playerProgram, fundingProgrammes, achievementProgrammes);
             return true;
         }
 
-        /// <summary>
-        /// Captures the latest live rival values so KSP's next ScenarioModule save writes
-        /// current balances, satellite counts, achievements, timestamps, and in-progress mission state.
-        /// </summary>
         public static void CaptureRivalState(SpaceProgramState asterProgram, SpaceProgramState cobaltProgram)
         {
             if (!_stateReady
@@ -202,39 +154,20 @@ namespace TheRaceForSpace.KspIntegration
         }
 
         /// <summary>
-        /// Captures player achievement flags, timestamps, and global contract progression without
-        /// duplicating satellite counts that remain owned by the live KSP vessel tracker.
+        /// Captures player achievement state and programme lifecycle state by stable ID. Player
+        /// satellite counts remain owned by live KSP vessel tracking and are not persisted here.
         /// </summary>
         public static void CaptureRaceProgress(
             SpaceProgramState playerProgram,
-            FundingProgramme kerbinProgramme,
-            FundingProgramme munProgramme,
-            FundingProgramme minmusProgramme,
-            AchievementFundingProgramme probeOrbitProgramme,
-            AchievementFundingProgramme crewedOrbitProgramme,
-            AchievementFundingProgramme munProbeOrbitProgramme,
-            AchievementFundingProgramme minmusProbeOrbitProgramme,
-            AchievementFundingProgramme munCrewedOrbitProgramme,
-            AchievementFundingProgramme minmusCrewedOrbitProgramme)
+            IList<FundingProgramme> fundingProgrammes,
+            IList<AchievementFundingProgramme> achievementProgrammes)
         {
-            if (!_stateReady
-                || _loadedGame == null
-                || _loadedGame != HighLogic.CurrentGame)
+            if (!_stateReady || _loadedGame == null || _loadedGame != HighLogic.CurrentGame)
             {
                 return;
             }
 
-            RaceProgressState.Capture(
-                playerProgram,
-                kerbinProgramme,
-                munProgramme,
-                minmusProgramme,
-                probeOrbitProgramme,
-                crewedOrbitProgramme,
-                munProbeOrbitProgramme,
-                minmusProbeOrbitProgramme,
-                munCrewedOrbitProgramme,
-                minmusCrewedOrbitProgramme);
+            RaceProgressState.Capture(playerProgram, fundingProgrammes, achievementProgrammes);
         }
     }
 }

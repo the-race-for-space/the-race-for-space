@@ -328,6 +328,26 @@ namespace TheRaceForSpace.UI
                 double asterNextPayout = programme.CalculateCurrentPayout(asterProgress, totalSatelliteCount);
                 double cobaltNextPayout = programme.CalculateCurrentPayout(cobaltProgress, totalSatelliteCount);
 
+                string satelliteSummary = string.Empty;
+                if (playerProgress > 0)
+                {
+                    satelliteSummary = "Player " + playerProgress;
+                }
+
+                if (asterProgress > 0)
+                {
+                    satelliteSummary += (satelliteSummary.Length > 0 ? ", " : string.Empty)
+                        + "Aster "
+                        + asterProgress;
+                }
+
+                if (cobaltProgress > 0)
+                {
+                    satelliteSummary += (satelliteSummary.Length > 0 ? ", " : string.Empty)
+                        + "Cobalt "
+                        + cobaltProgress;
+                }
+
                 GUILayout.BeginVertical("box");
                 DrawCenteredCardTitle(programme.Name);
 
@@ -342,12 +362,23 @@ namespace TheRaceForSpace.UI
 
                 GUILayout.Space(24.0f);
                 GUILayout.BeginVertical(GUILayout.ExpandWidth(true));
-                GUILayout.Label("Player Progress: " + FormatSatelliteCount(playerProgress));
-                GUILayout.Label("Player Next Payout: " + playerNextPayout.ToString("N0"));
-                GUILayout.Label("Aster Progress: " + FormatSatelliteCount(asterProgress));
-                GUILayout.Label("Aster Next Payout: " + asterNextPayout.ToString("N0"));
-                GUILayout.Label("Cobalt Progress: " + FormatSatelliteCount(cobaltProgress));
-                GUILayout.Label("Cobalt Next Payout: " + cobaltNextPayout.ToString("N0"));
+                GUILayout.Label("Satellites: " + (satelliteSummary.Length > 0 ? satelliteSummary : "None"));
+
+                if (playerNextPayout > 0.0)
+                {
+                    GUILayout.Label("Player Next Payout: " + playerNextPayout.ToString("N0"));
+                }
+
+                if (asterNextPayout > 0.0)
+                {
+                    GUILayout.Label("Aster Next Payout: " + asterNextPayout.ToString("N0"));
+                }
+
+                if (cobaltNextPayout > 0.0)
+                {
+                    GUILayout.Label("Cobalt Next Payout: " + cobaltNextPayout.ToString("N0"));
+                }
+
                 GUILayout.EndVertical();
 
                 GUILayout.EndHorizontal();
@@ -406,10 +437,13 @@ namespace TheRaceForSpace.UI
             SpaceProgramState program,
             AchievementFundingProgramme programme)
         {
-            GUILayout.Label(
-                displayName
-                + " Next Payout: "
-                + _raceController.GetAchievementCurrentPayout(program, programme).ToString("N0"));
+            double nextPayout = _raceController.GetAchievementCurrentPayout(program, programme);
+            if (nextPayout <= 0.0)
+            {
+                return;
+            }
+
+            GUILayout.Label(displayName + " Next Payout: " + nextPayout.ToString("N0"));
         }
 
         private void DrawRivalAgencies()

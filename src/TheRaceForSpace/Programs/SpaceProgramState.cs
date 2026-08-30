@@ -43,6 +43,16 @@ namespace TheRaceForSpace.Programs
             get { return _satellitesByBody; }
         }
 
+        internal void ClearRecordedAchievements()
+        {
+            _achievementTimesById.Clear();
+        }
+
+        internal void ClearSatelliteCounts()
+        {
+            _satellitesByBody.Clear();
+        }
+
         /// <summary>
         /// Returns whether this program has permanently recorded the milestone ID.
         /// </summary>

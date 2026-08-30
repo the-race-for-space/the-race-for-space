@@ -19,6 +19,7 @@ namespace TheRaceForSpace.Simulation
         private const double KerbinDaySeconds = 21600.0;
         private const double LaunchProgressIntervalSeconds = 5.0 * KerbinDaySeconds;
         private const double LaunchProgressChance = 0.30;
+        private const double SatelliteMissionSelectionChance = 0.60;
         private const int LaunchProgressIncrementPercent = 10;
         private const double LaunchProgressCostFunds = 20000.0;
         private const double MunMinmusLaunchProgressCostMultiplier = 2.0;
@@ -523,7 +524,8 @@ namespace TheRaceForSpace.Simulation
             bool munCrewedOrbitContractLive,
             bool minmusCrewedOrbitContractLive)
         {
-            var availableTargets = new List<string>();
+            var availableOneOffTargets = new List<string>();
+            var availableSatelliteTargets = new List<string>();
             bool lunarProbeAchievementsAvailable = IsKerbinNetworkAvailable(
                 kerbinNetworkAvailable,
                 playerProgram,
@@ -535,63 +537,81 @@ namespace TheRaceForSpace.Simulation
 
             if (probeOrbitContractLive && !program.HasAchievedProbeOrbit)
             {
-                availableTargets.Add(ProbeOrbitTargetName);
+                availableOneOffTargets.Add(ProbeOrbitTargetName);
             }
 
             if (crewedOrbitContractLive && !program.HasAchievedCrewedOrbit)
             {
-                availableTargets.Add(CrewedOrbitTargetName);
+                availableOneOffTargets.Add(CrewedOrbitTargetName);
             }
 
             if (lunarProbeAchievementsAvailable
                 && munProbeOrbitContractLive
                 && !program.HasAchievedMunProbeOrbit)
             {
-                availableTargets.Add(MunProbeOrbitTargetName);
+                availableOneOffTargets.Add(MunProbeOrbitTargetName);
             }
 
             if (lunarProbeAchievementsAvailable
                 && minmusProbeOrbitContractLive
                 && !program.HasAchievedMinmusProbeOrbit)
             {
-                availableTargets.Add(MinmusProbeOrbitTargetName);
+                availableOneOffTargets.Add(MinmusProbeOrbitTargetName);
             }
 
             if (lunarCrewedAchievementsAvailable
                 && munCrewedOrbitContractLive
                 && !program.HasAchievedMunCrewedOrbit)
             {
-                availableTargets.Add(MunCrewedOrbitTargetName);
+                availableOneOffTargets.Add(MunCrewedOrbitTargetName);
             }
 
             if (lunarCrewedAchievementsAvailable
                 && minmusCrewedOrbitContractLive
                 && !program.HasAchievedMinmusCrewedOrbit)
             {
-                availableTargets.Add(MinmusCrewedOrbitTargetName);
+                availableOneOffTargets.Add(MinmusCrewedOrbitTargetName);
             }
 
             if (IsKerbinNetworkAvailable(kerbinNetworkAvailable, playerProgram, asterProgram, cobaltProgram))
             {
-                availableTargets.Add("Kerbin");
+                availableSatelliteTargets.Add("Kerbin");
             }
 
             if (IsMunNetworkAvailable(munNetworkAvailable, playerProgram, asterProgram, cobaltProgram))
             {
-                availableTargets.Add("Mun");
+                availableSatelliteTargets.Add("Mun");
             }
 
             if (IsMinmusNetworkAvailable(minmusNetworkAvailable, playerProgram, asterProgram, cobaltProgram))
             {
-                availableTargets.Add("Minmus");
+                availableSatelliteTargets.Add("Minmus");
             }
 
-            if (availableTargets.Count == 0)
+            if (availableOneOffTargets.Count == 0 && availableSatelliteTargets.Count == 0)
             {
                 return null;
             }
 
-            return availableTargets[RandomGenerator.Next(availableTargets.Count)];
+            List<string> selectedTargetType;
+            if (availableSatelliteTargets.Count == 0)
+            {
+                selectedTargetType = availableOneOffTargets;
+            }
+            else if (availableOneOffTargets.Count == 0)
+            {
+                selectedTargetType = availableSatelliteTargets;
+            }
+            else
+            {
+                // Mission type is selected first so repeatable satellite work has a stable 60%
+                // share regardless of how many one-off contracts happen to be live at the time.
+                selectedTargetType = RandomGenerator.NextDouble() < SatelliteMissionSelectionChance
+                    ? availableSatelliteTargets
+                    : availableOneOffTargets;
+            }
+
+            return selectedTargetType[RandomGenerator.Next(selectedTargetType.Count)];
         }
 
         private static bool IsKerbinNetworkAvailable(

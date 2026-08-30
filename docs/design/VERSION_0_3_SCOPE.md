@@ -77,7 +77,9 @@ The goal is to prove these systems with a narrow implementation before adding mo
    - Completing Minmus Probe Orbit marks the achievement and adds one Minmus satellite.
    - Completing Crewed Orbit, Mun Crewed Orbit, or Minmus Crewed Orbit marks only the relevant achievement and does not add a satellite.
    - Completing a normal satellite mission adds one satellite to the selected body.
-   - After the fixed opening Probe Orbit mission, rivals choose randomly from currently valid live achievement and unlocked satellite objectives.
+   - After the fixed opening Probe Orbit mission, rivals first choose the next mission type: **60% satellite mission / 40% one-off achievement mission** when both categories have valid targets.
+   - After the mission type is chosen, one currently valid target inside that category is selected with equal probability.
+   - If only one mission category currently has valid targets, that category is used automatically rather than leaving the rival without a mission.
    - Mun Probe Orbit and Minmus Probe Orbit are not valid rival targets until Probe Orbit around Kerbin has been achieved by any agency.
    - Mun Crewed Orbit and Minmus Crewed Orbit are not valid rival targets until Crewed Orbit around Kerbin has been achieved by any agency.
    - Kerbin satellite missions become valid after Probe Orbit unlocks the Kerbin network.
@@ -168,6 +170,8 @@ The implementation uses these prototype values unless a later design change expl
 - Rival mission progress check: **every 5 Kerbin days**.
 - Rival progress success chance: **30%**.
 - Successful rival progress increment: **10 percentage points**.
+- Rival next-mission type selection: **60% satellite / 40% one-off achievement** when both categories have valid missions.
+- Within the selected mission category, all currently valid targets have equal selection probability; if only one category has valid targets, it is used automatically.
 - Shared funding interval: **90 Kerbin days**.
 - Rival base income: **20,000 funds per rival agency on every shared funding date**.
 - Achievement-contract interest reduction: **10 percentage points after each paid funding date**.

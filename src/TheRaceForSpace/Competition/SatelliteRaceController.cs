@@ -29,6 +29,8 @@ namespace TheRaceForSpace.Competition
         private readonly List<FundingProgramme> _fundingProgrammes = new List<FundingProgramme>();
         private readonly List<AchievementFundingProgramme> _achievementFundingProgrammes =
             new List<AchievementFundingProgramme>();
+        private readonly IList<FundingProgramme> _fundingProgrammesView;
+        private readonly IList<AchievementFundingProgramme> _achievementFundingProgrammesView;
         private double _nextFundingUniversalTime = -1.0;
         private bool _hasRestoredPersistentState;
 
@@ -115,6 +117,9 @@ namespace TheRaceForSpace.Competition
             _fundingProgrammes.Add(KerbinNetworkProgramme);
             _fundingProgrammes.Add(MunNetworkProgramme);
             _fundingProgrammes.Add(MinmusNetworkProgramme);
+
+            _fundingProgrammesView = _fundingProgrammes.AsReadOnly();
+            _achievementFundingProgrammesView = _achievementFundingProgrammes.AsReadOnly();
         }
 
         public SpaceProgramState PlayerProgram { get; private set; }
@@ -129,10 +134,10 @@ namespace TheRaceForSpace.Competition
         public AchievementFundingProgramme MinmusProbeOrbitProgramme { get; private set; }
         public AchievementFundingProgramme MunCrewedOrbitProgramme { get; private set; }
         public AchievementFundingProgramme MinmusCrewedOrbitProgramme { get; private set; }
-        public IList<FundingProgramme> FundingProgrammes { get { return _fundingProgrammes.AsReadOnly(); } }
+        public IList<FundingProgramme> FundingProgrammes { get { return _fundingProgrammesView; } }
         public IList<AchievementFundingProgramme> AchievementFundingProgrammes
         {
-            get { return _achievementFundingProgrammes.AsReadOnly(); }
+            get { return _achievementFundingProgrammesView; }
         }
 
         /// <summary>
@@ -268,6 +273,31 @@ namespace TheRaceForSpace.Competition
         public int GetAchievementAgencyCount(AchievementFundingProgramme achievementProgramme)
         {
             return GetAchievementAgencyCountAtTime(achievementProgramme, double.PositiveInfinity);
+        }
+
+        /// <summary>
+        /// Returns this agency's expected share of one satellite contract using the current
+        /// qualifying satellite counts across all programmes.
+        /// </summary>
+        public double GetSatelliteCurrentPayout(
+            SpaceProgramState program,
+            FundingProgramme fundingProgramme)
+        {
+            if (program == null || fundingProgramme == null || !fundingProgramme.IsAvailable)
+            {
+                return 0.0;
+            }
+
+            int totalSatelliteCount = 0;
+            for (int programIndex = 0; programIndex < _programs.Count; programIndex++)
+            {
+                totalSatelliteCount += _programs[programIndex].GetSatelliteCount(
+                    fundingProgramme.CelestialBodyName);
+            }
+
+            return fundingProgramme.CalculateCurrentPayout(
+                program.GetSatelliteCount(fundingProgramme.CelestialBodyName),
+                totalSatelliteCount);
         }
 
         /// <summary>
@@ -463,25 +493,19 @@ namespace TheRaceForSpace.Competition
         private void UpdateFundingAvailability()
         {
             if (!KerbinNetworkProgramme.IsAvailable
-                && (PlayerProgram.HasAchievedProbeOrbit
-                    || AsterProgram.HasAchievedProbeOrbit
-                    || CobaltProgram.HasAchievedProbeOrbit))
+                && GetAchievementAgencyCount(ProbeOrbitProgramme) > 0)
             {
                 KerbinNetworkProgramme.Unlock();
             }
 
             if (!MunNetworkProgramme.IsAvailable
-                && (PlayerProgram.HasAchievedMunProbeOrbit
-                    || AsterProgram.HasAchievedMunProbeOrbit
-                    || CobaltProgram.HasAchievedMunProbeOrbit))
+                && GetAchievementAgencyCount(MunProbeOrbitProgramme) > 0)
             {
                 MunNetworkProgramme.Unlock();
             }
 
             if (!MinmusNetworkProgramme.IsAvailable
-                && (PlayerProgram.HasAchievedMinmusProbeOrbit
-                    || AsterProgram.HasAchievedMinmusProbeOrbit
-                    || CobaltProgram.HasAchievedMinmusProbeOrbit))
+                && GetAchievementAgencyCount(MinmusProbeOrbitProgramme) > 0)
             {
                 MinmusNetworkProgramme.Unlock();
             }
@@ -513,8 +537,6 @@ namespace TheRaceForSpace.Competition
             while (_nextFundingUniversalTime >= 0.0 && currentUniversalTime >= _nextFundingUniversalTime)
             {
                 double payoutUniversalTime = _nextFundingUniversalTime;
-
-                EvaluateSatelliteRaceClaims();
 
                 for (int programIndex = 0; programIndex < _programs.Count; programIndex++)
                 {
@@ -575,22 +597,15 @@ namespace TheRaceForSpace.Competition
             {
                 // The player receives real KSP Career funds. In non-Career modes the
                 // adapter deliberately leaves KSP's economy untouched.
-                if (CareerFundingAdapter.TryAddFunds(payout))
-                {
-                    program.AwardedFunds += payout;
-                }
-
+                CareerFundingAdapter.TryAddFunds(payout);
                 return;
             }
 
             program.Funds += payout;
-            program.AwardedFunds += payout;
         }
 
         private void EvaluateFundingProgrammes()
         {
-            EvaluateSatelliteRaceClaims();
-
             for (int programIndex = 0; programIndex < _programs.Count; programIndex++)
             {
                 SpaceProgramState program = _programs[programIndex];
@@ -635,31 +650,6 @@ namespace TheRaceForSpace.Competition
             }
         }
 
-        private void EvaluateSatelliteRaceClaims()
-        {
-            for (int programmeIndex = 0; programmeIndex < _fundingProgrammes.Count; programmeIndex++)
-            {
-                FundingProgramme programme = _fundingProgrammes[programmeIndex];
-                if (!programme.IsAvailable || programme.IsClaimed)
-                {
-                    continue;
-                }
-
-                for (int programIndex = 0; programIndex < _programs.Count; programIndex++)
-                {
-                    SpaceProgramState program = _programs[programIndex];
-                    if (program.GetSatelliteCount(programme.CelestialBodyName) < programme.RequiredSatellites)
-                    {
-                        continue;
-                    }
-
-                    programme.WinnerProgramName = program.Name;
-                    program.RacePoints += 1;
-                    break;
-                }
-            }
-        }
-
         private double CalculateSatelliteFundingForProgram(SpaceProgramState program)
         {
             if (program == null)
@@ -671,21 +661,7 @@ namespace TheRaceForSpace.Competition
 
             for (int programmeIndex = 0; programmeIndex < _fundingProgrammes.Count; programmeIndex++)
             {
-                FundingProgramme programme = _fundingProgrammes[programmeIndex];
-                if (!programme.IsAvailable)
-                {
-                    continue;
-                }
-
-                int totalSatelliteCount = 0;
-                for (int programIndex = 0; programIndex < _programs.Count; programIndex++)
-                {
-                    totalSatelliteCount += _programs[programIndex].GetSatelliteCount(programme.CelestialBodyName);
-                }
-
-                payout += programme.CalculateCurrentPayout(
-                    program.GetSatelliteCount(programme.CelestialBodyName),
-                    totalSatelliteCount);
+                payout += GetSatelliteCurrentPayout(program, _fundingProgrammes[programmeIndex]);
             }
 
             return payout;

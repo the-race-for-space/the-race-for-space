@@ -17,7 +17,7 @@ namespace TheRaceForSpace.KspIntegration
         private const string AsterNodeName = "ASTER";
         private const string CobaltNodeName = "COBALT";
         private const string RaceProgressNodeName = "RACE_PROGRESS";
-        private const string SchemaVersion = "2";
+        private const string SchemaVersion = "3";
 
         private static readonly RivalProgramSaveState AsterState = new RivalProgramSaveState();
         private static readonly RivalProgramSaveState CobaltState = new RivalProgramSaveState();
@@ -121,7 +121,7 @@ namespace TheRaceForSpace.KspIntegration
 
         /// <summary>
         /// Captures the latest live rival values so KSP's next ScenarioModule save writes
-        /// current balances, satellite counts, achievements, and in-progress launch state.
+        /// current balances, satellite counts, achievements, timestamps, and in-progress mission state.
         /// </summary>
         public static void CaptureRivalState(SpaceProgramState asterProgram, SpaceProgramState cobaltProgram)
         {
@@ -139,8 +139,8 @@ namespace TheRaceForSpace.KspIntegration
         }
 
         /// <summary>
-        /// Captures player achievement flags and global contract progression without duplicating
-        /// satellite counts that remain owned by the live KSP vessel tracker.
+        /// Captures player achievement flags, timestamps, and global contract progression without
+        /// duplicating satellite counts that remain owned by the live KSP vessel tracker.
         /// </summary>
         public static void CaptureRaceProgress(
             SpaceProgramState playerProgram,

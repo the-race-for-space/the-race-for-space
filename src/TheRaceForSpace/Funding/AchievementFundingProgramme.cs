@@ -111,6 +111,8 @@ namespace TheRaceForSpace.Funding
 
         /// <summary>
         /// Restores persisted lifecycle state without performing gameplay calculations.
+        /// A negative next-payout time is retained so the controller can migrate an older
+        /// 0.3 save that predates independent achievement-contract schedules.
         /// </summary>
         public void RestoreState(bool hasStarted, int paymentsProcessed, double nextPayoutUniversalTime)
         {
@@ -123,7 +125,9 @@ namespace TheRaceForSpace.Funding
                 return;
             }
 
-            NextPayoutUniversalTime = Math.Max(0.0, nextPayoutUniversalTime);
+            NextPayoutUniversalTime = nextPayoutUniversalTime < 0.0
+                ? -1.0
+                : nextPayoutUniversalTime;
         }
     }
 }

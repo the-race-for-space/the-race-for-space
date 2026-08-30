@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using TheRaceForSpace.Funding;
 using TheRaceForSpace.KspIntegration;
+using TheRaceForSpace.Milestones;
 using TheRaceForSpace.Programs;
 using TheRaceForSpace.Simulation;
 using TheRaceForSpace.Tracking;
@@ -18,12 +19,6 @@ namespace TheRaceForSpace.Competition
         private const double FundingIntervalSeconds = 90.0 * KerbinDaySeconds;
         private const double RivalStartingFunds = 200000.0;
         private const double RivalBaseIncomeFunds = 20000.0;
-        private const string ProbeOrbitProgrammeId = "probe-orbit";
-        private const string CrewedOrbitProgrammeId = "crewed-orbit";
-        private const string MunProbeOrbitProgrammeId = "mun-probe-orbit";
-        private const string MinmusProbeOrbitProgrammeId = "minmus-probe-orbit";
-        private const string MunCrewedOrbitProgrammeId = "mun-crewed-orbit";
-        private const string MinmusCrewedOrbitProgrammeId = "minmus-crewed-orbit";
 
         private readonly List<SpaceProgramState> _programs = new List<SpaceProgramState>();
         private readonly List<FundingProgramme> _fundingProgrammes = new List<FundingProgramme>();
@@ -51,38 +46,51 @@ namespace TheRaceForSpace.Competition
             _programs.Add(AsterProgram);
             _programs.Add(CobaltProgram);
 
+            MilestoneDefinition probeOrbitMilestone = PrototypeMilestones.FindById(
+                PrototypeMilestones.ProbeOrbitId);
+            MilestoneDefinition crewedOrbitMilestone = PrototypeMilestones.FindById(
+                PrototypeMilestones.CrewedOrbitId);
+            MilestoneDefinition munProbeOrbitMilestone = PrototypeMilestones.FindById(
+                PrototypeMilestones.MunProbeOrbitId);
+            MilestoneDefinition minmusProbeOrbitMilestone = PrototypeMilestones.FindById(
+                PrototypeMilestones.MinmusProbeOrbitId);
+            MilestoneDefinition munCrewedOrbitMilestone = PrototypeMilestones.FindById(
+                PrototypeMilestones.MunCrewedOrbitId);
+            MilestoneDefinition minmusCrewedOrbitMilestone = PrototypeMilestones.FindById(
+                PrototypeMilestones.MinmusCrewedOrbitId);
+
             ProbeOrbitProgramme = new AchievementFundingProgramme(
-                ProbeOrbitProgrammeId,
-                "Probe Orbit",
-                "Achieve orbit around Kerbin with an uncrewed Probe or Relay vessel.",
+                probeOrbitMilestone.Id,
+                probeOrbitMilestone.Name,
+                probeOrbitMilestone.ObjectiveDescription,
                 100000.0);
             CrewedOrbitProgramme = new AchievementFundingProgramme(
-                CrewedOrbitProgrammeId,
-                "Crewed Orbit",
-                "Achieve orbit around Kerbin with at least one live Kerbal aboard.",
+                crewedOrbitMilestone.Id,
+                crewedOrbitMilestone.Name,
+                crewedOrbitMilestone.ObjectiveDescription,
                 200000.0);
             MunProbeOrbitProgramme = new AchievementFundingProgramme(
-                MunProbeOrbitProgrammeId,
-                "Mun Probe Orbit",
-                "Achieve orbit around Mun with an uncrewed Probe or Relay vessel.",
+                munProbeOrbitMilestone.Id,
+                munProbeOrbitMilestone.Name,
+                munProbeOrbitMilestone.ObjectiveDescription,
                 200000.0,
                 "Any agency must achieve Probe Orbit.");
             MinmusProbeOrbitProgramme = new AchievementFundingProgramme(
-                MinmusProbeOrbitProgrammeId,
-                "Minmus Probe Orbit",
-                "Achieve orbit around Minmus with an uncrewed Probe or Relay vessel.",
+                minmusProbeOrbitMilestone.Id,
+                minmusProbeOrbitMilestone.Name,
+                minmusProbeOrbitMilestone.ObjectiveDescription,
                 200000.0,
                 "Any agency must achieve Probe Orbit.");
             MunCrewedOrbitProgramme = new AchievementFundingProgramme(
-                MunCrewedOrbitProgrammeId,
-                "Mun Crewed Orbit",
-                "Achieve orbit around Mun with at least one live Kerbal aboard.",
+                munCrewedOrbitMilestone.Id,
+                munCrewedOrbitMilestone.Name,
+                munCrewedOrbitMilestone.ObjectiveDescription,
                 300000.0,
                 "Any agency must achieve Crewed Orbit.");
             MinmusCrewedOrbitProgramme = new AchievementFundingProgramme(
-                MinmusCrewedOrbitProgrammeId,
-                "Minmus Crewed Orbit",
-                "Achieve orbit around Minmus with at least one live Kerbal aboard.",
+                minmusCrewedOrbitMilestone.Id,
+                minmusCrewedOrbitMilestone.Name,
+                minmusCrewedOrbitMilestone.ObjectiveDescription,
                 300000.0,
                 "Any agency must achieve Crewed Orbit.");
 
@@ -238,13 +246,14 @@ namespace TheRaceForSpace.Competition
             SpaceProgramState program,
             AchievementFundingProgramme achievementProgramme)
         {
-            return GetAchievementUniversalTime(program, achievementProgramme) >= 0.0;
+            return program != null
+                && achievementProgramme != null
+                && program.HasAchievement(achievementProgramme.Id);
         }
 
         /// <summary>
-        /// Returns whether an achievement funding target is currently unlocked. Kerbin Probe
-        /// and Crewed Orbit are available from the start. Lunar probe targets require any
-        /// agency's Kerbin Probe Orbit; lunar crewed targets require any agency's Kerbin Crewed Orbit.
+        /// Returns whether an achievement funding target is unlocked from its milestone prerequisite.
+        /// Milestones without a prerequisite are available from the start of the campaign.
         /// </summary>
         public bool IsAchievementProgrammeAvailable(AchievementFundingProgramme achievementProgramme)
         {
@@ -253,30 +262,32 @@ namespace TheRaceForSpace.Competition
                 return false;
             }
 
-            if (string.Equals(achievementProgramme.Id, MunProbeOrbitProgrammeId, StringComparison.OrdinalIgnoreCase)
-                || string.Equals(
-                    achievementProgramme.Id,
-                    MinmusProbeOrbitProgrammeId,
-                    StringComparison.OrdinalIgnoreCase))
+            MilestoneDefinition milestone = PrototypeMilestones.FindById(achievementProgramme.Id);
+            if (milestone == null)
             {
-                return GetAchievementAgencyCount(ProbeOrbitProgramme) > 0;
+                return false;
             }
 
-            if (string.Equals(achievementProgramme.Id, MunCrewedOrbitProgrammeId, StringComparison.OrdinalIgnoreCase)
-                || string.Equals(
-                    achievementProgramme.Id,
-                    MinmusCrewedOrbitProgrammeId,
-                    StringComparison.OrdinalIgnoreCase))
+            if (string.IsNullOrEmpty(milestone.PrerequisiteMilestoneId))
             {
-                return GetAchievementAgencyCount(CrewedOrbitProgramme) > 0;
+                return true;
             }
 
-            return true;
+            return GetAchievementAgencyCountAtTime(
+                milestone.PrerequisiteMilestoneId,
+                double.PositiveInfinity) > 0;
         }
 
         public int GetAchievementAgencyCount(AchievementFundingProgramme achievementProgramme)
         {
-            return GetAchievementAgencyCountAtTime(achievementProgramme, double.PositiveInfinity);
+            if (achievementProgramme == null)
+            {
+                return 0;
+            }
+
+            return GetAchievementAgencyCountAtTime(
+                achievementProgramme.Id,
+                double.PositiveInfinity);
         }
 
         /// <summary>
@@ -320,11 +331,14 @@ namespace TheRaceForSpace.Competition
             }
 
             int eligibleAgencyCount = GetAchievementAgencyCountAtTime(
-                achievementProgramme,
+                achievementProgramme.Id,
                 _nextFundingUniversalTime);
 
             return achievementProgramme.CalculateCurrentPayout(
-                HasProgramAchievedByTime(program, achievementProgramme, _nextFundingUniversalTime),
+                HasProgramAchievedByTime(
+                    program,
+                    achievementProgramme.Id,
+                    _nextFundingUniversalTime),
                 eligibleAgencyCount);
         }
 
@@ -359,6 +373,7 @@ namespace TheRaceForSpace.Competition
                     return;
                 }
 
+                SynchronizeLegacyAchievementState();
                 _hasRestoredPersistentState = true;
             }
 
@@ -390,6 +405,7 @@ namespace TheRaceForSpace.Competition
                 PlayerProgram,
                 lunarProbeAchievementsAvailable,
                 lunarCrewedAchievementsAvailable);
+            SynchronizeLegacyAchievementState();
             UpdateFundingAvailability();
 
             if (!hasDueFunding)
@@ -433,6 +449,16 @@ namespace TheRaceForSpace.Competition
                 !MinmusProbeOrbitProgramme.IsExpired,
                 !MunCrewedOrbitProgramme.IsExpired,
                 !MinmusCrewedOrbitProgramme.IsExpired);
+
+            SynchronizeLegacyAchievementState();
+        }
+
+        private void SynchronizeLegacyAchievementState()
+        {
+            for (int programIndex = 0; programIndex < _programs.Count; programIndex++)
+            {
+                PrototypeMilestones.SynchronizeLegacyAchievementState(_programs[programIndex]);
+            }
         }
 
         private void UpdateFundingAvailability()
@@ -511,7 +537,9 @@ namespace TheRaceForSpace.Competition
                         continue;
                     }
 
-                    int eligibleAgencyCount = GetAchievementAgencyCountAtTime(programme, payoutUniversalTime);
+                    int eligibleAgencyCount = GetAchievementAgencyCountAtTime(
+                        programme.Id,
+                        payoutUniversalTime);
                     if (eligibleAgencyCount <= 0)
                     {
                         // The first achievement occurred after this historical funding boundary,
@@ -522,7 +550,10 @@ namespace TheRaceForSpace.Competition
                     for (int programIndex = 0; programIndex < _programs.Count; programIndex++)
                     {
                         SpaceProgramState program = _programs[programIndex];
-                        bool isEligible = HasProgramAchievedByTime(program, programme, payoutUniversalTime);
+                        bool isEligible = HasProgramAchievedByTime(
+                            program,
+                            programme.Id,
+                            payoutUniversalTime);
                         double payout = programme.CalculateCurrentPayout(isEligible, eligibleAgencyCount);
                         AwardProgramFunds(program, payout);
                     }
@@ -585,14 +616,17 @@ namespace TheRaceForSpace.Competition
                 }
 
                 int eligibleAgencyCount = GetAchievementAgencyCountAtTime(
-                    programme,
+                    programme.Id,
                     _nextFundingUniversalTime);
 
                 for (int programIndex = 0; programIndex < _programs.Count; programIndex++)
                 {
                     SpaceProgramState program = _programs[programIndex];
                     program.NextPayoutFunds += programme.CalculateCurrentPayout(
-                        HasProgramAchievedByTime(program, programme, _nextFundingUniversalTime),
+                        HasProgramAchievedByTime(
+                            program,
+                            programme.Id,
+                            _nextFundingUniversalTime),
                         eligibleAgencyCount);
                 }
             }
@@ -616,10 +650,10 @@ namespace TheRaceForSpace.Competition
         }
 
         private int GetAchievementAgencyCountAtTime(
-            AchievementFundingProgramme achievementProgramme,
+            string milestoneId,
             double payoutUniversalTime)
         {
-            if (achievementProgramme == null)
+            if (string.IsNullOrEmpty(milestoneId))
             {
                 return 0;
             }
@@ -629,7 +663,7 @@ namespace TheRaceForSpace.Competition
             {
                 if (HasProgramAchievedByTime(
                     _programs[programIndex],
-                    achievementProgramme,
+                    milestoneId,
                     payoutUniversalTime))
                 {
                     achievedAgencyCount++;
@@ -641,65 +675,16 @@ namespace TheRaceForSpace.Competition
 
         private bool HasProgramAchievedByTime(
             SpaceProgramState program,
-            AchievementFundingProgramme achievementProgramme,
+            string milestoneId,
             double payoutUniversalTime)
         {
-            double achievementUniversalTime = GetAchievementUniversalTime(program, achievementProgramme);
+            if (program == null || string.IsNullOrEmpty(milestoneId))
+            {
+                return false;
+            }
+
+            double achievementUniversalTime = program.GetAchievementUniversalTime(milestoneId);
             return achievementUniversalTime >= 0.0 && achievementUniversalTime <= payoutUniversalTime;
-        }
-
-        private double GetAchievementUniversalTime(
-            SpaceProgramState program,
-            AchievementFundingProgramme achievementProgramme)
-        {
-            if (program == null || achievementProgramme == null)
-            {
-                return -1.0;
-            }
-
-            if (string.Equals(achievementProgramme.Id, ProbeOrbitProgrammeId, StringComparison.OrdinalIgnoreCase))
-            {
-                return program.HasAchievedProbeOrbit
-                    ? Math.Max(0.0, program.ProbeOrbitAchievementUniversalTime)
-                    : -1.0;
-            }
-
-            if (string.Equals(achievementProgramme.Id, CrewedOrbitProgrammeId, StringComparison.OrdinalIgnoreCase))
-            {
-                return program.HasAchievedCrewedOrbit
-                    ? Math.Max(0.0, program.CrewedOrbitAchievementUniversalTime)
-                    : -1.0;
-            }
-
-            if (string.Equals(achievementProgramme.Id, MunProbeOrbitProgrammeId, StringComparison.OrdinalIgnoreCase))
-            {
-                return program.HasAchievedMunProbeOrbit
-                    ? Math.Max(0.0, program.MunProbeOrbitAchievementUniversalTime)
-                    : -1.0;
-            }
-
-            if (string.Equals(achievementProgramme.Id, MinmusProbeOrbitProgrammeId, StringComparison.OrdinalIgnoreCase))
-            {
-                return program.HasAchievedMinmusProbeOrbit
-                    ? Math.Max(0.0, program.MinmusProbeOrbitAchievementUniversalTime)
-                    : -1.0;
-            }
-
-            if (string.Equals(achievementProgramme.Id, MunCrewedOrbitProgrammeId, StringComparison.OrdinalIgnoreCase))
-            {
-                return program.HasAchievedMunCrewedOrbit
-                    ? Math.Max(0.0, program.MunCrewedOrbitAchievementUniversalTime)
-                    : -1.0;
-            }
-
-            if (string.Equals(achievementProgramme.Id, MinmusCrewedOrbitProgrammeId, StringComparison.OrdinalIgnoreCase))
-            {
-                return program.HasAchievedMinmusCrewedOrbit
-                    ? Math.Max(0.0, program.MinmusCrewedOrbitAchievementUniversalTime)
-                    : -1.0;
-            }
-
-            return -1.0;
         }
     }
 }

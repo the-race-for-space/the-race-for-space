@@ -73,12 +73,12 @@ namespace TheRaceForSpace.Competition
                 MunCrewedOrbitProgrammeId,
                 "Mun Crewed Orbit",
                 "Achieve orbit around Mun with at least one live Kerbal aboard.",
-                200000.0);
+                300000.0);
             MinmusCrewedOrbitProgramme = new AchievementFundingProgramme(
                 MinmusCrewedOrbitProgrammeId,
                 "Minmus Crewed Orbit",
                 "Achieve orbit around Minmus with at least one live Kerbal aboard.",
-                200000.0);
+                300000.0);
 
             _achievementFundingProgrammes.Add(ProbeOrbitProgramme);
             _achievementFundingProgrammes.Add(CrewedOrbitProgramme);

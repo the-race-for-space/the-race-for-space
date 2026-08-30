@@ -67,7 +67,7 @@ The goal is to prove these systems with a narrow implementation before adding mo
    - Rival agencies satisfy achievement contracts through the existing simulated launch-development system rather than real KSP vessels.
    - Both rivals begin a new campaign targeting Probe Orbit.
    - Rival progress is checked every **5 Kerbin days**.
-   - Each eligible progress check has a **25% success chance**.
+   - Each eligible progress check has a **30% success chance**.
    - A successful check adds **10 percentage points** of mission progress and deducts the applicable development cost.
    - Funds are deducted only when a successful progress step occurs, and progress cannot succeed if the rival lacks the required funds.
    - Probe Orbit and Kerbin satellite development cost **20,000 funds per successful 10% step / 200,000 total**.
@@ -166,7 +166,7 @@ The implementation uses these prototype values unless a later design change expl
 - Crewed Orbit rival development cost: **40,000 funds per successful 10% step / 400,000 total**.
 - Mun/Minmus probe, crewed-orbit, and satellite development cost: **40,000 funds per successful 10% step / 400,000 total**.
 - Rival mission progress check: **every 5 Kerbin days**.
-- Rival progress success chance: **25%**.
+- Rival progress success chance: **30%**.
 - Successful rival progress increment: **10 percentage points**.
 - Shared funding interval: **90 Kerbin days**.
 - Rival base income: **20,000 funds per rival agency on every shared funding date**.

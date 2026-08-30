@@ -24,6 +24,8 @@ namespace TheRaceForSpace.Competition
         private readonly List<FundingProgramme> _fundingProgrammes = new List<FundingProgramme>();
         private readonly List<AchievementFundingProgramme> _achievementFundingProgrammes =
             new List<AchievementFundingProgramme>();
+        private readonly HashSet<string> _availableAchievementMilestoneIds =
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         private readonly IList<FundingProgramme> _fundingProgrammesView;
         private readonly IList<AchievementFundingProgramme> _achievementFundingProgrammesView;
         private double _nextFundingUniversalTime = -1.0;
@@ -400,12 +402,21 @@ namespace TheRaceForSpace.Competition
                 UpdateFundingAvailability();
             }
 
-            bool lunarProbeAchievementsAvailable = IsAchievementProgrammeAvailable(MunProbeOrbitProgramme);
-            bool lunarCrewedAchievementsAvailable = IsAchievementProgrammeAvailable(MunCrewedOrbitProgramme);
+            _availableAchievementMilestoneIds.Clear();
+            for (int programmeIndex = 0; programmeIndex < _achievementFundingProgrammes.Count; programmeIndex++)
+            {
+                AchievementFundingProgramme programme = _achievementFundingProgrammes[programmeIndex];
+                if (IsAchievementProgrammeAvailable(programme))
+                {
+                    _availableAchievementMilestoneIds.Add(programme.Id);
+                }
+            }
+
             SatelliteTracker.RefreshPlayerSatelliteCounts(
                 PlayerProgram,
-                lunarProbeAchievementsAvailable,
-                lunarCrewedAchievementsAvailable);
+                PrototypeMilestones.All,
+                _availableAchievementMilestoneIds);
+            PrototypeMilestones.SynchronizeGenericAchievementStateToLegacy(PlayerProgram);
             SynchronizeLegacyAchievementState();
             UpdateFundingAvailability();
 

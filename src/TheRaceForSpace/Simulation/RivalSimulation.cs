@@ -209,8 +209,9 @@ namespace TheRaceForSpace.Simulation
                 munProbeOrbitContractLive,
                 minmusProbeOrbitContractLive))
             {
-                // If an achievement contract expires before this rival completes it, abandon
-                // that development rather than spending simulated funds on a dead objective.
+                // If an achievement contract expires or becomes unavailable before this rival
+                // completes it, abandon that development rather than spending simulated funds
+                // on an objective that is not currently in play.
                 program.NextLaunchBodyName = null;
                 program.LaunchProgressPercent = 0;
             }
@@ -399,12 +400,24 @@ namespace TheRaceForSpace.Simulation
 
             if (string.Equals(program.NextLaunchBodyName, MunProbeOrbitTargetName, StringComparison.OrdinalIgnoreCase))
             {
-                return munProbeOrbitContractLive && !program.HasAchievedMunProbeOrbit;
+                return IsKerbinNetworkAvailable(
+                        kerbinNetworkAvailable,
+                        playerProgram,
+                        asterProgram,
+                        cobaltProgram)
+                    && munProbeOrbitContractLive
+                    && !program.HasAchievedMunProbeOrbit;
             }
 
             if (string.Equals(program.NextLaunchBodyName, MinmusProbeOrbitTargetName, StringComparison.OrdinalIgnoreCase))
             {
-                return minmusProbeOrbitContractLive && !program.HasAchievedMinmusProbeOrbit;
+                return IsKerbinNetworkAvailable(
+                        kerbinNetworkAvailable,
+                        playerProgram,
+                        asterProgram,
+                        cobaltProgram)
+                    && minmusProbeOrbitContractLive
+                    && !program.HasAchievedMinmusProbeOrbit;
             }
 
             if (string.Equals(program.NextLaunchBodyName, "Kerbin", StringComparison.OrdinalIgnoreCase))
@@ -451,6 +464,11 @@ namespace TheRaceForSpace.Simulation
             bool minmusProbeOrbitContractLive)
         {
             var availableTargets = new List<string>();
+            bool lunarProbeAchievementsAvailable = IsKerbinNetworkAvailable(
+                kerbinNetworkAvailable,
+                playerProgram,
+                asterProgram,
+                cobaltProgram);
 
             if (probeOrbitContractLive && !program.HasAchievedProbeOrbit)
             {
@@ -462,12 +480,16 @@ namespace TheRaceForSpace.Simulation
                 availableTargets.Add(CrewedOrbitTargetName);
             }
 
-            if (munProbeOrbitContractLive && !program.HasAchievedMunProbeOrbit)
+            if (lunarProbeAchievementsAvailable
+                && munProbeOrbitContractLive
+                && !program.HasAchievedMunProbeOrbit)
             {
                 availableTargets.Add(MunProbeOrbitTargetName);
             }
 
-            if (minmusProbeOrbitContractLive && !program.HasAchievedMinmusProbeOrbit)
+            if (lunarProbeAchievementsAvailable
+                && minmusProbeOrbitContractLive
+                && !program.HasAchievedMinmusProbeOrbit)
             {
                 availableTargets.Add(MinmusProbeOrbitTargetName);
             }

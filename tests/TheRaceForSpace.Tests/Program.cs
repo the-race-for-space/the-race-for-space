@@ -20,6 +20,8 @@ namespace TheRaceForSpace.Tests
             Run("Achievement restore normalizes lifecycle", AchievementRestoreNormalizesLifecycle);
             Run("Prototype milestone definitions match v0.3", PrototypeMilestoneDefinitionsMatchV03);
             Run("Prototype milestone ids are unique", PrototypeMilestoneIdsAreUnique);
+            Run("Prototype milestone lookup uses stable ids", PrototypeMilestoneLookupUsesStableIds);
+            Run("Legacy prototype achievements synchronize to generic state", LegacyPrototypeAchievementsSynchronizeToGenericState);
             Run("Generic achievement state starts empty", GenericAchievementStateStartsEmpty);
             Run("Generic achievement state records first timestamp", GenericAchievementStateRecordsFirstTimestamp);
             Run("Generic achievement state preserves first timestamp", GenericAchievementStatePreservesFirstTimestamp);
@@ -154,6 +156,36 @@ namespace TheRaceForSpace.Tests
                     milestoneIds.Add(milestone.Id),
                     "Duplicate milestone id found: " + milestone.Id);
             }
+        }
+
+        private static void PrototypeMilestoneLookupUsesStableIds()
+        {
+            MilestoneDefinition milestone = PrototypeMilestones.FindById("MUN-PROBE-ORBIT");
+
+            AssertTrue(milestone != null, "Known milestone IDs should resolve case-insensitively.");
+            AssertEqual(PrototypeMilestones.MunProbeOrbitId, milestone.Id);
+            AssertEqual(PrototypeMilestones.ProbeOrbitId, milestone.PrerequisiteMilestoneId);
+            AssertEqual(null, PrototypeMilestones.FindById("not-a-milestone"));
+        }
+
+        private static void LegacyPrototypeAchievementsSynchronizeToGenericState()
+        {
+            var program = new SpaceProgramState("Program", false)
+            {
+                HasAchievedProbeOrbit = true,
+                ProbeOrbitAchievementUniversalTime = 1234.0,
+                HasAchievedMunCrewedOrbit = true,
+                MunCrewedOrbitAchievementUniversalTime = 5678.0
+            };
+            program.RecordAchievement(PrototypeMilestones.ProbeOrbitId, 1000.0);
+
+            PrototypeMilestones.SynchronizeLegacyAchievementState(program);
+
+            AssertEqual(1000.0, program.GetAchievementUniversalTime(PrototypeMilestones.ProbeOrbitId));
+            AssertEqual(5678.0, program.GetAchievementUniversalTime(PrototypeMilestones.MunCrewedOrbitId));
+            AssertTrue(
+                !program.HasAchievement(PrototypeMilestones.CrewedOrbitId),
+                "Unachieved legacy fields should not create generic milestone state.");
         }
 
         private static void GenericAchievementStateStartsEmpty()

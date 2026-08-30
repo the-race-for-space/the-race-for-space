@@ -74,25 +74,29 @@ namespace TheRaceForSpace.Competition
                 munProbeOrbitMilestone.Name,
                 munProbeOrbitMilestone.ObjectiveDescription,
                 200000.0,
-                "Any agency must achieve Probe Orbit.");
+                "Any agency must achieve Probe Orbit.",
+                munProbeOrbitMilestone.PrerequisiteMilestoneId);
             MinmusProbeOrbitProgramme = new AchievementFundingProgramme(
                 minmusProbeOrbitMilestone.Id,
                 minmusProbeOrbitMilestone.Name,
                 minmusProbeOrbitMilestone.ObjectiveDescription,
                 200000.0,
-                "Any agency must achieve Probe Orbit.");
+                "Any agency must achieve Probe Orbit.",
+                minmusProbeOrbitMilestone.PrerequisiteMilestoneId);
             MunCrewedOrbitProgramme = new AchievementFundingProgramme(
                 munCrewedOrbitMilestone.Id,
                 munCrewedOrbitMilestone.Name,
                 munCrewedOrbitMilestone.ObjectiveDescription,
                 300000.0,
-                "Any agency must achieve Crewed Orbit.");
+                "Any agency must achieve Crewed Orbit.",
+                munCrewedOrbitMilestone.PrerequisiteMilestoneId);
             MinmusCrewedOrbitProgramme = new AchievementFundingProgramme(
                 minmusCrewedOrbitMilestone.Id,
                 minmusCrewedOrbitMilestone.Name,
                 minmusCrewedOrbitMilestone.ObjectiveDescription,
                 300000.0,
-                "Any agency must achieve Crewed Orbit.");
+                "Any agency must achieve Crewed Orbit.",
+                minmusCrewedOrbitMilestone.PrerequisiteMilestoneId);
 
             _achievementFundingProgrammes.Add(ProbeOrbitProgramme);
             _achievementFundingProgrammes.Add(CrewedOrbitProgramme);
@@ -108,7 +112,8 @@ namespace TheRaceForSpace.Competition
                 10,
                 200000.0,
                 false,
-                "Any agency must achieve Probe Orbit.");
+                "Any agency must achieve Probe Orbit.",
+                PrototypeMilestones.ProbeOrbitId);
             MunNetworkProgramme = new FundingProgramme(
                 "mun-survey",
                 "Mun Survey Network",
@@ -116,7 +121,8 @@ namespace TheRaceForSpace.Competition
                 5,
                 100000.0,
                 false,
-                "Any agency must achieve Mun Probe Orbit.");
+                "Any agency must achieve Mun Probe Orbit.",
+                PrototypeMilestones.MunProbeOrbitId);
             MinmusNetworkProgramme = new FundingProgramme(
                 "minmus-relay",
                 "Minmus Relay Initiative",
@@ -124,7 +130,8 @@ namespace TheRaceForSpace.Competition
                 5,
                 100000.0,
                 false,
-                "Any agency must achieve Minmus Probe Orbit.");
+                "Any agency must achieve Minmus Probe Orbit.",
+                PrototypeMilestones.MinmusProbeOrbitId);
 
             _fundingProgrammes.Add(KerbinNetworkProgramme);
             _fundingProgrammes.Add(MunNetworkProgramme);
@@ -252,8 +259,8 @@ namespace TheRaceForSpace.Competition
         }
 
         /// <summary>
-        /// Returns whether an achievement funding target is unlocked from its milestone prerequisite.
-        /// Milestones without a prerequisite are available from the start of the campaign.
+        /// Returns whether an achievement funding target is unlocked from its structured milestone prerequisite.
+        /// Targets without a prerequisite are available from the start of the campaign.
         /// </summary>
         public bool IsAchievementProgrammeAvailable(AchievementFundingProgramme achievementProgramme)
         {
@@ -262,19 +269,13 @@ namespace TheRaceForSpace.Competition
                 return false;
             }
 
-            MilestoneDefinition milestone = PrototypeMilestones.FindById(achievementProgramme.Id);
-            if (milestone == null)
-            {
-                return false;
-            }
-
-            if (string.IsNullOrEmpty(milestone.PrerequisiteMilestoneId))
+            if (string.IsNullOrEmpty(achievementProgramme.PrerequisiteMilestoneId))
             {
                 return true;
             }
 
             return GetAchievementAgencyCountAtTime(
-                milestone.PrerequisiteMilestoneId,
+                achievementProgramme.PrerequisiteMilestoneId,
                 double.PositiveInfinity) > 0;
         }
 
@@ -463,22 +464,21 @@ namespace TheRaceForSpace.Competition
 
         private void UpdateFundingAvailability()
         {
-            if (!KerbinNetworkProgramme.IsAvailable
-                && GetAchievementAgencyCount(ProbeOrbitProgramme) > 0)
+            for (int programmeIndex = 0; programmeIndex < _fundingProgrammes.Count; programmeIndex++)
             {
-                KerbinNetworkProgramme.Unlock();
-            }
+                FundingProgramme programme = _fundingProgrammes[programmeIndex];
+                if (programme.IsAvailable)
+                {
+                    continue;
+                }
 
-            if (!MunNetworkProgramme.IsAvailable
-                && GetAchievementAgencyCount(MunProbeOrbitProgramme) > 0)
-            {
-                MunNetworkProgramme.Unlock();
-            }
-
-            if (!MinmusNetworkProgramme.IsAvailable
-                && GetAchievementAgencyCount(MinmusProbeOrbitProgramme) > 0)
-            {
-                MinmusNetworkProgramme.Unlock();
+                if (string.IsNullOrEmpty(programme.PrerequisiteMilestoneId)
+                    || GetAchievementAgencyCountAtTime(
+                        programme.PrerequisiteMilestoneId,
+                        double.PositiveInfinity) > 0)
+                {
+                    programme.Unlock();
+                }
             }
         }
 

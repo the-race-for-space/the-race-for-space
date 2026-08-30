@@ -219,7 +219,6 @@ namespace TheRaceForSpace.UI
         private void DrawFundingTargets()
         {
             GUILayout.Label("FUNDING TARGETS");
-            GUILayout.Label("Only contracts currently in play are shown here.");
             GUILayout.Space(8.0f);
 
             _fundingScrollPosition = GUILayout.BeginScrollView(_fundingScrollPosition);
@@ -249,9 +248,9 @@ namespace TheRaceForSpace.UI
                 int cobaltProgress = _raceController.CobaltProgram.GetSatelliteCount(programme.CelestialBodyName);
                 int totalSatelliteCount = playerProgress + asterProgress + cobaltProgress;
 
-                double playerCurrentPayout = programme.CalculateCurrentPayout(playerProgress, totalSatelliteCount);
-                double asterCurrentPayout = programme.CalculateCurrentPayout(asterProgress, totalSatelliteCount);
-                double cobaltCurrentPayout = programme.CalculateCurrentPayout(cobaltProgress, totalSatelliteCount);
+                double playerNextPayout = programme.CalculateCurrentPayout(playerProgress, totalSatelliteCount);
+                double asterNextPayout = programme.CalculateCurrentPayout(asterProgress, totalSatelliteCount);
+                double cobaltNextPayout = programme.CalculateCurrentPayout(cobaltProgress, totalSatelliteCount);
 
                 GUILayout.BeginVertical("box");
                 DrawCenteredCardTitle(programme.Name);
@@ -261,18 +260,18 @@ namespace TheRaceForSpace.UI
                 GUILayout.Label("Target: " + programme.CelestialBodyName);
                 GUILayout.Label("Requirement: " + programme.RequiredSatellites + " qualifying satellite(s) in orbit");
                 GUILayout.Label("Total Available Payout: " + programme.RewardFunds.ToString("N0"));
-                GUILayout.Label("Contract type: Permanent once unlocked");
+                GUILayout.Label("Contract type: Fixed Contract");
                 GUILayout.Label("Next Payout: " + FormatKerbinDate(_raceController.NextFundingUniversalTime));
                 GUILayout.EndVertical();
 
                 GUILayout.Space(24.0f);
                 GUILayout.BeginVertical(GUILayout.ExpandWidth(true));
                 GUILayout.Label("Player Progress: " + FormatSatelliteCount(playerProgress));
-                GUILayout.Label("Player Next Payout: " + playerCurrentPayout.ToString("N0"));
+                GUILayout.Label("Player Next Payout: " + playerNextPayout.ToString("N0"));
                 GUILayout.Label("Aster Progress: " + FormatSatelliteCount(asterProgress));
-                GUILayout.Label("Aster Next Payout: " + asterCurrentPayout.ToString("N0"));
+                GUILayout.Label("Aster Next Payout: " + asterNextPayout.ToString("N0"));
                 GUILayout.Label("Cobalt Progress: " + FormatSatelliteCount(cobaltProgress));
-                GUILayout.Label("Cobalt Next Payout: " + cobaltCurrentPayout.ToString("N0"));
+                GUILayout.Label("Cobalt Next Payout: " + cobaltNextPayout.ToString("N0"));
                 GUILayout.EndVertical();
 
                 GUILayout.EndHorizontal();
@@ -294,22 +293,29 @@ namespace TheRaceForSpace.UI
             GUILayout.Label("Base Payout: " + programme.BaseRewardFunds.ToString("N0"));
             GUILayout.Label("Current Interest: " + programme.CurrentInterestPercent + "%");
             GUILayout.Label("Current Total Payout: " + programme.CurrentTotalPayoutFunds.ToString("N0"));
-
-            if (!programme.HasStarted)
-            {
-                GUILayout.Label("Contract Status: AWAITING FIRST ACHIEVEMENT");
-                GUILayout.Label("First Payout: next global funding date after an agency achieves the objective");
-            }
-            else
-            {
-                GUILayout.Label("Contract Status: DECLINING INTEREST ACTIVE");
-                GUILayout.Label("Next Payout: " + FormatKerbinDate(_raceController.NextFundingUniversalTime));
-            }
-
+            GUILayout.Label("Contract Status: " + (programme.HasStarted ? "Completed" : "Not yet Completed"));
             GUILayout.EndVertical();
 
             GUILayout.Space(24.0f);
             GUILayout.BeginVertical(GUILayout.ExpandWidth(true));
+
+            string completedBy = string.Empty;
+            if (_raceController.HasProgramAchieved(_raceController.PlayerProgram, programme))
+            {
+                completedBy = "Player";
+            }
+
+            if (_raceController.HasProgramAchieved(_raceController.AsterProgram, programme))
+            {
+                completedBy += (completedBy.Length > 0 ? ", " : string.Empty) + "Aster";
+            }
+
+            if (_raceController.HasProgramAchieved(_raceController.CobaltProgram, programme))
+            {
+                completedBy += (completedBy.Length > 0 ? ", " : string.Empty) + "Cobalt";
+            }
+
+            GUILayout.Label("Completed by: " + (completedBy.Length > 0 ? completedBy : "None"));
             DrawAchievementAgencyLine("Player", _raceController.PlayerProgram, programme);
             DrawAchievementAgencyLine("Aster", _raceController.AsterProgram, programme);
             DrawAchievementAgencyLine("Cobalt", _raceController.CobaltProgram, programme);
@@ -324,8 +330,6 @@ namespace TheRaceForSpace.UI
             SpaceProgramState program,
             AchievementFundingProgramme programme)
         {
-            bool achieved = _raceController.HasProgramAchieved(program, programme);
-            GUILayout.Label(displayName + " Status: " + (achieved ? "ACHIEVED" : "NOT ACHIEVED"));
             GUILayout.Label(
                 displayName
                 + " Next Payout: "

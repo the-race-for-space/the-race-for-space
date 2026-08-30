@@ -16,6 +16,8 @@ namespace TheRaceForSpace.Persistence
         public int KerbinSatellites { get; private set; }
         public int MunSatellites { get; private set; }
         public int MinmusSatellites { get; private set; }
+        public bool HasAchievedProbeOrbit { get; private set; }
+        public bool HasAchievedCrewedOrbit { get; private set; }
         public string NextLaunchBodyName { get; private set; }
         public int LaunchProgressPercent { get; private set; }
         public double NextLaunchProgressCheckUniversalTime { get; private set; }
@@ -32,6 +34,8 @@ namespace TheRaceForSpace.Persistence
             KerbinSatellites = Math.Max(0, program.GetSatelliteCount("Kerbin"));
             MunSatellites = Math.Max(0, program.GetSatelliteCount("Mun"));
             MinmusSatellites = Math.Max(0, program.GetSatelliteCount("Minmus"));
+            HasAchievedProbeOrbit = program.HasAchievedProbeOrbit;
+            HasAchievedCrewedOrbit = program.HasAchievedCrewedOrbit;
             NextLaunchBodyName = program.NextLaunchBodyName;
             LaunchProgressPercent = Math.Max(0, Math.Min(100, program.LaunchProgressPercent));
             NextLaunchProgressCheckUniversalTime = Math.Max(0.0, program.NextLaunchProgressCheckUniversalTime);
@@ -48,6 +52,8 @@ namespace TheRaceForSpace.Persistence
             program.SetSatelliteCount("Kerbin", KerbinSatellites);
             program.SetSatelliteCount("Mun", MunSatellites);
             program.SetSatelliteCount("Minmus", MinmusSatellites);
+            program.HasAchievedProbeOrbit = HasAchievedProbeOrbit;
+            program.HasAchievedCrewedOrbit = HasAchievedCrewedOrbit;
             program.NextLaunchBodyName = NextLaunchBodyName;
             program.LaunchProgressPercent = Math.Max(0, Math.Min(100, LaunchProgressPercent));
             program.NextLaunchProgressCheckUniversalTime = Math.Max(0.0, NextLaunchProgressCheckUniversalTime);
@@ -60,6 +66,8 @@ namespace TheRaceForSpace.Persistence
             KerbinSatellites = 0;
             MunSatellites = 0;
             MinmusSatellites = 0;
+            HasAchievedProbeOrbit = false;
+            HasAchievedCrewedOrbit = false;
             NextLaunchBodyName = null;
             LaunchProgressPercent = 0;
             NextLaunchProgressCheckUniversalTime = 0.0;
@@ -99,6 +107,9 @@ namespace TheRaceForSpace.Persistence
                 MinmusSatellites = Math.Max(0, parsedInt);
             }
 
+            HasAchievedProbeOrbit = ParseBool(node.GetValue("hasAchievedProbeOrbit"));
+            HasAchievedCrewedOrbit = ParseBool(node.GetValue("hasAchievedCrewedOrbit"));
+
             value = node.GetValue("nextLaunchBodyName");
             if (string.Equals(value, "Kerbin", StringComparison.OrdinalIgnoreCase))
             {
@@ -111,6 +122,14 @@ namespace TheRaceForSpace.Persistence
             else if (string.Equals(value, "Minmus", StringComparison.OrdinalIgnoreCase))
             {
                 NextLaunchBodyName = "Minmus";
+            }
+            else if (string.Equals(value, "Probe Orbit", StringComparison.OrdinalIgnoreCase))
+            {
+                NextLaunchBodyName = "Probe Orbit";
+            }
+            else if (string.Equals(value, "Crewed Orbit", StringComparison.OrdinalIgnoreCase))
+            {
+                NextLaunchBodyName = "Crewed Orbit";
             }
 
             value = node.GetValue("launchProgressPercent");
@@ -139,6 +158,8 @@ namespace TheRaceForSpace.Persistence
             node.AddValue("kerbinSatellites", KerbinSatellites.ToString(CultureInfo.InvariantCulture));
             node.AddValue("munSatellites", MunSatellites.ToString(CultureInfo.InvariantCulture));
             node.AddValue("minmusSatellites", MinmusSatellites.ToString(CultureInfo.InvariantCulture));
+            node.AddValue("hasAchievedProbeOrbit", HasAchievedProbeOrbit);
+            node.AddValue("hasAchievedCrewedOrbit", HasAchievedCrewedOrbit);
 
             if (!string.IsNullOrEmpty(NextLaunchBodyName))
             {
@@ -149,6 +170,12 @@ namespace TheRaceForSpace.Persistence
             node.AddValue(
                 "nextLaunchProgressCheckUniversalTime",
                 NextLaunchProgressCheckUniversalTime.ToString("R", CultureInfo.InvariantCulture));
+        }
+
+        private static bool ParseBool(string value)
+        {
+            bool parsedValue;
+            return !string.IsNullOrEmpty(value) && bool.TryParse(value, out parsedValue) && parsedValue;
         }
     }
 }

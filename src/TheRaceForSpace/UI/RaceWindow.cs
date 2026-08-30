@@ -439,47 +439,30 @@ namespace TheRaceForSpace.UI
                     continue;
                 }
 
-                int playerProgress = _raceController.PlayerProgram.GetSatelliteCount(programme.CelestialBodyName);
-                int asterProgress = _raceController.AsterProgram.GetSatelliteCount(programme.CelestialBodyName);
-                int cobaltProgress = _raceController.CobaltProgram.GetSatelliteCount(programme.CelestialBodyName);
-
-                double playerNextPayout = _raceController.GetSatelliteCurrentPayout(
-                    _raceController.PlayerProgram,
-                    programme);
-                double asterNextPayout = _raceController.GetSatelliteCurrentPayout(
-                    _raceController.AsterProgram,
-                    programme);
-                double cobaltNextPayout = _raceController.GetSatelliteCurrentPayout(
-                    _raceController.CobaltProgram,
-                    programme);
-                double unclaimedPayout = programme.RewardFunds
-                    - playerNextPayout
-                    - asterNextPayout
-                    - cobaltNextPayout;
-                if (unclaimedPayout < 0.0)
-                {
-                    unclaimedPayout = 0.0;
-                }
-
                 string satelliteSummary = string.Empty;
-                if (playerProgress > 0)
+                double[] nextPayouts = new double[_raceController.Programs.Count];
+                double claimedPayout = 0.0;
+
+                for (int programIndex = 0; programIndex < _raceController.Programs.Count; programIndex++)
                 {
-                    satelliteSummary = "Player " + playerProgress;
+                    SpaceProgramState program = _raceController.Programs[programIndex];
+                    int satelliteCount = program.GetSatelliteCount(programme.CelestialBodyName);
+                    double nextPayout = _raceController.GetSatelliteCurrentPayout(program, programme);
+                    nextPayouts[programIndex] = nextPayout;
+                    claimedPayout += nextPayout;
+
+                    if (satelliteCount <= 0)
+                    {
+                        continue;
+                    }
+
+                    satelliteSummary += (satelliteSummary.Length > 0 ? ", " : string.Empty)
+                        + GetProgramDisplayName(program)
+                        + " "
+                        + satelliteCount;
                 }
 
-                if (asterProgress > 0)
-                {
-                    satelliteSummary += (satelliteSummary.Length > 0 ? ", " : string.Empty)
-                        + "Aster "
-                        + asterProgress;
-                }
-
-                if (cobaltProgress > 0)
-                {
-                    satelliteSummary += (satelliteSummary.Length > 0 ? ", " : string.Empty)
-                        + "Cobalt "
-                        + cobaltProgress;
-                }
+                double unclaimedPayout = Math.Max(0.0, programme.RewardFunds - claimedPayout);
 
                 GUILayout.BeginVertical("box");
                 DrawCenteredCardTitle("Satellite Funding - " + programme.Name);
@@ -494,7 +477,7 @@ namespace TheRaceForSpace.UI
                 GUILayout.Space(24.0f);
                 GUILayout.BeginVertical(GUILayout.ExpandWidth(true));
                 GUILayout.Label("Satellites: " + (satelliteSummary.Length > 0 ? satelliteSummary : "None"));
-                DrawPayoutLinesByAmount(playerNextPayout, asterNextPayout, cobaltNextPayout);
+                DrawPayoutLinesByAmount(nextPayouts);
                 GUILayout.Label("Unclaimed Payout: " + unclaimedPayout.ToString("N0"));
                 GUILayout.EndVertical();
 
@@ -508,15 +491,22 @@ namespace TheRaceForSpace.UI
 
         private void DrawAchievementFundingCard(AchievementFundingProgramme programme)
         {
-            double playerNextPayout = _raceController.GetAchievementCurrentPayout(
-                _raceController.PlayerProgram,
-                programme);
-            double asterNextPayout = _raceController.GetAchievementCurrentPayout(
-                _raceController.AsterProgram,
-                programme);
-            double cobaltNextPayout = _raceController.GetAchievementCurrentPayout(
-                _raceController.CobaltProgram,
-                programme);
+            var nextPayouts = new double[_raceController.Programs.Count];
+            string completedBy = string.Empty;
+
+            for (int programIndex = 0; programIndex < _raceController.Programs.Count; programIndex++)
+            {
+                SpaceProgramState program = _raceController.Programs[programIndex];
+                nextPayouts[programIndex] = _raceController.GetAchievementCurrentPayout(program, programme);
+
+                if (!_raceController.HasProgramAchieved(program, programme))
+                {
+                    continue;
+                }
+
+                completedBy += (completedBy.Length > 0 ? ", " : string.Empty)
+                    + GetProgramDisplayName(program);
+            }
 
             GUILayout.BeginVertical("box");
             DrawCenteredCardTitle(programme.Name);
@@ -537,41 +527,24 @@ namespace TheRaceForSpace.UI
 
             GUILayout.Space(24.0f);
             GUILayout.BeginVertical(GUILayout.ExpandWidth(true));
-
-            string completedBy = string.Empty;
-            if (_raceController.HasProgramAchieved(_raceController.PlayerProgram, programme))
-            {
-                completedBy = "Player";
-            }
-
-            if (_raceController.HasProgramAchieved(_raceController.AsterProgram, programme))
-            {
-                completedBy += (completedBy.Length > 0 ? ", " : string.Empty) + "Aster";
-            }
-
-            if (_raceController.HasProgramAchieved(_raceController.CobaltProgram, programme))
-            {
-                completedBy += (completedBy.Length > 0 ? ", " : string.Empty) + "Cobalt";
-            }
-
             GUILayout.Label("Completed by: " + (completedBy.Length > 0 ? completedBy : "None"));
-            DrawPayoutLinesByAmount(playerNextPayout, asterNextPayout, cobaltNextPayout);
+            DrawPayoutLinesByAmount(nextPayouts);
             GUILayout.EndVertical();
 
             GUILayout.EndHorizontal();
             GUILayout.EndVertical();
         }
 
-        private static void DrawPayoutLinesByAmount(
-            double playerNextPayout,
-            double asterNextPayout,
-            double cobaltNextPayout)
+        private void DrawPayoutLinesByAmount(double[] nextPayouts)
         {
-            string[] agencyNames = { "Player", "Aster", "Cobalt" };
-            double[] nextPayouts = { playerNextPayout, asterNextPayout, cobaltNextPayout };
+            string[] agencyNames = new string[_raceController.Programs.Count];
+            for (int programIndex = 0; programIndex < _raceController.Programs.Count; programIndex++)
+            {
+                agencyNames[programIndex] = GetProgramDisplayName(_raceController.Programs[programIndex]);
+            }
 
-            // Only three agencies are shown in 0.3, so a small in-place sort keeps the display
-            // straightforward while putting the agency with the strongest next payout first.
+            // A small in-place sort keeps the agency with the strongest next payout first while
+            // allowing the same UI path to handle any number of current programs.
             for (int payoutIndex = 0; payoutIndex < nextPayouts.Length - 1; payoutIndex++)
             {
                 for (int compareIndex = payoutIndex + 1; compareIndex < nextPayouts.Length; compareIndex++)
@@ -612,15 +585,19 @@ namespace TheRaceForSpace.UI
 
             _rivalsScrollPosition = GUILayout.BeginScrollView(_rivalsScrollPosition);
 
-            DrawProgramCard(
-                _raceController.AsterProgram,
-                _raceController.GetEstimatedRivalLaunchDays(_raceController.AsterProgram),
-                _raceController.GetRivalLaunchProgressCost(_raceController.AsterProgram));
-            GUILayout.Space(10.0f);
-            DrawProgramCard(
-                _raceController.CobaltProgram,
-                _raceController.GetEstimatedRivalLaunchDays(_raceController.CobaltProgram),
-                _raceController.GetRivalLaunchProgressCost(_raceController.CobaltProgram));
+            for (int programIndex = 0; programIndex < _raceController.RivalPrograms.Count; programIndex++)
+            {
+                SpaceProgramState program = _raceController.RivalPrograms[programIndex];
+                if (programIndex > 0)
+                {
+                    GUILayout.Space(10.0f);
+                }
+
+                DrawProgramCard(
+                    program,
+                    _raceController.GetEstimatedRivalLaunchDays(program),
+                    _raceController.GetRivalLaunchProgressCost(program));
+            }
 
             GUILayout.EndScrollView();
         }
@@ -961,6 +938,16 @@ namespace TheRaceForSpace.UI
 
             GUILayout.EndHorizontal();
             GUILayout.EndVertical();
+        }
+
+        private static string GetProgramDisplayName(SpaceProgramState program)
+        {
+            if (program == null)
+            {
+                return "Unknown";
+            }
+
+            return program.IsPlayer ? "Player" : program.Name;
         }
 
         private void DrawCenteredCardTitle(string title)

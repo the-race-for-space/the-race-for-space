@@ -18,6 +18,8 @@ namespace TheRaceForSpace.Programs
             CrewedOrbitAchievementUniversalTime = -1.0;
             MunProbeOrbitAchievementUniversalTime = -1.0;
             MinmusProbeOrbitAchievementUniversalTime = -1.0;
+            MunCrewedOrbitAchievementUniversalTime = -1.0;
+            MinmusCrewedOrbitAchievementUniversalTime = -1.0;
         }
 
         public string Name { get; private set; }
@@ -40,6 +42,10 @@ namespace TheRaceForSpace.Programs
         public double MunProbeOrbitAchievementUniversalTime { get; set; }
         public bool HasAchievedMinmusProbeOrbit { get; set; }
         public double MinmusProbeOrbitAchievementUniversalTime { get; set; }
+        public bool HasAchievedMunCrewedOrbit { get; set; }
+        public double MunCrewedOrbitAchievementUniversalTime { get; set; }
+        public bool HasAchievedMinmusCrewedOrbit { get; set; }
+        public double MinmusCrewedOrbitAchievementUniversalTime { get; set; }
 
         // NextLaunchBodyName is retained for save compatibility with 0.2. In 0.3 it may also
         // contain a named one-off achievement mission while a rival develops it.

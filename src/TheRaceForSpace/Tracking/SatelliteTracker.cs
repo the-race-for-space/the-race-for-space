@@ -11,13 +11,17 @@ namespace TheRaceForSpace.Tracking
     {
         public static void RefreshPlayerSatelliteCounts(SpaceProgramState playerProgram)
         {
-            if (playerProgram == null || HighLogic.CurrentGame == null || HighLogic.CurrentGame.flightState == null)
+            if (playerProgram == null
+                || HighLogic.CurrentGame == null
+                || HighLogic.CurrentGame.flightState == null
+                || Planetarium.fetch == null)
             {
                 return;
             }
 
             var countsByBody = new Dictionary<string, int>();
             List<ProtoVessel> protoVessels = HighLogic.CurrentGame.flightState.protoVessels;
+            double currentUniversalTime = Planetarium.GetUniversalTime();
 
             for (int i = 0; i < protoVessels.Count; i++)
             {
@@ -49,13 +53,15 @@ namespace TheRaceForSpace.Tracking
                     // Orbit achievements are permanent once observed. Probe/Relay vessel types
                     // represent the prototype's uncrewed probe category, while any vessel with
                     // at least one valid ProtoCrewMember can satisfy the crewed-orbit objective.
-                    if (crewCount > 0)
+                    if (crewCount > 0 && !playerProgram.HasAchievedCrewedOrbit)
                     {
                         playerProgram.HasAchievedCrewedOrbit = true;
+                        playerProgram.CrewedOrbitAchievementUniversalTime = currentUniversalTime;
                     }
-                    else if (isPrototypeSatellite)
+                    else if (isPrototypeSatellite && !playerProgram.HasAchievedProbeOrbit)
                     {
                         playerProgram.HasAchievedProbeOrbit = true;
+                        playerProgram.ProbeOrbitAchievementUniversalTime = currentUniversalTime;
                     }
                 }
 

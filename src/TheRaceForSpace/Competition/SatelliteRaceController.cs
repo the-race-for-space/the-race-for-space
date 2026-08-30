@@ -86,7 +86,7 @@ namespace TheRaceForSpace.Competition
                 "Mun Survey Network",
                 "Mun",
                 5,
-                300000.0,
+                100000.0,
                 false,
                 "Any agency must achieve Mun Probe Orbit.");
             MinmusNetworkProgramme = new FundingProgramme(
@@ -94,7 +94,7 @@ namespace TheRaceForSpace.Competition
                 "Minmus Relay Initiative",
                 "Minmus",
                 5,
-                300000.0,
+                100000.0,
                 false,
                 "Any agency must achieve Minmus Probe Orbit.");
 

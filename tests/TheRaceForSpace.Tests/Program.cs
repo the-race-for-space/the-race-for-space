@@ -20,6 +20,7 @@ namespace TheRaceForSpace.Tests
             Run("Rival ETA detects unaffordable mission", RivalEtaDetectsUnaffordableMission);
             Run("Unavailable rival target is abandoned", UnavailableRivalTargetIsAbandoned);
             Run("Rival selects the only available target", RivalSelectsOnlyAvailableTarget);
+            Run("Rival completion uses replay timestamp", RivalCompletionUsesReplayTimestamp);
             Run("Race progress persistence round trip", RaceProgressPersistenceRoundTrip);
             Run("Rival persistence round trip", RivalPersistenceRoundTrip);
 
@@ -169,6 +170,37 @@ namespace TheRaceForSpace.Tests
                 true);
 
             AssertEqual(RivalSimulation.MinmusCrewedOrbitTargetName, aster.NextLaunchBodyName);
+        }
+
+        private static void RivalCompletionUsesReplayTimestamp()
+        {
+            const double replayUniversalTime = 90.0 * 21600.0;
+            SpaceProgramState player = new SpaceProgramState("Player", true);
+            SpaceProgramState aster = new SpaceProgramState("Aster", false)
+            {
+                NextLaunchBodyName = RivalSimulation.ProbeOrbitTargetName,
+                LaunchProgressPercent = 100
+            };
+            SpaceProgramState cobalt = new SpaceProgramState("Cobalt", false);
+
+            RivalSimulation.Refresh(
+                player,
+                aster,
+                cobalt,
+                replayUniversalTime,
+                false,
+                false,
+                false,
+                true,
+                false,
+                false,
+                false,
+                false,
+                false);
+
+            AssertTrue(aster.HasAchievedProbeOrbit, "Completed rival mission should record its achievement.");
+            AssertEqual(replayUniversalTime, aster.ProbeOrbitAchievementUniversalTime);
+            AssertEqual(1, aster.GetSatelliteCount("Kerbin"));
         }
 
         private static void RaceProgressPersistenceRoundTrip()

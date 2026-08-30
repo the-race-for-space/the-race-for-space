@@ -37,12 +37,6 @@ namespace TheRaceForSpace.Funding
         public double RewardFunds { get; private set; }
         public string UnlockRequirement { get; private set; }
         public bool IsAvailable { get; private set; }
-        public string WinnerProgramName { get; set; }
-
-        public bool IsClaimed
-        {
-            get { return !string.IsNullOrEmpty(WinnerProgramName); }
-        }
 
         /// <summary>
         /// Permanently unlocks this satellite contract for the current campaign.

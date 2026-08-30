@@ -216,6 +216,30 @@ namespace TheRaceForSpace.Competition
             return GetAchievementUniversalTime(program, achievementProgramme) >= 0.0;
         }
 
+        /// <summary>
+        /// Returns whether an achievement funding target is currently unlocked. Kerbin Probe
+        /// and Crewed Orbit are always available; Mun/Minmus Probe Orbit unlock once any agency
+        /// has completed Kerbin Probe Orbit.
+        /// </summary>
+        public bool IsAchievementProgrammeAvailable(AchievementFundingProgramme achievementProgramme)
+        {
+            if (achievementProgramme == null)
+            {
+                return false;
+            }
+
+            if (string.Equals(achievementProgramme.Id, MunProbeOrbitProgrammeId, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(
+                    achievementProgramme.Id,
+                    MinmusProbeOrbitProgrammeId,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return GetAchievementAgencyCount(ProbeOrbitProgramme) > 0;
+            }
+
+            return true;
+        }
+
         public int GetAchievementAgencyCount(AchievementFundingProgramme achievementProgramme)
         {
             return GetAchievementAgencyCountAtTime(achievementProgramme, double.PositiveInfinity);
@@ -229,7 +253,9 @@ namespace TheRaceForSpace.Competition
             SpaceProgramState program,
             AchievementFundingProgramme achievementProgramme)
         {
-            if (achievementProgramme == null || _nextFundingUniversalTime < 0.0)
+            if (achievementProgramme == null
+                || !IsAchievementProgrammeAvailable(achievementProgramme)
+                || _nextFundingUniversalTime < 0.0)
             {
                 return 0.0;
             }
@@ -286,7 +312,10 @@ namespace TheRaceForSpace.Competition
                     * FundingIntervalSeconds;
             }
 
-            SatelliteTracker.RefreshPlayerSatelliteCounts(PlayerProgram);
+            bool lunarProbeAchievementsAvailable = IsAchievementProgrammeAvailable(MunProbeOrbitProgramme);
+            SatelliteTracker.RefreshPlayerSatelliteCounts(
+                PlayerProgram,
+                lunarProbeAchievementsAvailable);
             UpdateFundingAvailability();
 
             // Catch rivals up before processing funding so their recorded achievement timestamps
@@ -420,7 +449,9 @@ namespace TheRaceForSpace.Competition
             for (int programmeIndex = 0; programmeIndex < _achievementFundingProgrammes.Count; programmeIndex++)
             {
                 AchievementFundingProgramme programme = _achievementFundingProgrammes[programmeIndex];
-                if (!programme.HasStarted && GetAchievementAgencyCount(programme) > 0)
+                if (IsAchievementProgrammeAvailable(programme)
+                    && !programme.HasStarted
+                    && GetAchievementAgencyCount(programme) > 0)
                 {
                     programme.Start();
                 }
@@ -460,7 +491,9 @@ namespace TheRaceForSpace.Competition
                 for (int programmeIndex = 0; programmeIndex < _achievementFundingProgrammes.Count; programmeIndex++)
                 {
                     AchievementFundingProgramme programme = _achievementFundingProgrammes[programmeIndex];
-                    if (!programme.HasStarted || programme.IsExpired)
+                    if (!IsAchievementProgrammeAvailable(programme)
+                        || !programme.HasStarted
+                        || programme.IsExpired)
                     {
                         continue;
                     }
@@ -538,7 +571,9 @@ namespace TheRaceForSpace.Competition
             for (int programmeIndex = 0; programmeIndex < _achievementFundingProgrammes.Count; programmeIndex++)
             {
                 AchievementFundingProgramme programme = _achievementFundingProgrammes[programmeIndex];
-                if (!programme.HasStarted || programme.IsExpired)
+                if (!IsAchievementProgrammeAvailable(programme)
+                    || !programme.HasStarted
+                    || programme.IsExpired)
                 {
                     continue;
                 }

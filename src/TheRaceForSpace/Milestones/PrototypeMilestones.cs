@@ -1,10 +1,11 @@
+using System;
 using System.Collections.Generic;
+using TheRaceForSpace.Programs;
 
 namespace TheRaceForSpace.Milestones
 {
     /// <summary>
     /// Defines the six achievement milestones used by the 0.3 prototype.
-    /// These definitions are additive metadata for now; gameplay migration occurs in later passes.
     /// </summary>
     public static class PrototypeMilestones
     {
@@ -71,6 +72,71 @@ namespace TheRaceForSpace.Milestones
         public static IList<MilestoneDefinition> All
         {
             get { return Definitions; }
+        }
+
+        /// <summary>
+        /// Returns the prototype milestone with the supplied stable ID, or null when no definition exists.
+        /// </summary>
+        public static MilestoneDefinition FindById(string milestoneId)
+        {
+            if (string.IsNullOrEmpty(milestoneId))
+            {
+                return null;
+            }
+
+            for (int milestoneIndex = 0; milestoneIndex < Definitions.Count; milestoneIndex++)
+            {
+                MilestoneDefinition milestone = Definitions[milestoneIndex];
+                if (string.Equals(milestone.Id, milestoneId, StringComparison.OrdinalIgnoreCase))
+                {
+                    return milestone;
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Imports the current six prototype achievement fields into generic milestone state.
+        /// Tracking, rival simulation, and persistence still write those fields during the staged
+        /// migration; this bridge can be removed once those subsystems write milestone IDs directly.
+        /// </summary>
+        public static void SynchronizeLegacyAchievementState(SpaceProgramState program)
+        {
+            if (program == null)
+            {
+                return;
+            }
+
+            if (program.HasAchievedProbeOrbit)
+            {
+                program.RecordAchievement(ProbeOrbitId, program.ProbeOrbitAchievementUniversalTime);
+            }
+
+            if (program.HasAchievedCrewedOrbit)
+            {
+                program.RecordAchievement(CrewedOrbitId, program.CrewedOrbitAchievementUniversalTime);
+            }
+
+            if (program.HasAchievedMunProbeOrbit)
+            {
+                program.RecordAchievement(MunProbeOrbitId, program.MunProbeOrbitAchievementUniversalTime);
+            }
+
+            if (program.HasAchievedMinmusProbeOrbit)
+            {
+                program.RecordAchievement(MinmusProbeOrbitId, program.MinmusProbeOrbitAchievementUniversalTime);
+            }
+
+            if (program.HasAchievedMunCrewedOrbit)
+            {
+                program.RecordAchievement(MunCrewedOrbitId, program.MunCrewedOrbitAchievementUniversalTime);
+            }
+
+            if (program.HasAchievedMinmusCrewedOrbit)
+            {
+                program.RecordAchievement(MinmusCrewedOrbitId, program.MinmusCrewedOrbitAchievementUniversalTime);
+            }
         }
     }
 }

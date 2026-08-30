@@ -107,30 +107,34 @@ namespace TheRaceForSpace.Competition
 
         public int NextFundingYear
         {
-            get
-            {
-                if (_nextFundingUniversalTime < 0.0)
-                {
-                    return 0;
-                }
-
-                int totalKerbinDays = (int)Math.Floor(_nextFundingUniversalTime / KerbinDaySeconds);
-                return (totalKerbinDays / KerbinDaysPerYear) + 1;
-            }
+            get { return GetKerbinYear(_nextFundingUniversalTime); }
         }
 
         public int NextFundingDay
         {
-            get
-            {
-                if (_nextFundingUniversalTime < 0.0)
-                {
-                    return 0;
-                }
+            get { return GetKerbinDay(_nextFundingUniversalTime); }
+        }
 
-                int totalKerbinDays = (int)Math.Floor(_nextFundingUniversalTime / KerbinDaySeconds);
-                return (totalKerbinDays % KerbinDaysPerYear) + 1;
+        public int GetKerbinYear(double universalTime)
+        {
+            if (universalTime < 0.0)
+            {
+                return 0;
             }
+
+            int totalKerbinDays = (int)Math.Floor(universalTime / KerbinDaySeconds);
+            return (totalKerbinDays / KerbinDaysPerYear) + 1;
+        }
+
+        public int GetKerbinDay(double universalTime)
+        {
+            if (universalTime < 0.0)
+            {
+                return 0;
+            }
+
+            int totalKerbinDays = (int)Math.Floor(universalTime / KerbinDaySeconds);
+            return (totalKerbinDays % KerbinDaysPerYear) + 1;
         }
 
         /// <summary>
@@ -147,8 +151,9 @@ namespace TheRaceForSpace.Competition
         }
 
         /// <summary>
-        /// Returns the current expected Kerbin days until a rival mission completes, including
-        /// projected funding waits. A null result means the rival cannot currently finance completion.
+        /// Returns the current expected Kerbin days until a rival mission completes. The ETA
+        /// uses the existing projected-income approximation rather than modelling every orbit-contract
+        /// payment timestamp separately.
         /// </summary>
         public int? GetEstimatedRivalLaunchDays(SpaceProgramState program)
         {
@@ -168,41 +173,12 @@ namespace TheRaceForSpace.Competition
             SpaceProgramState program,
             AchievementFundingProgramme achievementProgramme)
         {
-            if (program == null || achievementProgramme == null)
-            {
-                return false;
-            }
-
-            if (string.Equals(achievementProgramme.Id, ProbeOrbitProgrammeId, StringComparison.OrdinalIgnoreCase))
-            {
-                return program.HasAchievedProbeOrbit;
-            }
-
-            if (string.Equals(achievementProgramme.Id, CrewedOrbitProgrammeId, StringComparison.OrdinalIgnoreCase))
-            {
-                return program.HasAchievedCrewedOrbit;
-            }
-
-            return false;
+            return GetAchievementUniversalTime(program, achievementProgramme) >= 0.0;
         }
 
         public int GetAchievementAgencyCount(AchievementFundingProgramme achievementProgramme)
         {
-            if (achievementProgramme == null)
-            {
-                return 0;
-            }
-
-            int achievedAgencyCount = 0;
-            for (int programIndex = 0; programIndex < _programs.Count; programIndex++)
-            {
-                if (HasProgramAchieved(_programs[programIndex], achievementProgramme))
-                {
-                    achievedAgencyCount++;
-                }
-            }
-
-            return achievedAgencyCount;
+            return GetAchievementAgencyCountAtTime(achievementProgramme, double.PositiveInfinity);
         }
 
         public double GetAchievementCurrentPayout(
@@ -226,6 +202,8 @@ namespace TheRaceForSpace.Competition
                 return;
             }
 
+            double currentUniversalTime = Planetarium.GetUniversalTime();
+
             // Do not advance gameplay until the ScenarioModule has loaded the current save.
             // Old saves without 0.3 fields retain safe defaults and are migrated below.
             if (!_hasRestoredPersistentState)
@@ -244,15 +222,15 @@ namespace TheRaceForSpace.Competition
                     return;
                 }
 
-                ApplyLegacySaveCompatibility(AsterProgram);
-                ApplyLegacySaveCompatibility(CobaltProgram);
+                ApplyLegacySaveCompatibility(AsterProgram, currentUniversalTime);
+                ApplyLegacySaveCompatibility(CobaltProgram, currentUniversalTime);
                 _hasRestoredPersistentState = true;
             }
 
-            double currentUniversalTime = Planetarium.GetUniversalTime();
             if (_nextFundingUniversalTime < 0.0)
             {
-                // Funding dates remain aligned to 90-day Kerbin calendar boundaries.
+                // Permanent satellite-network funding remains aligned to the global 90-day
+                // Kerbin calendar boundaries used by the 0.2 prototype.
                 _nextFundingUniversalTime =
                     (Math.Floor(currentUniversalTime / FundingIntervalSeconds) + 1.0)
                     * FundingIntervalSeconds;
@@ -260,7 +238,11 @@ namespace TheRaceForSpace.Competition
 
             SatelliteTracker.RefreshPlayerSatelliteCounts(PlayerProgram);
             UpdateFundingAvailability();
+
+            // Existing contracts may have payments due before rival catch-up. Process them first
+            // so an expired achievement cannot remain a valid rival target during a large time-warp.
             StartAchievementContracts();
+            ProcessDueAchievementFunding(currentUniversalTime);
 
             RivalSimulation.Refresh(
                 PlayerProgram,
@@ -273,12 +255,13 @@ namespace TheRaceForSpace.Competition
                 !ProbeOrbitProgramme.IsExpired,
                 !CrewedOrbitProgramme.IsExpired);
 
-            // Rival completion can unlock the Kerbin network or push combined Kerbin coverage
-            // across the 6-satellite lunar threshold during the same refresh.
+            // Rival completion can unlock the Kerbin network, push combined Kerbin coverage
+            // across the 6-satellite lunar threshold, or start an orbit contract during this refresh.
             UpdateFundingAvailability();
             StartAchievementContracts();
+            ProcessDueAchievementFunding(currentUniversalTime);
+            ProcessDueNetworkFunding(currentUniversalTime);
             EvaluateFundingProgrammes();
-            ProcessDueFunding(currentUniversalTime);
 
             RacePersistenceScenario.CaptureRivalState(AsterProgram, CobaltProgram);
             RacePersistenceScenario.CaptureRaceProgress(
@@ -290,7 +273,7 @@ namespace TheRaceForSpace.Competition
                 CrewedOrbitProgramme);
         }
 
-        private void ApplyLegacySaveCompatibility(SpaceProgramState program)
+        private void ApplyLegacySaveCompatibility(SpaceProgramState program, double currentUniversalTime)
         {
             if (program == null || program.IsPlayer)
             {
@@ -302,10 +285,22 @@ namespace TheRaceForSpace.Competition
                 + program.GetSatelliteCount("Minmus");
 
             // A 0.2 rival that already owns an orbital satellite necessarily demonstrated
-            // probe orbit before 0.3 added an explicit achievement flag.
+            // probe orbit. Treat the 0.3 achievement as newly recognised at the current save time
+            // instead of retroactively paying years of a contract that did not exist in 0.2.
             if (!program.HasAchievedProbeOrbit && existingSatelliteCount > 0)
             {
                 program.HasAchievedProbeOrbit = true;
+                program.ProbeOrbitAchievementUniversalTime = Math.Max(0.0, currentUniversalTime);
+            }
+
+            if (program.HasAchievedProbeOrbit && program.ProbeOrbitAchievementUniversalTime < 0.0)
+            {
+                program.ProbeOrbitAchievementUniversalTime = Math.Max(0.0, currentUniversalTime);
+            }
+
+            if (program.HasAchievedCrewedOrbit && program.CrewedOrbitAchievementUniversalTime < 0.0)
+            {
+                program.CrewedOrbitAchievementUniversalTime = Math.Max(0.0, currentUniversalTime);
             }
 
             // If an old rival had no completed satellites, reinterpret its current development
@@ -346,109 +341,106 @@ namespace TheRaceForSpace.Competition
             for (int programmeIndex = 0; programmeIndex < _achievementFundingProgrammes.Count; programmeIndex++)
             {
                 AchievementFundingProgramme programme = _achievementFundingProgrammes[programmeIndex];
-                if (!programme.HasStarted && GetAchievementAgencyCount(programme) > 0)
+                double firstAchievementUniversalTime = GetFirstAchievementUniversalTime(programme);
+
+                if (!programme.HasStarted && firstAchievementUniversalTime >= 0.0)
                 {
-                    programme.Start();
+                    programme.Start(firstAchievementUniversalTime);
+                    continue;
+                }
+
+                // Repair the short-lived first 0.3 implementation-pass format, which persisted
+                // a started/payment count before independent next-payout timestamps were added.
+                if (programme.HasStarted
+                    && !programme.IsExpired
+                    && programme.NextPayoutUniversalTime < 0.0
+                    && firstAchievementUniversalTime >= 0.0)
+                {
+                    programme.RestoreState(
+                        true,
+                        programme.PaymentsProcessed,
+                        firstAchievementUniversalTime + (programme.PaymentsProcessed * FundingIntervalSeconds));
                 }
             }
         }
 
-        private bool ProcessDueFunding(double currentUniversalTime)
+        private void ProcessDueAchievementFunding(double currentUniversalTime)
         {
-            bool processedFundingDate = false;
+            for (int programmeIndex = 0; programmeIndex < _achievementFundingProgrammes.Count; programmeIndex++)
+            {
+                AchievementFundingProgramme programme = _achievementFundingProgrammes[programmeIndex];
 
+                while (programme.HasStarted
+                    && !programme.IsExpired
+                    && programme.NextPayoutUniversalTime >= 0.0
+                    && currentUniversalTime >= programme.NextPayoutUniversalTime)
+                {
+                    double payoutUniversalTime = programme.NextPayoutUniversalTime;
+                    int eligibleAgencyCount = GetAchievementAgencyCountAtTime(programme, payoutUniversalTime);
+
+                    for (int programIndex = 0; programIndex < _programs.Count; programIndex++)
+                    {
+                        SpaceProgramState program = _programs[programIndex];
+                        bool isEligible = HasProgramAchievedByTime(program, programme, payoutUniversalTime);
+                        double payout = programme.CalculateCurrentPayout(isEligible, eligibleAgencyCount);
+                        AwardProgramFunds(program, payout);
+                    }
+
+                    programme.AdvancePayout(FundingIntervalSeconds);
+                }
+            }
+        }
+
+        private void ProcessDueNetworkFunding(double currentUniversalTime)
+        {
             while (_nextFundingUniversalTime >= 0.0 && currentUniversalTime >= _nextFundingUniversalTime)
             {
                 for (int programIndex = 0; programIndex < _programs.Count; programIndex++)
                 {
                     SpaceProgramState program = _programs[programIndex];
-                    double payout = program.NextPayoutFunds;
-                    if (payout <= 0.0)
-                    {
-                        continue;
-                    }
-
-                    if (program.IsPlayer)
-                    {
-                        // The player receives real KSP Career funds. In non-Career modes the
-                        // adapter deliberately leaves KSP's economy untouched.
-                        if (CareerFundingAdapter.TryAddFunds(payout))
-                        {
-                            program.AwardedFunds += payout;
-                        }
-                    }
-                    else
-                    {
-                        program.Funds += payout;
-                        program.AwardedFunds += payout;
-                    }
-                }
-
-                for (int programmeIndex = 0; programmeIndex < _achievementFundingProgrammes.Count; programmeIndex++)
-                {
-                    _achievementFundingProgrammes[programmeIndex].AdvancePayout();
+                    AwardProgramFunds(program, CalculateSatelliteFundingForProgram(program));
                 }
 
                 _nextFundingUniversalTime += FundingIntervalSeconds;
-                processedFundingDate = true;
+            }
+        }
 
-                // Recalculate after every missed funding boundary so declining-interest contracts
-                // step 100%, 90%, 80% ... correctly during large time-warps or long save gaps.
-                EvaluateFundingProgrammes();
+        private void AwardProgramFunds(SpaceProgramState program, double payout)
+        {
+            if (program == null || payout <= 0.0)
+            {
+                return;
             }
 
-            return processedFundingDate;
+            if (program.IsPlayer)
+            {
+                // The player receives real KSP Career funds. In non-Career modes the
+                // adapter deliberately leaves KSP's economy untouched.
+                if (CareerFundingAdapter.TryAddFunds(payout))
+                {
+                    program.AwardedFunds += payout;
+                }
+
+                return;
+            }
+
+            program.Funds += payout;
+            program.AwardedFunds += payout;
         }
 
         private void EvaluateFundingProgrammes()
         {
-            // NextPayoutFunds is the amount currently due on the next scheduled funding date.
-            // Recalculate it on each controlled refresh because rival progress can dilute shares.
+            EvaluateSatelliteRaceClaims();
+
             for (int programIndex = 0; programIndex < _programs.Count; programIndex++)
             {
-                _programs[programIndex].NextPayoutFunds = 0.0;
+                SpaceProgramState program = _programs[programIndex];
+                program.NextPayoutFunds = CalculateSatelliteFundingForProgram(program);
             }
 
-            for (int programmeIndex = 0; programmeIndex < _fundingProgrammes.Count; programmeIndex++)
-            {
-                FundingProgramme programme = _fundingProgrammes[programmeIndex];
-                if (!programme.IsAvailable)
-                {
-                    continue;
-                }
-
-                // First-to-requirement remains a separate race achievement, but it does not
-                // grant exclusive ownership of the recurring satellite funding pool.
-                if (!programme.IsClaimed)
-                {
-                    for (int programIndex = 0; programIndex < _programs.Count; programIndex++)
-                    {
-                        SpaceProgramState program = _programs[programIndex];
-                        if (program.GetSatelliteCount(programme.CelestialBodyName) < programme.RequiredSatellites)
-                        {
-                            continue;
-                        }
-
-                        programme.WinnerProgramName = program.Name;
-                        program.RacePoints += 1;
-                        break;
-                    }
-                }
-
-                int totalSatelliteCount = 0;
-                for (int programIndex = 0; programIndex < _programs.Count; programIndex++)
-                {
-                    totalSatelliteCount += _programs[programIndex].GetSatelliteCount(programme.CelestialBodyName);
-                }
-
-                for (int programIndex = 0; programIndex < _programs.Count; programIndex++)
-                {
-                    SpaceProgramState program = _programs[programIndex];
-                    int programSatelliteCount = program.GetSatelliteCount(programme.CelestialBodyName);
-                    program.NextPayoutFunds += programme.CalculateCurrentPayout(programSatelliteCount, totalSatelliteCount);
-                }
-            }
-
+            // NextPayoutFunds is a convenient current projection for the command center and
+            // rival ETA. Orbit contracts have independent dates, so this is deliberately an
+            // aggregate estimate rather than a promise that every component pays simultaneously.
             for (int programmeIndex = 0; programmeIndex < _achievementFundingProgrammes.Count; programmeIndex++)
             {
                 AchievementFundingProgramme programme = _achievementFundingProgrammes[programmeIndex];
@@ -462,6 +454,140 @@ namespace TheRaceForSpace.Competition
                         achievedAgencyCount);
                 }
             }
+        }
+
+        private void EvaluateSatelliteRaceClaims()
+        {
+            for (int programmeIndex = 0; programmeIndex < _fundingProgrammes.Count; programmeIndex++)
+            {
+                FundingProgramme programme = _fundingProgrammes[programmeIndex];
+                if (!programme.IsAvailable || programme.IsClaimed)
+                {
+                    continue;
+                }
+
+                for (int programIndex = 0; programIndex < _programs.Count; programIndex++)
+                {
+                    SpaceProgramState program = _programs[programIndex];
+                    if (program.GetSatelliteCount(programme.CelestialBodyName) < programme.RequiredSatellites)
+                    {
+                        continue;
+                    }
+
+                    programme.WinnerProgramName = program.Name;
+                    program.RacePoints += 1;
+                    break;
+                }
+            }
+        }
+
+        private double CalculateSatelliteFundingForProgram(SpaceProgramState program)
+        {
+            if (program == null)
+            {
+                return 0.0;
+            }
+
+            double payout = 0.0;
+
+            for (int programmeIndex = 0; programmeIndex < _fundingProgrammes.Count; programmeIndex++)
+            {
+                FundingProgramme programme = _fundingProgrammes[programmeIndex];
+                if (!programme.IsAvailable)
+                {
+                    continue;
+                }
+
+                int totalSatelliteCount = 0;
+                for (int programIndex = 0; programIndex < _programs.Count; programIndex++)
+                {
+                    totalSatelliteCount += _programs[programIndex].GetSatelliteCount(programme.CelestialBodyName);
+                }
+
+                payout += programme.CalculateCurrentPayout(
+                    program.GetSatelliteCount(programme.CelestialBodyName),
+                    totalSatelliteCount);
+            }
+
+            return payout;
+        }
+
+        private double GetFirstAchievementUniversalTime(AchievementFundingProgramme achievementProgramme)
+        {
+            double earliestUniversalTime = double.PositiveInfinity;
+
+            for (int programIndex = 0; programIndex < _programs.Count; programIndex++)
+            {
+                double achievementUniversalTime = GetAchievementUniversalTime(
+                    _programs[programIndex],
+                    achievementProgramme);
+
+                if (achievementUniversalTime >= 0.0 && achievementUniversalTime < earliestUniversalTime)
+                {
+                    earliestUniversalTime = achievementUniversalTime;
+                }
+            }
+
+            return double.IsPositiveInfinity(earliestUniversalTime) ? -1.0 : earliestUniversalTime;
+        }
+
+        private int GetAchievementAgencyCountAtTime(
+            AchievementFundingProgramme achievementProgramme,
+            double payoutUniversalTime)
+        {
+            if (achievementProgramme == null)
+            {
+                return 0;
+            }
+
+            int achievedAgencyCount = 0;
+            for (int programIndex = 0; programIndex < _programs.Count; programIndex++)
+            {
+                if (HasProgramAchievedByTime(
+                    _programs[programIndex],
+                    achievementProgramme,
+                    payoutUniversalTime))
+                {
+                    achievedAgencyCount++;
+                }
+            }
+
+            return achievedAgencyCount;
+        }
+
+        private bool HasProgramAchievedByTime(
+            SpaceProgramState program,
+            AchievementFundingProgramme achievementProgramme,
+            double payoutUniversalTime)
+        {
+            double achievementUniversalTime = GetAchievementUniversalTime(program, achievementProgramme);
+            return achievementUniversalTime >= 0.0 && achievementUniversalTime <= payoutUniversalTime;
+        }
+
+        private double GetAchievementUniversalTime(
+            SpaceProgramState program,
+            AchievementFundingProgramme achievementProgramme)
+        {
+            if (program == null || achievementProgramme == null)
+            {
+                return -1.0;
+            }
+
+            if (string.Equals(achievementProgramme.Id, ProbeOrbitProgrammeId, StringComparison.OrdinalIgnoreCase))
+            {
+                return program.HasAchievedProbeOrbit
+                    ? Math.Max(0.0, program.ProbeOrbitAchievementUniversalTime)
+                    : -1.0;
+            }
+
+            if (string.Equals(achievementProgramme.Id, CrewedOrbitProgrammeId, StringComparison.OrdinalIgnoreCase))
+            {
+                return program.HasAchievedCrewedOrbit
+                    ? Math.Max(0.0, program.CrewedOrbitAchievementUniversalTime)
+                    : -1.0;
+            }
+
+            return -1.0;
         }
     }
 }

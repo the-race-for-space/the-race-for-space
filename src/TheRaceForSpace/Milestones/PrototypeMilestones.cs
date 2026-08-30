@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace TheRaceForSpace.Milestones
 {
     /// <summary>
-    /// Defines the six achievement milestones used by the 0.3 prototype.
+    /// Defines the achievement milestones used by the current prototype.
     /// </summary>
     public static class PrototypeMilestones
     {
@@ -12,8 +12,10 @@ namespace TheRaceForSpace.Milestones
         public const string CrewedOrbitId = "crewed-orbit";
         public const string MunProbeOrbitId = "mun-probe-orbit";
         public const string MinmusProbeOrbitId = "minmus-probe-orbit";
+        public const string DunaProbeOrbitId = "duna-probe-orbit";
         public const string MunCrewedOrbitId = "mun-crewed-orbit";
         public const string MinmusCrewedOrbitId = "minmus-crewed-orbit";
+        public const string DunaCrewedOrbitId = "duna-crewed-orbit";
 
         private static readonly IList<MilestoneDefinition> Definitions =
             new List<MilestoneDefinition>
@@ -51,6 +53,14 @@ namespace TheRaceForSpace.Milestones
                     "Achieve orbit around Minmus with an uncrewed Probe or Relay vessel.",
                     ProbeOrbitId),
                 new MilestoneDefinition(
+                    DunaProbeOrbitId,
+                    "Duna Probe Orbit",
+                    "Duna",
+                    MilestoneSituation.Orbit,
+                    MilestoneCrewRequirement.UncrewedProbe,
+                    "Achieve orbit around Duna with an uncrewed Probe or Relay vessel.",
+                    ProbeOrbitId),
+                new MilestoneDefinition(
                     MunCrewedOrbitId,
                     "Mun Crewed Orbit",
                     "Mun",
@@ -65,6 +75,14 @@ namespace TheRaceForSpace.Milestones
                     MilestoneSituation.Orbit,
                     MilestoneCrewRequirement.Crewed,
                     "Achieve orbit around Minmus with at least one live Kerbal aboard.",
+                    CrewedOrbitId),
+                new MilestoneDefinition(
+                    DunaCrewedOrbitId,
+                    "Duna Crewed Orbit",
+                    "Duna",
+                    MilestoneSituation.Orbit,
+                    MilestoneCrewRequirement.Crewed,
+                    "Achieve orbit around Duna with at least one live Kerbal aboard.",
                     CrewedOrbitId)
             }.AsReadOnly();
 

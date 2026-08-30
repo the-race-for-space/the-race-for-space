@@ -1,6 +1,7 @@
 using KSP.UI.Screens;
 using TheRaceForSpace.Competition;
 using TheRaceForSpace.Funding;
+using TheRaceForSpace.KspIntegration;
 using TheRaceForSpace.Programs;
 using UnityEngine;
 
@@ -39,8 +40,9 @@ namespace TheRaceForSpace.UI
         private ApplicationLauncherButton _launcherButton;
         private GUIStyle _highlightedCardTitleStyle;
         private GUIStyle _boldLabelStyle;
+        private bool _hasRestoredVisibilityState;
         private bool _isDuplicateInstance;
-        private bool _isVisible = true;
+        private bool _isVisible;
         private float _nextRefreshTime;
 
         public void Awake()
@@ -104,6 +106,22 @@ namespace TheRaceForSpace.UI
             {
                 _raceController = new SatelliteRaceController();
                 _controllerGame = HighLogic.CurrentGame;
+                _hasRestoredVisibilityState = false;
+                _isVisible = false;
+            }
+
+            // Wait for the ScenarioModule before creating or synchronizing the launcher button.
+            // This prevents the new-save default (closed) from overwriting a saved open state.
+            if (!_hasRestoredVisibilityState)
+            {
+                bool savedVisibility;
+                if (!RacePersistenceScenario.TryRestoreCommandCenterVisibility(out savedVisibility))
+                {
+                    return;
+                }
+
+                _hasRestoredVisibilityState = true;
+                SetCommandCenterVisible(savedVisibility);
             }
 
             // The stock ApplicationLauncher may not be ready during Awake. This lightweight
@@ -165,6 +183,11 @@ namespace TheRaceForSpace.UI
         private void SetCommandCenterVisible(bool isVisible)
         {
             _isVisible = isVisible;
+
+            if (_hasRestoredVisibilityState)
+            {
+                RacePersistenceScenario.CaptureCommandCenterVisibility(_isVisible);
+            }
 
             if (_launcherButton == null)
             {

@@ -171,13 +171,13 @@ namespace TheRaceForSpace.Tests.Simulation
             player.RecordAchievement(PrototypeMilestones.ProbeOrbitId, 1.0);
             var aster = new SpaceProgramState("Aster", false)
             {
-                NextMissionTargetId = PrototypeMilestones.MunProbeOrbitId,
+                NextMissionTargetId = PrototypeMilestones.DunaProbeOrbitId,
                 LaunchProgressPercent = 100
             };
             var cobalt = new SpaceProgramState("Cobalt", false);
 
             MilestoneDefinition milestone = PrototypeMilestones.FindById(
-                PrototypeMilestones.MunProbeOrbitId);
+                PrototypeMilestones.DunaProbeOrbitId);
             var achievementProgrammes = new List<AchievementFundingProgramme>
             {
                 new AchievementFundingProgramme(
@@ -198,12 +198,12 @@ namespace TheRaceForSpace.Tests.Simulation
                 new List<FundingProgramme>());
 
             TestAssert.True(
-                aster.HasAchievement(PrototypeMilestones.MunProbeOrbitId),
-                "Achievement completion should record the milestone ID.");
+                aster.HasAchievement(PrototypeMilestones.DunaProbeOrbitId),
+                "Duna achievement completion should record the milestone ID.");
             TestAssert.Equal(
                 completionUniversalTime,
-                aster.GetAchievementUniversalTime(PrototypeMilestones.MunProbeOrbitId));
-            TestAssert.Equal(1, aster.GetSatelliteCount("Mun"));
+                aster.GetAchievementUniversalTime(PrototypeMilestones.DunaProbeOrbitId));
+            TestAssert.Equal(1, aster.GetSatelliteCount("Duna"));
             TestAssert.Equal(null, aster.NextMissionTargetId);
         }
     }

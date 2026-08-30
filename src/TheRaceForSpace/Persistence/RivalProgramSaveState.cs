@@ -20,6 +20,10 @@ namespace TheRaceForSpace.Persistence
         public double ProbeOrbitAchievementUniversalTime { get; private set; }
         public bool HasAchievedCrewedOrbit { get; private set; }
         public double CrewedOrbitAchievementUniversalTime { get; private set; }
+        public bool HasAchievedMunProbeOrbit { get; private set; }
+        public double MunProbeOrbitAchievementUniversalTime { get; private set; }
+        public bool HasAchievedMinmusProbeOrbit { get; private set; }
+        public double MinmusProbeOrbitAchievementUniversalTime { get; private set; }
         public string NextLaunchBodyName { get; private set; }
         public int LaunchProgressPercent { get; private set; }
         public double NextLaunchProgressCheckUniversalTime { get; private set; }
@@ -44,6 +48,14 @@ namespace TheRaceForSpace.Persistence
             CrewedOrbitAchievementUniversalTime = NormalizeAchievementTime(
                 HasAchievedCrewedOrbit,
                 program.CrewedOrbitAchievementUniversalTime);
+            HasAchievedMunProbeOrbit = program.HasAchievedMunProbeOrbit;
+            MunProbeOrbitAchievementUniversalTime = NormalizeAchievementTime(
+                HasAchievedMunProbeOrbit,
+                program.MunProbeOrbitAchievementUniversalTime);
+            HasAchievedMinmusProbeOrbit = program.HasAchievedMinmusProbeOrbit;
+            MinmusProbeOrbitAchievementUniversalTime = NormalizeAchievementTime(
+                HasAchievedMinmusProbeOrbit,
+                program.MinmusProbeOrbitAchievementUniversalTime);
             NextLaunchBodyName = program.NextLaunchBodyName;
             LaunchProgressPercent = Math.Max(0, Math.Min(100, program.LaunchProgressPercent));
             NextLaunchProgressCheckUniversalTime = Math.Max(0.0, program.NextLaunchProgressCheckUniversalTime);
@@ -64,6 +76,10 @@ namespace TheRaceForSpace.Persistence
             program.ProbeOrbitAchievementUniversalTime = ProbeOrbitAchievementUniversalTime;
             program.HasAchievedCrewedOrbit = HasAchievedCrewedOrbit;
             program.CrewedOrbitAchievementUniversalTime = CrewedOrbitAchievementUniversalTime;
+            program.HasAchievedMunProbeOrbit = HasAchievedMunProbeOrbit;
+            program.MunProbeOrbitAchievementUniversalTime = MunProbeOrbitAchievementUniversalTime;
+            program.HasAchievedMinmusProbeOrbit = HasAchievedMinmusProbeOrbit;
+            program.MinmusProbeOrbitAchievementUniversalTime = MinmusProbeOrbitAchievementUniversalTime;
             program.NextLaunchBodyName = NextLaunchBodyName;
             program.LaunchProgressPercent = Math.Max(0, Math.Min(100, LaunchProgressPercent));
             program.NextLaunchProgressCheckUniversalTime = Math.Max(0.0, NextLaunchProgressCheckUniversalTime);
@@ -80,6 +96,10 @@ namespace TheRaceForSpace.Persistence
             ProbeOrbitAchievementUniversalTime = -1.0;
             HasAchievedCrewedOrbit = false;
             CrewedOrbitAchievementUniversalTime = -1.0;
+            HasAchievedMunProbeOrbit = false;
+            MunProbeOrbitAchievementUniversalTime = -1.0;
+            HasAchievedMinmusProbeOrbit = false;
+            MinmusProbeOrbitAchievementUniversalTime = -1.0;
             NextLaunchBodyName = null;
             LaunchProgressPercent = 0;
             NextLaunchProgressCheckUniversalTime = 0.0;
@@ -127,6 +147,14 @@ namespace TheRaceForSpace.Persistence
             CrewedOrbitAchievementUniversalTime = ParseAchievementTime(
                 node.GetValue("crewedOrbitAchievementUniversalTime"),
                 HasAchievedCrewedOrbit);
+            HasAchievedMunProbeOrbit = ParseBool(node.GetValue("hasAchievedMunProbeOrbit"));
+            MunProbeOrbitAchievementUniversalTime = ParseAchievementTime(
+                node.GetValue("munProbeOrbitAchievementUniversalTime"),
+                HasAchievedMunProbeOrbit);
+            HasAchievedMinmusProbeOrbit = ParseBool(node.GetValue("hasAchievedMinmusProbeOrbit"));
+            MinmusProbeOrbitAchievementUniversalTime = ParseAchievementTime(
+                node.GetValue("minmusProbeOrbitAchievementUniversalTime"),
+                HasAchievedMinmusProbeOrbit);
 
             value = node.GetValue("nextLaunchBodyName");
             if (string.Equals(value, "Kerbin", StringComparison.OrdinalIgnoreCase))
@@ -148,6 +176,14 @@ namespace TheRaceForSpace.Persistence
             else if (string.Equals(value, "Crewed Orbit", StringComparison.OrdinalIgnoreCase))
             {
                 NextLaunchBodyName = "Crewed Orbit";
+            }
+            else if (string.Equals(value, "Mun Probe Orbit", StringComparison.OrdinalIgnoreCase))
+            {
+                NextLaunchBodyName = "Mun Probe Orbit";
+            }
+            else if (string.Equals(value, "Minmus Probe Orbit", StringComparison.OrdinalIgnoreCase))
+            {
+                NextLaunchBodyName = "Minmus Probe Orbit";
             }
 
             value = node.GetValue("launchProgressPercent");
@@ -184,6 +220,14 @@ namespace TheRaceForSpace.Persistence
             node.AddValue(
                 "crewedOrbitAchievementUniversalTime",
                 CrewedOrbitAchievementUniversalTime.ToString("R", CultureInfo.InvariantCulture));
+            node.AddValue("hasAchievedMunProbeOrbit", HasAchievedMunProbeOrbit);
+            node.AddValue(
+                "munProbeOrbitAchievementUniversalTime",
+                MunProbeOrbitAchievementUniversalTime.ToString("R", CultureInfo.InvariantCulture));
+            node.AddValue("hasAchievedMinmusProbeOrbit", HasAchievedMinmusProbeOrbit);
+            node.AddValue(
+                "minmusProbeOrbitAchievementUniversalTime",
+                MinmusProbeOrbitAchievementUniversalTime.ToString("R", CultureInfo.InvariantCulture));
 
             if (!string.IsNullOrEmpty(NextLaunchBodyName))
             {

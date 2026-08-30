@@ -14,6 +14,10 @@ namespace TheRaceForSpace.Competition
     /// </summary>
     public sealed class SatelliteRaceController
     {
+        public const string PlayerProgramId = "player";
+        public const string AsterProgramId = "aster";
+        public const string CobaltProgramId = "cobalt";
+
         private const double KerbinDaySeconds = 21600.0;
         private const int KerbinDaysPerYear = 426;
         private const double FundingIntervalSeconds = 90.0 * KerbinDaySeconds;
@@ -21,11 +25,14 @@ namespace TheRaceForSpace.Competition
         private const double RivalBaseIncomeFunds = 20000.0;
 
         private readonly List<SpaceProgramState> _programs = new List<SpaceProgramState>();
+        private readonly List<SpaceProgramState> _rivalPrograms = new List<SpaceProgramState>();
         private readonly List<FundingProgramme> _fundingProgrammes = new List<FundingProgramme>();
         private readonly List<AchievementFundingProgramme> _achievementFundingProgrammes =
             new List<AchievementFundingProgramme>();
         private readonly HashSet<string> _availableAchievementMilestoneIds =
             new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        private readonly IList<SpaceProgramState> _programsView;
+        private readonly IList<SpaceProgramState> _rivalProgramsView;
         private readonly IList<FundingProgramme> _fundingProgrammesView;
         private readonly IList<AchievementFundingProgramme> _achievementFundingProgrammesView;
         private double _nextFundingUniversalTime = -1.0;
@@ -33,9 +40,9 @@ namespace TheRaceForSpace.Competition
 
         public SatelliteRaceController()
         {
-            PlayerProgram = new SpaceProgramState("Kerbal Space Agency", true);
-            AsterProgram = new SpaceProgramState("Aster Aerospace Directorate", false);
-            CobaltProgram = new SpaceProgramState("Cobalt Orbital Bureau", false);
+            PlayerProgram = new SpaceProgramState(PlayerProgramId, "Kerbal Space Agency", true);
+            AsterProgram = new SpaceProgramState(AsterProgramId, "Aster Aerospace Directorate", false);
+            CobaltProgram = new SpaceProgramState(CobaltProgramId, "Cobalt Orbital Bureau", false);
 
             // New games begin with enough simulated cash for one complete Probe Orbit
             // development cycle. Probe Orbit is deliberately the fixed opening rival mission.
@@ -49,6 +56,8 @@ namespace TheRaceForSpace.Competition
             _programs.Add(PlayerProgram);
             _programs.Add(AsterProgram);
             _programs.Add(CobaltProgram);
+            _rivalPrograms.Add(AsterProgram);
+            _rivalPrograms.Add(CobaltProgram);
 
             MilestoneDefinition probeOrbitMilestone = PrototypeMilestones.FindById(
                 PrototypeMilestones.ProbeOrbitId);
@@ -141,6 +150,8 @@ namespace TheRaceForSpace.Competition
             _fundingProgrammes.Add(MunNetworkProgramme);
             _fundingProgrammes.Add(MinmusNetworkProgramme);
 
+            _programsView = _programs.AsReadOnly();
+            _rivalProgramsView = _rivalPrograms.AsReadOnly();
             _fundingProgrammesView = _fundingProgrammes.AsReadOnly();
             _achievementFundingProgrammesView = _achievementFundingProgrammes.AsReadOnly();
         }
@@ -157,10 +168,35 @@ namespace TheRaceForSpace.Competition
         public AchievementFundingProgramme MinmusProbeOrbitProgramme { get; private set; }
         public AchievementFundingProgramme MunCrewedOrbitProgramme { get; private set; }
         public AchievementFundingProgramme MinmusCrewedOrbitProgramme { get; private set; }
+        public IList<SpaceProgramState> Programs { get { return _programsView; } }
+        public IList<SpaceProgramState> RivalPrograms { get { return _rivalProgramsView; } }
         public IList<FundingProgramme> FundingProgrammes { get { return _fundingProgrammesView; } }
         public IList<AchievementFundingProgramme> AchievementFundingProgrammes
         {
             get { return _achievementFundingProgrammesView; }
+        }
+
+        /// <summary>
+        /// Returns the program with the supplied stable ID, or null when no current program matches.
+        /// </summary>
+        public SpaceProgramState FindProgramById(string programId)
+        {
+            if (string.IsNullOrEmpty(programId))
+            {
+                return null;
+            }
+
+            for (int programIndex = 0; programIndex < _programs.Count; programIndex++)
+            {
+                SpaceProgramState program = _programs[programIndex];
+                if (program != null
+                    && string.Equals(program.Id, programId, StringComparison.OrdinalIgnoreCase))
+                {
+                    return program;
+                }
+            }
+
+            return null;
         }
 
         /// <summary>
@@ -438,9 +474,7 @@ namespace TheRaceForSpace.Competition
         private void RefreshRivals(double currentUniversalTime)
         {
             RivalSimulation.Refresh(
-                PlayerProgram,
-                AsterProgram,
-                CobaltProgram,
+                _programs,
                 currentUniversalTime,
                 _achievementFundingProgrammes,
                 _fundingProgrammes);

@@ -69,8 +69,6 @@ namespace TheRaceForSpace.UI
 
         public void OnDestroy()
         {
-            // Release ownership when the active scene instance is genuinely destroyed so the
-            // next KSP scene can create its replacement without being mistaken for a duplicate.
             if (_activeInstance == this)
             {
                 _activeInstance = null;
@@ -79,8 +77,6 @@ namespace TheRaceForSpace.UI
 
         public void Update()
         {
-            // Scene transitions can briefly leave an addon alive after KSP has stopped treating
-            // the current scene as gameplay, so suppress input and refresh work immediately.
             if (_isDuplicateInstance
                 || _activeInstance != this
                 || !HighLogic.LoadedSceneIsGame
@@ -89,8 +85,6 @@ namespace TheRaceForSpace.UI
                 return;
             }
 
-            // A save reload can replace HighLogic.CurrentGame without a useful UI transition.
-            // Rebind defensively so persistence is always restored into a controller for that save.
             if (_controllerGame != HighLogic.CurrentGame)
             {
                 _raceController = new SatelliteRaceController();
@@ -121,7 +115,6 @@ namespace TheRaceForSpace.UI
                 return;
             }
 
-            // Use the normal KSP IMGUI window background without reducing its alpha.
             _windowRect = GUILayout.Window(
                 GetInstanceID(),
                 _windowRect,
@@ -131,8 +124,6 @@ namespace TheRaceForSpace.UI
 
         private void DrawWindow(int windowId)
         {
-            // Funding programme names and rival agency names intentionally share one cached style
-            // so both card types use the same highlighted title treatment without per-frame allocations.
             if (_highlightedCardTitleStyle == null)
             {
                 _highlightedCardTitleStyle = new GUIStyle(GUI.skin.label);
@@ -213,6 +204,11 @@ namespace TheRaceForSpace.UI
             GUILayout.Label("Next payout: " + player.NextPayoutFunds.ToString("N0"));
 
             GUILayout.Space(10.0f);
+            GUILayout.Label("ORBIT ACHIEVEMENTS");
+            GUILayout.Label("Probe Orbit: " + (player.HasAchievedProbeOrbit ? "ACHIEVED" : "IN PROGRESS"));
+            GUILayout.Label("Crewed Orbit: " + (player.HasAchievedCrewedOrbit ? "ACHIEVED" : "IN PROGRESS"));
+
+            GUILayout.Space(10.0f);
             GUILayout.Label("SATELLITE NETWORK");
             GUILayout.Label("Kerbin orbit: " + player.GetSatelliteCount("Kerbin") + " qualifying satellite(s)");
             GUILayout.Label("Mun orbit: " + player.GetSatelliteCount("Mun") + " qualifying satellite(s)");
@@ -222,13 +218,31 @@ namespace TheRaceForSpace.UI
         private void DrawFundingTargets()
         {
             GUILayout.Label("FUNDING TARGETS");
+            GUILayout.Label("Only contracts currently in play are shown here.");
             GUILayout.Space(8.0f);
 
             _fundingScrollPosition = GUILayout.BeginScrollView(_fundingScrollPosition);
 
+            for (int i = 0; i < _raceController.AchievementFundingProgrammes.Count; i++)
+            {
+                AchievementFundingProgramme programme = _raceController.AchievementFundingProgrammes[i];
+                if (programme.IsExpired)
+                {
+                    continue;
+                }
+
+                DrawAchievementFundingCard(programme);
+                GUILayout.Space(8.0f);
+            }
+
             for (int i = 0; i < _raceController.FundingProgrammes.Count; i++)
             {
                 FundingProgramme programme = _raceController.FundingProgrammes[i];
+                if (!programme.IsAvailable)
+                {
+                    continue;
+                }
+
                 int playerProgress = _raceController.PlayerProgram.GetSatelliteCount(programme.CelestialBodyName);
                 int asterProgress = _raceController.AsterProgram.GetSatelliteCount(programme.CelestialBodyName);
                 int cobaltProgress = _raceController.CobaltProgram.GetSatelliteCount(programme.CelestialBodyName);
@@ -239,32 +253,23 @@ namespace TheRaceForSpace.UI
                 double cobaltCurrentPayout = programme.CalculateCurrentPayout(cobaltProgress, totalSatelliteCount);
 
                 GUILayout.BeginVertical("box");
-
-                // Center the highlighted title with layout spacing rather than GUIStyle.alignment.
-                // This avoids requiring UnityEngine.TextRenderingModule only for TextAnchor.
-                GUILayout.BeginHorizontal();
-                GUILayout.FlexibleSpace();
-                GUILayout.Label(programme.Name, _highlightedCardTitleStyle, GUILayout.ExpandWidth(false));
-                GUILayout.FlexibleSpace();
-                GUILayout.EndHorizontal();
+                DrawCenteredCardTitle(programme.Name);
 
                 GUILayout.BeginHorizontal();
-
-                // Keep programme details on the left while agency progress and projected payouts
-                // use the previously empty right side of the desktop command-center window.
                 GUILayout.BeginVertical(GUILayout.Width(400.0f));
                 GUILayout.Label("Target: " + programme.CelestialBodyName);
                 GUILayout.Label("Requirement: " + programme.RequiredSatellites + " qualifying satellite(s) in orbit");
                 GUILayout.Label("Total Available Payout: " + programme.RewardFunds.ToString("N0"));
+                GUILayout.Label("Contract type: Permanent once unlocked");
                 GUILayout.EndVertical();
 
                 GUILayout.Space(24.0f);
                 GUILayout.BeginVertical(GUILayout.ExpandWidth(true));
-                GUILayout.Label("Player Progress: " + playerProgress + (playerProgress == 1 ? " Satellite" : " Satellites"));
+                GUILayout.Label("Player Progress: " + FormatSatelliteCount(playerProgress));
                 GUILayout.Label("Player Current Payout: " + playerCurrentPayout.ToString("N0"));
-                GUILayout.Label("Aster Progress: " + asterProgress + (asterProgress == 1 ? " Satellite" : " Satellites"));
+                GUILayout.Label("Aster Progress: " + FormatSatelliteCount(asterProgress));
                 GUILayout.Label("Aster Current Payout: " + asterCurrentPayout.ToString("N0"));
-                GUILayout.Label("Cobalt Progress: " + cobaltProgress + (cobaltProgress == 1 ? " Satellite" : " Satellites"));
+                GUILayout.Label("Cobalt Progress: " + FormatSatelliteCount(cobaltProgress));
                 GUILayout.Label("Cobalt Current Payout: " + cobaltCurrentPayout.ToString("N0"));
                 GUILayout.EndVertical();
 
@@ -274,6 +279,46 @@ namespace TheRaceForSpace.UI
             }
 
             GUILayout.EndScrollView();
+        }
+
+        private void DrawAchievementFundingCard(AchievementFundingProgramme programme)
+        {
+            GUILayout.BeginVertical("box");
+            DrawCenteredCardTitle(programme.Name);
+
+            GUILayout.BeginHorizontal();
+            GUILayout.BeginVertical(GUILayout.Width(400.0f));
+            GUILayout.Label("Objective: " + programme.ObjectiveDescription);
+            GUILayout.Label("Base Payout: " + programme.BaseRewardFunds.ToString("N0"));
+            GUILayout.Label("Current Interest: " + programme.CurrentInterestPercent + "%");
+            GUILayout.Label("Current Total Payout: " + programme.CurrentTotalPayoutFunds.ToString("N0"));
+            GUILayout.Label(
+                "Contract Status: "
+                + (programme.HasStarted ? "DECLINING INTEREST ACTIVE" : "AWAITING FIRST ACHIEVEMENT"));
+            GUILayout.EndVertical();
+
+            GUILayout.Space(24.0f);
+            GUILayout.BeginVertical(GUILayout.ExpandWidth(true));
+            DrawAchievementAgencyLine("Player", _raceController.PlayerProgram, programme);
+            DrawAchievementAgencyLine("Aster", _raceController.AsterProgram, programme);
+            DrawAchievementAgencyLine("Cobalt", _raceController.CobaltProgram, programme);
+            GUILayout.EndVertical();
+
+            GUILayout.EndHorizontal();
+            GUILayout.EndVertical();
+        }
+
+        private void DrawAchievementAgencyLine(
+            string displayName,
+            SpaceProgramState program,
+            AchievementFundingProgramme programme)
+        {
+            bool achieved = _raceController.HasProgramAchieved(program, programme);
+            GUILayout.Label(displayName + " Status: " + (achieved ? "ACHIEVED" : "NOT ACHIEVED"));
+            GUILayout.Label(
+                displayName
+                + " Current Payout: "
+                + _raceController.GetAchievementCurrentPayout(program, programme).ToString("N0"));
         }
 
         private void DrawRivalAgencies()
@@ -309,28 +354,77 @@ namespace TheRaceForSpace.UI
 
             _spaceRaceScrollPosition = GUILayout.BeginScrollView(_spaceRaceScrollPosition);
 
-            for (int i = 0; i < _raceController.FundingProgrammes.Count; i++)
-            {
-                FundingProgramme programme = _raceController.FundingProgrammes[i];
-                int satelliteCount = _raceController.PlayerProgram.GetSatelliteCount(programme.CelestialBodyName);
-                bool requirementMet = satelliteCount >= programme.RequiredSatellites;
+            GUILayout.BeginVertical("box");
+            GUILayout.Label("HELP / PLAYER GUIDE");
+            GUILayout.Label("Version 0.3 guide text placeholder. Final player-facing wording will be added after the first gameplay test pass.");
+            GUILayout.Label("Funding is reviewed every 90 Kerbin days. Orbit contracts lose interest after they begin; satellite contracts remain permanent once unlocked.");
+            GUILayout.EndVertical();
 
-                GUILayout.BeginVertical("box");
-                GUILayout.Label(programme.CelestialBodyName + " Orbital Milestone");
-                GUILayout.Label("Progress: " + satelliteCount + "/" + programme.RequiredSatellites);
-                GUILayout.Label("Milestone status: " + (requirementMet ? "COMPLETE" : "IN PROGRESS"));
-                GUILayout.EndVertical();
-                GUILayout.Space(8.0f);
-            }
+            GUILayout.Space(12.0f);
+            GUILayout.Label("ORBIT CONTRACTS");
+            DrawAchievementInformationCard(_raceController.ProbeOrbitProgramme);
+            GUILayout.Space(8.0f);
+            DrawAchievementInformationCard(_raceController.CrewedOrbitProgramme);
 
-            GUILayout.Space(10.0f);
-            GUILayout.Label("TRACKING RULES");
-            GUILayout.Label("- Probe and Relay vessel types count as prototype satellites.");
-            GUILayout.Label("- The vessel must be in the ORBITING situation.");
-            GUILayout.Label("- Loaded and unloaded ProtoVessel records are scanned.");
-            GUILayout.Label("- Counts refresh every 5 seconds rather than every frame.");
+            GUILayout.Space(12.0f);
+            GUILayout.Label("SATELLITE CONTRACTS");
+            DrawSatelliteInformationCard(_raceController.KerbinNetworkProgramme);
+            GUILayout.Space(8.0f);
+            DrawSatelliteInformationCard(_raceController.MunNetworkProgramme);
+            GUILayout.Space(8.0f);
+            DrawSatelliteInformationCard(_raceController.MinmusNetworkProgramme);
 
             GUILayout.EndScrollView();
+        }
+
+        private void DrawAchievementInformationCard(AchievementFundingProgramme programme)
+        {
+            GUILayout.BeginVertical("box");
+            GUILayout.Label(programme.Name);
+            GUILayout.Label("Objective: " + programme.ObjectiveDescription);
+            GUILayout.Label("Unlock: Available from the start of the campaign");
+
+            if (programme.IsExpired)
+            {
+                GUILayout.Label("State: EXPIRED");
+            }
+            else if (!programme.HasStarted)
+            {
+                GUILayout.Label("State: ACTIVE - awaiting first achievement");
+            }
+            else
+            {
+                GUILayout.Label("State: ACTIVE - current interest " + programme.CurrentInterestPercent + "%");
+            }
+
+            GUILayout.Label("Base payout: " + programme.BaseRewardFunds.ToString("N0"));
+            GUILayout.Label("Funding: shared by agencies that have achieved the objective; interest falls by 10% after each 90-day payment.");
+            GUILayout.Label(
+                "Player: "
+                + (_raceController.HasProgramAchieved(_raceController.PlayerProgram, programme) ? "ACHIEVED" : "NOT ACHIEVED"));
+            GUILayout.EndVertical();
+        }
+
+        private void DrawSatelliteInformationCard(FundingProgramme programme)
+        {
+            GUILayout.BeginVertical("box");
+            GUILayout.Label(programme.Name);
+            GUILayout.Label(
+                "Objective: maintain "
+                + programme.RequiredSatellites
+                + " qualifying satellite(s) in orbit around "
+                + programme.CelestialBodyName
+                + ".");
+            GUILayout.Label("State: " + (programme.IsAvailable ? "UNLOCKED" : "LOCKED"));
+
+            if (!programme.IsAvailable && !string.IsNullOrEmpty(programme.UnlockRequirement))
+            {
+                GUILayout.Label("Unlock requirement: " + programme.UnlockRequirement);
+            }
+
+            GUILayout.Label("Total available payout: " + programme.RewardFunds.ToString("N0"));
+            GUILayout.Label("Funding: permanent once unlocked; this contract does not lose interest over time.");
+            GUILayout.EndVertical();
         }
 
         private void DrawProgramCard(
@@ -339,34 +433,26 @@ namespace TheRaceForSpace.UI
             double launchProgressCostFunds)
         {
             GUILayout.BeginVertical("box");
-
-            // Match the funding-card title treatment while keeping the project on its existing
-            // Unity module references. Flexible spacing provides centering without TextAnchor.
-            GUILayout.BeginHorizontal();
-            GUILayout.FlexibleSpace();
-            GUILayout.Label(program.Name, _highlightedCardTitleStyle, GUILayout.ExpandWidth(false));
-            GUILayout.FlexibleSpace();
-            GUILayout.EndHorizontal();
+            DrawCenteredCardTitle(program.Name);
 
             GUILayout.BeginHorizontal();
-
-            // Launch and funding information stays on the left. Satellite coverage is grouped
-            // into a second column so the wide desktop layout is used more efficiently.
             GUILayout.BeginVertical(GUILayout.Width(430.0f));
             GUILayout.Label("Funds: " + program.Funds.ToString("N0"));
             GUILayout.Label("Next Payout: " + program.NextPayoutFunds.ToString("N0"));
             GUILayout.Label(
-                "Next Launch Planned: "
+                "Next Mission Planned: "
                 + (string.IsNullOrEmpty(program.NextLaunchBodyName) ? "Planning" : program.NextLaunchBodyName));
-            GUILayout.Label("Launch Progress: " + program.LaunchProgressPercent + "%");
-            GUILayout.Label("Launch Progress Cost: " + launchProgressCostFunds.ToString("N0") + " (10% +)");
+            GUILayout.Label("Mission Progress: " + program.LaunchProgressPercent + "%");
+            GUILayout.Label("Mission Progress Cost: " + launchProgressCostFunds.ToString("N0") + " (10% +)");
             GUILayout.Label(
-                "ETA till Launch: "
+                "ETA till Completion: "
                 + (launchEtaDays.HasValue ? launchEtaDays.Value + " days" : "Awaiting Funding"));
             GUILayout.EndVertical();
 
             GUILayout.Space(24.0f);
             GUILayout.BeginVertical(GUILayout.ExpandWidth(true));
+            GUILayout.Label("Probe Orbit: " + (program.HasAchievedProbeOrbit ? "ACHIEVED" : "NOT ACHIEVED"));
+            GUILayout.Label("Crewed Orbit: " + (program.HasAchievedCrewedOrbit ? "ACHIEVED" : "NOT ACHIEVED"));
             GUILayout.Label("Kerbin satellites: " + program.GetSatelliteCount("Kerbin"));
             GUILayout.Label("Mun satellites: " + program.GetSatelliteCount("Mun"));
             GUILayout.Label("Minmus satellites: " + program.GetSatelliteCount("Minmus"));
@@ -374,6 +460,20 @@ namespace TheRaceForSpace.UI
 
             GUILayout.EndHorizontal();
             GUILayout.EndVertical();
+        }
+
+        private void DrawCenteredCardTitle(string title)
+        {
+            GUILayout.BeginHorizontal();
+            GUILayout.FlexibleSpace();
+            GUILayout.Label(title, _highlightedCardTitleStyle, GUILayout.ExpandWidth(false));
+            GUILayout.FlexibleSpace();
+            GUILayout.EndHorizontal();
+        }
+
+        private static string FormatSatelliteCount(int satelliteCount)
+        {
+            return satelliteCount + (satelliteCount == 1 ? " Satellite" : " Satellites");
         }
 
         private static void DrawComparisonRow(SpaceProgramState program)

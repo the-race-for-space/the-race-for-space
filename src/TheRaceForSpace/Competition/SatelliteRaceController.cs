@@ -238,11 +238,10 @@ namespace TheRaceForSpace.Competition
 
             SatelliteTracker.RefreshPlayerSatelliteCounts(PlayerProgram);
             UpdateFundingAvailability();
-            StartAchievementContracts();
 
-            // Catch rivals up before paying achievement contracts. Their simulated completion
-            // timestamps may fall before one or more overdue payout dates, and those agencies
-            // must receive only the historical payments for which they were already eligible.
+            // Catch rivals up before starting any newly discovered contract. Their simulated
+            // completion timestamps may predate the player's current refresh and therefore
+            // determine the actual first achiever and the contract's independent schedule.
             RivalSimulation.Refresh(
                 PlayerProgram,
                 AsterProgram,

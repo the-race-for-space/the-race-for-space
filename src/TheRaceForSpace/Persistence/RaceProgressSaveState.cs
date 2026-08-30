@@ -120,6 +120,7 @@ namespace TheRaceForSpace.Persistence
                 return;
             }
 
+            playerProgram.ClearRecordedAchievements();
             foreach (KeyValuePair<string, double> achievement in _achievementTimesById)
             {
                 playerProgram.RecordAchievement(achievement.Key, achievement.Value);
@@ -128,12 +129,12 @@ namespace TheRaceForSpace.Persistence
             for (int programmeIndex = 0; programmeIndex < fundingProgrammes.Count; programmeIndex++)
             {
                 FundingProgramme programme = fundingProgrammes[programmeIndex];
-                if (programme != null
-                    && !string.IsNullOrEmpty(programme.Id)
-                    && _unlockedFundingProgrammeIds.Contains(programme.Id))
+                if (programme == null || string.IsNullOrEmpty(programme.Id))
                 {
-                    programme.Unlock();
+                    continue;
                 }
+
+                programme.RestoreAvailability(_unlockedFundingProgrammeIds.Contains(programme.Id));
             }
 
             for (int programmeIndex = 0; programmeIndex < achievementProgrammes.Count; programmeIndex++)
@@ -150,6 +151,10 @@ namespace TheRaceForSpace.Persistence
                     && _contractPaymentsProcessedById.TryGetValue(programme.Id, out paymentsProcessed))
                 {
                     programme.RestoreState(started, paymentsProcessed);
+                }
+                else
+                {
+                    programme.RestoreState(false, 0);
                 }
             }
         }

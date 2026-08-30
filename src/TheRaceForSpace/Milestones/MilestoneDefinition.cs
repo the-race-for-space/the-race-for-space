@@ -1,3 +1,5 @@
+using System;
+
 namespace TheRaceForSpace.Milestones
 {
     /// <summary>
@@ -16,6 +18,27 @@ namespace TheRaceForSpace.Milestones
     public enum MilestoneSituation
     {
         Orbit
+    }
+
+    /// <summary>
+    /// KSP-independent facts about one observed vessel that are relevant to milestone evaluation.
+    /// A null crew qualification means the vessel does not fit a milestone crew category.
+    /// </summary>
+    public sealed class MilestoneVesselObservation
+    {
+        public MilestoneVesselObservation(
+            string celestialBodyName,
+            MilestoneSituation situation,
+            MilestoneCrewRequirement? crewQualification)
+        {
+            CelestialBodyName = celestialBodyName;
+            Situation = situation;
+            CrewQualification = crewQualification;
+        }
+
+        public string CelestialBodyName { get; private set; }
+        public MilestoneSituation Situation { get; private set; }
+        public MilestoneCrewRequirement? CrewQualification { get; private set; }
     }
 
     /// <summary>
@@ -49,5 +72,25 @@ namespace TheRaceForSpace.Milestones
         public MilestoneCrewRequirement CrewRequirement { get; private set; }
         public string ObjectiveDescription { get; private set; }
         public string PrerequisiteMilestoneId { get; private set; }
+
+        /// <summary>
+        /// Returns whether one KSP-independent vessel observation satisfies this milestone.
+        /// </summary>
+        public bool IsSatisfiedBy(MilestoneVesselObservation observation)
+        {
+            if (observation == null
+                || string.IsNullOrEmpty(observation.CelestialBodyName)
+                || !observation.CrewQualification.HasValue)
+            {
+                return false;
+            }
+
+            return string.Equals(
+                    CelestialBodyName,
+                    observation.CelestialBodyName,
+                    StringComparison.OrdinalIgnoreCase)
+                && Situation == observation.Situation
+                && CrewRequirement == observation.CrewQualification.Value;
+        }
     }
 }

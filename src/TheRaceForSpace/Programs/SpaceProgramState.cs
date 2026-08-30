@@ -14,11 +14,22 @@ namespace TheRaceForSpace.Programs
             new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 
         public SpaceProgramState(string name, bool isPlayer)
+            : this(name, name, isPlayer)
         {
+        }
+
+        public SpaceProgramState(string id, string name, bool isPlayer)
+        {
+            Id = string.IsNullOrEmpty(id) ? name : id;
             Name = name;
             IsPlayer = isPlayer;
         }
 
+        /// <summary>
+        /// Stable program identity used by collection-driven race logic. Display names may change
+        /// independently without changing which agency a piece of state belongs to.
+        /// </summary>
+        public string Id { get; private set; }
         public string Name { get; private set; }
         public bool IsPlayer { get; private set; }
 

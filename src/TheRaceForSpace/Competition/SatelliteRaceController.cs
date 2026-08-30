@@ -61,12 +61,12 @@ namespace TheRaceForSpace.Competition
                 MunProbeOrbitProgrammeId,
                 "Mun Probe Orbit",
                 "Achieve orbit around Mun with an uncrewed Probe or Relay vessel.",
-                300000.0);
+                200000.0);
             MinmusProbeOrbitProgramme = new AchievementFundingProgramme(
                 MinmusProbeOrbitProgrammeId,
                 "Minmus Probe Orbit",
                 "Achieve orbit around Minmus with an uncrewed Probe or Relay vessel.",
-                300000.0);
+                200000.0);
 
             _achievementFundingProgrammes.Add(ProbeOrbitProgramme);
             _achievementFundingProgrammes.Add(CrewedOrbitProgramme);

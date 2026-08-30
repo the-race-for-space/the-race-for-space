@@ -1,5 +1,6 @@
 using System;
 using System.Globalization;
+using TheRaceForSpace.Milestones;
 using TheRaceForSpace.Programs;
 
 namespace TheRaceForSpace.Persistence
@@ -44,30 +45,30 @@ namespace TheRaceForSpace.Persistence
             KerbinSatellites = Math.Max(0, program.GetSatelliteCount("Kerbin"));
             MunSatellites = Math.Max(0, program.GetSatelliteCount("Mun"));
             MinmusSatellites = Math.Max(0, program.GetSatelliteCount("Minmus"));
-            HasAchievedProbeOrbit = program.HasAchievedProbeOrbit;
+            HasAchievedProbeOrbit = program.HasAchievement(PrototypeMilestones.ProbeOrbitId);
             ProbeOrbitAchievementUniversalTime = NormalizeAchievementTime(
                 HasAchievedProbeOrbit,
-                program.ProbeOrbitAchievementUniversalTime);
-            HasAchievedCrewedOrbit = program.HasAchievedCrewedOrbit;
+                program.GetAchievementUniversalTime(PrototypeMilestones.ProbeOrbitId));
+            HasAchievedCrewedOrbit = program.HasAchievement(PrototypeMilestones.CrewedOrbitId);
             CrewedOrbitAchievementUniversalTime = NormalizeAchievementTime(
                 HasAchievedCrewedOrbit,
-                program.CrewedOrbitAchievementUniversalTime);
-            HasAchievedMunProbeOrbit = program.HasAchievedMunProbeOrbit;
+                program.GetAchievementUniversalTime(PrototypeMilestones.CrewedOrbitId));
+            HasAchievedMunProbeOrbit = program.HasAchievement(PrototypeMilestones.MunProbeOrbitId);
             MunProbeOrbitAchievementUniversalTime = NormalizeAchievementTime(
                 HasAchievedMunProbeOrbit,
-                program.MunProbeOrbitAchievementUniversalTime);
-            HasAchievedMinmusProbeOrbit = program.HasAchievedMinmusProbeOrbit;
+                program.GetAchievementUniversalTime(PrototypeMilestones.MunProbeOrbitId));
+            HasAchievedMinmusProbeOrbit = program.HasAchievement(PrototypeMilestones.MinmusProbeOrbitId);
             MinmusProbeOrbitAchievementUniversalTime = NormalizeAchievementTime(
                 HasAchievedMinmusProbeOrbit,
-                program.MinmusProbeOrbitAchievementUniversalTime);
-            HasAchievedMunCrewedOrbit = program.HasAchievedMunCrewedOrbit;
+                program.GetAchievementUniversalTime(PrototypeMilestones.MinmusProbeOrbitId));
+            HasAchievedMunCrewedOrbit = program.HasAchievement(PrototypeMilestones.MunCrewedOrbitId);
             MunCrewedOrbitAchievementUniversalTime = NormalizeAchievementTime(
                 HasAchievedMunCrewedOrbit,
-                program.MunCrewedOrbitAchievementUniversalTime);
-            HasAchievedMinmusCrewedOrbit = program.HasAchievedMinmusCrewedOrbit;
+                program.GetAchievementUniversalTime(PrototypeMilestones.MunCrewedOrbitId));
+            HasAchievedMinmusCrewedOrbit = program.HasAchievement(PrototypeMilestones.MinmusCrewedOrbitId);
             MinmusCrewedOrbitAchievementUniversalTime = NormalizeAchievementTime(
                 HasAchievedMinmusCrewedOrbit,
-                program.MinmusCrewedOrbitAchievementUniversalTime);
+                program.GetAchievementUniversalTime(PrototypeMilestones.MinmusCrewedOrbitId));
             NextLaunchBodyName = program.NextLaunchBodyName;
             LaunchProgressPercent = Math.Max(0, Math.Min(100, program.LaunchProgressPercent));
             NextLaunchProgressCheckUniversalTime = Math.Max(0.0, program.NextLaunchProgressCheckUniversalTime);
@@ -84,18 +85,37 @@ namespace TheRaceForSpace.Persistence
             program.SetSatelliteCount("Kerbin", KerbinSatellites);
             program.SetSatelliteCount("Mun", MunSatellites);
             program.SetSatelliteCount("Minmus", MinmusSatellites);
-            program.HasAchievedProbeOrbit = HasAchievedProbeOrbit;
-            program.ProbeOrbitAchievementUniversalTime = ProbeOrbitAchievementUniversalTime;
-            program.HasAchievedCrewedOrbit = HasAchievedCrewedOrbit;
-            program.CrewedOrbitAchievementUniversalTime = CrewedOrbitAchievementUniversalTime;
-            program.HasAchievedMunProbeOrbit = HasAchievedMunProbeOrbit;
-            program.MunProbeOrbitAchievementUniversalTime = MunProbeOrbitAchievementUniversalTime;
-            program.HasAchievedMinmusProbeOrbit = HasAchievedMinmusProbeOrbit;
-            program.MinmusProbeOrbitAchievementUniversalTime = MinmusProbeOrbitAchievementUniversalTime;
-            program.HasAchievedMunCrewedOrbit = HasAchievedMunCrewedOrbit;
-            program.MunCrewedOrbitAchievementUniversalTime = MunCrewedOrbitAchievementUniversalTime;
-            program.HasAchievedMinmusCrewedOrbit = HasAchievedMinmusCrewedOrbit;
-            program.MinmusCrewedOrbitAchievementUniversalTime = MinmusCrewedOrbitAchievementUniversalTime;
+
+            if (HasAchievedProbeOrbit)
+            {
+                program.RecordAchievement(PrototypeMilestones.ProbeOrbitId, ProbeOrbitAchievementUniversalTime);
+            }
+
+            if (HasAchievedCrewedOrbit)
+            {
+                program.RecordAchievement(PrototypeMilestones.CrewedOrbitId, CrewedOrbitAchievementUniversalTime);
+            }
+
+            if (HasAchievedMunProbeOrbit)
+            {
+                program.RecordAchievement(PrototypeMilestones.MunProbeOrbitId, MunProbeOrbitAchievementUniversalTime);
+            }
+
+            if (HasAchievedMinmusProbeOrbit)
+            {
+                program.RecordAchievement(PrototypeMilestones.MinmusProbeOrbitId, MinmusProbeOrbitAchievementUniversalTime);
+            }
+
+            if (HasAchievedMunCrewedOrbit)
+            {
+                program.RecordAchievement(PrototypeMilestones.MunCrewedOrbitId, MunCrewedOrbitAchievementUniversalTime);
+            }
+
+            if (HasAchievedMinmusCrewedOrbit)
+            {
+                program.RecordAchievement(PrototypeMilestones.MinmusCrewedOrbitId, MinmusCrewedOrbitAchievementUniversalTime);
+            }
+
             program.NextLaunchBodyName = NextLaunchBodyName;
             program.LaunchProgressPercent = Math.Max(0, Math.Min(100, LaunchProgressPercent));
             program.NextLaunchProgressCheckUniversalTime = Math.Max(0.0, NextLaunchProgressCheckUniversalTime);
@@ -248,6 +268,8 @@ namespace TheRaceForSpace.Persistence
             node.AddValue("kerbinSatellites", KerbinSatellites.ToString(CultureInfo.InvariantCulture));
             node.AddValue("munSatellites", MunSatellites.ToString(CultureInfo.InvariantCulture));
             node.AddValue("minmusSatellites", MinmusSatellites.ToString(CultureInfo.InvariantCulture));
+
+            // Keep the 0.3 key names stable while the in-memory programme state is now ID-based.
             node.AddValue("hasAchievedProbeOrbit", HasAchievedProbeOrbit);
             node.AddValue(
                 "probeOrbitAchievementUniversalTime",

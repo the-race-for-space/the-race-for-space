@@ -297,11 +297,7 @@ namespace TheRaceForSpace.UI
                 totalMinmusSatelliteCount);
 
             GUILayout.BeginHorizontal();
-            GUILayout.BeginVertical(GUILayout.Width(450.0f));
-            GUILayout.Label("Funding Information", _boldLabelStyle);
-            GUILayout.Label(FormatNextFundingDate());
-
-            GUILayout.Space(10.0f);
+            GUILayout.BeginVertical(GUILayout.Width(350.0f));
             GUILayout.Label("Your Objectives", _boldLabelStyle);
             GUILayout.Label("Probe Orbit: " + (player.HasAchievedProbeOrbit ? "ACHIEVED" : "IN PROGRESS"));
             GUILayout.Label("Crewed Orbit: " + (player.HasAchievedCrewedOrbit ? "ACHIEVED" : "IN PROGRESS"));
@@ -327,50 +323,84 @@ namespace TheRaceForSpace.UI
             GUILayout.EndVertical();
 
             GUILayout.Space(24.0f);
-            GUILayout.BeginVertical(GUILayout.ExpandWidth(true));
-            GUILayout.Label("Next Funding", _boldLabelStyle);
+            GUILayout.BeginVertical(GUILayout.Width(330.0f));
+            GUILayout.Label("Funding Information", _boldLabelStyle);
+            GUILayout.Label(FormatNextFundingDate());
+            GUILayout.Space(10.0f);
 
             if (probeOrbitNextPayout > 0.0)
             {
-                GUILayout.Label("Probe Orbit: Completed " + probeOrbitNextPayout.ToString("N0"));
+                GUILayout.Label("Probe Orbit: Completed");
             }
 
             if (crewedOrbitNextPayout > 0.0)
             {
-                GUILayout.Label("Crewed Orbit: Completed " + crewedOrbitNextPayout.ToString("N0"));
+                GUILayout.Label("Crewed Orbit: Completed");
             }
 
             if (kerbinSatelliteNextPayout > 0.0)
             {
                 GUILayout.Label(
-                    "Kerbin Satellites "
-                    + kerbinSatelliteCount
-                    + " "
-                    + kerbinSatelliteNextPayout.ToString("N0"));
+                    kerbinSatelliteCount
+                    + " Kerbin "
+                    + (kerbinSatelliteCount == 1 ? "Satellite" : "Satellites"));
             }
 
             if (munSatelliteNextPayout > 0.0)
             {
                 GUILayout.Label(
-                    "Mun Satellites "
-                    + munSatelliteCount
-                    + " "
-                    + munSatelliteNextPayout.ToString("N0"));
+                    munSatelliteCount
+                    + " Mun "
+                    + (munSatelliteCount == 1 ? "Satellite" : "Satellites"));
             }
 
             if (minmusSatelliteNextPayout > 0.0)
             {
                 GUILayout.Label(
-                    "Minmus Satellites "
-                    + minmusSatelliteCount
-                    + " "
-                    + minmusSatelliteNextPayout.ToString("N0"));
+                    minmusSatelliteCount
+                    + " Minmus "
+                    + (minmusSatelliteCount == 1 ? "Satellite" : "Satellites"));
             }
 
             GUILayout.Space(6.0f);
-            GUILayout.Label(
-                "Total Next Payout: " + player.NextPayoutFunds.ToString("N0"),
-                _boldLabelStyle);
+            GUILayout.Label("Total Next Payout", _boldLabelStyle);
+            GUILayout.EndVertical();
+
+            // Keep the amounts close to their funding labels while separating them into a
+            // dedicated column so the player can scan the payout sources and values quickly.
+            GUILayout.Space(2.0f);
+            GUILayout.BeginVertical(GUILayout.Width(100.0f));
+            GUILayout.Label(string.Empty, _boldLabelStyle);
+            GUILayout.Label(string.Empty);
+            GUILayout.Space(10.0f);
+
+            if (probeOrbitNextPayout > 0.0)
+            {
+                GUILayout.Label(probeOrbitNextPayout.ToString("N0"));
+            }
+
+            if (crewedOrbitNextPayout > 0.0)
+            {
+                GUILayout.Label(crewedOrbitNextPayout.ToString("N0"));
+            }
+
+            if (kerbinSatelliteNextPayout > 0.0)
+            {
+                GUILayout.Label(kerbinSatelliteNextPayout.ToString("N0"));
+            }
+
+            if (munSatelliteNextPayout > 0.0)
+            {
+                GUILayout.Label(munSatelliteNextPayout.ToString("N0"));
+            }
+
+            if (minmusSatelliteNextPayout > 0.0)
+            {
+                GUILayout.Label(minmusSatelliteNextPayout.ToString("N0"));
+            }
+
+            GUILayout.Space(6.0f);
+            GUILayout.Label(player.NextPayoutFunds.ToString("N0"), _boldLabelStyle);
             GUILayout.EndVertical();
             GUILayout.EndHorizontal();
         }

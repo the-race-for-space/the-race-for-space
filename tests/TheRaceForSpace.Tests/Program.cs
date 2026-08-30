@@ -172,7 +172,7 @@ namespace TheRaceForSpace.Tests
 
         private static void PrototypeMilestoneDefinitionsMatchV03()
         {
-            AssertEqual(6, PrototypeMilestones.All.Count);
+            AssertEqual(8, PrototypeMilestones.All.Count);
 
             AssertMilestone(
                 PrototypeMilestones.All[0],
@@ -204,16 +204,30 @@ namespace TheRaceForSpace.Tests
                 PrototypeMilestones.ProbeOrbitId);
             AssertMilestone(
                 PrototypeMilestones.All[4],
+                PrototypeMilestones.DunaProbeOrbitId,
+                "Duna Probe Orbit",
+                "Duna",
+                MilestoneCrewRequirement.UncrewedProbe,
+                PrototypeMilestones.ProbeOrbitId);
+            AssertMilestone(
+                PrototypeMilestones.All[5],
                 PrototypeMilestones.MunCrewedOrbitId,
                 "Mun Crewed Orbit",
                 "Mun",
                 MilestoneCrewRequirement.Crewed,
                 PrototypeMilestones.CrewedOrbitId);
             AssertMilestone(
-                PrototypeMilestones.All[5],
+                PrototypeMilestones.All[6],
                 PrototypeMilestones.MinmusCrewedOrbitId,
                 "Minmus Crewed Orbit",
                 "Minmus",
+                MilestoneCrewRequirement.Crewed,
+                PrototypeMilestones.CrewedOrbitId);
+            AssertMilestone(
+                PrototypeMilestones.All[7],
+                PrototypeMilestones.DunaCrewedOrbitId,
+                "Duna Crewed Orbit",
+                "Duna",
                 MilestoneCrewRequirement.Crewed,
                 PrototypeMilestones.CrewedOrbitId);
         }
@@ -233,10 +247,14 @@ namespace TheRaceForSpace.Tests
         private static void PrototypeMilestoneLookupUsesStableIds()
         {
             MilestoneDefinition milestone = PrototypeMilestones.FindById("MUN-PROBE-ORBIT");
+            MilestoneDefinition dunaMilestone = PrototypeMilestones.FindById("DUNA-PROBE-ORBIT");
 
             AssertTrue(milestone != null, "Known milestone IDs should resolve case-insensitively.");
             AssertEqual(PrototypeMilestones.MunProbeOrbitId, milestone.Id);
             AssertEqual(PrototypeMilestones.ProbeOrbitId, milestone.PrerequisiteMilestoneId);
+            AssertTrue(dunaMilestone != null, "Duna milestone should resolve through the shared catalogue.");
+            AssertEqual("Duna", dunaMilestone.CelestialBodyName);
+            AssertEqual(PrototypeMilestones.ProbeOrbitId, dunaMilestone.PrerequisiteMilestoneId);
             AssertEqual(null, PrototypeMilestones.FindById("not-a-milestone"));
         }
 

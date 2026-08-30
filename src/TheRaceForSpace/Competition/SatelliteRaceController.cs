@@ -121,6 +121,26 @@ namespace TheRaceForSpace.Competition
             get { return GetKerbinDay(_nextFundingUniversalTime); }
         }
 
+        /// <summary>
+        /// Whole Kerbin days remaining until the shared funding date, rounded upward so a
+        /// partial final day remains visible until the funding boundary is actually reached.
+        /// </summary>
+        public int DaysUntilNextFunding
+        {
+            get
+            {
+                if (_nextFundingUniversalTime < 0.0 || Planetarium.fetch == null)
+                {
+                    return 0;
+                }
+
+                double remainingSeconds = Math.Max(
+                    0.0,
+                    _nextFundingUniversalTime - Planetarium.GetUniversalTime());
+                return (int)Math.Ceiling(remainingSeconds / KerbinDaySeconds);
+            }
+        }
+
         public int GetKerbinYear(double universalTime)
         {
             if (universalTime < 0.0)

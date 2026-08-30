@@ -49,19 +49,19 @@ namespace TheRaceForSpace.Tests.Milestones
         public static void ArbitraryBodyDefinitionUsesSameRule()
         {
             var milestone = new MilestoneDefinition(
-                "future-duna-probe-orbit",
-                "Duna Probe Orbit",
-                "Duna",
+                "future-eve-probe-orbit",
+                "Eve Probe Orbit",
+                "Eve",
                 MilestoneSituation.Orbit,
                 MilestoneCrewRequirement.UncrewedProbe,
-                "Orbit Duna with an uncrewed probe.",
-                PrototypeMilestones.MunProbeOrbitId);
+                "Orbit Eve with an uncrewed probe.",
+                PrototypeMilestones.ProbeOrbitId);
             var observation = new MilestoneVesselObservation(
-                "Duna",
+                "Eve",
                 MilestoneSituation.Orbit,
                 MilestoneCrewRequirement.UncrewedProbe);
             var unqualifiedObservation = new MilestoneVesselObservation(
-                "Duna",
+                "Eve",
                 MilestoneSituation.Orbit,
                 null);
 

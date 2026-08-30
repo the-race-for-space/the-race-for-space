@@ -360,7 +360,7 @@ namespace TheRaceForSpace.UI
                 DrawCenteredCardTitle("Satellite Funding - " + programme.Name);
 
                 GUILayout.BeginHorizontal();
-                GUILayout.BeginVertical(GUILayout.Width(400.0f));
+                GUILayout.BeginVertical(GUILayout.Width(450.0f));
                 GUILayout.Label("Target: " + programme.CelestialBodyName);
                 GUILayout.Label("Requirement: " + programme.RequiredSatellites + " qualifying satellite(s) in orbit");
                 GUILayout.Label("Total Available Payout: " + programme.RewardFunds.ToString("N0"));
@@ -396,7 +396,7 @@ namespace TheRaceForSpace.UI
             DrawCenteredCardTitle(programme.Name);
 
             GUILayout.BeginHorizontal();
-            GUILayout.BeginVertical(GUILayout.Width(400.0f));
+            GUILayout.BeginVertical(GUILayout.Width(450.0f));
             GUILayout.Label(
                 "Objective: "
                 + programme.ObjectiveDescription

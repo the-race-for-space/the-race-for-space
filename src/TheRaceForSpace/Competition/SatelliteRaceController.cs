@@ -368,15 +368,8 @@ namespace TheRaceForSpace.Competition
                 bool restoredRivals = RacePersistenceScenario.TryRestoreRivalState(AsterProgram, CobaltProgram);
                 bool restoredRaceProgress = RacePersistenceScenario.TryRestoreRaceProgress(
                     PlayerProgram,
-                    KerbinNetworkProgramme,
-                    MunNetworkProgramme,
-                    MinmusNetworkProgramme,
-                    ProbeOrbitProgramme,
-                    CrewedOrbitProgramme,
-                    MunProbeOrbitProgramme,
-                    MinmusProbeOrbitProgramme,
-                    MunCrewedOrbitProgramme,
-                    MinmusCrewedOrbitProgramme);
+                    _fundingProgrammes,
+                    _achievementFundingProgrammes);
 
                 if (!restoredRivals || !restoredRaceProgress)
                 {
@@ -438,15 +431,8 @@ namespace TheRaceForSpace.Competition
             RacePersistenceScenario.CaptureRivalState(AsterProgram, CobaltProgram);
             RacePersistenceScenario.CaptureRaceProgress(
                 PlayerProgram,
-                KerbinNetworkProgramme,
-                MunNetworkProgramme,
-                MinmusNetworkProgramme,
-                ProbeOrbitProgramme,
-                CrewedOrbitProgramme,
-                MunProbeOrbitProgramme,
-                MinmusProbeOrbitProgramme,
-                MunCrewedOrbitProgramme,
-                MinmusCrewedOrbitProgramme);
+                _fundingProgrammes,
+                _achievementFundingProgrammes);
         }
 
         private void RefreshRivals(double currentUniversalTime)

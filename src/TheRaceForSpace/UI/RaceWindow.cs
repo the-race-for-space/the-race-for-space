@@ -270,11 +270,36 @@ namespace TheRaceForSpace.UI
             int munSatelliteCount = player.GetSatelliteCount("Mun");
             int minmusSatelliteCount = player.GetSatelliteCount("Minmus");
 
+            int totalKerbinSatelliteCount = kerbinSatelliteCount
+                + _raceController.AsterProgram.GetSatelliteCount("Kerbin")
+                + _raceController.CobaltProgram.GetSatelliteCount("Kerbin");
+            int totalMunSatelliteCount = munSatelliteCount
+                + _raceController.AsterProgram.GetSatelliteCount("Mun")
+                + _raceController.CobaltProgram.GetSatelliteCount("Mun");
+            int totalMinmusSatelliteCount = minmusSatelliteCount
+                + _raceController.AsterProgram.GetSatelliteCount("Minmus")
+                + _raceController.CobaltProgram.GetSatelliteCount("Minmus");
+
+            double probeOrbitNextPayout = _raceController.GetAchievementCurrentPayout(
+                player,
+                _raceController.ProbeOrbitProgramme);
+            double crewedOrbitNextPayout = _raceController.GetAchievementCurrentPayout(
+                player,
+                _raceController.CrewedOrbitProgramme);
+            double kerbinSatelliteNextPayout = _raceController.KerbinNetworkProgramme.CalculateCurrentPayout(
+                kerbinSatelliteCount,
+                totalKerbinSatelliteCount);
+            double munSatelliteNextPayout = _raceController.MunNetworkProgramme.CalculateCurrentPayout(
+                munSatelliteCount,
+                totalMunSatelliteCount);
+            double minmusSatelliteNextPayout = _raceController.MinmusNetworkProgramme.CalculateCurrentPayout(
+                minmusSatelliteCount,
+                totalMinmusSatelliteCount);
+
+            GUILayout.BeginHorizontal();
+            GUILayout.BeginVertical(GUILayout.Width(450.0f));
             GUILayout.Label("Funding Information", _boldLabelStyle);
             GUILayout.Label(FormatNextFundingDate());
-
-            // Every live contract is included because all funding now pays on the same date.
-            GUILayout.Label("Next payout: " + player.NextPayoutFunds.ToString("N0"));
 
             GUILayout.Space(10.0f);
             GUILayout.Label("Your Objectives", _boldLabelStyle);
@@ -298,6 +323,56 @@ namespace TheRaceForSpace.UI
             {
                 GUILayout.Label("Minmus orbit: " + minmusSatelliteCount + " qualifying satellite(s)");
             }
+
+            GUILayout.EndVertical();
+
+            GUILayout.Space(24.0f);
+            GUILayout.BeginVertical(GUILayout.ExpandWidth(true));
+            GUILayout.Label("Next Funding", _boldLabelStyle);
+
+            if (probeOrbitNextPayout > 0.0)
+            {
+                GUILayout.Label("Probe Orbit: Completed " + probeOrbitNextPayout.ToString("N0"));
+            }
+
+            if (crewedOrbitNextPayout > 0.0)
+            {
+                GUILayout.Label("Crewed Orbit: Completed " + crewedOrbitNextPayout.ToString("N0"));
+            }
+
+            if (kerbinSatelliteNextPayout > 0.0)
+            {
+                GUILayout.Label(
+                    "Kerbin Satellites "
+                    + kerbinSatelliteCount
+                    + " "
+                    + kerbinSatelliteNextPayout.ToString("N0"));
+            }
+
+            if (munSatelliteNextPayout > 0.0)
+            {
+                GUILayout.Label(
+                    "Mun Satellites "
+                    + munSatelliteCount
+                    + " "
+                    + munSatelliteNextPayout.ToString("N0"));
+            }
+
+            if (minmusSatelliteNextPayout > 0.0)
+            {
+                GUILayout.Label(
+                    "Minmus Satellites "
+                    + minmusSatelliteCount
+                    + " "
+                    + minmusSatelliteNextPayout.ToString("N0"));
+            }
+
+            GUILayout.Space(6.0f);
+            GUILayout.Label(
+                "Total Next Payout: " + player.NextPayoutFunds.ToString("N0"),
+                _boldLabelStyle);
+            GUILayout.EndVertical();
+            GUILayout.EndHorizontal();
         }
 
         private void DrawFundingTargets()
@@ -335,6 +410,14 @@ namespace TheRaceForSpace.UI
                 double playerNextPayout = programme.CalculateCurrentPayout(playerProgress, totalSatelliteCount);
                 double asterNextPayout = programme.CalculateCurrentPayout(asterProgress, totalSatelliteCount);
                 double cobaltNextPayout = programme.CalculateCurrentPayout(cobaltProgress, totalSatelliteCount);
+                double unclaimedPayout = programme.RewardFunds
+                    - playerNextPayout
+                    - asterNextPayout
+                    - cobaltNextPayout;
+                if (unclaimedPayout < 0.0)
+                {
+                    unclaimedPayout = 0.0;
+                }
 
                 string satelliteSummary = string.Empty;
                 if (playerProgress > 0)
@@ -370,6 +453,7 @@ namespace TheRaceForSpace.UI
                 GUILayout.BeginVertical(GUILayout.ExpandWidth(true));
                 GUILayout.Label("Satellites: " + (satelliteSummary.Length > 0 ? satelliteSummary : "None"));
                 DrawPayoutLinesByAmount(playerNextPayout, asterNextPayout, cobaltNextPayout);
+                GUILayout.Label("Unclaimed Payout: " + unclaimedPayout.ToString("N0"));
                 GUILayout.EndVertical();
 
                 GUILayout.EndHorizontal();

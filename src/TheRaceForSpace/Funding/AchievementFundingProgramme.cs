@@ -3,8 +3,9 @@ using System;
 namespace TheRaceForSpace.Funding
 {
     /// <summary>
-    /// Competitive achievement contract with an immediate 100% payout followed by
-    /// nine independent 90-day payments that decline from 90% through 10%.
+    /// Competitive achievement contract paid on the shared 90-day funding calendar.
+    /// The first eligible funding date pays 100%, then each later payment declines
+    /// by 10 percentage points until the final 10% payment expires the contract.
     /// </summary>
     public sealed class AchievementFundingProgramme
     {
@@ -21,7 +22,6 @@ namespace TheRaceForSpace.Funding
             Name = name;
             ObjectiveDescription = objectiveDescription;
             BaseRewardFunds = Math.Max(0.0, baseRewardFunds);
-            NextPayoutUniversalTime = -1.0;
         }
 
         public string Id { get; private set; }
@@ -30,7 +30,6 @@ namespace TheRaceForSpace.Funding
         public double BaseRewardFunds { get; private set; }
         public bool HasStarted { get; private set; }
         public int PaymentsProcessed { get; private set; }
-        public double NextPayoutUniversalTime { get; private set; }
 
         public bool IsExpired
         {
@@ -58,10 +57,10 @@ namespace TheRaceForSpace.Funding
         }
 
         /// <summary>
-        /// Starts the contract at the first achievement time. The first payment is due
-        /// immediately at 100%; later payments advance from this timestamp in 90-day steps.
+        /// Marks the contract as active after the first agency achieves its objective.
+        /// No funds are awarded here; all payouts occur on the shared funding calendar.
         /// </summary>
-        public void Start(double firstAchievementUniversalTime)
+        public void Start()
         {
             if (HasStarted || IsExpired)
             {
@@ -69,13 +68,12 @@ namespace TheRaceForSpace.Funding
             }
 
             HasStarted = true;
-            NextPayoutUniversalTime = Math.Max(0.0, firstAchievementUniversalTime);
         }
 
         /// <summary>
-        /// Returns an eligible agency's share of the currently due interest stage.
-        /// Eligibility is evaluated by the controller at the exact payout timestamp so
-        /// agencies cannot receive retroactive shares of payments before their achievement.
+        /// Returns an eligible agency's share of the next payment. The controller evaluates
+        /// eligibility at the exact shared funding timestamp so agencies joining before that
+        /// date share the same payment and agencies joining later do not receive it retroactively.
         /// </summary>
         public double CalculateCurrentPayout(bool agencyIsEligible, int eligibleAgencyCount)
         {
@@ -88,10 +86,9 @@ namespace TheRaceForSpace.Funding
         }
 
         /// <summary>
-        /// Advances one payment. The first call records the immediate 100% payment;
-        /// subsequent calls move through 90%, 80% ... 10% at the supplied interval.
+        /// Advances one shared funding payment through 100%, 90%, 80% ... 10%.
         /// </summary>
-        public void AdvancePayout(double payoutIntervalSeconds)
+        public void AdvancePayout()
         {
             if (!HasStarted || IsExpired)
             {
@@ -99,35 +96,17 @@ namespace TheRaceForSpace.Funding
             }
 
             PaymentsProcessed = Math.Min(TotalPayments, PaymentsProcessed + 1);
-
-            if (IsExpired)
-            {
-                NextPayoutUniversalTime = -1.0;
-                return;
-            }
-
-            NextPayoutUniversalTime += Math.Max(0.0, payoutIntervalSeconds);
         }
 
         /// <summary>
         /// Restores persisted lifecycle state without performing gameplay calculations.
-        /// A negative next-payout time is retained so the controller can migrate an older
-        /// 0.3 save that predates independent achievement-contract schedules.
+        /// Payout timing is intentionally not stored here because all contracts use the
+        /// controller's single global 90-day funding date.
         /// </summary>
-        public void RestoreState(bool hasStarted, int paymentsProcessed, double nextPayoutUniversalTime)
+        public void RestoreState(bool hasStarted, int paymentsProcessed)
         {
             PaymentsProcessed = Math.Max(0, Math.Min(TotalPayments, paymentsProcessed));
             HasStarted = hasStarted || PaymentsProcessed > 0;
-
-            if (!HasStarted || IsExpired)
-            {
-                NextPayoutUniversalTime = -1.0;
-                return;
-            }
-
-            NextPayoutUniversalTime = nextPayoutUniversalTime < 0.0
-                ? -1.0
-                : nextPayoutUniversalTime;
         }
     }
 }

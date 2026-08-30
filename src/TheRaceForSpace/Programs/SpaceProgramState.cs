@@ -25,12 +25,9 @@ namespace TheRaceForSpace.Programs
         public string Name { get; private set; }
         public bool IsPlayer { get; private set; }
 
-        // AwardedFunds is cumulative funding actually paid during this prototype session.
         // Rival Funds is their simulated spendable balance; the player's real balance remains owned by KSP.
-        public double AwardedFunds { get; set; }
         public double Funds { get; set; }
         public double NextPayoutFunds { get; set; }
-        public int RacePoints { get; set; }
 
         // Orbit achievements are permanent once observed. Their timestamps are retained so
         // declining-interest payouts can exclude agencies that qualified after an earlier payment.

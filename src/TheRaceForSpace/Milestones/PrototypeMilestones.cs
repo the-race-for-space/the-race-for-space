@@ -97,94 +97,19 @@ namespace TheRaceForSpace.Milestones
         }
 
         /// <summary>
-        /// Imports the current six prototype achievement fields into generic milestone state.
-        /// Rival simulation and persistence still write those fields during the staged migration;
-        /// this bridge can be removed once those subsystems write milestone IDs directly.
+        /// Staged source-compatibility shim for the pre-Pass-17 simulation overload.
+        /// Achievement state is already generic, so no synchronization is required.
         /// </summary>
         public static void SynchronizeLegacyAchievementState(SpaceProgramState program)
         {
-            if (program == null)
-            {
-                return;
-            }
-
-            if (program.HasAchievedProbeOrbit)
-            {
-                program.RecordAchievement(ProbeOrbitId, program.ProbeOrbitAchievementUniversalTime);
-            }
-
-            if (program.HasAchievedCrewedOrbit)
-            {
-                program.RecordAchievement(CrewedOrbitId, program.CrewedOrbitAchievementUniversalTime);
-            }
-
-            if (program.HasAchievedMunProbeOrbit)
-            {
-                program.RecordAchievement(MunProbeOrbitId, program.MunProbeOrbitAchievementUniversalTime);
-            }
-
-            if (program.HasAchievedMinmusProbeOrbit)
-            {
-                program.RecordAchievement(MinmusProbeOrbitId, program.MinmusProbeOrbitAchievementUniversalTime);
-            }
-
-            if (program.HasAchievedMunCrewedOrbit)
-            {
-                program.RecordAchievement(MunCrewedOrbitId, program.MunCrewedOrbitAchievementUniversalTime);
-            }
-
-            if (program.HasAchievedMinmusCrewedOrbit)
-            {
-                program.RecordAchievement(MinmusCrewedOrbitId, program.MinmusCrewedOrbitAchievementUniversalTime);
-            }
         }
 
         /// <summary>
-        /// Mirrors generic milestone state into the six temporary prototype fields still consumed
-        /// by rival simulation and persistence. Generic milestone state remains the source of truth.
+        /// Staged source-compatibility shim for the pre-Pass-17 simulation completion path.
+        /// Achievement state is already generic, so no synchronization is required.
         /// </summary>
         public static void SynchronizeGenericAchievementStateToLegacy(SpaceProgramState program)
         {
-            if (program == null)
-            {
-                return;
-            }
-
-            if (program.HasAchievement(ProbeOrbitId))
-            {
-                program.HasAchievedProbeOrbit = true;
-                program.ProbeOrbitAchievementUniversalTime = program.GetAchievementUniversalTime(ProbeOrbitId);
-            }
-
-            if (program.HasAchievement(CrewedOrbitId))
-            {
-                program.HasAchievedCrewedOrbit = true;
-                program.CrewedOrbitAchievementUniversalTime = program.GetAchievementUniversalTime(CrewedOrbitId);
-            }
-
-            if (program.HasAchievement(MunProbeOrbitId))
-            {
-                program.HasAchievedMunProbeOrbit = true;
-                program.MunProbeOrbitAchievementUniversalTime = program.GetAchievementUniversalTime(MunProbeOrbitId);
-            }
-
-            if (program.HasAchievement(MinmusProbeOrbitId))
-            {
-                program.HasAchievedMinmusProbeOrbit = true;
-                program.MinmusProbeOrbitAchievementUniversalTime = program.GetAchievementUniversalTime(MinmusProbeOrbitId);
-            }
-
-            if (program.HasAchievement(MunCrewedOrbitId))
-            {
-                program.HasAchievedMunCrewedOrbit = true;
-                program.MunCrewedOrbitAchievementUniversalTime = program.GetAchievementUniversalTime(MunCrewedOrbitId);
-            }
-
-            if (program.HasAchievement(MinmusCrewedOrbitId))
-            {
-                program.HasAchievedMinmusCrewedOrbit = true;
-                program.MinmusCrewedOrbitAchievementUniversalTime = program.GetAchievementUniversalTime(MinmusCrewedOrbitId);
-            }
         }
     }
 }

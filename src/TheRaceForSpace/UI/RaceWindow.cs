@@ -1,3 +1,4 @@
+using KSP.UI.Screens;
 using TheRaceForSpace.Competition;
 using TheRaceForSpace.Funding;
 using TheRaceForSpace.Programs;
@@ -7,7 +8,7 @@ namespace TheRaceForSpace.UI
 {
     /// <summary>
     /// Prototype command center with four switchable views inside one interface window.
-    /// Press F8 to show or hide the complete interface.
+    /// Press F8 or use the stock KSP application launcher button to show or hide the interface.
     /// </summary>
     [KSPAddon(KSPAddon.Startup.EveryScene, false)]
     public sealed class RaceWindow : MonoBehaviour
@@ -22,6 +23,8 @@ namespace TheRaceForSpace.UI
 
         private const float RefreshIntervalSeconds = 5.0f;
         private const int HighlightedCardTitleFontSize = 16;
+        private const string LauncherIconTexturePath =
+            "Squad/PartList/SimpleIcons/R&D_node_icon_basicprobes";
         private static SatelliteRaceController _raceController;
         private static RaceWindow _activeInstance;
         private static Game _controllerGame;
@@ -32,6 +35,7 @@ namespace TheRaceForSpace.UI
         private Vector2 _rivalsScrollPosition;
         private Vector2 _spaceRaceScrollPosition;
         private ActiveView _activeView = ActiveView.Overview;
+        private ApplicationLauncherButton _launcherButton;
         private GUIStyle _highlightedCardTitleStyle;
         private bool _isDuplicateInstance;
         private bool _isVisible = true;
@@ -69,6 +73,15 @@ namespace TheRaceForSpace.UI
 
         public void OnDestroy()
         {
+            // ApplicationLauncher is recreated by KSP across some scene/menu transitions, so
+            // remove our button whenever this RaceWindow instance stops owning the interface.
+            if (_launcherButton != null && ApplicationLauncher.Instance != null)
+            {
+                ApplicationLauncher.Instance.RemoveModApplication(_launcherButton);
+            }
+
+            _launcherButton = null;
+
             if (_activeInstance == this)
             {
                 _activeInstance = null;
@@ -91,15 +104,78 @@ namespace TheRaceForSpace.UI
                 _controllerGame = HighLogic.CurrentGame;
             }
 
+            // The stock ApplicationLauncher may not be ready during Awake. This lightweight
+            // check creates the button once KSP has made the launcher available, and recreates
+            // it if KSP destroys the launcher during a scene transition.
+            if (_launcherButton == null)
+            {
+                EnsureApplicationLauncherButton();
+            }
+
             if (Input.GetKeyDown(KeyCode.F8))
             {
-                _isVisible = !_isVisible;
+                SetCommandCenterVisible(!_isVisible);
             }
 
             if (Time.realtimeSinceStartup >= _nextRefreshTime)
             {
                 _raceController.Refresh();
                 _nextRefreshTime = Time.realtimeSinceStartup + RefreshIntervalSeconds;
+            }
+        }
+
+        private void EnsureApplicationLauncherButton()
+        {
+            if (_launcherButton != null
+                || !ApplicationLauncher.Ready
+                || ApplicationLauncher.Instance == null)
+            {
+                return;
+            }
+
+            // Reuse a stock KSP probe icon for the prototype so the launcher integration does
+            // not require an additional image asset. A custom Race for Space icon can replace
+            // this texture later without changing the launcher behaviour.
+            Texture launcherIconTexture = GameDatabase.Instance != null
+                ? GameDatabase.Instance.GetTexture(LauncherIconTexturePath, false)
+                : null;
+
+            if (launcherIconTexture == null)
+            {
+                launcherIconTexture = Texture2D.whiteTexture;
+            }
+
+            _launcherButton = ApplicationLauncher.Instance.AddModApplication(
+                delegate { SetCommandCenterVisible(true); },
+                delegate { SetCommandCenterVisible(false); },
+                null,
+                null,
+                null,
+                null,
+                ApplicationLauncher.AppScenes.ALWAYS,
+                launcherIconTexture);
+
+            // F8 and the stock launcher control the same visibility state. Setting the button
+            // without firing its callback keeps its highlighted state synchronized with F8.
+            SetCommandCenterVisible(_isVisible);
+        }
+
+        private void SetCommandCenterVisible(bool isVisible)
+        {
+            _isVisible = isVisible;
+
+            if (_launcherButton == null)
+            {
+                return;
+            }
+
+            if (_isVisible)
+            {
+                _launcherButton.SetTrue(false);
+            }
+            else
+            {
+                _launcherButton.SetFalse(false);
             }
         }
 

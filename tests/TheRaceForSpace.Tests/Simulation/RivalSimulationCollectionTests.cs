@@ -226,13 +226,14 @@ namespace TheRaceForSpace.Tests.Simulation
         {
             const double completionUniversalTime = 4321.0;
             var player = new SpaceProgramState("Player", true);
-            player.RecordAchievement(PrototypeMilestones.ProbeOrbitId, 1.0);
+            player.RecordAchievement(PrototypeMilestones.MunProbeOrbitId, 1.0);
             var aster = new SpaceProgramState("Aster", false)
             {
                 NextMissionTargetId = PrototypeMilestones.DunaProbeOrbitId,
                 LaunchProgressPercent = 100
             };
             var cobalt = new SpaceProgramState("Cobalt", false);
+            cobalt.RecordAchievement(PrototypeMilestones.MinmusProbeOrbitId, 2.0);
 
             MilestoneDefinition milestone = PrototypeMilestones.FindById(
                 PrototypeMilestones.DunaProbeOrbitId);

@@ -1,4 +1,5 @@
 using System;
+using TheRaceForSpace.Milestones;
 
 namespace TheRaceForSpace.Funding
 {
@@ -40,7 +41,7 @@ namespace TheRaceForSpace.Funding
             double rewardFunds,
             bool isAvailable,
             string unlockRequirement,
-            string prerequisiteMilestoneId)
+            UnlockRuleDefinition unlockRule)
         {
             Id = id;
             Name = name;
@@ -49,7 +50,7 @@ namespace TheRaceForSpace.Funding
             RewardFunds = rewardFunds;
             IsAvailable = isAvailable;
             UnlockRequirement = unlockRequirement;
-            PrerequisiteMilestoneId = prerequisiteMilestoneId;
+            UnlockRule = unlockRule;
         }
 
         public string Id { get; private set; }
@@ -58,8 +59,24 @@ namespace TheRaceForSpace.Funding
         public int RequiredSatellites { get; private set; }
         public double RewardFunds { get; private set; }
         public string UnlockRequirement { get; private set; }
-        public string PrerequisiteMilestoneId { get; private set; }
+        public UnlockRuleDefinition UnlockRule { get; private set; }
         public bool IsAvailable { get; private set; }
+
+        /// <summary>
+        /// Temporary Item 14B bridge for existing availability consumers. The value is derived
+        /// from UnlockRule and is not stored separately. Item 14C removes this projection.
+        /// </summary>
+        public string PrerequisiteMilestoneId
+        {
+            get
+            {
+                string milestoneId;
+                return UnlockRule != null
+                    && UnlockRule.TryGetSingleAnyAgencyAchievementMilestoneId(out milestoneId)
+                    ? milestoneId
+                    : null;
+            }
+        }
 
         /// <summary>
         /// Permanently unlocks this satellite contract for the current campaign.

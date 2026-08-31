@@ -7,7 +7,7 @@ This scaffold mirrors the current design direction for **The Race for Space** wi
 - `Core/` — mod lifecycle, shared state and cross-module coordination. `RaceRuntime` owns the current race controller and advances progression on the controlled five-second refresh cadence independently of the UI.
 - `Programs/` — player and rival space-program models/state.
 - `Tracking/` — KSP-independent vessel classification and body-presence tracking from project-owned vessel snapshots. Probe/Relay counts are maintained for observed celestial bodies independently of milestone definitions; milestone definitions are used only when evaluating achievements.
-- `Milestones/` — achievement/goal definitions and evaluation. `PrototypeMilestones` is the code-defined catalogue of current prototype achievement targets.
+- `Milestones/` — achievement/goal definitions and evaluation. `PrototypeMilestones` is the code-defined catalogue of current prototype achievement targets. The Item 14A unlock foundation also lives here: immutable OR-of-AND unlock definitions plus a KSP-independent evaluator for achievement scope/count and universal-time conditions. Current prototype targets still use their existing single-prerequisite fields until Item 14B migrates them.
 - `Competition/` — first-to-achieve and comparative-coverage race logic. `SatelliteRaceController` consumes programme collections, does not construct or expose individual funding targets, and caches per-programme projected payouts when its controlled refresh evaluates funding.
 - `Funding/` — nation/corporation sponsors, offers and awards. `PrototypeFundingCatalogue` owns the code-defined achievement rewards and satellite-network programme bootstrap for the current prototype.
 - `Simulation/` — lightweight rival-program simulation for prototype use. Rival progression consumes program and target collections, and stable mission target IDs are authoritative; display names are presentation only.
@@ -24,7 +24,7 @@ This scaffold mirrors the current design direction for **The Race for Space** wi
 ## Tests
 
 - `tests/TheRaceForSpace.Tests/` mirrors logic-heavy modules so milestone, simulation, tracking, funding, and persistence rules can be tested without requiring a live KSP scene.
-- `tests/TheRaceForSpace.ControllerTests/` compiles the real `SatelliteRaceController` against small test-only stand-ins for its existing KSP integration boundaries. It covers cross-module controller ordering without adding test seams to production code or requiring a KSP installation.
+- `tests/TheRaceForSpace.ControllerTests/` compiles the real `SatelliteRaceController` against small test-only stand-ins for its existing KSP integration boundaries. It covers cross-module controller ordering without adding test seams to production code or requiring a KSP installation. The runner also hosts the KSP-independent Item 14A unlock-rule regressions because those new source files are already dependencies of the future controller migration.
 - `tools/run-logic-tests.sh` runs both standalone suites.
 - `.github/workflows/logic-tests.yml` runs the same script on GitHub Actions for pushes and pull requests using .NET 8 on Ubuntu.
 

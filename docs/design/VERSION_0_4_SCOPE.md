@@ -26,7 +26,7 @@ The initial 0.4 cleanup pass was intentionally narrow:
 2. Keep rival cost and ETA queries free of hidden mission-state mutation; legacy target migration remains part of simulation refresh/load behaviour.
 3. Add small defensive checks where invalid state can otherwise cause avoidable failures.
 
-The initial cleanup did not change save formats or introduce a general configuration/rule framework.
+The initial cleanup did not introduce a general configuration/rule framework.
 
 ## Approved Structural Work
 
@@ -69,10 +69,25 @@ Satellite body-count selection has now been separated from milestone definitions
 
 This removes the hidden requirement that a celestial body must first appear in the milestone catalogue before tracking can represent satellites around it.
 
+### Collection-driven rival persistence
+
+Rival persistence has now been changed from fixed Aster/Cobalt save slots to a collection-driven format with explicit approval under the structural-change and save-compatibility gates in `AGENTS.md`.
+
+- `Persistence/RivalProgramsSaveState` stores any number of rival program states keyed by each program's stable ID.
+- Each `RIVAL` entry stores its own `programId` together with funds, achievements, satellite counts, mission target ID, mission progress, and next progress-check time.
+- `KspIntegration/RacePersistenceScenario` now saves one `RIVALS` collection instead of dedicated `ASTER` and `COBALT` nodes.
+- Restore matches runtime rivals by stable program ID, so save-node order and display-name changes do not affect identity.
+- A rival that exists in the runtime but has no matching saved entry keeps its constructor defaults. This allows future rivals to be introduced without inventing state for them or extending the save schema.
+- Current Aster and Cobalt gameplay rules are unchanged; only how their state is stored and restored has changed.
+
+This is intentionally a save-format break for rival state. The older fixed `ASTER` and `COBALT` ScenarioModule nodes are no longer imported by the new collection path.
+
 ## Compatibility
 
-Version 0.4 continues to read the existing 0.3 persistence format. Compatibility paths for legacy rival mission names and older fixed save fields remain in place.
+Player race progress, funding-programme state, achievement-contract state, and Command Center visibility keep their existing persistence paths.
+
+Rival state now uses the new `RIVALS` collection format. Saves written before this Item 7 change will not restore the old fixed Aster/Cobalt rival state; those rivals will start from their constructor defaults when such a save is loaded. This compatibility break was explicitly accepted for the 0.4 structural work.
 
 ## Next Decisions
 
-Larger 0.4 work can continue to be selected separately. Candidate work includes making rival persistence collection-driven and centralising target definitions. Those changes remain outside the current implementation unless separately approved where required by `AGENTS.md`.
+Larger 0.4 work can continue to be selected separately. The main remaining expansion-preparation decision is centralising the currently code-defined target/programme bootstrap so new celestial bodies and race targets do not require edits across the controller constructor. That work remains outside the current implementation unless separately approved where required by `AGENTS.md`.

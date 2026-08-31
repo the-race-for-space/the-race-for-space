@@ -4,7 +4,7 @@ This scaffold mirrors the current design direction for **The Race for Space** wi
 
 ## Source modules
 
-- `Core/` — mod lifecycle, shared state and cross-module coordination.
+- `Core/` — mod lifecycle, shared state and cross-module coordination. `RaceRuntime` owns the current race controller and advances progression on the controlled five-second refresh cadence independently of the UI.
 - `Programs/` — player and rival space-program models/state.
 - `Tracking/` — vessel classification and body-presence tracking, including unloaded vessels.
 - `Milestones/` — achievement/goal definitions and evaluation.
@@ -14,7 +14,7 @@ This scaffold mirrors the current design direction for **The Race for Space** wi
 - `Scoring/` — progress/coverage calculations kept separate from funding rules.
 - `Persistence/` — simple save-state models for Race for Space values that must survive KSP save/load cycles.
 - `KspIntegration/` — KSP API adapters, game events, ScenarioModule persistence hooks and vessel discovery.
-- `UI/` — race/funding status presentation.
+- `UI/` — race/funding presentation, Command Center visibility, and stock launcher interaction. UI code reads race state but does not own or advance gameplay progression.
 - `Debug/` — prototype diagnostics and developer-only helpers.
 
 ## Distribution layout

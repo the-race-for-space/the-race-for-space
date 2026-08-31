@@ -9,6 +9,34 @@ namespace TheRaceForSpace.ControllerTests
         private static int Main()
         {
             Run(
+                "Unlock null rule is available from start",
+                UnlockRuleEvaluatorTests.NullRuleIsAvailableFromStart);
+            Run(
+                "Unlock path requires all conditions",
+                UnlockRuleEvaluatorTests.ConditionsInOnePathRequireAll);
+            Run(
+                "Unlock alternative path can satisfy rule",
+                UnlockRuleEvaluatorTests.AlternativePathCanUnlock);
+            Run(
+                "Unlock program scopes are respected",
+                UnlockRuleEvaluatorTests.ProgramScopesAreRespected);
+            Run(
+                "Unlock required agency count must be met",
+                UnlockRuleEvaluatorTests.RequiredAgencyCountMustBeMet);
+            Run(
+                "Unlock achievement timestamps respect evaluation time",
+                UnlockRuleEvaluatorTests.AchievementTimestampUsesEvaluationTime);
+            Run(
+                "Unlock time condition uses exact boundary",
+                UnlockRuleEvaluatorTests.UniversalTimeConditionUsesExactBoundary);
+            Run(
+                "Unlock malformed rules fail closed",
+                UnlockRuleEvaluatorTests.MalformedRulesFailClosed);
+            Run(
+                "Unlock invalid condition definitions fail fast",
+                UnlockRuleEvaluatorTests.InvalidConditionDefinitionsFailFast);
+
+            Run(
                 "Controller probe observation unlocks funding flow",
                 SatelliteRaceControllerTests.ProbeObservationUnlocksFundingFlow);
             Run(
@@ -23,8 +51,8 @@ namespace TheRaceForSpace.ControllerTests
 
             Console.WriteLine();
             Console.WriteLine(_failures == 0
-                ? "All controller regression tests passed."
-                : _failures + " controller regression test(s) failed.");
+                ? "All controller and unlock rule regression tests passed."
+                : _failures + " controller/unlock regression test(s) failed.");
             return _failures == 0 ? 0 : 1;
         }
 

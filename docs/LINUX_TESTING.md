@@ -1,37 +1,123 @@
 # Linux / Steam Deck Testing and Deployment
 
-This guide describes the normal local test cycle for **The Race for Space** on the Linux PC / Steam Deck development machine using **Konsole**.
+This guide is for testing and deploying **The Race for Space** from Konsole on the Linux / Steam Deck development machine.
 
-## Local paths
-
-The local repository is:
+Local paths used by this project:
 
 ```text
-/home/deck/Projects/the-race-for-space/
+Repository: /home/deck/Projects/the-race-for-space/
+KSP root:   /home/deck/.local/share/Steam/steamapps/common/Kerbal Space Program
+GameData:   /home/deck/.local/share/Steam/steamapps/common/Kerbal Space Program/GameData/
 ```
 
-The installed KSP `GameData` folder is:
+> `KSP_ROOT` must point to the KSP installation folder, not directly to `GameData`.
 
-```text
-/home/deck/.local/share/Steam/steamapps/common/Kerbal Space Program/GameData/
-```
+---
 
-The build uses `KSP_ROOT`, which must point to the **KSP installation folder**, not directly to `GameData`:
+# Part 1 - Deploy and Test When Setup Is Already Complete
+
+Use this section for the normal development/test cycle.
+
+## 1. Open the project
+
+Open Konsole and run:
 
 ```bash
+cd /home/deck/Projects/the-race-for-space/
 export KSP_ROOT="/home/deck/.local/share/Steam/steamapps/common/Kerbal Space Program"
 ```
 
-For convenience, the repository path can also be stored in a shell variable:
+## 2. Update the 0.4 branch
 
 ```bash
-export RFS_ROOT="/home/deck/Projects/the-race-for-space"
+git fetch origin
+git switch Alpha/Cleanup-0.4
+git pull --ff-only
 ```
 
-You can confirm the KSP managed assemblies are available with:
+Check that the repository is clean:
 
 ```bash
-test -f "$KSP_ROOT/KSP_Data/Managed/Assembly-CSharp.dll" && echo "KSP references found"
+git status --short
+```
+
+No output means there are no uncommitted changes.
+
+## 3. Run the automated tests
+
+```bash
+bash tools/run-logic-tests.sh
+```
+
+A successful run should finish with:
+
+```text
+All prototype logic tests passed.
+```
+
+Do not deploy a build if the automated tests fail.
+
+## 4. Build and deploy to KSP
+
+```bash
+bash tools/test-prototype.sh Alpha/Cleanup-0.4
+```
+
+The deployed DLL should be written to:
+
+```text
+/home/deck/.local/share/Steam/steamapps/common/Kerbal Space Program/GameData/TheRaceForSpace/Plugins/TheRaceForSpace.dll
+```
+
+Confirm it exists with:
+
+```bash
+ls -l "$KSP_ROOT/GameData/TheRaceForSpace/Plugins/TheRaceForSpace.dll"
+```
+
+## 5. Test in KSP
+
+1. Start KSP 1.12.x through Steam.
+2. Load a disposable Career test save.
+3. Confirm the Race for Space Command Center appears.
+4. Press `F8` and confirm the window hides and reopens.
+5. Test the feature or change being worked on.
+6. Save and reload when testing persistence-related behaviour.
+
+### Normal command sequence
+
+For most test sessions, these are the commands you need:
+
+```bash
+cd /home/deck/Projects/the-race-for-space/
+export KSP_ROOT="/home/deck/.local/share/Steam/steamapps/common/Kerbal Space Program"
+
+git fetch origin
+git switch Alpha/Cleanup-0.4
+git pull --ff-only
+
+bash tools/run-logic-tests.sh
+bash tools/test-prototype.sh Alpha/Cleanup-0.4
+```
+
+---
+
+# Part 2 - Set Up From Scratch
+
+Use this section when setting up a new Linux / Steam Deck development environment or recreating the local project folder.
+
+## 1. Check KSP is installed
+
+The expected KSP installation is:
+
+```text
+/home/deck/.local/share/Steam/steamapps/common/Kerbal Space Program
+```
+
+Confirm the KSP assembly needed by the build exists:
+
+```bash
+test -f "/home/deck/.local/share/Steam/steamapps/common/Kerbal Space Program/KSP_Data/Managed/Assembly-CSharp.dll" && echo "KSP references found"
 ```
 
 Expected output:
@@ -40,186 +126,97 @@ Expected output:
 KSP references found
 ```
 
-## Open the repository in Konsole
+## 2. Check the development tools
 
-Open Konsole and change to the project directory:
+Confirm Git is available:
 
 ```bash
+git --version
+```
+
+Confirm the .NET SDK is available:
+
+```bash
+dotnet --version
+```
+
+The standalone logic tests target .NET 8. The KSP mod itself targets .NET Framework 4.7.2 and, on Linux, may also require compatible Mono 4.7.2 reference assemblies.
+
+## 3. Create the Projects folder
+
+```bash
+mkdir -p /home/deck/Projects
+cd /home/deck/Projects
+```
+
+## 4. Clone the repository
+
+If the repository is not already present:
+
+```bash
+git clone https://github.com/the-race-for-space/the-race-for-space.git
 cd /home/deck/Projects/the-race-for-space/
 ```
 
-For the current 0.4 cleanup build, update and switch to the branch with:
-
-```bash
-git fetch origin
-git switch Alpha/Cleanup-0.4
-git pull --ff-only
-```
-
-If the branch does not yet exist locally, use:
+## 5. Switch to the current 0.4 development branch
 
 ```bash
 git fetch origin
 git switch --track origin/Alpha/Cleanup-0.4
 ```
 
-## Run the automated logic tests
+If the local branch already exists, use:
 
-From the repository root:
+```bash
+git switch Alpha/Cleanup-0.4
+git pull --ff-only
+```
+
+## 6. Set KSP_ROOT
+
+For the current Konsole session:
+
+```bash
+export KSP_ROOT="/home/deck/.local/share/Steam/steamapps/common/Kerbal Space Program"
+```
+
+Confirm it is correct:
+
+```bash
+echo "$KSP_ROOT"
+test -f "$KSP_ROOT/KSP_Data/Managed/Assembly-CSharp.dll" && echo "KSP references found"
+```
+
+Optional: make `KSP_ROOT` available automatically in future Bash sessions:
+
+```bash
+echo 'export KSP_ROOT="/home/deck/.local/share/Steam/steamapps/common/Kerbal Space Program"' >> ~/.bashrc
+source ~/.bashrc
+```
+
+## 7. Run the tests
 
 ```bash
 cd /home/deck/Projects/the-race-for-space/
 bash tools/run-logic-tests.sh
 ```
 
-The logic tests do not require KSP to be running. They test the KSP-independent funding, milestone, persistence, and rival-simulation logic.
-
-A successful run should finish with:
+Expected final message:
 
 ```text
 All prototype logic tests passed.
 ```
 
-If the test runner reports a failure, do not deploy the build until the failure has been investigated.
-
-## Recommended build and deploy command
-
-The easiest way to update the selected prototype branch, build it, and copy the DLL into KSP is:
+## 8. Build and deploy the first test build
 
 ```bash
-cd /home/deck/Projects/the-race-for-space/
-export KSP_ROOT="/home/deck/.local/share/Steam/steamapps/common/Kerbal Space Program"
 bash tools/test-prototype.sh Alpha/Cleanup-0.4
 ```
 
-The helper refuses to change branches when the repository contains uncommitted changes, fetches the latest branch, builds the mod, and deploys the DLL to:
-
-```text
-/home/deck/.local/share/Steam/steamapps/common/Kerbal Space Program/GameData/TheRaceForSpace/Plugins/TheRaceForSpace.dll
-```
-
-## Manual build and deployment
-
-If you want to build the currently checked-out code without using the helper:
-
-```bash
-cd /home/deck/Projects/the-race-for-space/
-export KSP_ROOT="/home/deck/.local/share/Steam/steamapps/common/Kerbal Space Program"
-dotnet build ./src/TheRaceForSpace/TheRaceForSpace.csproj -c Debug -p:DeployToKsp=true
-```
-
-The build target creates the mod plugin directory when necessary and copies the compiled DLL into KSP.
-
-Verify the deployed DLL with:
+Verify the DLL:
 
 ```bash
 ls -l "$KSP_ROOT/GameData/TheRaceForSpace/Plugins/TheRaceForSpace.dll"
 ```
 
-## Normal Konsole test cycle
-
-For most development changes, use this sequence:
-
-```bash
-cd /home/deck/Projects/the-race-for-space/
-export KSP_ROOT="/home/deck/.local/share/Steam/steamapps/common/Kerbal Space Program"
-
-git switch Alpha/Cleanup-0.4
-git pull --ff-only
-
-bash tools/run-logic-tests.sh
-bash tools/test-prototype.sh Alpha/Cleanup-0.4
-```
-
-Then start KSP through Steam and load a disposable test save.
-
-## One-command-style setup for a new Konsole session
-
-When opening a fresh Konsole window, this is a useful starting block:
-
-```bash
-export RFS_ROOT="/home/deck/Projects/the-race-for-space"
-export KSP_ROOT="/home/deck/.local/share/Steam/steamapps/common/Kerbal Space Program"
-cd "$RFS_ROOT"
-
-git status --short
-git branch --show-current
-```
-
-After that, tests can be run with:
-
-```bash
-bash tools/run-logic-tests.sh
-```
-
-and the current 0.4 build can be deployed with:
-
-```bash
-bash tools/test-prototype.sh Alpha/Cleanup-0.4
-```
-
-## In-game verification
-
-After deployment:
-
-1. Start KSP 1.12.x.
-2. Load a disposable Career test save.
-3. Confirm the Race for Space Command Center appears.
-4. Press `F8` to confirm the window hides and reopens correctly.
-5. Verify the current funding targets, rival agencies, achievements, and Duna progression relevant to the change being tested.
-6. Save and reload when testing persistence-related behaviour.
-
-## Useful checks
-
-Check the installed .NET SDK:
-
-```bash
-dotnet --version
-```
-
-Check the current Git branch:
-
-```bash
-git branch --show-current
-```
-
-Check whether the repository has uncommitted changes:
-
-```bash
-git status --short
-```
-
-Check the deployed DLL timestamp:
-
-```bash
-stat "$KSP_ROOT/GameData/TheRaceForSpace/Plugins/TheRaceForSpace.dll"
-```
-
-Check that Konsole is currently inside the expected repository:
-
-```bash
-pwd
-```
-
-Expected path:
-
-```text
-/home/deck/Projects/the-race-for-space
-```
-
-## Important path note
-
-Use:
-
-```text
-Repository=/home/deck/Projects/the-race-for-space/
-KSP_ROOT=/home/deck/.local/share/Steam/steamapps/common/Kerbal Space Program
-```
-
-Do **not** set `KSP_ROOT` to:
-
-```text
-/home/deck/.local/share/Steam/steamapps/common/Kerbal Space Program/GameData/
-```
-
-`GameData` is the deployment destination inside the KSP installation. The project needs the installation root so it can also locate KSP's managed assemblies under `KSP_Data/Managed/`.
+After this succeeds, the machine is set up. Future testing should use **Part 1** only.

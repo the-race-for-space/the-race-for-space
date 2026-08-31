@@ -118,6 +118,10 @@ namespace TheRaceForSpace.Tests
             AchievementFundingProgramme programme = FindAchievement(programmes, id);
             Require(programme != null, "Missing achievement funding programme '" + id + "'.");
             Equal(rewardFunds, programme.BaseRewardFunds);
+            AssertSimpleAnyAgencyRule(programme.UnlockRule, prerequisiteMilestoneId);
+
+            // Item 14B keeps this projection solely so untouched 14C consumers continue to see
+            // exactly the same prerequisite while the stored source of truth is now UnlockRule.
             Equal(prerequisiteMilestoneId, programme.PrerequisiteMilestoneId);
         }
 
@@ -134,8 +138,32 @@ namespace TheRaceForSpace.Tests
             Equal(celestialBodyName, programme.CelestialBodyName);
             Equal(requiredSatellites, programme.RequiredSatellites);
             Equal(rewardFunds, programme.RewardFunds);
+            AssertSimpleAnyAgencyRule(programme.UnlockRule, prerequisiteMilestoneId);
             Equal(prerequisiteMilestoneId, programme.PrerequisiteMilestoneId);
             Require(!programme.IsAvailable, "Prototype satellite programmes should begin locked.");
+        }
+
+        private static void AssertSimpleAnyAgencyRule(
+            UnlockRuleDefinition rule,
+            string expectedMilestoneId)
+        {
+            if (expectedMilestoneId == null)
+            {
+                Equal(null, rule);
+                return;
+            }
+
+            Require(rule != null, "Locked prototype targets should carry an unlock rule.");
+            Equal(1, rule.Paths.Count);
+            Require(rule.Paths[0] != null, "Prototype unlock path should not be null.");
+            Equal(1, rule.Paths[0].Conditions.Count);
+
+            UnlockConditionDefinition condition = rule.Paths[0].Conditions[0];
+            Require(condition != null, "Prototype unlock condition should not be null.");
+            Equal(UnlockConditionType.Achievement, condition.ConditionType);
+            Equal(UnlockProgramScope.AnyAgency, condition.ProgramScope);
+            Equal(1, condition.RequiredProgramCount);
+            Equal(expectedMilestoneId, condition.MilestoneId);
         }
 
         private static AchievementFundingProgramme FindAchievement(

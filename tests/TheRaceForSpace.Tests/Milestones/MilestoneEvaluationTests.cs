@@ -55,7 +55,7 @@ namespace TheRaceForSpace.Tests.Milestones
                 MilestoneSituation.Orbit,
                 MilestoneCrewRequirement.UncrewedProbe,
                 "Orbit Eve with an uncrewed probe.",
-                PrototypeMilestones.ProbeOrbitId);
+                UnlockRuleDefinition.AnyAgencyAchievement(PrototypeMilestones.ProbeOrbitId));
             var observation = new MilestoneVesselObservation(
                 "Eve",
                 MilestoneSituation.Orbit,

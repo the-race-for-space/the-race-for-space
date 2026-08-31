@@ -51,12 +51,23 @@ Raw KSP vessel discovery has now been moved out of `Tracking/SatelliteTracker` w
 - Loaded vessels continue to use live situation, body, type, and crew state so newly reached orbits are detected immediately.
 - Unloaded vessels continue to use persistent `ProtoVessel` and orbit snapshot state.
 - KSP vessel types are converted into the project-owned `TrackedVesselType` representation before tracking rules consume them.
-- `Tracking/SatelliteTracker` now consumes `VesselTrackingSnapshot` values and contains no direct KSP vessel API access.
+- `Tracking/SatelliteTracker` consumes `VesselTrackingSnapshot` values and contains no direct KSP vessel API access.
 - `Competition/SatelliteRaceController` coordinates discovery and tracking during the existing refresh path.
 - Snapshot-based tracking logic is included in the standalone logic-test project.
 - No save-data format, funding rule, milestone definition, rival rule, or refresh cadence changed as part of this move.
 
-The current tracker still derives the set of maintained satellite-count bodies from milestone definitions. Removing that coupling is a separate structural/design decision and is intentionally not part of this item.
+### Milestone-independent satellite body tracking
+
+Satellite body-count selection has now been separated from milestone definitions with explicit approval under the structural-change gate in `AGENTS.md`.
+
+- `SatelliteTracker` counts every observed Probe or Relay by its celestial body name, including bodies that have no current milestone definition.
+- Milestone definitions are now used only when evaluating milestone achievements, not when deciding which bodies can have satellite counts.
+- A successful vessel snapshot refresh is authoritative for player satellite presence, so stale counts are cleared before the newly observed body counts are stored.
+- If KSP vessel discovery is not ready and returns no valid snapshot refresh, the tracker is not called and the last known counts remain untouched.
+- Existing Kerbin, Mun, Minmus, and Duna funding behaviour is unchanged.
+- The persistence schema remains unchanged; its existing collection-based satellite storage can already represent arbitrary celestial-body names.
+
+This removes the hidden requirement that a celestial body must first appear in the milestone catalogue before tracking can represent satellites around it.
 
 ## Compatibility
 
@@ -64,4 +75,4 @@ Version 0.4 continues to read the existing 0.3 persistence format. Compatibility
 
 ## Next Decisions
 
-Larger 0.4 work can continue to be selected separately. Candidate work includes separating satellite-count body selection from milestone definitions, making rival persistence collection-driven, and centralising target definitions. Those changes remain outside the current implementation unless separately approved where required by `AGENTS.md`.
+Larger 0.4 work can continue to be selected separately. Candidate work includes making rival persistence collection-driven and centralising target definitions. Those changes remain outside the current implementation unless separately approved where required by `AGENTS.md`.

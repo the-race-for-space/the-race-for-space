@@ -1,6 +1,7 @@
 using System;
 using KSP.UI.Screens;
 using TheRaceForSpace.Competition;
+using TheRaceForSpace.Core;
 using TheRaceForSpace.Funding;
 using TheRaceForSpace.KspIntegration;
 using TheRaceForSpace.Programs;
@@ -11,6 +12,7 @@ namespace TheRaceForSpace.UI
     /// <summary>
     /// Prototype command center with four switchable views inside one interface window.
     /// Press F8 or use the stock KSP application launcher button to show or hide the interface.
+    /// Race progression and controller lifetime are owned by RaceRuntime in the Core module.
     /// </summary>
     [KSPAddon(KSPAddon.Startup.EveryScene, false)]
     public sealed class RaceWindow : MonoBehaviour
@@ -23,14 +25,16 @@ namespace TheRaceForSpace.UI
             SpaceRace
         }
 
-        private const float RefreshIntervalSeconds = 5.0f;
         private const float WindowBackgroundOpacity = 0.82f;
         private const int HighlightedCardTitleFontSize = 16;
         private const string LauncherIconTexturePath =
             "Squad/PartList/SimpleIcons/R&D_node_icon_basicprobes";
-        private static SatelliteRaceController _raceController;
         private static RaceWindow _activeInstance;
-        private static Game _controllerGame;
+
+        // This is a non-owning reference to the current Core runtime controller. RaceWindow never
+        // creates or advances the controller; it only reads the state needed for presentation.
+        private SatelliteRaceController _raceController;
+        private Game _visibilityGame;
 
         // Desktop-oriented size keeps all four views readable without creating additional pop-out windows.
         private Rect _windowRect = new Rect(70.0f, 55.0f, 900.0f, 720.0f);
@@ -44,12 +48,11 @@ namespace TheRaceForSpace.UI
         private bool _hasRestoredVisibilityState;
         private bool _isDuplicateInstance;
         private bool _isVisible;
-        private float _nextRefreshTime;
 
         public void Awake()
         {
             // EveryScene also instantiates addons during loading and on the main menu. Do not
-            // create command-center state until KSP has entered an actual saved-game scene.
+            // create command-center UI state until KSP has entered an actual saved-game scene.
             if (!HighLogic.LoadedSceneIsGame || HighLogic.CurrentGame == null)
             {
                 Destroy(this);
@@ -66,14 +69,8 @@ namespace TheRaceForSpace.UI
             }
 
             _activeInstance = this;
-
-            // Keep one controller across scene changes inside a save, but never carry rival
-            // state into a different save loaded during the same KSP process.
-            if (_raceController == null || _controllerGame != HighLogic.CurrentGame)
-            {
-                _raceController = new SatelliteRaceController();
-                _controllerGame = HighLogic.CurrentGame;
-            }
+            _visibilityGame = HighLogic.CurrentGame;
+            _raceController = RaceRuntime.Controller;
         }
 
         public void OnDestroy()
@@ -86,6 +83,7 @@ namespace TheRaceForSpace.UI
             }
 
             _launcherButton = null;
+            _raceController = null;
 
             if (_activeInstance == this)
             {
@@ -103,12 +101,19 @@ namespace TheRaceForSpace.UI
                 return;
             }
 
-            if (_controllerGame != HighLogic.CurrentGame)
+            if (_visibilityGame != HighLogic.CurrentGame)
             {
-                _raceController = new SatelliteRaceController();
-                _controllerGame = HighLogic.CurrentGame;
+                _visibilityGame = HighLogic.CurrentGame;
                 _hasRestoredVisibilityState = false;
                 _isVisible = false;
+            }
+
+            // The Core runtime owns controller creation and progression. A null controller here
+            // simply means this UI instance started before the runtime was ready in the scene.
+            _raceController = RaceRuntime.Controller;
+            if (_raceController == null)
+            {
+                return;
             }
 
             // Wait for the ScenarioModule before creating or synchronizing the launcher button.
@@ -136,12 +141,6 @@ namespace TheRaceForSpace.UI
             if (Input.GetKeyDown(KeyCode.F8))
             {
                 SetCommandCenterVisible(!_isVisible);
-            }
-
-            if (Time.realtimeSinceStartup >= _nextRefreshTime)
-            {
-                _raceController.Refresh();
-                _nextRefreshTime = Time.realtimeSinceStartup + RefreshIntervalSeconds;
             }
         }
 

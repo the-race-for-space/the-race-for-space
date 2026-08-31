@@ -20,10 +20,10 @@ namespace TheRaceForSpace.Tests
         {
             Run("Satellite funding before saturation", SatelliteFundingBeforeSaturation);
             Run("Satellite funding after saturation", SatelliteFundingAfterSaturation);
-            Run("Satellite funding stores structured prerequisite", SatelliteFundingStoresStructuredPrerequisite);
+            Run("Satellite funding stores unlock rule", SatelliteFundingStoresStructuredPrerequisite);
             Run("Achievement payout declines and expires", AchievementPayoutDeclinesAndExpires);
             Run("Achievement restore normalizes lifecycle", AchievementRestoreNormalizesLifecycle);
-            Run("Achievement funding stores structured prerequisite", AchievementFundingStoresStructuredPrerequisite);
+            Run("Achievement funding stores unlock rule", AchievementFundingStoresStructuredPrerequisite);
             Run("Prototype funding catalogue matches 0.4", PrototypeFundingCatalogueTests.CatalogueMatchesCurrentPrototype);
             Run("Prototype funding catalogue creates fresh state", PrototypeFundingCatalogueTests.CatalogueCreatesFreshCampaignState);
             Run("Prototype milestone definitions match v0.3", PrototypeMilestoneDefinitionsMatchV03);
@@ -36,6 +36,7 @@ namespace TheRaceForSpace.Tests
             Run("Tracking snapshots update counts and milestones", SatelliteTrackerTests.NormalizedSnapshotsUpdateCountsAndMilestones);
             Run("Tracking empty snapshots reset body counts", SatelliteTrackerTests.EmptySnapshotsResetTrackedBodyCounts);
             Run("Tracking crewed probe keeps satellite classification", SatelliteTrackerTests.CrewedProbeCountsAsSatelliteButNotProbeMilestone);
+            Run("Tracking flexible unlock uses race state and time", SatelliteTrackerTests.FlexibleUnlockRuleUsesRaceStateAndTime);
             Run("Generic achievement state starts empty", GenericAchievementStateStartsEmpty);
             Run("Generic achievement state records first timestamp", GenericAchievementStateRecordsFirstTimestamp);
             Run("Generic achievement state preserves first timestamp", GenericAchievementStatePreservesFirstTimestamp);
@@ -106,21 +107,21 @@ namespace TheRaceForSpace.Tests
                 100000.0,
                 false,
                 "Display-only unlock text",
-                PrototypeMilestones.MunProbeOrbitId);
+                UnlockRuleDefinition.AnyAgencyAchievement(PrototypeMilestones.MunProbeOrbitId));
 
-            AssertEqual(PrototypeMilestones.MunProbeOrbitId, programme.PrerequisiteMilestoneId);
+            AssertSimpleAnyAgencyRule(programme.UnlockRule, PrototypeMilestones.MunProbeOrbitId);
             AssertEqual("Display-only unlock text", programme.UnlockRequirement);
-            AssertTrue(!programme.IsAvailable, "Structured prerequisites should not change initial availability.");
+            AssertTrue(!programme.IsAvailable, "Structured unlock rules should not change initial availability.");
 
-            var legacyConstructor = new FundingProgramme(
-                "legacy-network",
-                "Legacy Network",
+            var startAvailableProgramme = new FundingProgramme(
+                "start-network",
+                "Start Network",
                 "Kerbin",
                 5,
                 100000.0,
                 false,
                 "Display-only unlock text");
-            AssertEqual(null, legacyConstructor.PrerequisiteMilestoneId);
+            AssertEqual(null, startAvailableProgramme.UnlockRule);
         }
 
         private static void AchievementPayoutDeclinesAndExpires()
@@ -160,18 +161,18 @@ namespace TheRaceForSpace.Tests
                 "Orbit Mun",
                 200000.0,
                 "Display-only unlock text",
-                PrototypeMilestones.ProbeOrbitId);
+                UnlockRuleDefinition.AnyAgencyAchievement(PrototypeMilestones.ProbeOrbitId));
 
-            AssertEqual(PrototypeMilestones.ProbeOrbitId, programme.PrerequisiteMilestoneId);
+            AssertSimpleAnyAgencyRule(programme.UnlockRule, PrototypeMilestones.ProbeOrbitId);
             AssertEqual("Display-only unlock text", programme.UnlockRequirement);
 
-            var legacyConstructor = new AchievementFundingProgramme(
-                "legacy-achievement",
-                "Legacy Achievement",
+            var startAvailableProgramme = new AchievementFundingProgramme(
+                "start-achievement",
+                "Start Achievement",
                 "Objective",
                 100000.0,
                 "Display-only unlock text");
-            AssertEqual(null, legacyConstructor.PrerequisiteMilestoneId);
+            AssertEqual(null, startAvailableProgramme.UnlockRule);
         }
 
         private static void PrototypeMilestoneDefinitionsMatchV03()
@@ -255,10 +256,10 @@ namespace TheRaceForSpace.Tests
 
             AssertTrue(milestone != null, "Known milestone IDs should resolve case-insensitively.");
             AssertEqual(PrototypeMilestones.MunProbeOrbitId, milestone.Id);
-            AssertEqual(PrototypeMilestones.ProbeOrbitId, milestone.PrerequisiteMilestoneId);
+            AssertSimpleAnyAgencyRule(milestone.UnlockRule, PrototypeMilestones.ProbeOrbitId);
             AssertTrue(dunaMilestone != null, "Duna milestone should resolve through the shared catalogue.");
             AssertEqual("Duna", dunaMilestone.CelestialBodyName);
-            AssertEqual(PrototypeMilestones.ProbeOrbitId, dunaMilestone.PrerequisiteMilestoneId);
+            AssertSimpleAnyAgencyRule(dunaMilestone.UnlockRule, PrototypeMilestones.ProbeOrbitId);
             AssertEqual(null, PrototypeMilestones.FindById("not-a-milestone"));
         }
 
@@ -425,7 +426,7 @@ namespace TheRaceForSpace.Tests
                     milestone.ObjectiveDescription,
                     200000.0,
                     "Display text",
-                    milestone.PrerequisiteMilestoneId)
+                    milestone.UnlockRule)
             };
 
             RivalSimulation.Refresh(
@@ -477,12 +478,12 @@ namespace TheRaceForSpace.Tests
                     milestone.ObjectiveDescription,
                     300000.0,
                     "Display text",
-                    milestone.PrerequisiteMilestoneId)
+                    milestone.UnlockRule)
             };
 
             RivalSimulation.Refresh(
                 new List<SpaceProgramState> { player, aster, cobalt },
-                0.0,
+                1.0,
                 achievementProgrammes,
                 new List<FundingProgramme>());
 
@@ -703,17 +704,40 @@ namespace TheRaceForSpace.Tests
             string expectedName,
             string expectedBodyName,
             MilestoneCrewRequirement expectedCrewRequirement,
-            string expectedPrerequisiteId)
+            string expectedUnlockMilestoneId)
         {
             AssertEqual(expectedId, milestone.Id);
             AssertEqual(expectedName, milestone.Name);
             AssertEqual(expectedBodyName, milestone.CelestialBodyName);
             AssertEqual(MilestoneSituation.Orbit, milestone.Situation);
             AssertEqual(expectedCrewRequirement, milestone.CrewRequirement);
-            AssertEqual(expectedPrerequisiteId, milestone.PrerequisiteMilestoneId);
+            AssertSimpleAnyAgencyRule(milestone.UnlockRule, expectedUnlockMilestoneId);
             AssertTrue(
                 !string.IsNullOrEmpty(milestone.ObjectiveDescription),
                 "Milestone objective description should not be empty.");
+        }
+
+        private static void AssertSimpleAnyAgencyRule(
+            UnlockRuleDefinition rule,
+            string expectedMilestoneId)
+        {
+            if (expectedMilestoneId == null)
+            {
+                AssertEqual(null, rule);
+                return;
+            }
+
+            AssertTrue(rule != null, "Expected a milestone unlock rule.");
+            AssertEqual(1, rule.Paths.Count);
+            AssertTrue(rule.Paths[0] != null, "Expected a non-null unlock path.");
+            AssertEqual(1, rule.Paths[0].Conditions.Count);
+
+            UnlockConditionDefinition condition = rule.Paths[0].Conditions[0];
+            AssertTrue(condition != null, "Expected a non-null unlock condition.");
+            AssertEqual(UnlockConditionType.Achievement, condition.ConditionType);
+            AssertEqual(UnlockProgramScope.AnyAgency, condition.ProgramScope);
+            AssertEqual(1, condition.RequiredProgramCount);
+            AssertEqual(expectedMilestoneId, condition.MilestoneId);
         }
 
         private static void AssertTrue(bool condition, string message)

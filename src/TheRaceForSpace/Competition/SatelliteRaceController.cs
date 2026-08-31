@@ -434,7 +434,7 @@ namespace TheRaceForSpace.Competition
             // A new game has no saved Race for Space data, so the constructor defaults remain in use.
             if (!_hasRestoredPersistentState)
             {
-                bool restoredRivals = RacePersistenceScenario.TryRestoreRivalState(AsterProgram, CobaltProgram);
+                bool restoredRivals = RacePersistenceScenario.TryRestoreRivalState(_rivalPrograms);
                 bool restoredRaceProgress = RacePersistenceScenario.TryRestoreRaceProgress(
                     PlayerProgram,
                     _fundingProgrammes,
@@ -507,7 +507,7 @@ namespace TheRaceForSpace.Competition
             StartAchievementContracts();
             EvaluateFundingProgrammes();
 
-            RacePersistenceScenario.CaptureRivalState(AsterProgram, CobaltProgram);
+            RacePersistenceScenario.CaptureRivalState(_rivalPrograms);
             RacePersistenceScenario.CaptureRaceProgress(
                 PlayerProgram,
                 _fundingProgrammes,

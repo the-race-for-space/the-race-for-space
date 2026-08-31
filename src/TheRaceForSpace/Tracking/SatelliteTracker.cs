@@ -13,13 +13,13 @@ namespace TheRaceForSpace.Tracking
     {
         /// <summary>
         /// Refreshes player satellite counts from every observed Probe/Relay body and records
-        /// available milestones from the same normalized orbiting-vessel snapshots.
+        /// milestones whose shared campaign unlock rules are satisfied at the observation time.
         /// Satellite body tracking does not depend on the milestone catalogue.
         /// </summary>
         public static void RefreshPlayerSatelliteCounts(
             SpaceProgramState playerProgram,
+            IList<SpaceProgramState> programs,
             IList<MilestoneDefinition> milestoneDefinitions,
-            ISet<string> availableMilestoneIds,
             IList<VesselTrackingSnapshot> vesselSnapshots,
             double currentUniversalTime)
         {
@@ -72,8 +72,8 @@ namespace TheRaceForSpace.Tracking
             {
                 EvaluateMilestones(
                     playerProgram,
+                    programs,
                     milestoneDefinitions,
-                    availableMilestoneIds,
                     observations,
                     currentUniversalTime);
             }
@@ -90,13 +90,14 @@ namespace TheRaceForSpace.Tracking
 
         private static void EvaluateMilestones(
             SpaceProgramState playerProgram,
+            IList<SpaceProgramState> programs,
             IList<MilestoneDefinition> milestoneDefinitions,
-            ISet<string> availableMilestoneIds,
             IList<MilestoneVesselObservation> observations,
             double currentUniversalTime)
         {
-            // Repeat only when this refresh records a new prerequisite. This makes chained
-            // milestones independent of vessel ordering without introducing a rule engine.
+            // Repeat only when this refresh records a new achievement. The player state in the
+            // shared program collection changes immediately, so a newly satisfied unlock rule can
+            // enable another milestone from the same vessel snapshot without depending on ordering.
             bool recordedAchievement;
             do
             {
@@ -106,17 +107,11 @@ namespace TheRaceForSpace.Tracking
                 {
                     MilestoneDefinition milestone = milestoneDefinitions[milestoneIndex];
                     if (milestone == null
-                        || playerProgram.HasAchievement(milestone.Id))
-                    {
-                        continue;
-                    }
-
-                    bool availableFromRace = availableMilestoneIds != null
-                        && availableMilestoneIds.Contains(milestone.Id);
-                    bool prerequisiteSatisfiedByPlayer = string.IsNullOrEmpty(milestone.PrerequisiteMilestoneId)
-                        || playerProgram.HasAchievement(milestone.PrerequisiteMilestoneId);
-
-                    if (!availableFromRace && !prerequisiteSatisfiedByPlayer)
+                        || playerProgram.HasAchievement(milestone.Id)
+                        || !UnlockRuleEvaluator.IsSatisfied(
+                            milestone.UnlockRule,
+                            programs,
+                            currentUniversalTime))
                     {
                         continue;
                     }

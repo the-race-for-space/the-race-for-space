@@ -100,6 +100,19 @@ ls -l "$KSP_ROOT/GameData/TheRaceForSpace/Plugins/TheRaceForSpace.dll"
 5. Test the feature or change being worked on.
 6. Save and reload when testing persistence-related behaviour.
 
+### 0.4 Core runtime verification
+
+Use these checks after changes to race lifecycle or runtime ownership:
+
+1. Open the Command Center and note the current rival funds, mission progress, and next funding date.
+2. Hide the Command Center with `F8` and continue playing or time-warping for more than one five-second runtime refresh.
+3. Reopen the Command Center and confirm the race state is still current.
+4. Move between normal KSP game scenes, for example Space Center and Flight or Tracking Station, and confirm rival funds/progress do not reset to new-game values.
+5. When practical, cross one shared 90-day funding boundary and confirm it is processed once and the next funding date advances normally.
+6. Save, return to the menu, reload the save, and confirm the persisted race state is restored.
+
+These checks verify that `Core/RaceRuntime` owns progression while `UI/RaceWindow` only displays the current controller state.
+
 ---
 
 # Part 2 - Set Up From Scratch

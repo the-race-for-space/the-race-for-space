@@ -78,7 +78,8 @@ namespace TheRaceForSpace.Funding
             double baseRewardFunds)
         {
             MilestoneDefinition milestone = FindRequiredMilestone(milestoneId);
-            if (string.IsNullOrEmpty(milestone.PrerequisiteMilestoneId))
+            string prerequisiteMilestoneId = milestone.PrerequisiteMilestoneId;
+            if (string.IsNullOrEmpty(prerequisiteMilestoneId))
             {
                 programmes.Add(new AchievementFundingProgramme(
                     milestone.Id,
@@ -88,14 +89,14 @@ namespace TheRaceForSpace.Funding
                 return;
             }
 
-            MilestoneDefinition prerequisite = FindRequiredMilestone(milestone.PrerequisiteMilestoneId);
+            MilestoneDefinition prerequisite = FindRequiredMilestone(prerequisiteMilestoneId);
             programmes.Add(new AchievementFundingProgramme(
                 milestone.Id,
                 milestone.Name,
                 milestone.ObjectiveDescription,
                 baseRewardFunds,
                 "Any agency must achieve " + prerequisite.Name + ".",
-                milestone.PrerequisiteMilestoneId));
+                milestone.UnlockRule));
         }
 
         private static FundingProgramme CreateSatelliteProgramme(
@@ -115,7 +116,7 @@ namespace TheRaceForSpace.Funding
                 rewardFunds,
                 false,
                 "Any agency must achieve " + prerequisite.Name + ".",
-                prerequisiteMilestoneId);
+                UnlockRuleDefinition.AnyAgencyAchievement(prerequisiteMilestoneId));
         }
 
         private static MilestoneDefinition FindRequiredMilestone(string milestoneId)

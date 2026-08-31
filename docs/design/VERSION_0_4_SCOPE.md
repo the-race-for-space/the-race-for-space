@@ -124,6 +124,21 @@ Controller-level regression coverage and continuous integration have now been ad
 
 This gives the current controller orchestration an automated regression boundary while keeping KSP-specific runtime validation separate.
 
+### Funding and Command Center performance cleanup
+
+The two low-priority prototype performance items have now been completed together without changing save data or gameplay rules.
+
+- `SatelliteRaceController` owns fixed-size per-program/per-programme payout arrays for the controller lifetime.
+- `EvaluateFundingProgrammes()` rebuilds satellite and achievement projected payouts once per controlled refresh and uses those same values to assemble each program's `NextPayoutFunds`.
+- `GetSatelliteCurrentPayout()` and `GetAchievementCurrentPayout()` serve the completed refresh snapshot to repeated UI queries instead of recalculating cross-agency shares on every IMGUI event.
+- Historical crossed-funding replay deliberately bypasses the projection cache and calculates directly from the state at each funding boundary, preserving payment ordering and amounts.
+- The controller regression suite verifies that projected payout values are rebuilt when a later vessel snapshot changes the player satellite state.
+- `RaceWindow` reuses funding-card payout/name buffers, a `StringBuilder` for agency summaries, the `GUILayout.Window` callback delegate, and common `GUILayoutOption[]` arrays.
+- Scratch payout/name arrays are only reallocated when the number of programs changes, rather than once per funding card per IMGUI event.
+- Dynamic label strings still exist where their displayed values actually change; this cleanup targets the obvious recurring collection, delegate, and layout-option allocations without complicating the UI code.
+
+No persistence field, save node, unlock condition, reward amount, funding cadence, rival rule, tracking rule, or Command Center layout was changed by this performance pass.
+
 ## Compatibility
 
 Player race progress, funding-programme state, achievement-contract state, and Command Center visibility keep their existing persistence paths.
@@ -134,4 +149,4 @@ Within rival state, current 0.4 `programId`, `nextMissionTargetId`, achievement 
 
 ## Next Decisions
 
-The major 0.4 expansion blockers identified in the initial review are now separated from the controller, tracking, runtime, rival persistence, and prototype compatibility paths, with automated domain/controller regression coverage running in GitHub Actions. Remaining cleanup candidates are the later performance items: caching repeated funding calculations and reducing `OnGUI` allocations. Flexible multi-condition unlock rules remain a separate future gameplay/design decision.
+Items 1 through 13 of the original 0.4 cleanup roadmap are now complete. The remaining numbered roadmap item is the larger future gameplay/design decision: flexible multi-condition unlock rules.

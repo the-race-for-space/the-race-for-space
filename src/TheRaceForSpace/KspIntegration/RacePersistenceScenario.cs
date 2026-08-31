@@ -15,13 +15,11 @@ namespace TheRaceForSpace.KspIntegration
         new[] { GameScenes.SPACECENTER, GameScenes.TRACKSTATION, GameScenes.FLIGHT, GameScenes.EDITOR })]
     public sealed class RacePersistenceScenario : ScenarioModule
     {
-        private const string AsterNodeName = "ASTER";
-        private const string CobaltNodeName = "COBALT";
+        private const string RivalProgramsNodeName = "RIVALS";
         private const string RaceProgressNodeName = "RACE_PROGRESS";
         private const string CommandCenterVisibleValueName = "commandCenterVisible";
 
-        private static readonly RivalProgramSaveState AsterState = new RivalProgramSaveState();
-        private static readonly RivalProgramSaveState CobaltState = new RivalProgramSaveState();
+        private static readonly RivalProgramsSaveState RivalProgramsState = new RivalProgramsSaveState();
         private static readonly RaceProgressSaveState RaceProgressState = new RaceProgressSaveState();
         private static Game _loadedGame;
         private static bool _commandCenterVisible;
@@ -33,8 +31,7 @@ namespace TheRaceForSpace.KspIntegration
             // newer in-memory state in that case; only deserialize when a different Game is loaded.
             if (_loadedGame != HighLogic.CurrentGame)
             {
-                AsterState.Load(node == null ? null : node.GetNode(AsterNodeName));
-                CobaltState.Load(node == null ? null : node.GetNode(CobaltNodeName));
+                RivalProgramsState.Load(node == null ? null : node.GetNode(RivalProgramsNodeName));
                 RaceProgressState.Load(node == null ? null : node.GetNode(RaceProgressNodeName));
 
                 bool parsedCommandCenterVisible;
@@ -59,14 +56,9 @@ namespace TheRaceForSpace.KspIntegration
 
             node.AddValue(CommandCenterVisibleValueName, _commandCenterVisible);
 
-            if (AsterState.HasData)
+            if (RivalProgramsState.HasData)
             {
-                AsterState.Save(node.AddNode(AsterNodeName));
-            }
-
-            if (CobaltState.HasData)
-            {
-                CobaltState.Save(node.AddNode(CobaltNodeName));
+                RivalProgramsState.Save(node.AddNode(RivalProgramsNodeName));
             }
 
             if (RaceProgressState.HasData)
@@ -98,22 +90,21 @@ namespace TheRaceForSpace.KspIntegration
         }
 
         /// <summary>
-        /// Restores saved rival state once KSP has finished loading the current save.
-        /// A new game has no rival nodes, so the controller's constructor defaults remain in use.
+        /// Restores each saved rival by stable program ID once KSP has finished loading the current save.
+        /// Rivals with no matching saved state keep their constructor defaults, allowing newly added
+        /// rivals to enter an existing save created with this collection format.
         /// </summary>
-        public static bool TryRestoreRivalState(SpaceProgramState asterProgram, SpaceProgramState cobaltProgram)
+        public static bool TryRestoreRivalState(IList<SpaceProgramState> rivalPrograms)
         {
             if (!_stateReady
                 || _loadedGame == null
                 || _loadedGame != HighLogic.CurrentGame
-                || asterProgram == null
-                || cobaltProgram == null)
+                || rivalPrograms == null)
             {
                 return false;
             }
 
-            AsterState.ApplyTo(asterProgram);
-            CobaltState.ApplyTo(cobaltProgram);
+            RivalProgramsState.ApplyTo(rivalPrograms);
             return true;
         }
 
@@ -138,19 +129,17 @@ namespace TheRaceForSpace.KspIntegration
             return true;
         }
 
-        public static void CaptureRivalState(SpaceProgramState asterProgram, SpaceProgramState cobaltProgram)
+        public static void CaptureRivalState(IList<SpaceProgramState> rivalPrograms)
         {
             if (!_stateReady
                 || _loadedGame == null
                 || _loadedGame != HighLogic.CurrentGame
-                || asterProgram == null
-                || cobaltProgram == null)
+                || rivalPrograms == null)
             {
                 return;
             }
 
-            AsterState.Capture(asterProgram);
-            CobaltState.Capture(cobaltProgram);
+            RivalProgramsState.Capture(rivalPrograms);
         }
 
         /// <summary>

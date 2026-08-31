@@ -17,14 +17,10 @@ For repeated prototype testing, use `tools/test-prototype.sh` instead of manuall
 From anywhere inside the repository, run:
 
 ```bash
-bash tools/test-prototype.sh prototype/interface-v0.2
+bash tools/test-prototype.sh Alpha/Cleanup-0.4
 ```
 
-Replace the branch name with whichever prototype version you want to test. For example, when a later branch exists:
-
-```bash
-bash tools/test-prototype.sh prototype/interface-v0.3
-```
+Replace the branch name with whichever prototype version you want to test.
 
 The helper:
 
@@ -171,6 +167,6 @@ After deploying the DLL:
 2. Load a disposable test save.
 3. Confirm the prototype window appears.
 4. Press F8 to hide/show it.
-5. Follow the design document for the prototype branch being tested.
+5. Follow `docs/design/VERSION_0_4_SCOPE.md` for the current alpha baseline.
 
 Automated unit-test project setup is intentionally separate from this build/deploy helper. The existing `tests/TheRaceForSpace.Tests/` structure remains reserved for logic that can be tested without a live KSP installation.

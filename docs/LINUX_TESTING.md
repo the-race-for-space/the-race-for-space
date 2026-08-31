@@ -2,6 +2,22 @@
 
 This guide is for testing and deploying **The Race for Space** from Konsole on the Linux / Steam Deck development machine.
 
+## Normal command sequence
+
+For most test sessions, these are the commands you need:
+
+```bash
+cd /home/deck/Projects/the-race-for-space/
+export KSP_ROOT="/home/deck/.local/share/Steam/steamapps/common/Kerbal Space Program"
+
+git fetch origin
+git switch Alpha/Cleanup-0.4
+git pull --ff-only
+
+bash tools/run-logic-tests.sh
+bash tools/test-prototype.sh Alpha/Cleanup-0.4
+```
+
 Local paths used by this project:
 
 ```text
@@ -83,22 +99,6 @@ ls -l "$KSP_ROOT/GameData/TheRaceForSpace/Plugins/TheRaceForSpace.dll"
 4. Press `F8` and confirm the window hides and reopens.
 5. Test the feature or change being worked on.
 6. Save and reload when testing persistence-related behaviour.
-
-### Normal command sequence
-
-For most test sessions, these are the commands you need:
-
-```bash
-cd /home/deck/Projects/the-race-for-space/
-export KSP_ROOT="/home/deck/.local/share/Steam/steamapps/common/Kerbal Space Program"
-
-git fetch origin
-git switch Alpha/Cleanup-0.4
-git pull --ff-only
-
-bash tools/run-logic-tests.sh
-bash tools/test-prototype.sh Alpha/Cleanup-0.4
-```
 
 ---
 

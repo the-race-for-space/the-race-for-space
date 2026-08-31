@@ -94,7 +94,7 @@ namespace TheRaceForSpace.KspIntegration
         /// Rivals with no matching saved state keep their constructor defaults, allowing newly added
         /// rivals to enter an existing save created with this collection format.
         /// </summary>
-        public static bool TryRestoreRivalState(params SpaceProgramState[] rivalPrograms)
+        public static bool TryRestoreRivalState(IList<SpaceProgramState> rivalPrograms)
         {
             if (!_stateReady
                 || _loadedGame == null
@@ -129,7 +129,7 @@ namespace TheRaceForSpace.KspIntegration
             return true;
         }
 
-        public static void CaptureRivalState(params SpaceProgramState[] rivalPrograms)
+        public static void CaptureRivalState(IList<SpaceProgramState> rivalPrograms)
         {
             if (!_stateReady
                 || _loadedGame == null

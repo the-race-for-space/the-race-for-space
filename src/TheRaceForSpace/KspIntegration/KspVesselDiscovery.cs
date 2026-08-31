@@ -28,6 +28,10 @@ namespace TheRaceForSpace.KspIntegration
                 return false;
             }
 
+            // Capture the observation time before walking vessel state, matching the previous
+            // tracker behaviour so all milestones found in one refresh share one stable timestamp.
+            currentUniversalTime = Planetarium.GetUniversalTime();
+
             var snapshots = new List<VesselTrackingSnapshot>();
             List<ProtoVessel> protoVessels = HighLogic.CurrentGame.flightState.protoVessels;
 
@@ -97,7 +101,6 @@ namespace TheRaceForSpace.KspIntegration
             }
 
             vesselSnapshots = snapshots;
-            currentUniversalTime = Planetarium.GetUniversalTime();
             return true;
         }
 

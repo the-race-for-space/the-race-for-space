@@ -71,6 +71,8 @@ A successful run should finish with:
 All prototype logic tests passed.
 ```
 
+The logic suite includes KSP-independent vessel snapshot tracking tests. Live KSP vessel discovery still requires the in-game checks below.
+
 Do not deploy a build if the automated tests fail.
 
 ## 4. Build and deploy to KSP
@@ -112,6 +114,19 @@ Use these checks after changes to race lifecycle or runtime ownership:
 6. Save, return to the menu, reload the save, and confirm the persisted race state is restored.
 
 These checks verify that `Core/RaceRuntime` owns progression while `UI/RaceWindow` only displays the current controller state.
+
+### 0.4 vessel discovery verification
+
+Use these checks after changes to vessel discovery or satellite tracking:
+
+1. Put a Probe or Relay vessel into Kerbin orbit and, while it is the loaded active vessel, confirm the Kerbin satellite count updates within the normal five-second refresh.
+2. Reach orbit without saving or changing scenes first. Confirm the active vessel is recognised immediately; this verifies the live `Vessel` path rather than a stale `ProtoVessel` snapshot.
+3. Return to the Space Center or Tracking Station so the vessel becomes unloaded, then confirm the same satellite is still counted. This verifies the persistent `ProtoVessel` path.
+4. Repeat with a Relay vessel and confirm it counts as a satellite in the same way as a Probe vessel.
+5. Put a crewed vessel into Kerbin orbit and confirm Crewed Orbit is recognised. If the craft is a crewed Probe, it should still count toward the satellite network but should not qualify as the uncrewed Probe Orbit achievement by itself.
+6. If testing Mun, Minmus, or Duna, confirm an unloaded orbiting Probe or Relay remains counted after scene changes and save/reload.
+
+These checks verify the boundary between `KspIntegration/KspVesselDiscovery` and `Tracking/SatelliteTracker` while preserving loaded and unloaded vessel behaviour.
 
 ---
 

@@ -44,8 +44,8 @@ namespace TheRaceForSpace.Simulation
 
         /// <summary>
         /// Advances every non-player program in the supplied collection. Target availability
-        /// checks use the same live programme collections, so adding another rival or target
-        /// does not require another simulation overload or fixed prototype parameter list.
+        /// checks use the shared campaign unlock evaluator and the supplied historical time, so
+        /// adding another rival or target does not require another simulation-specific rule path.
         /// </summary>
         public static void Refresh(
             IList<SpaceProgramState> programs,
@@ -366,16 +366,20 @@ namespace TheRaceForSpace.Simulation
                     return false;
                 }
 
-                return string.IsNullOrEmpty(achievementProgramme.PrerequisiteMilestoneId)
-                    || HasAnyProgramAchieved(achievementProgramme.PrerequisiteMilestoneId, context);
+                return UnlockRuleEvaluator.IsSatisfied(
+                    achievementProgramme.UnlockRule,
+                    context.Programs,
+                    context.CurrentUniversalTime);
             }
 
             FundingProgramme fundingProgramme = FindFundingProgramme(targetId, context.FundingProgrammes);
             if (fundingProgramme != null)
             {
                 return fundingProgramme.IsAvailable
-                    || string.IsNullOrEmpty(fundingProgramme.PrerequisiteMilestoneId)
-                    || HasAnyProgramAchieved(fundingProgramme.PrerequisiteMilestoneId, context);
+                    || UnlockRuleEvaluator.IsSatisfied(
+                        fundingProgramme.UnlockRule,
+                        context.Programs,
+                        context.CurrentUniversalTime);
             }
 
             return false;
@@ -478,27 +482,6 @@ namespace TheRaceForSpace.Simulation
             }
 
             return LaunchProgressCostFunds;
-        }
-
-        private static bool HasAnyProgramAchieved(
-            string milestoneId,
-            RivalSimulationContext context)
-        {
-            if (string.IsNullOrEmpty(milestoneId) || context.Programs == null)
-            {
-                return false;
-            }
-
-            for (int programIndex = 0; programIndex < context.Programs.Count; programIndex++)
-            {
-                SpaceProgramState program = context.Programs[programIndex];
-                if (program != null && program.HasAchievement(milestoneId))
-                {
-                    return true;
-                }
-            }
-
-            return false;
         }
 
         private static void SetMissionTarget(

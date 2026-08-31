@@ -60,9 +60,7 @@ namespace TheRaceForSpace.Tests.Simulation
             };
 
             RivalSimulation.Refresh(
-                player,
-                aster,
-                cobalt,
+                new List<SpaceProgramState> { player, aster, cobalt },
                 0.0,
                 achievementProgrammes,
                 new List<FundingProgramme>());
@@ -91,9 +89,7 @@ namespace TheRaceForSpace.Tests.Simulation
             };
 
             RivalSimulation.Refresh(
-                player,
-                aster,
-                cobalt,
+                new List<SpaceProgramState> { player, aster, cobalt },
                 0.0,
                 new List<AchievementFundingProgramme>(),
                 fundingProgrammes);
@@ -144,7 +140,7 @@ namespace TheRaceForSpace.Tests.Simulation
                 NextMissionTargetId = "duna-network",
                 NextLaunchBodyName = "Stored presentation text"
             };
-            var legacyTarget = new SpaceProgramState("Legacy", false)
+            var presentationOnlyTarget = new SpaceProgramState("PresentationOnly", false)
             {
                 NextLaunchBodyName = "Duna Orbital Network"
             };
@@ -166,17 +162,17 @@ namespace TheRaceForSpace.Tests.Simulation
                 aster,
                 achievementProgrammes,
                 fundingProgrammes);
-            double legacyCost = RivalSimulation.CalculateLaunchProgressCost(
-                legacyTarget,
+            double presentationOnlyCost = RivalSimulation.CalculateLaunchProgressCost(
+                presentationOnlyTarget,
                 achievementProgrammes,
                 fundingProgrammes);
 
             TestAssert.Equal(40000.0, cost);
-            TestAssert.Equal(40000.0, legacyCost);
+            TestAssert.Equal(20000.0, presentationOnlyCost);
             TestAssert.Equal("duna-network", aster.NextMissionTargetId);
             TestAssert.Equal("Stored presentation text", aster.NextLaunchBodyName);
-            TestAssert.Equal(null, legacyTarget.NextMissionTargetId);
-            TestAssert.Equal("Duna Orbital Network", legacyTarget.NextLaunchBodyName);
+            TestAssert.Equal(null, presentationOnlyTarget.NextMissionTargetId);
+            TestAssert.Equal("Duna Orbital Network", presentationOnlyTarget.NextLaunchBodyName);
         }
 
         public static void AchievementCompletionUsesMilestoneDefinition()
@@ -205,9 +201,7 @@ namespace TheRaceForSpace.Tests.Simulation
             };
 
             RivalSimulation.Refresh(
-                player,
-                aster,
-                cobalt,
+                new List<SpaceProgramState> { player, aster, cobalt },
                 completionUniversalTime,
                 achievementProgrammes,
                 new List<FundingProgramme>());

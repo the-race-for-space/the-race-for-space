@@ -23,7 +23,7 @@ The 0.4 alpha baseline currently contains:
 The initial 0.4 cleanup pass was intentionally narrow:
 
 1. Align version numbers and documentation with the code that actually exists.
-2. Keep rival cost and ETA queries free of hidden mission-state mutation; legacy target migration remains part of simulation refresh/load behaviour.
+2. Keep rival cost and ETA queries free of hidden mission-state mutation.
 3. Add small defensive checks where invalid state can otherwise cause avoidable failures.
 
 The initial cleanup did not introduce a general configuration/rule framework.
@@ -90,20 +90,34 @@ The code-defined funding target bootstrap has now been moved out of `Competition
 - `Funding/PrototypeFundingCatalogue` now owns achievement reward amounts and the satellite-network definitions for the current prototype.
 - Achievement funding programmes are created from the milestone catalogue, so names, objective text, and prerequisite IDs are not repeated in the controller.
 - `SatelliteRaceController` consumes the two programme collections and no longer constructs Kerbin, Mun, Minmus, or Duna funding targets individually.
-- The original named controller programme properties remain as compatibility aliases resolved from the collections by stable ID. New targets do not require another named property.
 - The standalone logic suite verifies the current eight achievement programmes, four satellite programmes, rewards, prerequisites, and fresh campaign-state creation.
 - No funding calculation, unlock rule, rival rule, tracking rule, or save format changed as part of this move.
 
 This makes target expansion a catalogue change instead of a controller-constructor change while deliberately stopping short of a configuration framework or general rule engine.
 
+### Collection-first compatibility API cleanup
+
+The remaining 0.3 rival-simulation compatibility surface has now been removed with explicit approval for public API and legacy-save cleanup.
+
+- `RivalSimulation` now exposes one collection-driven progression path instead of the old three-program and boolean-state overloads.
+- Display-name lookup, launch-progress cost, and ETA calculations use the current collection-aware APIs rather than fixed Kerbin/Mun/Minmus compatibility overloads.
+- `SpaceProgramState.NextMissionTargetId` is the authoritative rival mission identity. `NextLaunchBodyName` remains a presentation mirror and is never translated back into gameplay identity.
+- The fixed public rival target-name and three-network compatibility constants have been removed from `RivalSimulation`.
+- `SatelliteRaceController` no longer exposes named achievement/network programme properties; callers use `AchievementFundingProgrammes` and `FundingProgrammes`.
+- `RivalProgramSaveState` stores and restores the current stable `nextMissionTargetId` directly and no longer imports old display-name mission fields, fixed rival achievement flags, or fixed Kerbin/Mun/Minmus satellite fields.
+- Current collection-driven `RIVALS` save nodes and their stable fields remain the active 0.4 format; this cleanup does not change that current schema.
+- Regression tests now exercise the collection APIs directly and verify that presentation text alone cannot define a rival mission target.
+
+This removes duplicate prototype-era entry points before more rivals and targets are added, so new gameplay has one supported identity and collection model.
+
 ## Compatibility
 
 Player race progress, funding-programme state, achievement-contract state, and Command Center visibility keep their existing persistence paths.
 
-Rival state now uses the new `RIVALS` collection format. Saves written before this Item 7 change will not restore the old fixed Aster/Cobalt rival state; those rivals will start from their constructor defaults when such a save is loaded. This compatibility break was explicitly accepted for the 0.4 structural work.
+Rival state uses the `RIVALS` collection format introduced during Item 7. Saves written before that collection change do not restore the old fixed Aster/Cobalt rival state.
 
-The named current-prototype programme properties on `SatelliteRaceController` remain available for compatibility even though normal gameplay now uses the programme collections.
+Within rival state, current 0.4 `programId`, `nextMissionTargetId`, achievement collection, and satellite collection fields remain supported. Older rival migration fields and the old public rival-simulation compatibility APIs are no longer supported; this additional compatibility cleanup was explicitly accepted for Item 9.
 
 ## Next Decisions
 
-The major 0.4 expansion blockers identified in the initial review are now separated from the controller, tracking, runtime, and rival persistence paths. Remaining cleanup candidates include compatibility API cleanup, controller-level regression tests, GitHub Actions CI, and later performance work. Flexible multi-condition unlock rules remain a separate future gameplay/design decision.
+The major 0.4 expansion blockers identified in the initial review are now separated from the controller, tracking, runtime, rival persistence, and prototype compatibility paths. Remaining cleanup candidates include controller-level regression tests, GitHub Actions CI, and later performance work. Flexible multi-condition unlock rules remain a separate future gameplay/design decision.

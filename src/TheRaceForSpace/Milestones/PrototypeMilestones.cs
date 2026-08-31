@@ -43,7 +43,7 @@ namespace TheRaceForSpace.Milestones
                     MilestoneSituation.Orbit,
                     MilestoneCrewRequirement.UncrewedProbe,
                     "Achieve orbit around Mun with an uncrewed Probe or Relay vessel.",
-                    ProbeOrbitId),
+                    UnlockRuleDefinition.AnyAgencyAchievement(ProbeOrbitId)),
                 new MilestoneDefinition(
                     MinmusProbeOrbitId,
                     "Minmus Probe Orbit",
@@ -51,7 +51,7 @@ namespace TheRaceForSpace.Milestones
                     MilestoneSituation.Orbit,
                     MilestoneCrewRequirement.UncrewedProbe,
                     "Achieve orbit around Minmus with an uncrewed Probe or Relay vessel.",
-                    ProbeOrbitId),
+                    UnlockRuleDefinition.AnyAgencyAchievement(ProbeOrbitId)),
                 new MilestoneDefinition(
                     DunaProbeOrbitId,
                     "Duna Probe Orbit",
@@ -59,7 +59,7 @@ namespace TheRaceForSpace.Milestones
                     MilestoneSituation.Orbit,
                     MilestoneCrewRequirement.UncrewedProbe,
                     "Achieve orbit around Duna with an uncrewed Probe or Relay vessel.",
-                    ProbeOrbitId),
+                    UnlockRuleDefinition.AnyAgencyAchievement(ProbeOrbitId)),
                 new MilestoneDefinition(
                     MunCrewedOrbitId,
                     "Mun Crewed Orbit",
@@ -67,7 +67,7 @@ namespace TheRaceForSpace.Milestones
                     MilestoneSituation.Orbit,
                     MilestoneCrewRequirement.Crewed,
                     "Achieve orbit around Mun with at least one live Kerbal aboard.",
-                    CrewedOrbitId),
+                    UnlockRuleDefinition.AnyAgencyAchievement(CrewedOrbitId)),
                 new MilestoneDefinition(
                     MinmusCrewedOrbitId,
                     "Minmus Crewed Orbit",
@@ -75,7 +75,7 @@ namespace TheRaceForSpace.Milestones
                     MilestoneSituation.Orbit,
                     MilestoneCrewRequirement.Crewed,
                     "Achieve orbit around Minmus with at least one live Kerbal aboard.",
-                    CrewedOrbitId),
+                    UnlockRuleDefinition.AnyAgencyAchievement(CrewedOrbitId)),
                 new MilestoneDefinition(
                     DunaCrewedOrbitId,
                     "Duna Crewed Orbit",
@@ -83,7 +83,7 @@ namespace TheRaceForSpace.Milestones
                     MilestoneSituation.Orbit,
                     MilestoneCrewRequirement.Crewed,
                     "Achieve orbit around Duna with at least one live Kerbal aboard.",
-                    CrewedOrbitId)
+                    UnlockRuleDefinition.AnyAgencyAchievement(CrewedOrbitId))
             }.AsReadOnly();
 
         public static IList<MilestoneDefinition> All

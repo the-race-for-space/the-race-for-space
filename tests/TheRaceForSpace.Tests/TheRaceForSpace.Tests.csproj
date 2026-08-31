@@ -13,10 +13,11 @@
   <!--
     The prototype assembly depends on KSP and Unity, so these tests compile only
     the domain source files that are intentionally independent of those APIs.
-    This keeps the regression suite runnable without a KSP installation or a
-    third-party test framework.
+    The real race controller is also compiled against test-only stand-ins for its
+    existing KSP integration boundaries so controller ordering can be exercised in CI.
   -->
   <ItemGroup>
+    <Compile Include="../../src/TheRaceForSpace/Competition/SatelliteRaceController.cs" Link="Production/Competition/SatelliteRaceController.cs" />
     <Compile Include="../../src/TheRaceForSpace/Funding/FundingProgramme.cs" Link="Production/Funding/FundingProgramme.cs" />
     <Compile Include="../../src/TheRaceForSpace/Funding/AchievementFundingProgramme.cs" Link="Production/Funding/AchievementFundingProgramme.cs" />
     <Compile Include="../../src/TheRaceForSpace/Funding/PrototypeFundingCatalogue.cs" Link="Production/Funding/PrototypeFundingCatalogue.cs" />

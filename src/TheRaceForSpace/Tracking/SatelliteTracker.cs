@@ -1,83 +1,19 @@
 using System;
 using System.Collections.Generic;
-using TheRaceForSpace.KspIntegration;
 using TheRaceForSpace.Milestones;
 using TheRaceForSpace.Programs;
 
 namespace TheRaceForSpace.Tracking
 {
     /// <summary>
-    /// Applies project-owned vessel snapshots to player satellite counts and milestone state.
-    /// Raw KSP Vessel and ProtoVessel discovery is owned by the KSP integration layer.
+    /// Applies KSP-independent vessel snapshots to player satellite counts and milestone state.
+    /// Raw KSP vessel discovery is owned by the KSP integration layer.
     /// </summary>
     public static class SatelliteTracker
     {
         /// <summary>
-        /// Compatibility overload for callers that still expose the two 0.3 lunar unlock groups.
-        /// New tracking code should pass milestone definitions and available milestone IDs directly.
-        /// </summary>
-        public static void RefreshPlayerSatelliteCounts(
-            SpaceProgramState playerProgram,
-            bool lunarProbeAchievementsAvailable,
-            bool lunarCrewedAchievementsAvailable)
-        {
-            var availableMilestoneIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-            {
-                PrototypeMilestones.ProbeOrbitId,
-                PrototypeMilestones.CrewedOrbitId
-            };
-
-            if (lunarProbeAchievementsAvailable)
-            {
-                availableMilestoneIds.Add(PrototypeMilestones.MunProbeOrbitId);
-                availableMilestoneIds.Add(PrototypeMilestones.MinmusProbeOrbitId);
-            }
-
-            if (lunarCrewedAchievementsAvailable)
-            {
-                availableMilestoneIds.Add(PrototypeMilestones.MunCrewedOrbitId);
-                availableMilestoneIds.Add(PrototypeMilestones.MinmusCrewedOrbitId);
-            }
-
-            RefreshPlayerSatelliteCounts(
-                playerProgram,
-                PrototypeMilestones.All,
-                availableMilestoneIds);
-        }
-
-        /// <summary>
-        /// Captures the current KSP vessel state through the integration boundary, then applies
-        /// the normalized snapshots to the supplied player state and milestone definitions.
-        /// </summary>
-        public static void RefreshPlayerSatelliteCounts(
-            SpaceProgramState playerProgram,
-            IList<MilestoneDefinition> milestoneDefinitions,
-            ISet<string> availableMilestoneIds)
-        {
-            if (playerProgram == null || milestoneDefinitions == null)
-            {
-                return;
-            }
-
-            IList<VesselTrackingSnapshot> vesselSnapshots;
-            double currentUniversalTime;
-            if (!KspVesselDiscovery.TryCaptureOrbitingVessels(
-                out vesselSnapshots,
-                out currentUniversalTime))
-            {
-                return;
-            }
-
-            RefreshPlayerSatelliteCounts(
-                playerProgram,
-                milestoneDefinitions,
-                availableMilestoneIds,
-                vesselSnapshots,
-                currentUniversalTime);
-        }
-
-        /// <summary>
-        /// Applies normalized orbiting-vessel snapshots without accessing KSP Vessel or ProtoVessel objects.
+        /// Refreshes player satellite counts and records available milestones from normalized
+        /// orbiting-vessel snapshots supplied by the KSP integration boundary.
         /// </summary>
         public static void RefreshPlayerSatelliteCounts(
             SpaceProgramState playerProgram,

@@ -11,11 +11,7 @@ namespace TheRaceForSpace.Tests.Tracking
         public static void NormalizedSnapshotsUpdateCountsAndMilestones()
         {
             var playerProgram = new SpaceProgramState("player", "Player", true);
-            var availableMilestoneIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-            {
-                PrototypeMilestones.ProbeOrbitId,
-                PrototypeMilestones.CrewedOrbitId
-            };
+            var programs = new List<SpaceProgramState> { playerProgram };
             var vesselSnapshots = new List<VesselTrackingSnapshot>
             {
                 new VesselTrackingSnapshot("Kerbin", TrackedVesselType.Probe, 0),
@@ -26,8 +22,8 @@ namespace TheRaceForSpace.Tests.Tracking
 
             SatelliteTracker.RefreshPlayerSatelliteCounts(
                 playerProgram,
+                programs,
                 PrototypeMilestones.All,
-                availableMilestoneIds,
                 vesselSnapshots,
                 1234.0);
 
@@ -36,7 +32,7 @@ namespace TheRaceForSpace.Tests.Tracking
             RequireEqual(1, playerProgram.GetSatelliteCount("Eve"), "A body outside the milestone catalogue should still receive a satellite count.");
             Require(playerProgram.HasAchievement(PrototypeMilestones.ProbeOrbitId), "Uncrewed probe should satisfy Probe Orbit.");
             Require(playerProgram.HasAchievement(PrototypeMilestones.CrewedOrbitId), "Crewed vessel should satisfy Crewed Orbit.");
-            Require(playerProgram.HasAchievement(PrototypeMilestones.MunProbeOrbitId), "Mun relay should satisfy Mun Probe Orbit after its prerequisite is recorded.");
+            Require(playerProgram.HasAchievement(PrototypeMilestones.MunProbeOrbitId), "Mun relay should satisfy Mun Probe Orbit after its unlock rule becomes satisfied.");
             RequireEqual(
                 1234.0,
                 playerProgram.GetAchievementUniversalTime(PrototypeMilestones.MunProbeOrbitId),
@@ -65,11 +61,7 @@ namespace TheRaceForSpace.Tests.Tracking
         public static void CrewedProbeCountsAsSatelliteButNotProbeMilestone()
         {
             var playerProgram = new SpaceProgramState("player", "Player", true);
-            var availableMilestoneIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-            {
-                PrototypeMilestones.ProbeOrbitId,
-                PrototypeMilestones.CrewedOrbitId
-            };
+            var programs = new List<SpaceProgramState> { playerProgram };
             var vesselSnapshots = new List<VesselTrackingSnapshot>
             {
                 new VesselTrackingSnapshot("Kerbin", TrackedVesselType.Probe, 1)
@@ -77,14 +69,62 @@ namespace TheRaceForSpace.Tests.Tracking
 
             SatelliteTracker.RefreshPlayerSatelliteCounts(
                 playerProgram,
+                programs,
                 PrototypeMilestones.All,
-                availableMilestoneIds,
                 vesselSnapshots,
                 3000.0);
 
             RequireEqual(1, playerProgram.GetSatelliteCount("Kerbin"), "A crewed probe remains a qualifying satellite for network counts.");
             Require(!playerProgram.HasAchievement(PrototypeMilestones.ProbeOrbitId), "A crewed probe should not satisfy the uncrewed Probe Orbit milestone.");
             Require(playerProgram.HasAchievement(PrototypeMilestones.CrewedOrbitId), "A crewed probe should satisfy the Crewed Orbit milestone.");
+        }
+
+        public static void FlexibleUnlockRuleUsesRaceStateAndTime()
+        {
+            var playerProgram = new SpaceProgramState("player", "Player", true);
+            var rivalProgram = new SpaceProgramState("rival", "Rival", false);
+            rivalProgram.RecordAchievement("rival-breakthrough", 500.0);
+            var programs = new List<SpaceProgramState> { playerProgram, rivalProgram };
+            var milestones = new List<MilestoneDefinition>
+            {
+                new MilestoneDefinition(
+                    "eve-response",
+                    "Eve Response",
+                    "Eve",
+                    MilestoneSituation.Orbit,
+                    MilestoneCrewRequirement.UncrewedProbe,
+                    "Orbit Eve after the rival breakthrough and campaign time gate.",
+                    new UnlockRuleDefinition(
+                        new UnlockPathDefinition(
+                            UnlockConditionDefinition.Achievement(
+                                "rival-breakthrough",
+                                UnlockProgramScope.AnyRival),
+                            UnlockConditionDefinition.AfterUniversalTime(600.0))))
+            };
+            var vesselSnapshots = new List<VesselTrackingSnapshot>
+            {
+                new VesselTrackingSnapshot("Eve", TrackedVesselType.Probe, 0)
+            };
+
+            SatelliteTracker.RefreshPlayerSatelliteCounts(
+                playerProgram,
+                programs,
+                milestones,
+                vesselSnapshots,
+                599.0);
+            Require(
+                !playerProgram.HasAchievement("eve-response"),
+                "The tracker should keep a milestone locked until every condition in its path is satisfied.");
+
+            SatelliteTracker.RefreshPlayerSatelliteCounts(
+                playerProgram,
+                programs,
+                milestones,
+                vesselSnapshots,
+                600.0);
+            Require(
+                playerProgram.HasAchievement("eve-response"),
+                "The tracker should use rival state and exact universal time through the shared evaluator.");
         }
 
         private static void Require(bool condition, string message)

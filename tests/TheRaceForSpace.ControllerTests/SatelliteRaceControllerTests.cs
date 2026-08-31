@@ -85,7 +85,7 @@ namespace TheRaceForSpace.ControllerTests
             // The one existing Kerbin satellite earns 20k of the 200k/10 network pool and
             // the sole Probe Orbit achiever receives the first 100k achievement payment.
             Equal(120000.0, CareerFundingAdapter.TotalAddedFunds);
-            Equal(1, CareerFundingAdapter.AddFundsCalls);
+            Equal(2, CareerFundingAdapter.AddFundsCalls);
             Equal(1, probeOrbit.PaymentsProcessed);
             Equal(90, probeOrbit.CurrentInterestPercent);
             Equal(FundingIntervalSeconds * 2.0, controller.NextFundingUniversalTime);

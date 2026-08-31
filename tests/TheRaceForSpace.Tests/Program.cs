@@ -8,6 +8,7 @@ using TheRaceForSpace.Simulation;
 using TheRaceForSpace.Tests.Milestones;
 using TheRaceForSpace.Tests.Persistence;
 using TheRaceForSpace.Tests.Simulation;
+using TheRaceForSpace.Tests.Tracking;
 
 namespace TheRaceForSpace.Tests
 {
@@ -30,6 +31,9 @@ namespace TheRaceForSpace.Tests
             Run("Milestone crewed observation matches definition", MilestoneEvaluationTests.CrewedObservationMatchesDefinition);
             Run("Milestone rejects wrong body or situation", MilestoneEvaluationTests.WrongBodyOrSituationDoesNotMatch);
             Run("Milestone arbitrary body uses same rule", MilestoneEvaluationTests.ArbitraryBodyDefinitionUsesSameRule);
+            Run("Tracking snapshots update counts and milestones", SatelliteTrackerTests.NormalizedSnapshotsUpdateCountsAndMilestones);
+            Run("Tracking empty snapshots reset body counts", SatelliteTrackerTests.EmptySnapshotsResetTrackedBodyCounts);
+            Run("Tracking crewed probe keeps satellite classification", SatelliteTrackerTests.CrewedProbeCountsAsSatelliteButNotProbeMilestone);
             Run("Generic achievement state starts empty", GenericAchievementStateStartsEmpty);
             Run("Generic achievement state records first timestamp", GenericAchievementStateRecordsFirstTimestamp);
             Run("Generic achievement state preserves first timestamp", GenericAchievementStatePreservesFirstTimestamp);

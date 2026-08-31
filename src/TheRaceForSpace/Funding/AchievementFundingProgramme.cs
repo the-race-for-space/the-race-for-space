@@ -25,7 +25,7 @@ namespace TheRaceForSpace.Funding
                 objectiveDescription,
                 baseRewardFunds,
                 DefaultUnlockRequirement,
-                null)
+                (UnlockRuleDefinition)null)
         {
         }
 
@@ -41,7 +41,30 @@ namespace TheRaceForSpace.Funding
                 objectiveDescription,
                 baseRewardFunds,
                 unlockRequirement,
-                null)
+                (UnlockRuleDefinition)null)
+        {
+        }
+
+        /// <summary>
+        /// Temporary Item 14B constructor bridge for existing test/caller code. The prerequisite
+        /// string is converted immediately and is not stored; Item 14C removes this overload.
+        /// </summary>
+        public AchievementFundingProgramme(
+            string id,
+            string name,
+            string objectiveDescription,
+            double baseRewardFunds,
+            string unlockRequirement,
+            string prerequisiteMilestoneId)
+            : this(
+                id,
+                name,
+                objectiveDescription,
+                baseRewardFunds,
+                unlockRequirement,
+                string.IsNullOrEmpty(prerequisiteMilestoneId)
+                    ? null
+                    : UnlockRuleDefinition.AnyAgencyAchievement(prerequisiteMilestoneId))
         {
         }
 

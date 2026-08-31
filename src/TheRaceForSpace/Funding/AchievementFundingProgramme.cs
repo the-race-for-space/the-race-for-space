@@ -25,7 +25,7 @@ namespace TheRaceForSpace.Funding
                 objectiveDescription,
                 baseRewardFunds,
                 DefaultUnlockRequirement,
-                (UnlockRuleDefinition)null)
+                null)
         {
         }
 
@@ -41,30 +41,7 @@ namespace TheRaceForSpace.Funding
                 objectiveDescription,
                 baseRewardFunds,
                 unlockRequirement,
-                (UnlockRuleDefinition)null)
-        {
-        }
-
-        /// <summary>
-        /// Temporary Item 14B constructor bridge for existing test/caller code. The prerequisite
-        /// string is converted immediately and is not stored; Item 14C removes this overload.
-        /// </summary>
-        public AchievementFundingProgramme(
-            string id,
-            string name,
-            string objectiveDescription,
-            double baseRewardFunds,
-            string unlockRequirement,
-            string prerequisiteMilestoneId)
-            : this(
-                id,
-                name,
-                objectiveDescription,
-                baseRewardFunds,
-                unlockRequirement,
-                string.IsNullOrEmpty(prerequisiteMilestoneId)
-                    ? null
-                    : UnlockRuleDefinition.AnyAgencyAchievement(prerequisiteMilestoneId))
+                null)
         {
         }
 
@@ -94,22 +71,6 @@ namespace TheRaceForSpace.Funding
         public double BaseRewardFunds { get; private set; }
         public bool HasStarted { get; private set; }
         public int PaymentsProcessed { get; private set; }
-
-        /// <summary>
-        /// Temporary Item 14B bridge for existing availability consumers. The value is derived
-        /// from UnlockRule and is not stored separately. Item 14C removes this projection.
-        /// </summary>
-        public string PrerequisiteMilestoneId
-        {
-            get
-            {
-                string milestoneId;
-                return UnlockRule != null
-                    && UnlockRule.TryGetSingleAnyAgencyAchievementMilestoneId(out milestoneId)
-                    ? milestoneId
-                    : null;
-            }
-        }
 
         public bool IsExpired
         {

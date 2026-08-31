@@ -23,6 +23,7 @@
     <Compile Include="../../src/TheRaceForSpace/Milestones/MilestoneDefinition.cs" Link="Production/Milestones/MilestoneDefinition.cs" />
     <Compile Include="../../src/TheRaceForSpace/Milestones/PrototypeMilestones.cs" Link="Production/Milestones/PrototypeMilestones.cs" />
     <Compile Include="../../src/TheRaceForSpace/Milestones/UnlockRuleDefinition.cs" Link="Production/Milestones/UnlockRuleDefinition.cs" />
+    <Compile Include="../../src/TheRaceForSpace/Milestones/UnlockRuleEvaluator.cs" Link="Production/Milestones/UnlockRuleEvaluator.cs" />
     <Compile Include="../../src/TheRaceForSpace/Programs/SpaceProgramState.cs" Link="Production/Programs/SpaceProgramState.cs" />
     <Compile Include="../../src/TheRaceForSpace/Simulation/RivalSimulation.cs" Link="Production/Simulation/RivalSimulation.cs" />
     <Compile Include="../../src/TheRaceForSpace/Tracking/VesselTrackingSnapshot.cs" Link="Production/Tracking/VesselTrackingSnapshot.cs" />

@@ -50,8 +50,12 @@ namespace TheRaceForSpace.Competition
             CobaltProgram.Funds = RivalStartingFunds;
             AsterProgram.NextMissionTargetId = PrototypeMilestones.ProbeOrbitId;
             CobaltProgram.NextMissionTargetId = PrototypeMilestones.ProbeOrbitId;
-            AsterProgram.NextLaunchBodyName = RivalSimulation.ProbeOrbitTargetName;
-            CobaltProgram.NextLaunchBodyName = RivalSimulation.ProbeOrbitTargetName;
+
+            MilestoneDefinition openingMilestone = PrototypeMilestones.FindById(
+                PrototypeMilestones.ProbeOrbitId);
+            string openingMissionName = openingMilestone == null ? null : openingMilestone.Name;
+            AsterProgram.NextLaunchBodyName = openingMissionName;
+            CobaltProgram.NextLaunchBodyName = openingMissionName;
 
             _programs.Add(PlayerProgram);
             _programs.Add(AsterProgram);
@@ -76,22 +80,6 @@ namespace TheRaceForSpace.Competition
                 _fundingProgrammes.Add(fundingProgrammes[programmeIndex]);
             }
 
-            // Keep the original named properties as compatibility aliases for the current 0.4
-            // prototype. New targets only need to join the collections and do not need a new property.
-            ProbeOrbitProgramme = FindAchievementFundingProgrammeById(PrototypeMilestones.ProbeOrbitId);
-            CrewedOrbitProgramme = FindAchievementFundingProgrammeById(PrototypeMilestones.CrewedOrbitId);
-            MunProbeOrbitProgramme = FindAchievementFundingProgrammeById(PrototypeMilestones.MunProbeOrbitId);
-            MinmusProbeOrbitProgramme = FindAchievementFundingProgrammeById(PrototypeMilestones.MinmusProbeOrbitId);
-            DunaProbeOrbitProgramme = FindAchievementFundingProgrammeById(PrototypeMilestones.DunaProbeOrbitId);
-            MunCrewedOrbitProgramme = FindAchievementFundingProgrammeById(PrototypeMilestones.MunCrewedOrbitId);
-            MinmusCrewedOrbitProgramme = FindAchievementFundingProgrammeById(PrototypeMilestones.MinmusCrewedOrbitId);
-            DunaCrewedOrbitProgramme = FindAchievementFundingProgrammeById(PrototypeMilestones.DunaCrewedOrbitId);
-
-            KerbinNetworkProgramme = FindFundingProgrammeById(PrototypeFundingCatalogue.KerbinNetworkId);
-            MunNetworkProgramme = FindFundingProgrammeById(PrototypeFundingCatalogue.MunNetworkId);
-            MinmusNetworkProgramme = FindFundingProgrammeById(PrototypeFundingCatalogue.MinmusNetworkId);
-            DunaNetworkProgramme = FindFundingProgrammeById(PrototypeFundingCatalogue.DunaNetworkId);
-
             _programsView = _programs.AsReadOnly();
             _rivalProgramsView = _rivalPrograms.AsReadOnly();
             _fundingProgrammesView = _fundingProgrammes.AsReadOnly();
@@ -101,18 +89,6 @@ namespace TheRaceForSpace.Competition
         public SpaceProgramState PlayerProgram { get; private set; }
         public SpaceProgramState AsterProgram { get; private set; }
         public SpaceProgramState CobaltProgram { get; private set; }
-        public FundingProgramme KerbinNetworkProgramme { get; private set; }
-        public FundingProgramme MunNetworkProgramme { get; private set; }
-        public FundingProgramme MinmusNetworkProgramme { get; private set; }
-        public FundingProgramme DunaNetworkProgramme { get; private set; }
-        public AchievementFundingProgramme ProbeOrbitProgramme { get; private set; }
-        public AchievementFundingProgramme CrewedOrbitProgramme { get; private set; }
-        public AchievementFundingProgramme MunProbeOrbitProgramme { get; private set; }
-        public AchievementFundingProgramme MinmusProbeOrbitProgramme { get; private set; }
-        public AchievementFundingProgramme DunaProbeOrbitProgramme { get; private set; }
-        public AchievementFundingProgramme MunCrewedOrbitProgramme { get; private set; }
-        public AchievementFundingProgramme MinmusCrewedOrbitProgramme { get; private set; }
-        public AchievementFundingProgramme DunaCrewedOrbitProgramme { get; private set; }
         public IList<SpaceProgramState> Programs { get { return _programsView; } }
         public IList<SpaceProgramState> RivalPrograms { get { return _rivalProgramsView; } }
         public IList<FundingProgramme> FundingProgrammes { get { return _fundingProgrammesView; } }
@@ -138,36 +114,6 @@ namespace TheRaceForSpace.Competition
                     && string.Equals(program.Id, programId, StringComparison.OrdinalIgnoreCase))
                 {
                     return program;
-                }
-            }
-
-            return null;
-        }
-
-        private AchievementFundingProgramme FindAchievementFundingProgrammeById(string programmeId)
-        {
-            for (int programmeIndex = 0;
-                programmeIndex < _achievementFundingProgrammes.Count;
-                programmeIndex++)
-            {
-                AchievementFundingProgramme programme = _achievementFundingProgrammes[programmeIndex];
-                if (string.Equals(programme.Id, programmeId, StringComparison.OrdinalIgnoreCase))
-                {
-                    return programme;
-                }
-            }
-
-            return null;
-        }
-
-        private FundingProgramme FindFundingProgrammeById(string programmeId)
-        {
-            for (int programmeIndex = 0; programmeIndex < _fundingProgrammes.Count; programmeIndex++)
-            {
-                FundingProgramme programme = _fundingProgrammes[programmeIndex];
-                if (string.Equals(programme.Id, programmeId, StringComparison.OrdinalIgnoreCase))
-                {
-                    return programme;
                 }
             }
 

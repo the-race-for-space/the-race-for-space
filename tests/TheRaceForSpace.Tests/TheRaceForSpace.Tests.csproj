@@ -27,5 +27,6 @@
     <Compile Include="../../src/TheRaceForSpace/Tracking/SatelliteTracker.cs" Link="Production/Tracking/SatelliteTracker.cs" />
     <Compile Include="../../src/TheRaceForSpace/Persistence/RaceProgressSaveState.cs" Link="Production/Persistence/RaceProgressSaveState.cs" />
     <Compile Include="../../src/TheRaceForSpace/Persistence/RivalProgramSaveState.cs" Link="Production/Persistence/RivalProgramSaveState.cs" />
+    <Compile Include="../../src/TheRaceForSpace/Persistence/RivalProgramsSaveState.cs" Link="Production/Persistence/RivalProgramsSaveState.cs" />
   </ItemGroup>
 </Project>

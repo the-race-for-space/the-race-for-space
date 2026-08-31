@@ -19,6 +19,7 @@ namespace TheRaceForSpace.Persistence
         private const string UniversalTimeValueName = "universalTime";
         private const string BodyValueName = "body";
         private const string CountValueName = "count";
+        private const string ProgramIdValueName = "programId";
         private const string FundsValueName = "funds";
         private const string NextMissionTargetIdValueName = "nextMissionTargetId";
         private const string LaunchProgressPercentValueName = "launchProgressPercent";
@@ -31,6 +32,7 @@ namespace TheRaceForSpace.Persistence
             new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 
         public bool HasData { get; private set; }
+        public string ProgramId { get; private set; }
         public double Funds { get; private set; }
         public string NextMissionTargetId { get; private set; }
         public int LaunchProgressPercent { get; private set; }
@@ -38,13 +40,14 @@ namespace TheRaceForSpace.Persistence
 
         public void Capture(SpaceProgramState program)
         {
-            if (program == null || program.IsPlayer)
+            if (program == null || program.IsPlayer || string.IsNullOrEmpty(program.Id))
             {
                 return;
             }
 
             ClearState();
             HasData = true;
+            ProgramId = program.Id;
             Funds = Math.Max(0.0, program.Funds);
             NextMissionTargetId = !string.IsNullOrEmpty(program.NextMissionTargetId)
                 ? program.NextMissionTargetId
@@ -75,7 +78,11 @@ namespace TheRaceForSpace.Persistence
 
         public void ApplyTo(SpaceProgramState program)
         {
-            if (!HasData || program == null || program.IsPlayer)
+            if (!HasData
+                || program == null
+                || program.IsPlayer
+                || (!string.IsNullOrEmpty(ProgramId)
+                    && !string.Equals(ProgramId, program.Id, StringComparison.OrdinalIgnoreCase)))
             {
                 return;
             }
@@ -112,6 +119,8 @@ namespace TheRaceForSpace.Persistence
             {
                 return;
             }
+
+            ProgramId = node.GetValue(ProgramIdValueName);
 
             double parsedDouble;
             if (TryParseFiniteDouble(node.GetValue(FundsValueName), out parsedDouble))
@@ -224,6 +233,11 @@ namespace TheRaceForSpace.Persistence
                 return;
             }
 
+            if (!string.IsNullOrEmpty(ProgramId))
+            {
+                node.AddValue(ProgramIdValueName, ProgramId);
+            }
+
             node.AddValue(FundsValueName, Funds.ToString("R", CultureInfo.InvariantCulture));
             if (!string.IsNullOrEmpty(NextMissionTargetId))
             {
@@ -265,6 +279,7 @@ namespace TheRaceForSpace.Persistence
         private void ClearState()
         {
             HasData = false;
+            ProgramId = null;
             Funds = 0.0;
             NextMissionTargetId = null;
             LaunchProgressPercent = 0;

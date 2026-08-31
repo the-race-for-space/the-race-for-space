@@ -8,13 +8,13 @@ This scaffold mirrors the current design direction for **The Race for Space** wi
 - `Programs/` — player and rival space-program models/state.
 - `Tracking/` — KSP-independent vessel classification and body-presence tracking from project-owned vessel snapshots. Probe/Relay counts are maintained for observed celestial bodies independently of milestone definitions; milestone definitions are used only when evaluating achievements.
 - `Milestones/` — achievement/goal definitions and evaluation. `PrototypeMilestones` is the code-defined catalogue of current prototype achievement targets.
-- `Competition/` — first-to-achieve and comparative-coverage race logic. `SatelliteRaceController` consumes programme collections and does not construct or expose individual funding targets.
+- `Competition/` — first-to-achieve and comparative-coverage race logic. `SatelliteRaceController` consumes programme collections, does not construct or expose individual funding targets, and caches per-programme projected payouts when its controlled refresh evaluates funding.
 - `Funding/` — nation/corporation sponsors, offers and awards. `PrototypeFundingCatalogue` owns the code-defined achievement rewards and satellite-network programme bootstrap for the current prototype.
 - `Simulation/` — lightweight rival-program simulation for prototype use. Rival progression consumes program and target collections, and stable mission target IDs are authoritative; display names are presentation only.
 - `Scoring/` — progress/coverage calculations kept separate from funding rules.
 - `Persistence/` — simple save-state models for Race for Space values that must survive KSP save/load cycles. Rival programs are persisted as a collection keyed by stable program ID, with stable mission target IDs rather than presentation-name migration.
 - `KspIntegration/` — KSP API adapters, game events, ScenarioModule persistence hooks, and vessel discovery. `KspVesselDiscovery` resolves loaded and unloaded KSP vessel state into project-owned tracking snapshots before tracking rules consume it.
-- `UI/` — race/funding presentation, Command Center visibility, and stock launcher interaction. UI code reads race state but does not own or advance gameplay progression.
+- `UI/` — race/funding presentation, Command Center visibility, and stock launcher interaction. UI code reads race state but does not own or advance gameplay progression; recurring IMGUI scratch buffers, layout options, and the window callback are reused rather than recreated for every draw event.
 - `Debug/` — prototype diagnostics and developer-only helpers.
 
 ## Distribution layout

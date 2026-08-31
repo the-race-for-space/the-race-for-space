@@ -262,7 +262,8 @@ namespace TheRaceForSpace.Simulation
 
         /// <summary>
         /// Returns mission-progress cost using the live funding collection so newly added bodies
-        /// follow the same Kerbin-versus-distant cost rule without another ID branch.
+        /// follow the same Kerbin-versus-distant cost rule without another ID branch. This query
+        /// does not normalize or otherwise modify the supplied program state.
         /// </summary>
         public static double CalculateLaunchProgressCost(
             SpaceProgramState program,
@@ -274,10 +275,12 @@ namespace TheRaceForSpace.Simulation
                 return LaunchProgressCostFunds;
             }
 
-            string targetId = SynchronizeMissionTargetIdentity(
-                program,
-                achievementProgrammes,
-                fundingProgrammes);
+            string targetId = !string.IsNullOrEmpty(program.NextMissionTargetId)
+                ? program.NextMissionTargetId
+                : ResolveLegacyMissionTargetId(
+                    program.NextLaunchBodyName,
+                    achievementProgrammes,
+                    fundingProgrammes);
             return CalculateLaunchProgressCostForTarget(targetId, fundingProgrammes);
         }
 

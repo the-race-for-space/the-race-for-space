@@ -74,24 +74,6 @@ namespace TheRaceForSpace.Milestones
         public UnlockRuleDefinition UnlockRule { get; private set; }
 
         /// <summary>
-        /// Temporary Item 14B bridge for the existing tracker/controller/simulation paths. The
-        /// prerequisite is derived from UnlockRule rather than stored separately, so the rule is
-        /// already the single source of truth. Item 14C removes this projection when all consumers
-        /// use UnlockRuleEvaluator directly.
-        /// </summary>
-        public string PrerequisiteMilestoneId
-        {
-            get
-            {
-                string milestoneId;
-                return UnlockRule != null
-                    && UnlockRule.TryGetSingleAnyAgencyAchievementMilestoneId(out milestoneId)
-                    ? milestoneId
-                    : null;
-            }
-        }
-
-        /// <summary>
         /// Returns whether one KSP-independent vessel observation satisfies this milestone.
         /// </summary>
         public bool IsSatisfiedBy(MilestoneVesselObservation observation)

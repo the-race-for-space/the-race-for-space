@@ -17,6 +17,9 @@ namespace TheRaceForSpace.ControllerTests
             Run(
                 "Controller boundary observation is not paid retroactively",
                 SatelliteRaceControllerTests.BoundaryObservationIsNotPaidRetroactively);
+            Run(
+                "Controller projected payout cache rebuilds on refresh",
+                SatelliteRaceControllerTests.ProjectedPayoutCacheRebuildsOnRefresh);
 
             Console.WriteLine();
             Console.WriteLine(_failures == 0

@@ -35,6 +35,9 @@ namespace TheRaceForSpace.ControllerTests
             Run(
                 "Unlock invalid condition definitions fail fast",
                 UnlockRuleEvaluatorTests.InvalidConditionDefinitionsFailFast);
+            Run(
+                "Rival selection uses shared scope/count/time rule",
+                UnlockConsumerIntegrationTests.RivalSelectionUsesScopeCountAndHistoricalTime);
 
             Run(
                 "Controller probe observation unlocks funding flow",

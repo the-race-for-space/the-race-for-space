@@ -119,10 +119,6 @@ namespace TheRaceForSpace.Tests
             Require(programme != null, "Missing achievement funding programme '" + id + "'.");
             Equal(rewardFunds, programme.BaseRewardFunds);
             AssertSimpleAnyAgencyRule(programme.UnlockRule, prerequisiteMilestoneId);
-
-            // Item 14B keeps this projection solely so untouched 14C consumers continue to see
-            // exactly the same prerequisite while the stored source of truth is now UnlockRule.
-            Equal(prerequisiteMilestoneId, programme.PrerequisiteMilestoneId);
         }
 
         private static void AssertSatellite(
@@ -139,7 +135,6 @@ namespace TheRaceForSpace.Tests
             Equal(requiredSatellites, programme.RequiredSatellites);
             Equal(rewardFunds, programme.RewardFunds);
             AssertSimpleAnyAgencyRule(programme.UnlockRule, prerequisiteMilestoneId);
-            Equal(prerequisiteMilestoneId, programme.PrerequisiteMilestoneId);
             Require(!programme.IsAvailable, "Prototype satellite programmes should begin locked.");
         }
 

@@ -10,7 +10,7 @@ using TheRaceForSpace.Tracking;
 namespace TheRaceForSpace.Competition
 {
     /// <summary>
-    /// Coordinates the narrow 0.3 race prototype without introducing a general mission framework.
+    /// Coordinates the current race prototype without owning the code-defined funding catalogue.
     /// </summary>
     public sealed class SatelliteRaceController
     {
@@ -59,126 +59,38 @@ namespace TheRaceForSpace.Competition
             _rivalPrograms.Add(AsterProgram);
             _rivalPrograms.Add(CobaltProgram);
 
-            MilestoneDefinition probeOrbitMilestone = PrototypeMilestones.FindById(
-                PrototypeMilestones.ProbeOrbitId);
-            MilestoneDefinition crewedOrbitMilestone = PrototypeMilestones.FindById(
-                PrototypeMilestones.CrewedOrbitId);
-            MilestoneDefinition munProbeOrbitMilestone = PrototypeMilestones.FindById(
-                PrototypeMilestones.MunProbeOrbitId);
-            MilestoneDefinition minmusProbeOrbitMilestone = PrototypeMilestones.FindById(
-                PrototypeMilestones.MinmusProbeOrbitId);
-            MilestoneDefinition dunaProbeOrbitMilestone = PrototypeMilestones.FindById(
-                PrototypeMilestones.DunaProbeOrbitId);
-            MilestoneDefinition munCrewedOrbitMilestone = PrototypeMilestones.FindById(
-                PrototypeMilestones.MunCrewedOrbitId);
-            MilestoneDefinition minmusCrewedOrbitMilestone = PrototypeMilestones.FindById(
-                PrototypeMilestones.MinmusCrewedOrbitId);
-            MilestoneDefinition dunaCrewedOrbitMilestone = PrototypeMilestones.FindById(
-                PrototypeMilestones.DunaCrewedOrbitId);
+            // Funding content is code-defined for 0.4, but the catalogue owns the complete target
+            // set. The controller only consumes collections, so adding another target does not
+            // require another constructor branch here.
+            IList<AchievementFundingProgramme> achievementProgrammes =
+                PrototypeFundingCatalogue.CreateAchievementProgrammes();
+            for (int programmeIndex = 0; programmeIndex < achievementProgrammes.Count; programmeIndex++)
+            {
+                _achievementFundingProgrammes.Add(achievementProgrammes[programmeIndex]);
+            }
 
-            ProbeOrbitProgramme = new AchievementFundingProgramme(
-                probeOrbitMilestone.Id,
-                probeOrbitMilestone.Name,
-                probeOrbitMilestone.ObjectiveDescription,
-                100000.0);
-            CrewedOrbitProgramme = new AchievementFundingProgramme(
-                crewedOrbitMilestone.Id,
-                crewedOrbitMilestone.Name,
-                crewedOrbitMilestone.ObjectiveDescription,
-                200000.0);
-            MunProbeOrbitProgramme = new AchievementFundingProgramme(
-                munProbeOrbitMilestone.Id,
-                munProbeOrbitMilestone.Name,
-                munProbeOrbitMilestone.ObjectiveDescription,
-                200000.0,
-                "Any agency must achieve Probe Orbit.",
-                munProbeOrbitMilestone.PrerequisiteMilestoneId);
-            MinmusProbeOrbitProgramme = new AchievementFundingProgramme(
-                minmusProbeOrbitMilestone.Id,
-                minmusProbeOrbitMilestone.Name,
-                minmusProbeOrbitMilestone.ObjectiveDescription,
-                200000.0,
-                "Any agency must achieve Probe Orbit.",
-                minmusProbeOrbitMilestone.PrerequisiteMilestoneId);
-            DunaProbeOrbitProgramme = new AchievementFundingProgramme(
-                dunaProbeOrbitMilestone.Id,
-                dunaProbeOrbitMilestone.Name,
-                dunaProbeOrbitMilestone.ObjectiveDescription,
-                200000.0,
-                "Any agency must achieve Probe Orbit.",
-                dunaProbeOrbitMilestone.PrerequisiteMilestoneId);
-            MunCrewedOrbitProgramme = new AchievementFundingProgramme(
-                munCrewedOrbitMilestone.Id,
-                munCrewedOrbitMilestone.Name,
-                munCrewedOrbitMilestone.ObjectiveDescription,
-                300000.0,
-                "Any agency must achieve Crewed Orbit.",
-                munCrewedOrbitMilestone.PrerequisiteMilestoneId);
-            MinmusCrewedOrbitProgramme = new AchievementFundingProgramme(
-                minmusCrewedOrbitMilestone.Id,
-                minmusCrewedOrbitMilestone.Name,
-                minmusCrewedOrbitMilestone.ObjectiveDescription,
-                300000.0,
-                "Any agency must achieve Crewed Orbit.",
-                minmusCrewedOrbitMilestone.PrerequisiteMilestoneId);
-            DunaCrewedOrbitProgramme = new AchievementFundingProgramme(
-                dunaCrewedOrbitMilestone.Id,
-                dunaCrewedOrbitMilestone.Name,
-                dunaCrewedOrbitMilestone.ObjectiveDescription,
-                300000.0,
-                "Any agency must achieve Crewed Orbit.",
-                dunaCrewedOrbitMilestone.PrerequisiteMilestoneId);
+            IList<FundingProgramme> fundingProgrammes =
+                PrototypeFundingCatalogue.CreateSatelliteProgrammes();
+            for (int programmeIndex = 0; programmeIndex < fundingProgrammes.Count; programmeIndex++)
+            {
+                _fundingProgrammes.Add(fundingProgrammes[programmeIndex]);
+            }
 
-            _achievementFundingProgrammes.Add(ProbeOrbitProgramme);
-            _achievementFundingProgrammes.Add(CrewedOrbitProgramme);
-            _achievementFundingProgrammes.Add(MunProbeOrbitProgramme);
-            _achievementFundingProgrammes.Add(MinmusProbeOrbitProgramme);
-            _achievementFundingProgrammes.Add(DunaProbeOrbitProgramme);
-            _achievementFundingProgrammes.Add(MunCrewedOrbitProgramme);
-            _achievementFundingProgrammes.Add(MinmusCrewedOrbitProgramme);
-            _achievementFundingProgrammes.Add(DunaCrewedOrbitProgramme);
+            // Keep the original named properties as compatibility aliases for the current 0.4
+            // prototype. New targets only need to join the collections and do not need a new property.
+            ProbeOrbitProgramme = FindAchievementFundingProgrammeById(PrototypeMilestones.ProbeOrbitId);
+            CrewedOrbitProgramme = FindAchievementFundingProgrammeById(PrototypeMilestones.CrewedOrbitId);
+            MunProbeOrbitProgramme = FindAchievementFundingProgrammeById(PrototypeMilestones.MunProbeOrbitId);
+            MinmusProbeOrbitProgramme = FindAchievementFundingProgrammeById(PrototypeMilestones.MinmusProbeOrbitId);
+            DunaProbeOrbitProgramme = FindAchievementFundingProgrammeById(PrototypeMilestones.DunaProbeOrbitId);
+            MunCrewedOrbitProgramme = FindAchievementFundingProgrammeById(PrototypeMilestones.MunCrewedOrbitId);
+            MinmusCrewedOrbitProgramme = FindAchievementFundingProgrammeById(PrototypeMilestones.MinmusCrewedOrbitId);
+            DunaCrewedOrbitProgramme = FindAchievementFundingProgrammeById(PrototypeMilestones.DunaCrewedOrbitId);
 
-            KerbinNetworkProgramme = new FundingProgramme(
-                "kerbin-network",
-                "Kerbin Orbital Network",
-                "Kerbin",
-                10,
-                200000.0,
-                false,
-                "Any agency must achieve Probe Orbit.",
-                PrototypeMilestones.ProbeOrbitId);
-            MunNetworkProgramme = new FundingProgramme(
-                "mun-survey",
-                "Mun Survey Network",
-                "Mun",
-                5,
-                100000.0,
-                false,
-                "Any agency must achieve Mun Probe Orbit.",
-                PrototypeMilestones.MunProbeOrbitId);
-            MinmusNetworkProgramme = new FundingProgramme(
-                "minmus-relay",
-                "Minmus Relay Initiative",
-                "Minmus",
-                5,
-                100000.0,
-                false,
-                "Any agency must achieve Minmus Probe Orbit.",
-                PrototypeMilestones.MinmusProbeOrbitId);
-            DunaNetworkProgramme = new FundingProgramme(
-                "duna-network",
-                "Duna Orbital Network",
-                "Duna",
-                5,
-                100000.0,
-                false,
-                "Any agency must achieve Duna Probe Orbit.",
-                PrototypeMilestones.DunaProbeOrbitId);
-
-            _fundingProgrammes.Add(KerbinNetworkProgramme);
-            _fundingProgrammes.Add(MunNetworkProgramme);
-            _fundingProgrammes.Add(MinmusNetworkProgramme);
-            _fundingProgrammes.Add(DunaNetworkProgramme);
+            KerbinNetworkProgramme = FindFundingProgrammeById(PrototypeFundingCatalogue.KerbinNetworkId);
+            MunNetworkProgramme = FindFundingProgrammeById(PrototypeFundingCatalogue.MunNetworkId);
+            MinmusNetworkProgramme = FindFundingProgrammeById(PrototypeFundingCatalogue.MinmusNetworkId);
+            DunaNetworkProgramme = FindFundingProgrammeById(PrototypeFundingCatalogue.DunaNetworkId);
 
             _programsView = _programs.AsReadOnly();
             _rivalProgramsView = _rivalPrograms.AsReadOnly();
@@ -226,6 +138,36 @@ namespace TheRaceForSpace.Competition
                     && string.Equals(program.Id, programId, StringComparison.OrdinalIgnoreCase))
                 {
                     return program;
+                }
+            }
+
+            return null;
+        }
+
+        private AchievementFundingProgramme FindAchievementFundingProgrammeById(string programmeId)
+        {
+            for (int programmeIndex = 0;
+                programmeIndex < _achievementFundingProgrammes.Count;
+                programmeIndex++)
+            {
+                AchievementFundingProgramme programme = _achievementFundingProgrammes[programmeIndex];
+                if (string.Equals(programme.Id, programmeId, StringComparison.OrdinalIgnoreCase))
+                {
+                    return programme;
+                }
+            }
+
+            return null;
+        }
+
+        private FundingProgramme FindFundingProgrammeById(string programmeId)
+        {
+            for (int programmeIndex = 0; programmeIndex < _fundingProgrammes.Count; programmeIndex++)
+            {
+                FundingProgramme programme = _fundingProgrammes[programmeIndex];
+                if (string.Equals(programme.Id, programmeId, StringComparison.OrdinalIgnoreCase))
+                {
+                    return programme;
                 }
             }
 

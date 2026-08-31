@@ -35,7 +35,10 @@ namespace TheRaceForSpace.Competition
         private readonly IList<SpaceProgramState> _rivalProgramsView;
         private readonly IList<FundingProgramme> _fundingProgrammesView;
         private readonly IList<AchievementFundingProgramme> _achievementFundingProgrammesView;
+        private readonly double[,] _satellitePayoutCache;
+        private readonly double[,] _achievementPayoutCache;
         private double _nextFundingUniversalTime = -1.0;
+        private bool _hasFundingPayoutCache;
         private bool _hasRestoredPersistentState;
 
         public SatelliteRaceController()
@@ -79,6 +82,11 @@ namespace TheRaceForSpace.Competition
             {
                 _fundingProgrammes.Add(fundingProgrammes[programmeIndex]);
             }
+
+            // Programme and program collections are fixed for one controller lifetime. Cache arrays
+            // therefore need no recurring allocation and can be rebuilt in place after each refresh.
+            _satellitePayoutCache = new double[_programs.Count, _fundingProgrammes.Count];
+            _achievementPayoutCache = new double[_programs.Count, _achievementFundingProgrammes.Count];
 
             _programsView = _programs.AsReadOnly();
             _rivalProgramsView = _rivalPrograms.AsReadOnly();
@@ -258,8 +266,9 @@ namespace TheRaceForSpace.Competition
         }
 
         /// <summary>
-        /// Returns this agency's expected share of one satellite contract using the current
-        /// qualifying satellite counts across all programmes.
+        /// Returns this agency's projected share of one satellite contract. After the first
+        /// completed controller refresh, the value comes from that refresh's payout snapshot so
+        /// repeated UI queries do not re-scan every agency's satellite count.
         /// </summary>
         public double GetSatelliteCurrentPayout(
             SpaceProgramState program,
@@ -270,43 +279,44 @@ namespace TheRaceForSpace.Competition
                 return 0.0;
             }
 
-            int totalSatelliteCount = 0;
-            for (int programIndex = 0; programIndex < _programs.Count; programIndex++)
+            if (_hasFundingPayoutCache)
             {
-                totalSatelliteCount += _programs[programIndex].GetSatelliteCount(
-                    fundingProgramme.CelestialBodyName);
+                int programIndex = _programs.IndexOf(program);
+                int programmeIndex = _fundingProgrammes.IndexOf(fundingProgramme);
+                if (programIndex >= 0 && programmeIndex >= 0)
+                {
+                    return _satellitePayoutCache[programIndex, programmeIndex];
+                }
             }
 
-            return fundingProgramme.CalculateCurrentPayout(
-                program.GetSatelliteCount(fundingProgramme.CelestialBodyName),
-                totalSatelliteCount);
+            return CalculateSatelliteCurrentPayout(program, fundingProgramme);
         }
 
         /// <summary>
-        /// Returns this agency's expected share of the achievement contract on the next global
-        /// funding date. All live contracts pay together on that shared 90-day schedule.
+        /// Returns this agency's projected share of the achievement contract on the next global
+        /// funding date. After a completed refresh the value is served from the same payout snapshot
+        /// used to build NextPayoutFunds, avoiding repeated agency-count calculations in the UI.
         /// </summary>
         public double GetAchievementCurrentPayout(
             SpaceProgramState program,
             AchievementFundingProgramme achievementProgramme)
         {
-            if (achievementProgramme == null
-                || !IsAchievementProgrammeAvailable(achievementProgramme)
-                || _nextFundingUniversalTime < 0.0)
+            if (program == null || achievementProgramme == null)
             {
                 return 0.0;
             }
 
-            int eligibleAgencyCount = GetAchievementAgencyCountAtTime(
-                achievementProgramme.Id,
-                _nextFundingUniversalTime);
+            if (_hasFundingPayoutCache)
+            {
+                int programIndex = _programs.IndexOf(program);
+                int programmeIndex = _achievementFundingProgrammes.IndexOf(achievementProgramme);
+                if (programIndex >= 0 && programmeIndex >= 0)
+                {
+                    return _achievementPayoutCache[programIndex, programmeIndex];
+                }
+            }
 
-            return achievementProgramme.CalculateCurrentPayout(
-                HasProgramAchievedByTime(
-                    program,
-                    achievementProgramme.Id,
-                    _nextFundingUniversalTime),
-                eligibleAgencyCount);
+            return CalculateAchievementCurrentPayout(program, achievementProgramme);
         }
 
         public void Refresh()
@@ -534,10 +544,25 @@ namespace TheRaceForSpace.Competition
 
         private void EvaluateFundingProgrammes()
         {
+            _hasFundingPayoutCache = false;
+            Array.Clear(_satellitePayoutCache, 0, _satellitePayoutCache.Length);
+            Array.Clear(_achievementPayoutCache, 0, _achievementPayoutCache.Length);
+
             for (int programIndex = 0; programIndex < _programs.Count; programIndex++)
             {
                 SpaceProgramState program = _programs[programIndex];
-                program.NextPayoutFunds = CalculateSatelliteFundingForProgram(program);
+                double nextPayoutFunds = 0.0;
+
+                for (int programmeIndex = 0; programmeIndex < _fundingProgrammes.Count; programmeIndex++)
+                {
+                    double payout = CalculateSatelliteCurrentPayout(
+                        program,
+                        _fundingProgrammes[programmeIndex]);
+                    _satellitePayoutCache[programIndex, programmeIndex] = payout;
+                    nextPayoutFunds += payout;
+                }
+
+                program.NextPayoutFunds = nextPayoutFunds;
 
                 // Show the guaranteed rival base income in projected funding so the displayed
                 // next payout and rival launch ETA use the same value that will actually be paid.
@@ -547,38 +572,44 @@ namespace TheRaceForSpace.Competition
                 }
             }
 
-            if (_nextFundingUniversalTime < 0.0)
+            if (_nextFundingUniversalTime >= 0.0)
             {
-                return;
+                // All projected amounts below are due on the same next funding date. Achievement
+                // eligibility is evaluated against that date, matching the actual payment path.
+                for (int programmeIndex = 0;
+                    programmeIndex < _achievementFundingProgrammes.Count;
+                    programmeIndex++)
+                {
+                    AchievementFundingProgramme programme = _achievementFundingProgrammes[programmeIndex];
+                    if (!IsAchievementProgrammeAvailable(programme)
+                        || !programme.HasStarted
+                        || programme.IsExpired)
+                    {
+                        continue;
+                    }
+
+                    int eligibleAgencyCount = GetAchievementAgencyCountAtTime(
+                        programme.Id,
+                        _nextFundingUniversalTime);
+
+                    for (int programIndex = 0; programIndex < _programs.Count; programIndex++)
+                    {
+                        SpaceProgramState program = _programs[programIndex];
+                        double payout = programme.CalculateCurrentPayout(
+                            HasProgramAchievedByTime(
+                                program,
+                                programme.Id,
+                                _nextFundingUniversalTime),
+                            eligibleAgencyCount);
+                        _achievementPayoutCache[programIndex, programmeIndex] = payout;
+                        program.NextPayoutFunds += payout;
+                    }
+                }
             }
 
-            // All projected amounts below are due on the same next funding date. Achievement
-            // eligibility is evaluated against that date, matching the actual payment path.
-            for (int programmeIndex = 0; programmeIndex < _achievementFundingProgrammes.Count; programmeIndex++)
-            {
-                AchievementFundingProgramme programme = _achievementFundingProgrammes[programmeIndex];
-                if (!IsAchievementProgrammeAvailable(programme)
-                    || !programme.HasStarted
-                    || programme.IsExpired)
-                {
-                    continue;
-                }
-
-                int eligibleAgencyCount = GetAchievementAgencyCountAtTime(
-                    programme.Id,
-                    _nextFundingUniversalTime);
-
-                for (int programIndex = 0; programIndex < _programs.Count; programIndex++)
-                {
-                    SpaceProgramState program = _programs[programIndex];
-                    program.NextPayoutFunds += programme.CalculateCurrentPayout(
-                        HasProgramAchievedByTime(
-                            program,
-                            programme.Id,
-                            _nextFundingUniversalTime),
-                        eligibleAgencyCount);
-                }
-            }
+            // UI can draw several times per rendered frame. Publish the complete cache only after
+            // every programme has been evaluated so presentation never observes a partial rebuild.
+            _hasFundingPayoutCache = true;
         }
 
         private double CalculateSatelliteFundingForProgram(SpaceProgramState program)
@@ -592,10 +623,57 @@ namespace TheRaceForSpace.Competition
 
             for (int programmeIndex = 0; programmeIndex < _fundingProgrammes.Count; programmeIndex++)
             {
-                payout += GetSatelliteCurrentPayout(program, _fundingProgrammes[programmeIndex]);
+                // Historical funding replay must use state at that boundary rather than the cached
+                // projection from the previous completed refresh.
+                payout += CalculateSatelliteCurrentPayout(program, _fundingProgrammes[programmeIndex]);
             }
 
             return payout;
+        }
+
+        private double CalculateSatelliteCurrentPayout(
+            SpaceProgramState program,
+            FundingProgramme fundingProgramme)
+        {
+            if (program == null || fundingProgramme == null || !fundingProgramme.IsAvailable)
+            {
+                return 0.0;
+            }
+
+            int totalSatelliteCount = 0;
+            for (int programIndex = 0; programIndex < _programs.Count; programIndex++)
+            {
+                totalSatelliteCount += _programs[programIndex].GetSatelliteCount(
+                    fundingProgramme.CelestialBodyName);
+            }
+
+            return fundingProgramme.CalculateCurrentPayout(
+                program.GetSatelliteCount(fundingProgramme.CelestialBodyName),
+                totalSatelliteCount);
+        }
+
+        private double CalculateAchievementCurrentPayout(
+            SpaceProgramState program,
+            AchievementFundingProgramme achievementProgramme)
+        {
+            if (program == null
+                || achievementProgramme == null
+                || !IsAchievementProgrammeAvailable(achievementProgramme)
+                || _nextFundingUniversalTime < 0.0)
+            {
+                return 0.0;
+            }
+
+            int eligibleAgencyCount = GetAchievementAgencyCountAtTime(
+                achievementProgramme.Id,
+                _nextFundingUniversalTime);
+
+            return achievementProgramme.CalculateCurrentPayout(
+                HasProgramAchievedByTime(
+                    program,
+                    achievementProgramme.Id,
+                    _nextFundingUniversalTime),
+                eligibleAgencyCount);
         }
 
         private int GetAchievementAgencyCountAtTime(

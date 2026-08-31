@@ -85,7 +85,7 @@ namespace TheRaceForSpace.Tests.Simulation
                     100000.0,
                     true,
                     null,
-                    null)
+                    (UnlockRuleDefinition)null)
             };
 
             RivalSimulation.Refresh(
@@ -119,7 +119,7 @@ namespace TheRaceForSpace.Tests.Simulation
                     100000.0,
                     true,
                     null,
-                    null)
+                    (UnlockRuleDefinition)null)
             };
 
             RivalSimulation.Refresh(
@@ -154,7 +154,7 @@ namespace TheRaceForSpace.Tests.Simulation
                     100000.0,
                     true,
                     null,
-                    null)
+                    (UnlockRuleDefinition)null)
             };
             var achievementProgrammes = new List<AchievementFundingProgramme>();
 

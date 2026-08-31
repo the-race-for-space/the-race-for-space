@@ -12,7 +12,7 @@ This scaffold mirrors the current design direction for **The Race for Space** wi
 - `Funding/` — nation/corporation sponsors, offers and awards.
 - `Simulation/` — lightweight rival-program simulation for prototype use.
 - `Scoring/` — progress/coverage calculations kept separate from funding rules.
-- `Persistence/` — simple save-state models for Race for Space values that must survive KSP save/load cycles.
+- `Persistence/` — simple save-state models for Race for Space values that must survive KSP save/load cycles. Rival programs are persisted as a collection keyed by stable program ID rather than fixed agency save slots.
 - `KspIntegration/` — KSP API adapters, game events, ScenarioModule persistence hooks, and vessel discovery. `KspVesselDiscovery` resolves loaded and unloaded KSP vessel state into project-owned tracking snapshots before tracking rules consume it.
 - `UI/` — race/funding presentation, Command Center visibility, and stock launcher interaction. UI code reads race state but does not own or advance gameplay progression.
 - `Debug/` — prototype diagnostics and developer-only helpers.

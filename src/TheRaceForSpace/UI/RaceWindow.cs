@@ -41,7 +41,7 @@ namespace TheRaceForSpace.UI
         private Vector2 _fundingScrollPosition;
         private Vector2 _rivalsScrollPosition;
         private Vector2 _spaceRaceScrollPosition;
-        private ActiveView _activeView = ActiveView.Overview;
+        private static ActiveView _activeView = ActiveView.Overview;
         private ApplicationLauncherButton _launcherButton;
         private GUIStyle _highlightedCardTitleStyle;
         private GUIStyle _boldLabelStyle;

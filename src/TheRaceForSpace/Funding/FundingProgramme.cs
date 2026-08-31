@@ -17,7 +17,7 @@ namespace TheRaceForSpace.Funding
                 rewardFunds,
                 true,
                 null,
-                (UnlockRuleDefinition)null)
+                null)
         {
         }
 
@@ -37,34 +37,7 @@ namespace TheRaceForSpace.Funding
                 rewardFunds,
                 isAvailable,
                 unlockRequirement,
-                (UnlockRuleDefinition)null)
-        {
-        }
-
-        /// <summary>
-        /// Temporary Item 14B constructor bridge for existing test/caller code. The prerequisite
-        /// string is converted immediately and is not stored; Item 14C removes this overload.
-        /// </summary>
-        public FundingProgramme(
-            string id,
-            string name,
-            string celestialBodyName,
-            int requiredSatellites,
-            double rewardFunds,
-            bool isAvailable,
-            string unlockRequirement,
-            string prerequisiteMilestoneId)
-            : this(
-                id,
-                name,
-                celestialBodyName,
-                requiredSatellites,
-                rewardFunds,
-                isAvailable,
-                unlockRequirement,
-                string.IsNullOrEmpty(prerequisiteMilestoneId)
-                    ? null
-                    : UnlockRuleDefinition.AnyAgencyAchievement(prerequisiteMilestoneId))
+                null)
         {
         }
 
@@ -98,24 +71,8 @@ namespace TheRaceForSpace.Funding
         public bool IsAvailable { get; private set; }
 
         /// <summary>
-        /// Temporary Item 14B bridge for existing availability consumers. The value is derived
-        /// from UnlockRule and is not stored separately. Item 14C removes this projection.
-        /// </summary>
-        public string PrerequisiteMilestoneId
-        {
-            get
-            {
-                string milestoneId;
-                return UnlockRule != null
-                    && UnlockRule.TryGetSingleAnyAgencyAchievementMilestoneId(out milestoneId)
-                    ? milestoneId
-                    : null;
-            }
-        }
-
-        /// <summary>
         /// Permanently unlocks this satellite contract for the current campaign.
-        /// Version 0.3 does not relock satellite contracts after they become available.
+        /// Version 0.4 does not relock satellite contracts after they become available.
         /// </summary>
         public void Unlock()
         {

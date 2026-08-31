@@ -24,6 +24,8 @@ namespace TheRaceForSpace.Tests
             Run("Achievement payout declines and expires", AchievementPayoutDeclinesAndExpires);
             Run("Achievement restore normalizes lifecycle", AchievementRestoreNormalizesLifecycle);
             Run("Achievement funding stores structured prerequisite", AchievementFundingStoresStructuredPrerequisite);
+            Run("Prototype funding catalogue matches 0.4", PrototypeFundingCatalogueTests.CatalogueMatchesCurrentPrototype);
+            Run("Prototype funding catalogue creates fresh state", PrototypeFundingCatalogueTests.CatalogueCreatesFreshCampaignState);
             Run("Prototype milestone definitions match v0.3", PrototypeMilestoneDefinitionsMatchV03);
             Run("Prototype milestone ids are unique", PrototypeMilestoneIdsAreUnique);
             Run("Prototype milestone lookup uses stable ids", PrototypeMilestoneLookupUsesStableIds);

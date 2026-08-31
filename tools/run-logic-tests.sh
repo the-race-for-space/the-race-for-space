@@ -2,7 +2,8 @@
 set -euo pipefail
 
 repositoryRoot="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-testProject="$repositoryRoot/tests/TheRaceForSpace.Tests/TheRaceForSpace.Tests.csproj"
+domainTestProject="$repositoryRoot/tests/TheRaceForSpace.Tests/TheRaceForSpace.Tests.csproj"
+controllerTestProject="$repositoryRoot/tests/TheRaceForSpace.ControllerTests/TheRaceForSpace.ControllerTests.csproj"
 
 if ! command -v dotnet >/dev/null 2>&1; then
     echo "dotnet is required but was not found in PATH."
@@ -10,4 +11,8 @@ if ! command -v dotnet >/dev/null 2>&1; then
 fi
 
 echo "Running KSP-independent prototype logic tests..."
-dotnet run --project "$testProject" -c Release
+dotnet run --project "$domainTestProject" -c Release
+
+echo
+echo "Running race controller regression tests..."
+dotnet run --project "$controllerTestProject" -c Release

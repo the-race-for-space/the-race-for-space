@@ -26,7 +26,7 @@ namespace TheRaceForSpace.Tests.Simulation
                     milestone.ObjectiveDescription,
                     300000.0,
                     "Display text",
-                    milestone.PrerequisiteMilestoneId)
+                    milestone.UnlockRule)
             };
 
             RivalSimulation.Refresh(
@@ -56,7 +56,7 @@ namespace TheRaceForSpace.Tests.Simulation
                     milestone.ObjectiveDescription,
                     200000.0,
                     "Display text",
-                    milestone.PrerequisiteMilestoneId)
+                    milestone.UnlockRule)
             };
 
             RivalSimulation.Refresh(
@@ -197,7 +197,7 @@ namespace TheRaceForSpace.Tests.Simulation
                     milestone.ObjectiveDescription,
                     200000.0,
                     "Display text",
-                    milestone.PrerequisiteMilestoneId)
+                    milestone.UnlockRule)
             };
 
             RivalSimulation.Refresh(

@@ -131,6 +131,49 @@ namespace TheRaceForSpace.ControllerTests
             Equal(120000.0, controller.PlayerProgram.NextPayoutFunds);
         }
 
+        public static void ProjectedPayoutCacheRebuildsOnRefresh()
+        {
+            ResetEnvironment();
+            Planetarium.CurrentUniversalTime = 1000.0;
+            KspVesselDiscovery.SetSnapshots(
+                new List<VesselTrackingSnapshot>
+                {
+                    new VesselTrackingSnapshot("Kerbin", TrackedVesselType.Probe, 0)
+                },
+                1000.0);
+
+            var controller = new SatelliteRaceController();
+            controller.AsterProgram.Funds = 0.0;
+            controller.CobaltProgram.Funds = 0.0;
+            controller.Refresh();
+
+            AchievementFundingProgramme probeOrbit = FindAchievementProgramme(
+                controller,
+                PrototypeMilestones.ProbeOrbitId);
+            FundingProgramme kerbinNetwork = FindFundingProgramme(
+                controller,
+                PrototypeFundingCatalogue.KerbinNetworkId);
+
+            Equal(
+                20000.0,
+                controller.GetSatelliteCurrentPayout(controller.PlayerProgram, kerbinNetwork));
+            Equal(
+                100000.0,
+                controller.GetAchievementCurrentPayout(controller.PlayerProgram, probeOrbit));
+
+            Planetarium.CurrentUniversalTime = 2000.0;
+            KspVesselDiscovery.SetSnapshots(new List<VesselTrackingSnapshot>(), 2000.0);
+            controller.Refresh();
+
+            Equal(
+                0.0,
+                controller.GetSatelliteCurrentPayout(controller.PlayerProgram, kerbinNetwork));
+            Equal(
+                100000.0,
+                controller.GetAchievementCurrentPayout(controller.PlayerProgram, probeOrbit));
+            Equal(100000.0, controller.PlayerProgram.NextPayoutFunds);
+        }
+
         private static AchievementFundingProgramme FindAchievementProgramme(
             SatelliteRaceController controller,
             string programmeId)

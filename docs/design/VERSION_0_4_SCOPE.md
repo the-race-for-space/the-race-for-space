@@ -43,10 +43,25 @@ Race progression ownership has now been moved out of `UI/RaceWindow` with explic
 
 The purpose of this change is to ensure race progression continues independently of whether the Command Center window is visible or whether the UI implementation changes later.
 
+### KSP vessel discovery boundary
+
+Raw KSP vessel discovery has now been moved out of `Tracking/SatelliteTracker` with explicit approval under the structural-change gate in `AGENTS.md`.
+
+- `KspIntegration/KspVesselDiscovery` owns access to `HighLogic`, `ProtoVessel`, live `Vessel` state, `FlightGlobals`, and KSP universal time for vessel observations.
+- Loaded vessels continue to use live situation, body, type, and crew state so newly reached orbits are detected immediately.
+- Unloaded vessels continue to use persistent `ProtoVessel` and orbit snapshot state.
+- KSP vessel types are converted into the project-owned `TrackedVesselType` representation before tracking rules consume them.
+- `Tracking/SatelliteTracker` now consumes `VesselTrackingSnapshot` values and contains no direct KSP vessel API access.
+- `Competition/SatelliteRaceController` coordinates discovery and tracking during the existing refresh path.
+- Snapshot-based tracking logic is included in the standalone logic-test project.
+- No save-data format, funding rule, milestone definition, rival rule, or refresh cadence changed as part of this move.
+
+The current tracker still derives the set of maintained satellite-count bodies from milestone definitions. Removing that coupling is a separate structural/design decision and is intentionally not part of this item.
+
 ## Compatibility
 
 Version 0.4 continues to read the existing 0.3 persistence format. Compatibility paths for legacy rival mission names and older fixed save fields remain in place.
 
 ## Next Decisions
 
-Larger 0.4 work can continue to be selected separately. Candidate work includes improving the KSP tracking boundary, making rival persistence collection-driven, and centralising target definitions. Those changes remain outside the current implementation unless separately approved where required by `AGENTS.md`.
+Larger 0.4 work can continue to be selected separately. Candidate work includes separating satellite-count body selection from milestone definitions, making rival persistence collection-driven, and centralising target definitions. Those changes remain outside the current implementation unless separately approved where required by `AGENTS.md`.

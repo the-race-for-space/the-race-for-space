@@ -23,7 +23,12 @@ This scaffold mirrors the current design direction for **The Race for Space** wi
 
 ## Tests
 
-`tests/TheRaceForSpace.Tests/` mirrors logic-heavy modules so milestone, competition, tracking and scoring rules can be tested without requiring a live KSP scene where possible.
+- `tests/TheRaceForSpace.Tests/` mirrors logic-heavy modules so milestone, simulation, tracking, funding, and persistence rules can be tested without requiring a live KSP scene.
+- `tests/TheRaceForSpace.ControllerTests/` compiles the real `SatelliteRaceController` against small test-only stand-ins for its existing KSP integration boundaries. It covers cross-module controller ordering without adding test seams to production code or requiring a KSP installation.
+- `tools/run-logic-tests.sh` runs both standalone suites.
+- `.github/workflows/logic-tests.yml` runs the same script on GitHub Actions for pushes and pull requests using .NET 8 on Ubuntu.
+
+Live KSP API behavior such as loaded/unloaded vessel discovery and actual Career-funds integration still requires the documented in-game verification path.
 
 ## Prototype rule
 

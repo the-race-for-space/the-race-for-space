@@ -1,4 +1,5 @@
 using System;
+using System.Text;
 using KSP.UI.Screens;
 using TheRaceForSpace.Competition;
 using TheRaceForSpace.Core;
@@ -31,6 +32,20 @@ namespace TheRaceForSpace.UI
         private const int HighlightedCardTitleFontSize = 16;
         private const string LauncherIconTexturePath =
             "Squad/PartList/SimpleIcons/R&D_node_icon_basicprobes";
+
+        // GUILayoutOption is immutable after creation. Reusing these arrays avoids the params-array
+        // and option allocations that otherwise occur on every IMGUI layout/repaint event.
+        private static readonly GUILayoutOption[] TabButtonOptions = { GUILayout.Height(40.0f) };
+        private static readonly GUILayoutOption[] OverviewObjectivesOptions = { GUILayout.Width(350.0f) };
+        private static readonly GUILayoutOption[] FundingLabelOptions = { GUILayout.Width(245.0f) };
+        private static readonly GUILayoutOption[] FundingAmountOptions = { GUILayout.Width(100.0f) };
+        private static readonly GUILayoutOption[] FundingCardLeftOptions = { GUILayout.Width(450.0f) };
+        private static readonly GUILayoutOption[] RivalDetailsOptions = { GUILayout.Width(320.0f) };
+        private static readonly GUILayoutOption[] RivalIncomeLabelOptions = { GUILayout.Width(245.0f) };
+        private static readonly GUILayoutOption[] RivalIncomeAmountOptions = { GUILayout.Width(125.0f) };
+        private static readonly GUILayoutOption[] ExpandWidthOptions = { GUILayout.ExpandWidth(true) };
+        private static readonly GUILayoutOption[] NoExpandWidthOptions = { GUILayout.ExpandWidth(false) };
+
         private static RaceWindow _activeInstance;
         private static ActiveView _activeView = ActiveView.Overview;
         private static Game _windowPositionGame;
@@ -41,12 +56,16 @@ namespace TheRaceForSpace.UI
         private SatelliteRaceController _raceController;
         private Game _visibilityGame;
 
+        private readonly StringBuilder _listTextBuilder = new StringBuilder(128);
         private Vector2 _fundingScrollPosition;
         private Vector2 _rivalsScrollPosition;
         private Vector2 _spaceRaceScrollPosition;
         private ApplicationLauncherButton _launcherButton;
         private GUIStyle _highlightedCardTitleStyle;
         private GUIStyle _boldLabelStyle;
+        private GUI.WindowFunction _drawWindowFunction;
+        private double[] _payoutScratch;
+        private string[] _agencyNameScratch;
         private bool _hasRestoredVisibilityState;
         private bool _isDuplicateInstance;
         private bool _isVisible;
@@ -71,6 +90,7 @@ namespace TheRaceForSpace.UI
             }
 
             _activeInstance = this;
+            _drawWindowFunction = DrawWindow;
 
             // Scene changes recreate RaceWindow, so position and selected tab are static for the
             // current game. A different save starts from the normal centered Overview state.
@@ -96,6 +116,7 @@ namespace TheRaceForSpace.UI
 
             _launcherButton = null;
             _raceController = null;
+            _drawWindowFunction = null;
 
             if (_activeInstance == this)
             {
@@ -249,7 +270,7 @@ namespace TheRaceForSpace.UI
             _windowRect = GUILayout.Window(
                 GetInstanceID(),
                 _windowRect,
-                DrawWindow,
+                _drawWindowFunction,
                 "The Race for Space - Command Center");
         }
 
@@ -270,22 +291,22 @@ namespace TheRaceForSpace.UI
 
             GUILayout.BeginHorizontal();
 
-            if (GUILayout.Button("Overview", GUILayout.Height(40.0f)))
+            if (GUILayout.Button("Overview", TabButtonOptions))
             {
                 _activeView = ActiveView.Overview;
             }
 
-            if (GUILayout.Button("Funding Targets", GUILayout.Height(40.0f)))
+            if (GUILayout.Button("Funding Targets", TabButtonOptions))
             {
                 _activeView = ActiveView.FundingTargets;
             }
 
-            if (GUILayout.Button("Rival Agencies", GUILayout.Height(40.0f)))
+            if (GUILayout.Button("Rival Agencies", TabButtonOptions))
             {
                 _activeView = ActiveView.RivalAgencies;
             }
 
-            if (GUILayout.Button("Space Race", GUILayout.Height(40.0f)))
+            if (GUILayout.Button("Space Race", TabButtonOptions))
             {
                 _activeView = ActiveView.SpaceRace;
             }
@@ -322,7 +343,7 @@ namespace TheRaceForSpace.UI
             SpaceProgramState player = _raceController.PlayerProgram;
 
             GUILayout.BeginHorizontal();
-            GUILayout.BeginVertical(GUILayout.Width(350.0f));
+            GUILayout.BeginVertical(OverviewObjectivesOptions);
             GUILayout.Label("Your Objectives", _boldLabelStyle);
 
             for (int programmeIndex = 0;
@@ -366,7 +387,7 @@ namespace TheRaceForSpace.UI
             GUILayout.EndVertical();
 
             GUILayout.Space(24.0f);
-            GUILayout.BeginVertical(GUILayout.ExpandWidth(true));
+            GUILayout.BeginVertical(ExpandWidthOptions);
 
             // The funding heading and shared date span both funding sub-columns so the date
             // has the full remaining window width and does not wrap above the payout rows.
@@ -374,8 +395,8 @@ namespace TheRaceForSpace.UI
             GUILayout.Label(FormatNextFundingDate());
             GUILayout.Space(10.0f);
 
-            // The controller owns programme payout calculations. The UI only decides which
-            // non-zero funding sources to display and preserves the programme definition order.
+            // Projected programme payouts are refresh-scoped controller values, so drawing this
+            // view does not repeat the cross-agency funding calculations on every IMGUI event.
             for (int programmeIndex = 0;
                 programmeIndex < _raceController.AchievementFundingProgrammes.Count;
                 programmeIndex++)
@@ -389,9 +410,9 @@ namespace TheRaceForSpace.UI
                 }
 
                 GUILayout.BeginHorizontal();
-                GUILayout.Label(programme.Name + ": Completed", GUILayout.Width(245.0f));
+                GUILayout.Label(programme.Name + ": Completed", FundingLabelOptions);
                 GUILayout.Space(2.0f);
-                GUILayout.Label(nextPayout.ToString("N0"), GUILayout.Width(100.0f));
+                GUILayout.Label(nextPayout.ToString("N0"), FundingAmountOptions);
                 GUILayout.EndHorizontal();
             }
 
@@ -414,20 +435,20 @@ namespace TheRaceForSpace.UI
                     + programme.CelestialBodyName
                     + " "
                     + (satelliteCount == 1 ? "Satellite" : "Satellites"),
-                    GUILayout.Width(245.0f));
+                    FundingLabelOptions);
                 GUILayout.Space(2.0f);
-                GUILayout.Label(nextPayout.ToString("N0"), GUILayout.Width(100.0f));
+                GUILayout.Label(nextPayout.ToString("N0"), FundingAmountOptions);
                 GUILayout.EndHorizontal();
             }
 
             GUILayout.Space(6.0f);
             GUILayout.BeginHorizontal();
-            GUILayout.Label("Total Next Payout", _boldLabelStyle, GUILayout.Width(245.0f));
+            GUILayout.Label("Total Next Payout", _boldLabelStyle, FundingLabelOptions);
             GUILayout.Space(2.0f);
             GUILayout.Label(
                 player.NextPayoutFunds.ToString("N0"),
                 _boldLabelStyle,
-                GUILayout.Width(100.0f));
+                FundingAmountOptions);
             GUILayout.EndHorizontal();
 
             GUILayout.EndVertical();
@@ -439,6 +460,7 @@ namespace TheRaceForSpace.UI
             GUILayout.Label("FUNDING TARGETS - " + FormatNextFundingDate());
             GUILayout.Space(8.0f);
 
+            EnsurePayoutScratchBuffers();
             _fundingScrollPosition = GUILayout.BeginScrollView(_fundingScrollPosition);
 
             for (int i = 0; i < _raceController.AchievementFundingProgrammes.Count; i++)
@@ -461,8 +483,9 @@ namespace TheRaceForSpace.UI
                     continue;
                 }
 
-                string satelliteSummary = string.Empty;
-                double[] nextPayouts = new double[_raceController.Programs.Count];
+                _listTextBuilder.Length = 0;
+                _listTextBuilder.Append("Satellites: ");
+                bool hasSatelliteSummary = false;
                 double claimedPayout = 0.0;
 
                 for (int programIndex = 0; programIndex < _raceController.Programs.Count; programIndex++)
@@ -470,7 +493,7 @@ namespace TheRaceForSpace.UI
                     SpaceProgramState program = _raceController.Programs[programIndex];
                     int satelliteCount = program.GetSatelliteCount(programme.CelestialBodyName);
                     double nextPayout = _raceController.GetSatelliteCurrentPayout(program, programme);
-                    nextPayouts[programIndex] = nextPayout;
+                    _payoutScratch[programIndex] = nextPayout;
                     claimedPayout += nextPayout;
 
                     if (satelliteCount <= 0)
@@ -478,10 +501,20 @@ namespace TheRaceForSpace.UI
                         continue;
                     }
 
-                    satelliteSummary += (satelliteSummary.Length > 0 ? ", " : string.Empty)
-                        + GetProgramDisplayName(program)
-                        + " "
-                        + satelliteCount;
+                    if (hasSatelliteSummary)
+                    {
+                        _listTextBuilder.Append(", ");
+                    }
+
+                    _listTextBuilder.Append(GetProgramDisplayName(program));
+                    _listTextBuilder.Append(' ');
+                    _listTextBuilder.Append(satelliteCount);
+                    hasSatelliteSummary = true;
+                }
+
+                if (!hasSatelliteSummary)
+                {
+                    _listTextBuilder.Append("None");
                 }
 
                 double unclaimedPayout = Math.Max(0.0, programme.RewardFunds - claimedPayout);
@@ -490,16 +523,16 @@ namespace TheRaceForSpace.UI
                 DrawCenteredCardTitle("Satellite Funding - " + programme.Name);
 
                 GUILayout.BeginHorizontal();
-                GUILayout.BeginVertical(GUILayout.Width(450.0f));
+                GUILayout.BeginVertical(FundingCardLeftOptions);
                 GUILayout.Label("Target: " + programme.CelestialBodyName);
                 GUILayout.Label("Requirement: " + programme.RequiredSatellites + " qualifying satellite(s) in orbit");
                 GUILayout.Label("Total Available Payout: " + programme.RewardFunds.ToString("N0"));
                 GUILayout.EndVertical();
 
                 GUILayout.Space(24.0f);
-                GUILayout.BeginVertical(GUILayout.ExpandWidth(true));
-                GUILayout.Label("Satellites: " + (satelliteSummary.Length > 0 ? satelliteSummary : "None"));
-                DrawPayoutLinesByAmount(nextPayouts);
+                GUILayout.BeginVertical(ExpandWidthOptions);
+                GUILayout.Label(_listTextBuilder.ToString());
+                DrawPayoutLinesByAmount(_payoutScratch);
                 GUILayout.Label("Unclaimed Payout: " + unclaimedPayout.ToString("N0"));
                 GUILayout.EndVertical();
 
@@ -513,28 +546,39 @@ namespace TheRaceForSpace.UI
 
         private void DrawAchievementFundingCard(AchievementFundingProgramme programme)
         {
-            var nextPayouts = new double[_raceController.Programs.Count];
-            string completedBy = string.Empty;
+            _listTextBuilder.Length = 0;
+            _listTextBuilder.Append("Completed by: ");
+            bool hasCompletedAgency = false;
 
             for (int programIndex = 0; programIndex < _raceController.Programs.Count; programIndex++)
             {
                 SpaceProgramState program = _raceController.Programs[programIndex];
-                nextPayouts[programIndex] = _raceController.GetAchievementCurrentPayout(program, programme);
+                _payoutScratch[programIndex] = _raceController.GetAchievementCurrentPayout(program, programme);
 
                 if (!_raceController.HasProgramAchieved(program, programme))
                 {
                     continue;
                 }
 
-                completedBy += (completedBy.Length > 0 ? ", " : string.Empty)
-                    + GetProgramDisplayName(program);
+                if (hasCompletedAgency)
+                {
+                    _listTextBuilder.Append(", ");
+                }
+
+                _listTextBuilder.Append(GetProgramDisplayName(program));
+                hasCompletedAgency = true;
+            }
+
+            if (!hasCompletedAgency)
+            {
+                _listTextBuilder.Append("None");
             }
 
             GUILayout.BeginVertical("box");
             DrawCenteredCardTitle(programme.Name);
 
             GUILayout.BeginHorizontal();
-            GUILayout.BeginVertical(GUILayout.Width(450.0f));
+            GUILayout.BeginVertical(FundingCardLeftOptions);
             GUILayout.Label(
                 "Objective: "
                 + programme.ObjectiveDescription
@@ -548,9 +592,9 @@ namespace TheRaceForSpace.UI
             GUILayout.EndVertical();
 
             GUILayout.Space(24.0f);
-            GUILayout.BeginVertical(GUILayout.ExpandWidth(true));
-            GUILayout.Label("Completed by: " + (completedBy.Length > 0 ? completedBy : "None"));
-            DrawPayoutLinesByAmount(nextPayouts);
+            GUILayout.BeginVertical(ExpandWidthOptions);
+            GUILayout.Label(_listTextBuilder.ToString());
+            DrawPayoutLinesByAmount(_payoutScratch);
             GUILayout.EndVertical();
 
             GUILayout.EndHorizontal();
@@ -559,14 +603,14 @@ namespace TheRaceForSpace.UI
 
         private void DrawPayoutLinesByAmount(double[] nextPayouts)
         {
-            string[] agencyNames = new string[_raceController.Programs.Count];
             for (int programIndex = 0; programIndex < _raceController.Programs.Count; programIndex++)
             {
-                agencyNames[programIndex] = GetProgramDisplayName(_raceController.Programs[programIndex]);
+                _agencyNameScratch[programIndex] = GetProgramDisplayName(_raceController.Programs[programIndex]);
             }
 
             // A small in-place sort keeps the agency with the strongest next payout first while
-            // allowing the same UI path to handle any number of current programs.
+            // allowing the same UI path to handle any number of current programs. The caller
+            // refills the reusable payout buffer before each card, so no per-card array is needed.
             for (int payoutIndex = 0; payoutIndex < nextPayouts.Length - 1; payoutIndex++)
             {
                 for (int compareIndex = payoutIndex + 1; compareIndex < nextPayouts.Length; compareIndex++)
@@ -580,9 +624,9 @@ namespace TheRaceForSpace.UI
                     nextPayouts[payoutIndex] = nextPayouts[compareIndex];
                     nextPayouts[compareIndex] = payoutToSwap;
 
-                    string agencyNameToSwap = agencyNames[payoutIndex];
-                    agencyNames[payoutIndex] = agencyNames[compareIndex];
-                    agencyNames[compareIndex] = agencyNameToSwap;
+                    string agencyNameToSwap = _agencyNameScratch[payoutIndex];
+                    _agencyNameScratch[payoutIndex] = _agencyNameScratch[compareIndex];
+                    _agencyNameScratch[compareIndex] = agencyNameToSwap;
                 }
             }
 
@@ -594,7 +638,7 @@ namespace TheRaceForSpace.UI
                 }
 
                 GUILayout.Label(
-                    agencyNames[payoutIndex]
+                    _agencyNameScratch[payoutIndex]
                     + " Next Payout: "
                     + nextPayouts[payoutIndex].ToString("N0"));
             }
@@ -849,7 +893,7 @@ namespace TheRaceForSpace.UI
             DrawCenteredCardTitle(program.Name);
 
             GUILayout.BeginHorizontal();
-            GUILayout.BeginVertical(GUILayout.Width(320.0f));
+            GUILayout.BeginVertical(RivalDetailsOptions);
             GUILayout.Label(string.Empty);
             GUILayout.Label("Funds: " + program.Funds.ToString("N0"));
             GUILayout.Label(
@@ -878,7 +922,7 @@ namespace TheRaceForSpace.UI
             GUILayout.EndVertical();
 
             GUILayout.Space(24.0f);
-            GUILayout.BeginVertical(GUILayout.Width(245.0f));
+            GUILayout.BeginVertical(RivalIncomeLabelOptions);
             GUILayout.Label(string.Empty);
             GUILayout.Label("Base Income");
 
@@ -918,7 +962,7 @@ namespace TheRaceForSpace.UI
             GUILayout.EndVertical();
 
             GUILayout.Space(2.0f);
-            GUILayout.BeginVertical(GUILayout.Width(125.0f));
+            GUILayout.BeginVertical(RivalIncomeAmountOptions);
             GUILayout.Label(string.Empty);
             GUILayout.Label(_raceController.RivalBaseIncomePerFundingPeriod.ToString("N0"));
 
@@ -962,6 +1006,20 @@ namespace TheRaceForSpace.UI
             GUILayout.EndVertical();
         }
 
+        private void EnsurePayoutScratchBuffers()
+        {
+            int programCount = _raceController == null ? 0 : _raceController.Programs.Count;
+            if (_payoutScratch == null || _payoutScratch.Length != programCount)
+            {
+                _payoutScratch = new double[programCount];
+            }
+
+            if (_agencyNameScratch == null || _agencyNameScratch.Length != programCount)
+            {
+                _agencyNameScratch = new string[programCount];
+            }
+        }
+
         private static string GetProgramDisplayName(SpaceProgramState program)
         {
             if (program == null)
@@ -976,7 +1034,7 @@ namespace TheRaceForSpace.UI
         {
             GUILayout.BeginHorizontal();
             GUILayout.FlexibleSpace();
-            GUILayout.Label(title, _highlightedCardTitleStyle, GUILayout.ExpandWidth(false));
+            GUILayout.Label(title, _highlightedCardTitleStyle, NoExpandWidthOptions);
             GUILayout.FlexibleSpace();
             GUILayout.EndHorizontal();
         }

@@ -16,7 +16,7 @@ The 0.4 alpha baseline currently contains:
 - Declining-interest achievement funding.
 - Lightweight rival mission simulation.
 - Persistent race, achievement, funding, satellite, and rival mission state.
-- The four-view Command Center interface: Overview, Funding Targets, Rival Agencies, and Space Race.
+- The four-view Command Center interface: Overview, Funding Targets, Rival Agencies, and Space Race, plus a `?` Help / Player Guide view.
 
 ## Alpha Cleanup Goals
 
@@ -141,7 +141,7 @@ No persistence field, save node, unlock condition, reward amount, funding cadenc
 
 ### Flexible unlock foundation and target migration
 
-Item 14 is being introduced in staged checkpoints so the rule representation can be proven before campaign balance changes.
+Item 14 was introduced in staged checkpoints so the rule representation could be proven before campaign balance changes.
 
 **Item 14A** added the KSP-independent rule foundation in `Milestones/`:
 
@@ -162,7 +162,7 @@ Item 14 is being introduced in staged checkpoints so the rule representation can
 - `PrototypeFundingCatalogue` passes milestone rules into achievement funding programmes and creates equivalent rules for network programmes.
 - Tests verify the current 8 achievement and 4 satellite targets retain the same rewards and simple unlock semantics.
 
-**Item 14C** makes the shared evaluator authoritative for every live availability consumer:
+**Item 14C** made the shared evaluator authoritative for every live availability consumer:
 
 - `SatelliteTracker` receives the full program collection and evaluates each milestone's `UnlockRule` at the vessel observation time. Its repeat-until-stable pass remains, so a newly recorded player achievement can unlock another milestone from the same snapshot.
 - `SatelliteRaceController` no longer builds or passes an available-milestone ID set. Funding programme unlocks and achievement-contract availability use `UnlockRuleEvaluator` directly.
@@ -170,10 +170,20 @@ Item 14 is being introduced in staged checkpoints so the rule representation can
 - Projected achievement funding is evaluated at the next funding date, while normal current-state updates use the current/latest vessel-observation time.
 - `RivalSimulation` uses the same evaluator at the simulation time for both one-off achievement targets and repeatable satellite targets. Its private `HasAnyProgramAchieved` prerequisite interpretation has been removed.
 - The temporary `PrerequisiteMilestoneId` projections and prerequisite-string constructors introduced for the 14B transition have been removed. `UnlockRuleDefinition` is now the only stored unlock definition on milestones and funding programmes.
-- `PrototypeFundingCatalogue` retains a deliberately narrow formatter only to preserve the current simple unlock-description text. It does not decide availability; Item 14D will replace this presentation limitation with general OR/AND rule progress display.
+- `PrototypeFundingCatalogue` retains a deliberately narrow formatter only to preserve the current simple unlock-description text. It does not decide availability.
 - Domain and controller regressions cover chained tracking, rival scope, multi-agency counts, exact historical timestamps, and the existing no-retroactive-funding behavior.
 
-Items 14A-14C do not deliberately rebalance the current Kerbin/Mun/Minmus/Duna campaign. Existing code-defined rules, target rewards, funding cadence, and persistence fields remain unchanged. Unlock definitions are immutable metadata and require no saved rule state.
+**Item 14D** turns the fourth Command Center view into campaign progression without changing gameplay rules:
+
+- The Space Race view is read-only progression information split into `CURRENT OPPORTUNITIES`, `COMING NEXT`, and `COMPLETED / HISTORICAL` sections.
+- Locked targets display their real OR/AND unlock paths. Achievement conditions show scope and live agency counts; time conditions show the Kerbin date and remaining days.
+- `UnlockRuleEvaluator` exposes read-only condition/count/agency-attribution helpers so UI presentation uses the same scope and historical-time semantics as gameplay.
+- The existing `HELP / PLAYER GUIDE` header and all existing help copy are moved unchanged to a separate view opened by a small `?` button at the top right of the Command Center.
+- Overview, Funding Targets, and Rival Agencies content remain unchanged. Funding and payout details stay in Funding Targets rather than being duplicated in Space Race.
+- The interface continues to use the mod's own funding/programme system and does not introduce a dependency on KSP's stock Contracts system.
+- No target rule, reward, funding cadence, rival behavior, tracking behavior, persistence field, or save schema changes as part of 14D.
+
+Items 14A-14D establish flexible rules, shared evaluation, and readable progression presentation without deliberately rebalancing the current Kerbin/Mun/Minmus/Duna campaign.
 
 ## Compatibility
 
@@ -183,8 +193,8 @@ Rival state uses the `RIVALS` collection format introduced during Item 7. Saves 
 
 Within rival state, current 0.4 `programId`, `nextMissionTargetId`, achievement collection, and satellite collection fields remain supported. Older rival migration fields and the old public rival-simulation compatibility APIs are no longer supported; this additional compatibility cleanup was explicitly accepted for Item 9.
 
-Item 14 changes code-defined target metadata and availability evaluation rather than persisted campaign state. The user has explicitly accepted that backward save compatibility is not a requirement during this prototype phase, but no save schema change is required by Items 14A-14C.
+Item 14 changes code-defined target metadata, availability evaluation, and presentation rather than persisted campaign state. The user has explicitly accepted that backward save compatibility is not a requirement during this prototype phase, but no save schema change is required by Items 14A-14D.
 
 ## Next Decisions
 
-Items 1 through 13 and Item 14A-14C are complete. The next implementation checkpoint is Item 14D: turn the Space Race tab into a live progression/unlock view that can explain OR/AND paths, completed conditions, rival-triggered requirements, agency counts, and time gates. Once that presentation layer is in place, the campaign rules can be deliberately rebalanced and expanded without adding another unlock architecture.
+Items 1 through 13 and Item 14A-14D are complete. The unlock architecture and progression presentation are now ready for deliberate campaign design: target pacing, additional celestial bodies, rival-triggered opportunities, time/era gates, and richer rival development can be added without another unlock-system rewrite.

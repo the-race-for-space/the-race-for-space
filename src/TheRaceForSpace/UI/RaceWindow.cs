@@ -5,6 +5,7 @@ using TheRaceForSpace.Competition;
 using TheRaceForSpace.Core;
 using TheRaceForSpace.Funding;
 using TheRaceForSpace.KspIntegration;
+using TheRaceForSpace.Milestones;
 using TheRaceForSpace.Programs;
 using UnityEngine;
 
@@ -26,6 +27,7 @@ namespace TheRaceForSpace.UI
             SpaceRace
         }
 
+        private const double KerbinDaySeconds = 21600.0;
         private const float WindowBackgroundOpacity = 0.82f;
         private const float WindowWidth = 900.0f;
         private const float WindowHeight = 720.0f;
@@ -36,6 +38,8 @@ namespace TheRaceForSpace.UI
         // GUILayoutOption is immutable after creation. Reusing these arrays avoids the params-array
         // and option allocations that otherwise occur on every IMGUI layout/repaint event.
         private static readonly GUILayoutOption[] TabButtonOptions = { GUILayout.Height(40.0f) };
+        private static readonly GUILayoutOption[] HelpButtonOptions =
+            { GUILayout.Width(36.0f), GUILayout.Height(40.0f) };
         private static readonly GUILayoutOption[] OverviewObjectivesOptions = { GUILayout.Width(350.0f) };
         private static readonly GUILayoutOption[] FundingLabelOptions = { GUILayout.Width(245.0f) };
         private static readonly GUILayoutOption[] FundingAmountOptions = { GUILayout.Width(100.0f) };
@@ -60,6 +64,7 @@ namespace TheRaceForSpace.UI
         private Vector2 _fundingScrollPosition;
         private Vector2 _rivalsScrollPosition;
         private Vector2 _spaceRaceScrollPosition;
+        private Vector2 _helpScrollPosition;
         private ApplicationLauncherButton _launcherButton;
         private GUIStyle _highlightedCardTitleStyle;
         private GUIStyle _boldLabelStyle;
@@ -69,6 +74,7 @@ namespace TheRaceForSpace.UI
         private bool _hasRestoredVisibilityState;
         private bool _isDuplicateInstance;
         private bool _isVisible;
+        private bool _showHelpGuide;
 
         public void Awake()
         {
@@ -142,6 +148,7 @@ namespace TheRaceForSpace.UI
                 _activeView = ActiveView.Overview;
                 _hasRestoredVisibilityState = false;
                 _isVisible = false;
+                _showHelpGuide = false;
             }
 
             // The Core runtime owns controller creation and progression. A null controller here
@@ -294,43 +301,60 @@ namespace TheRaceForSpace.UI
             if (GUILayout.Button("Overview", TabButtonOptions))
             {
                 _activeView = ActiveView.Overview;
+                _showHelpGuide = false;
             }
 
             if (GUILayout.Button("Funding Targets", TabButtonOptions))
             {
                 _activeView = ActiveView.FundingTargets;
+                _showHelpGuide = false;
             }
 
             if (GUILayout.Button("Rival Agencies", TabButtonOptions))
             {
                 _activeView = ActiveView.RivalAgencies;
+                _showHelpGuide = false;
             }
 
             if (GUILayout.Button("Space Race", TabButtonOptions))
             {
                 _activeView = ActiveView.SpaceRace;
+                _showHelpGuide = false;
+            }
+
+            GUILayout.Space(4.0f);
+            if (GUILayout.Button("?", HelpButtonOptions))
+            {
+                _showHelpGuide = true;
             }
 
             GUILayout.EndHorizontal();
             GUILayout.Space(12.0f);
 
-            switch (_activeView)
+            if (_showHelpGuide)
             {
-                case ActiveView.Overview:
-                    DrawOverview();
-                    break;
+                DrawHelpGuide();
+            }
+            else
+            {
+                switch (_activeView)
+                {
+                    case ActiveView.Overview:
+                        DrawOverview();
+                        break;
 
-                case ActiveView.FundingTargets:
-                    DrawFundingTargets();
-                    break;
+                    case ActiveView.FundingTargets:
+                        DrawFundingTargets();
+                        break;
 
-                case ActiveView.RivalAgencies:
-                    DrawRivalAgencies();
-                    break;
+                    case ActiveView.RivalAgencies:
+                        DrawRivalAgencies();
+                        break;
 
-                case ActiveView.SpaceRace:
-                    DrawSpaceRace();
-                    break;
+                    case ActiveView.SpaceRace:
+                        DrawSpaceRace();
+                        break;
+                }
             }
 
             GUILayout.FlexibleSpace();
@@ -668,12 +692,9 @@ namespace TheRaceForSpace.UI
             GUILayout.EndScrollView();
         }
 
-        private void DrawSpaceRace()
+        private void DrawHelpGuide()
         {
-            GUILayout.Label("SPACE RACE");
-            GUILayout.Space(8.0f);
-
-            _spaceRaceScrollPosition = GUILayout.BeginScrollView(_spaceRaceScrollPosition);
+            _helpScrollPosition = GUILayout.BeginScrollView(_helpScrollPosition);
 
             GUILayout.BeginVertical("box");
             GUILayout.Label("HELP / PLAYER GUIDE");
@@ -699,9 +720,24 @@ namespace TheRaceForSpace.UI
                 "New funding targets can be unlocked by meeting the requirements of the funding targets currently available. Look down the list below to see all of the available funding targets:");
             GUILayout.EndVertical();
 
-            GUILayout.Space(12.0f);
-            GUILayout.Label("AVAILABLE FUNDING", _boldLabelStyle);
-            bool hasAvailableFunding = false;
+            GUILayout.EndScrollView();
+        }
+
+        private void DrawSpaceRace()
+        {
+            double currentUniversalTime = Planetarium.fetch == null
+                ? 0.0
+                : Planetarium.GetUniversalTime();
+            SpaceProgramState player = _raceController.PlayerProgram;
+
+            GUILayout.Label("SPACE RACE");
+            GUILayout.Label("Campaign Date: " + FormatKerbinDate(currentUniversalTime));
+            GUILayout.Space(8.0f);
+
+            _spaceRaceScrollPosition = GUILayout.BeginScrollView(_spaceRaceScrollPosition);
+
+            GUILayout.Label("CURRENT OPPORTUNITIES", _boldLabelStyle);
+            bool hasCurrentOpportunity = false;
 
             for (int programmeIndex = 0;
                 programmeIndex < _raceController.AchievementFundingProgrammes.Count;
@@ -709,18 +745,20 @@ namespace TheRaceForSpace.UI
             {
                 AchievementFundingProgramme programme =
                     _raceController.AchievementFundingProgrammes[programmeIndex];
-                if (programme.IsExpired || !_raceController.IsAchievementProgrammeAvailable(programme))
+                if (programme.IsExpired
+                    || !_raceController.IsAchievementProgrammeAvailable(programme)
+                    || _raceController.HasProgramAchieved(player, programme))
                 {
                     continue;
                 }
 
-                if (hasAvailableFunding)
+                if (hasCurrentOpportunity)
                 {
                     GUILayout.Space(8.0f);
                 }
 
-                DrawAchievementInformationCard(programme);
-                hasAvailableFunding = true;
+                DrawSpaceRaceAchievementCard(programme, false, currentUniversalTime);
+                hasCurrentOpportunity = true;
             }
 
             for (int programmeIndex = 0;
@@ -733,23 +771,23 @@ namespace TheRaceForSpace.UI
                     continue;
                 }
 
-                if (hasAvailableFunding)
+                if (hasCurrentOpportunity)
                 {
                     GUILayout.Space(8.0f);
                 }
 
-                DrawSatelliteInformationCard(programme);
-                hasAvailableFunding = true;
+                DrawSpaceRaceSatelliteCard(programme, false, currentUniversalTime);
+                hasCurrentOpportunity = true;
             }
 
-            if (!hasAvailableFunding)
+            if (!hasCurrentOpportunity)
             {
                 GUILayout.Label("None");
             }
 
             GUILayout.Space(12.0f);
-            GUILayout.Label("LOCKED FUNDING", _boldLabelStyle);
-            bool hasLockedFunding = false;
+            GUILayout.Label("COMING NEXT", _boldLabelStyle);
+            bool hasComingNext = false;
 
             for (int programmeIndex = 0;
                 programmeIndex < _raceController.AchievementFundingProgrammes.Count;
@@ -762,13 +800,13 @@ namespace TheRaceForSpace.UI
                     continue;
                 }
 
-                if (hasLockedFunding)
+                if (hasComingNext)
                 {
                     GUILayout.Space(8.0f);
                 }
 
-                DrawAchievementInformationCard(programme);
-                hasLockedFunding = true;
+                DrawSpaceRaceAchievementCard(programme, true, currentUniversalTime);
+                hasComingNext = true;
             }
 
             for (int programmeIndex = 0;
@@ -781,23 +819,23 @@ namespace TheRaceForSpace.UI
                     continue;
                 }
 
-                if (hasLockedFunding)
+                if (hasComingNext)
                 {
                     GUILayout.Space(8.0f);
                 }
 
-                DrawSatelliteInformationCard(programme);
-                hasLockedFunding = true;
+                DrawSpaceRaceSatelliteCard(programme, true, currentUniversalTime);
+                hasComingNext = true;
             }
 
-            if (!hasLockedFunding)
+            if (!hasComingNext)
             {
                 GUILayout.Label("None");
             }
 
             GUILayout.Space(12.0f);
-            GUILayout.Label("EXPIRED FUNDING", _boldLabelStyle);
-            bool hasExpiredFunding = false;
+            GUILayout.Label("COMPLETED / HISTORICAL", _boldLabelStyle);
+            bool hasHistoricalAchievement = false;
 
             for (int programmeIndex = 0;
                 programmeIndex < _raceController.AchievementFundingProgrammes.Count;
@@ -805,21 +843,29 @@ namespace TheRaceForSpace.UI
             {
                 AchievementFundingProgramme programme =
                     _raceController.AchievementFundingProgrammes[programmeIndex];
-                if (!programme.IsExpired)
+                bool playerAchieved = _raceController.HasProgramAchieved(player, programme);
+                if (!playerAchieved && !programme.IsExpired)
                 {
                     continue;
                 }
 
-                if (hasExpiredFunding)
+                if (!hasHistoricalAchievement)
                 {
-                    GUILayout.Space(8.0f);
+                    GUILayout.BeginVertical("box");
+                    hasHistoricalAchievement = true;
                 }
 
-                DrawAchievementInformationCard(programme);
-                hasExpiredFunding = true;
+                GUILayout.Label(
+                    programme.Name
+                    + ": "
+                    + (playerAchieved ? "ACHIEVED" : "EXPIRED - NOT ACHIEVED"));
             }
 
-            if (!hasExpiredFunding)
+            if (hasHistoricalAchievement)
+            {
+                GUILayout.EndVertical();
+            }
+            else
             {
                 GUILayout.Label("None");
             }
@@ -827,61 +873,256 @@ namespace TheRaceForSpace.UI
             GUILayout.EndScrollView();
         }
 
-        private void DrawAchievementInformationCard(AchievementFundingProgramme programme)
+        private void DrawSpaceRaceAchievementCard(
+            AchievementFundingProgramme programme,
+            bool isLocked,
+            double evaluationUniversalTime)
         {
-            bool isAvailable = _raceController.IsAchievementProgrammeAvailable(programme);
-
             GUILayout.BeginVertical("box");
-            GUILayout.Label(programme.Name);
+            GUILayout.Label(programme.Name, _boldLabelStyle);
             GUILayout.Label("Objective: " + programme.ObjectiveDescription);
-            GUILayout.Label("Unlock: " + programme.UnlockRequirement);
+            GUILayout.Label("State: " + (isLocked ? "LOCKED" : "AVAILABLE"));
 
-            if (programme.IsExpired)
+            if (isLocked)
             {
-                GUILayout.Label("State: EXPIRED");
-            }
-            else if (!isAvailable)
-            {
-                GUILayout.Label("State: LOCKED");
-            }
-            else if (!programme.HasStarted)
-            {
-                GUILayout.Label("State: ACTIVE - awaiting first achievement");
+                DrawUnlockRuleProgress(programme.UnlockRule, evaluationUniversalTime);
             }
             else
             {
-                GUILayout.Label("State: ACTIVE - current interest " + programme.CurrentInterestPercent + "%");
-                GUILayout.Label("Next payout: " + FormatKerbinDate(_raceController.NextFundingUniversalTime));
+                GUILayout.Label("Player: NOT ACHIEVED");
             }
 
-            GUILayout.Label("Base payout: " + programme.BaseRewardFunds.ToString("N0"));
-            GUILayout.Label("Funding: the first global funding date after the objective is achieved pays 100%. Later global funding dates fall by 10% each time. Each payment is shared by agencies that had achieved the objective by that date.");
-            GUILayout.Label(
-                "Player: "
-                + (_raceController.HasProgramAchieved(_raceController.PlayerProgram, programme) ? "ACHIEVED" : "NOT ACHIEVED"));
             GUILayout.EndVertical();
         }
 
-        private void DrawSatelliteInformationCard(FundingProgramme programme)
+        private void DrawSpaceRaceSatelliteCard(
+            FundingProgramme programme,
+            bool isLocked,
+            double evaluationUniversalTime)
         {
             GUILayout.BeginVertical("box");
-            GUILayout.Label(programme.Name);
+            GUILayout.Label(programme.Name, _boldLabelStyle);
             GUILayout.Label(
                 "Objective: maintain "
                 + programme.RequiredSatellites
                 + " qualifying satellite(s) in orbit around "
                 + programme.CelestialBodyName
                 + ".");
-            GUILayout.Label("State: " + (programme.IsAvailable ? "UNLOCKED" : "LOCKED"));
+            GUILayout.Label("State: " + (isLocked ? "LOCKED" : "UNLOCKED"));
 
-            if (!programme.IsAvailable && !string.IsNullOrEmpty(programme.UnlockRequirement))
+            if (isLocked)
             {
-                GUILayout.Label("Unlock requirement: " + programme.UnlockRequirement);
+                DrawUnlockRuleProgress(programme.UnlockRule, evaluationUniversalTime);
+            }
+            else
+            {
+                int satelliteCount = _raceController.PlayerProgram.GetSatelliteCount(
+                    programme.CelestialBodyName);
+                GUILayout.Label(
+                    "Your progress: "
+                    + satelliteCount
+                    + " / "
+                    + programme.RequiredSatellites
+                    + " qualifying satellite(s)");
             }
 
-            GUILayout.Label("Total available payout: " + programme.RewardFunds.ToString("N0"));
-            GUILayout.Label("Funding: paid on the shared 90-day funding date and permanent once unlocked; this contract does not lose interest over time.");
             GUILayout.EndVertical();
+        }
+
+        private void DrawUnlockRuleProgress(
+            UnlockRuleDefinition rule,
+            double evaluationUniversalTime)
+        {
+            GUILayout.Space(4.0f);
+            GUILayout.Label("Unlock requirements:", _boldLabelStyle);
+
+            if (rule == null)
+            {
+                GUILayout.Label("[x] Available from campaign start");
+                return;
+            }
+
+            if (rule.Paths.Count == 0)
+            {
+                GUILayout.Label("[ ] No valid unlock paths");
+                return;
+            }
+
+            for (int pathIndex = 0; pathIndex < rule.Paths.Count; pathIndex++)
+            {
+                if (pathIndex > 0)
+                {
+                    GUILayout.Space(4.0f);
+                    GUILayout.Label("OR", _boldLabelStyle);
+                }
+
+                if (rule.Paths.Count > 1)
+                {
+                    GUILayout.Label("Unlock Path " + (pathIndex + 1), _boldLabelStyle);
+                }
+
+                UnlockPathDefinition path = rule.Paths[pathIndex];
+                if (path == null || path.Conditions.Count == 0)
+                {
+                    GUILayout.Label("[ ] No valid unlock conditions");
+                    continue;
+                }
+
+                for (int conditionIndex = 0; conditionIndex < path.Conditions.Count; conditionIndex++)
+                {
+                    DrawUnlockConditionProgress(
+                        path.Conditions[conditionIndex],
+                        evaluationUniversalTime);
+                }
+            }
+        }
+
+        private void DrawUnlockConditionProgress(
+            UnlockConditionDefinition condition,
+            double evaluationUniversalTime)
+        {
+            bool isSatisfied = UnlockRuleEvaluator.IsConditionSatisfied(
+                condition,
+                _raceController.Programs,
+                evaluationUniversalTime);
+
+            _listTextBuilder.Length = 0;
+            _listTextBuilder.Append(isSatisfied ? "[x] " : "[ ] ");
+
+            if (condition == null)
+            {
+                _listTextBuilder.Append("Invalid unlock condition");
+            }
+            else if (condition.ConditionType == UnlockConditionType.Achievement)
+            {
+                AppendAchievementConditionText(
+                    condition,
+                    isSatisfied,
+                    evaluationUniversalTime);
+            }
+            else if (condition.ConditionType == UnlockConditionType.UniversalTime)
+            {
+                if (isSatisfied)
+                {
+                    _listTextBuilder.Append("Campaign date reached: ");
+                    _listTextBuilder.Append(FormatKerbinDate(condition.RequiredUniversalTime));
+                }
+                else
+                {
+                    int remainingDays = (int)Math.Ceiling(
+                        Math.Max(
+                            0.0,
+                            condition.RequiredUniversalTime - evaluationUniversalTime)
+                        / KerbinDaySeconds);
+                    _listTextBuilder.Append("Available from ");
+                    _listTextBuilder.Append(FormatKerbinDate(condition.RequiredUniversalTime));
+                    _listTextBuilder.Append(" - ");
+                    _listTextBuilder.Append(remainingDays);
+                    _listTextBuilder.Append(remainingDays == 1 ? " day remaining" : " days remaining");
+                }
+            }
+            else
+            {
+                _listTextBuilder.Append("Unknown unlock condition");
+            }
+
+            GUILayout.Label(_listTextBuilder.ToString());
+        }
+
+        private void AppendAchievementConditionText(
+            UnlockConditionDefinition condition,
+            bool isSatisfied,
+            double evaluationUniversalTime)
+        {
+            int satisfiedProgramCount = UnlockRuleEvaluator.GetSatisfiedProgramCount(
+                condition,
+                _raceController.Programs,
+                evaluationUniversalTime);
+            string milestoneName = GetMilestoneDisplayName(condition.MilestoneId);
+
+            if (condition.RequiredProgramCount <= 1)
+            {
+                switch (condition.ProgramScope)
+                {
+                    case UnlockProgramScope.Player:
+                        _listTextBuilder.Append("You achieve ");
+                        break;
+
+                    case UnlockProgramScope.AnyRival:
+                        _listTextBuilder.Append("Any rival agency achieves ");
+                        break;
+
+                    case UnlockProgramScope.AnyAgency:
+                    default:
+                        _listTextBuilder.Append("Any agency achieves ");
+                        break;
+                }
+
+                _listTextBuilder.Append(milestoneName);
+
+                if (isSatisfied && condition.ProgramScope != UnlockProgramScope.Player)
+                {
+                    SpaceProgramState satisfyingProgram = FindFirstProgramSatisfyingCondition(
+                        condition,
+                        evaluationUniversalTime);
+                    if (satisfyingProgram != null)
+                    {
+                        _listTextBuilder.Append(" - ");
+                        _listTextBuilder.Append(GetProgramDisplayName(satisfyingProgram));
+                    }
+                }
+
+                return;
+            }
+
+            _listTextBuilder.Append(satisfiedProgramCount);
+            _listTextBuilder.Append(" / ");
+            _listTextBuilder.Append(condition.RequiredProgramCount);
+
+            switch (condition.ProgramScope)
+            {
+                case UnlockProgramScope.AnyRival:
+                    _listTextBuilder.Append(" rival agencies have achieved ");
+                    break;
+
+                case UnlockProgramScope.Player:
+                    _listTextBuilder.Append(" player achievement count for ");
+                    break;
+
+                case UnlockProgramScope.AnyAgency:
+                default:
+                    _listTextBuilder.Append(" agencies have achieved ");
+                    break;
+            }
+
+            _listTextBuilder.Append(milestoneName);
+        }
+
+        private SpaceProgramState FindFirstProgramSatisfyingCondition(
+            UnlockConditionDefinition condition,
+            double evaluationUniversalTime)
+        {
+            for (int programIndex = 0; programIndex < _raceController.Programs.Count; programIndex++)
+            {
+                SpaceProgramState program = _raceController.Programs[programIndex];
+                if (UnlockRuleEvaluator.DoesProgramSatisfyAchievementCondition(
+                    program,
+                    condition,
+                    evaluationUniversalTime))
+                {
+                    return program;
+                }
+            }
+
+            return null;
+        }
+
+        private static string GetMilestoneDisplayName(string milestoneId)
+        {
+            MilestoneDefinition milestone = PrototypeMilestones.FindById(milestoneId);
+            return milestone == null || string.IsNullOrEmpty(milestone.Name)
+                ? milestoneId
+                : milestone.Name;
         }
 
         private void DrawProgramCard(

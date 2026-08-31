@@ -132,6 +132,68 @@ namespace TheRaceForSpace.ControllerTests
                 "A time condition should unlock exactly at its threshold.");
         }
 
+        public static void ConditionProgressMatchesRuleEvaluation()
+        {
+            IList<SpaceProgramState> programs = CreatePrograms();
+            programs[1].RecordAchievement("shared-progress", 100.0);
+            programs[2].RecordAchievement("shared-progress", 200.0);
+
+            UnlockConditionDefinition condition = UnlockConditionDefinition.Achievement(
+                "shared-progress",
+                UnlockProgramScope.AnyRival,
+                2);
+            var rule = new UnlockRuleDefinition(new UnlockPathDefinition(condition));
+
+            Require(
+                UnlockRuleEvaluator.GetSatisfiedProgramCount(condition, programs, 199.0) == 1,
+                "Progress should count only rival achievements reached by the evaluation time.");
+            Require(
+                !UnlockRuleEvaluator.IsConditionSatisfied(condition, programs, 199.0),
+                "One of two rivals should leave the condition incomplete.");
+            Require(
+                !UnlockRuleEvaluator.IsSatisfied(rule, programs, 199.0),
+                "The containing rule should agree with the condition progress result.");
+
+            Require(
+                UnlockRuleEvaluator.GetSatisfiedProgramCount(condition, programs, 200.0) == 2,
+                "Both rivals should count exactly when the second achievement occurs.");
+            Require(
+                UnlockRuleEvaluator.IsConditionSatisfied(condition, programs, 200.0),
+                "The condition should complete at the same time as its count reaches the requirement.");
+            Require(
+                UnlockRuleEvaluator.IsSatisfied(rule, programs, 200.0),
+                "The full rule should agree with the completed UI-facing condition result.");
+        }
+
+        public static void ProgramConditionProgressUsesScopeAndTime()
+        {
+            IList<SpaceProgramState> programs = CreatePrograms();
+            programs[0].RecordAchievement("rival-only-progress", 50.0);
+            programs[1].RecordAchievement("rival-only-progress", 100.0);
+            UnlockConditionDefinition condition = UnlockConditionDefinition.Achievement(
+                "rival-only-progress",
+                UnlockProgramScope.AnyRival);
+
+            Require(
+                !UnlockRuleEvaluator.DoesProgramSatisfyAchievementCondition(
+                    programs[0],
+                    condition,
+                    100.0),
+                "The player should not be attributed to an AnyRival condition.");
+            Require(
+                !UnlockRuleEvaluator.DoesProgramSatisfyAchievementCondition(
+                    programs[1],
+                    condition,
+                    99.0),
+                "A rival achievement should not be attributed before its recorded time.");
+            Require(
+                UnlockRuleEvaluator.DoesProgramSatisfyAchievementCondition(
+                    programs[1],
+                    condition,
+                    100.0),
+                "A qualifying rival should be attributable exactly at its achievement time.");
+        }
+
         public static void MalformedRulesFailClosed()
         {
             var emptyRule = new UnlockRuleDefinition();

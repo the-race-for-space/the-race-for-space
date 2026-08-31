@@ -42,6 +42,93 @@ namespace TheRaceForSpace.Milestones
             return false;
         }
 
+        /// <summary>
+        /// Returns whether one unlock condition is satisfied at the supplied time. UI progress
+        /// uses this same method as the full-rule evaluator rather than reimplementing semantics.
+        /// </summary>
+        public static bool IsConditionSatisfied(
+            UnlockConditionDefinition condition,
+            IList<SpaceProgramState> programs,
+            double evaluationUniversalTime)
+        {
+            if (condition == null || double.IsNaN(evaluationUniversalTime))
+            {
+                return false;
+            }
+
+            if (condition.ConditionType == UnlockConditionType.UniversalTime)
+            {
+                return evaluationUniversalTime >= condition.RequiredUniversalTime;
+            }
+
+            if (condition.ConditionType != UnlockConditionType.Achievement)
+            {
+                return false;
+            }
+
+            return GetSatisfiedProgramCount(
+                condition,
+                programs,
+                evaluationUniversalTime) >= condition.RequiredProgramCount;
+        }
+
+        /// <summary>
+        /// Counts programs that satisfy an achievement condition at the supplied time. Non-
+        /// achievement or malformed conditions return zero.
+        /// </summary>
+        public static int GetSatisfiedProgramCount(
+            UnlockConditionDefinition condition,
+            IList<SpaceProgramState> programs,
+            double evaluationUniversalTime)
+        {
+            if (condition == null
+                || condition.ConditionType != UnlockConditionType.Achievement
+                || programs == null
+                || string.IsNullOrEmpty(condition.MilestoneId)
+                || double.IsNaN(evaluationUniversalTime))
+            {
+                return 0;
+            }
+
+            int achievedProgramCount = 0;
+            for (int programIndex = 0; programIndex < programs.Count; programIndex++)
+            {
+                if (DoesProgramSatisfyAchievementCondition(
+                    programs[programIndex],
+                    condition,
+                    evaluationUniversalTime))
+                {
+                    achievedProgramCount++;
+                }
+            }
+
+            return achievedProgramCount;
+        }
+
+        /// <summary>
+        /// Returns whether one program satisfies the scope, milestone and historical-time parts of
+        /// an achievement condition. This supports read-only UI attribution without duplicating rules.
+        /// </summary>
+        public static bool DoesProgramSatisfyAchievementCondition(
+            SpaceProgramState program,
+            UnlockConditionDefinition condition,
+            double evaluationUniversalTime)
+        {
+            if (program == null
+                || condition == null
+                || condition.ConditionType != UnlockConditionType.Achievement
+                || string.IsNullOrEmpty(condition.MilestoneId)
+                || double.IsNaN(evaluationUniversalTime)
+                || !ProgramMatchesScope(program, condition.ProgramScope))
+            {
+                return false;
+            }
+
+            double achievementUniversalTime = program.GetAchievementUniversalTime(condition.MilestoneId);
+            return achievementUniversalTime >= 0.0
+                && achievementUniversalTime <= evaluationUniversalTime;
+        }
+
         private static bool IsPathSatisfied(
             UnlockPathDefinition path,
             IList<SpaceProgramState> programs,
@@ -62,54 +149,6 @@ namespace TheRaceForSpace.Milestones
             }
 
             return true;
-        }
-
-        private static bool IsConditionSatisfied(
-            UnlockConditionDefinition condition,
-            IList<SpaceProgramState> programs,
-            double evaluationUniversalTime)
-        {
-            if (condition == null)
-            {
-                return false;
-            }
-
-            if (condition.ConditionType == UnlockConditionType.UniversalTime)
-            {
-                return evaluationUniversalTime >= condition.RequiredUniversalTime;
-            }
-
-            if (condition.ConditionType != UnlockConditionType.Achievement
-                || programs == null
-                || string.IsNullOrEmpty(condition.MilestoneId))
-            {
-                return false;
-            }
-
-            int achievedProgramCount = 0;
-            for (int programIndex = 0; programIndex < programs.Count; programIndex++)
-            {
-                SpaceProgramState program = programs[programIndex];
-                if (!ProgramMatchesScope(program, condition.ProgramScope))
-                {
-                    continue;
-                }
-
-                double achievementUniversalTime = program.GetAchievementUniversalTime(condition.MilestoneId);
-                if (achievementUniversalTime < 0.0
-                    || achievementUniversalTime > evaluationUniversalTime)
-                {
-                    continue;
-                }
-
-                achievedProgramCount++;
-                if (achievedProgramCount >= condition.RequiredProgramCount)
-                {
-                    return true;
-                }
-            }
-
-            return false;
         }
 
         private static bool ProgramMatchesScope(

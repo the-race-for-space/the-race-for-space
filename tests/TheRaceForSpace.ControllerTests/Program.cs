@@ -30,6 +30,12 @@ namespace TheRaceForSpace.ControllerTests
                 "Unlock time condition uses exact boundary",
                 UnlockRuleEvaluatorTests.UniversalTimeConditionUsesExactBoundary);
             Run(
+                "Unlock condition progress matches rule evaluation",
+                UnlockRuleEvaluatorTests.ConditionProgressMatchesRuleEvaluation);
+            Run(
+                "Unlock program progress respects scope and time",
+                UnlockRuleEvaluatorTests.ProgramConditionProgressUsesScopeAndTime);
+            Run(
                 "Unlock malformed rules fail closed",
                 UnlockRuleEvaluatorTests.MalformedRulesFailClosed);
             Run(

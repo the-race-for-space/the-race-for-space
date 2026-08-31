@@ -26,22 +26,24 @@ namespace TheRaceForSpace.UI
         }
 
         private const float WindowBackgroundOpacity = 0.82f;
+        private const float WindowWidth = 900.0f;
+        private const float WindowHeight = 720.0f;
         private const int HighlightedCardTitleFontSize = 16;
         private const string LauncherIconTexturePath =
             "Squad/PartList/SimpleIcons/R&D_node_icon_basicprobes";
         private static RaceWindow _activeInstance;
+        private static ActiveView _activeView = ActiveView.Overview;
+        private static Game _windowPositionGame;
+        private static Rect _windowRect;
 
         // This is a non-owning reference to the current Core runtime controller. RaceWindow never
         // creates or advances the controller; it only reads the state needed for presentation.
         private SatelliteRaceController _raceController;
         private Game _visibilityGame;
 
-        // Desktop-oriented size keeps all four views readable without creating additional pop-out windows.
-        private Rect _windowRect = new Rect(70.0f, 55.0f, 900.0f, 720.0f);
         private Vector2 _fundingScrollPosition;
         private Vector2 _rivalsScrollPosition;
         private Vector2 _spaceRaceScrollPosition;
-        private static ActiveView _activeView = ActiveView.Overview;
         private ApplicationLauncherButton _launcherButton;
         private GUIStyle _highlightedCardTitleStyle;
         private GUIStyle _boldLabelStyle;
@@ -69,6 +71,16 @@ namespace TheRaceForSpace.UI
             }
 
             _activeInstance = this;
+
+            // Scene changes recreate RaceWindow, so position and selected tab are static for the
+            // current game. A different save starts from the normal centered Overview state.
+            if (_windowPositionGame != HighLogic.CurrentGame)
+            {
+                _windowPositionGame = HighLogic.CurrentGame;
+                _windowRect = CreateCenteredWindowRect();
+                _activeView = ActiveView.Overview;
+            }
+
             _visibilityGame = HighLogic.CurrentGame;
             _raceController = RaceRuntime.Controller;
         }
@@ -104,6 +116,9 @@ namespace TheRaceForSpace.UI
             if (_visibilityGame != HighLogic.CurrentGame)
             {
                 _visibilityGame = HighLogic.CurrentGame;
+                _windowPositionGame = HighLogic.CurrentGame;
+                _windowRect = CreateCenteredWindowRect();
+                _activeView = ActiveView.Overview;
                 _hasRestoredVisibilityState = false;
                 _isVisible = false;
             }
@@ -142,6 +157,13 @@ namespace TheRaceForSpace.UI
             {
                 SetCommandCenterVisible(!_isVisible);
             }
+        }
+
+        private static Rect CreateCenteredWindowRect()
+        {
+            float windowX = Mathf.Max(0.0f, (Screen.width - WindowWidth) * 0.5f);
+            float windowY = Mathf.Max(0.0f, (Screen.height - WindowHeight) * 0.5f);
+            return new Rect(windowX, windowY, WindowWidth, WindowHeight);
         }
 
         private void EnsureApplicationLauncherButton()

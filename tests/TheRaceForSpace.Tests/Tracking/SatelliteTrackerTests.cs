@@ -20,7 +20,8 @@ namespace TheRaceForSpace.Tests.Tracking
             {
                 new VesselTrackingSnapshot("Kerbin", TrackedVesselType.Probe, 0),
                 new VesselTrackingSnapshot("Kerbin", TrackedVesselType.Other, 1),
-                new VesselTrackingSnapshot("Mun", TrackedVesselType.Relay, 0)
+                new VesselTrackingSnapshot("Mun", TrackedVesselType.Relay, 0),
+                new VesselTrackingSnapshot("Eve", TrackedVesselType.Probe, 0)
             };
 
             SatelliteTracker.RefreshPlayerSatelliteCounts(
@@ -32,6 +33,7 @@ namespace TheRaceForSpace.Tests.Tracking
 
             RequireEqual(1, playerProgram.GetSatelliteCount("Kerbin"), "Probe should count as one Kerbin satellite.");
             RequireEqual(1, playerProgram.GetSatelliteCount("Mun"), "Relay should count as one Mun satellite.");
+            RequireEqual(1, playerProgram.GetSatelliteCount("Eve"), "A body outside the milestone catalogue should still receive a satellite count.");
             Require(playerProgram.HasAchievement(PrototypeMilestones.ProbeOrbitId), "Uncrewed probe should satisfy Probe Orbit.");
             Require(playerProgram.HasAchievement(PrototypeMilestones.CrewedOrbitId), "Crewed vessel should satisfy Crewed Orbit.");
             Require(playerProgram.HasAchievement(PrototypeMilestones.MunProbeOrbitId), "Mun relay should satisfy Mun Probe Orbit after its prerequisite is recorded.");
@@ -50,14 +52,14 @@ namespace TheRaceForSpace.Tests.Tracking
 
             SatelliteTracker.RefreshPlayerSatelliteCounts(
                 playerProgram,
-                PrototypeMilestones.All,
-                new HashSet<string>(StringComparer.OrdinalIgnoreCase),
+                null,
+                null,
                 new List<VesselTrackingSnapshot>(),
                 2000.0);
 
             RequireEqual(0, playerProgram.GetSatelliteCount("Kerbin"), "Missing Kerbin snapshots should clear the previous count.");
             RequireEqual(0, playerProgram.GetSatelliteCount("Mun"), "Missing Mun snapshots should clear the previous count.");
-            RequireEqual(0, playerProgram.GetSatelliteCount("Eve"), "Missing arbitrary-body snapshots should clear the previous count.");
+            RequireEqual(0, playerProgram.GetSatelliteCount("Eve"), "Missing arbitrary-body snapshots should clear the previous count without milestone definitions.");
         }
 
         public static void CrewedProbeCountsAsSatelliteButNotProbeMilestone()
@@ -83,27 +85,6 @@ namespace TheRaceForSpace.Tests.Tracking
             RequireEqual(1, playerProgram.GetSatelliteCount("Kerbin"), "A crewed probe remains a qualifying satellite for network counts.");
             Require(!playerProgram.HasAchievement(PrototypeMilestones.ProbeOrbitId), "A crewed probe should not satisfy the uncrewed Probe Orbit milestone.");
             Require(playerProgram.HasAchievement(PrototypeMilestones.CrewedOrbitId), "A crewed probe should satisfy the Crewed Orbit milestone.");
-        }
-
-        public static void SatelliteCountsDoNotRequireMilestoneDefinitions()
-        {
-            var playerProgram = new SpaceProgramState("player", "Player", true);
-            var vesselSnapshots = new List<VesselTrackingSnapshot>
-            {
-                new VesselTrackingSnapshot("Eve", TrackedVesselType.Probe, 0),
-                new VesselTrackingSnapshot("Eve", TrackedVesselType.Relay, 0),
-                new VesselTrackingSnapshot("Jool", TrackedVesselType.Other, 0)
-            };
-
-            SatelliteTracker.RefreshPlayerSatelliteCounts(
-                playerProgram,
-                null,
-                null,
-                vesselSnapshots,
-                4000.0);
-
-            RequireEqual(2, playerProgram.GetSatelliteCount("Eve"), "Bodies outside the milestone catalogue should still receive satellite counts.");
-            RequireEqual(0, playerProgram.GetSatelliteCount("Jool"), "Non-satellite vessel types should not create body counts.");
         }
 
         private static void Require(bool condition, string message)

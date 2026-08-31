@@ -9,7 +9,15 @@ namespace TheRaceForSpace.Funding
     public sealed class FundingProgramme
     {
         public FundingProgramme(string id, string name, string celestialBodyName, int requiredSatellites, double rewardFunds)
-            : this(id, name, celestialBodyName, requiredSatellites, rewardFunds, true, null, null)
+            : this(
+                id,
+                name,
+                celestialBodyName,
+                requiredSatellites,
+                rewardFunds,
+                true,
+                null,
+                (UnlockRuleDefinition)null)
         {
         }
 
@@ -29,7 +37,34 @@ namespace TheRaceForSpace.Funding
                 rewardFunds,
                 isAvailable,
                 unlockRequirement,
-                null)
+                (UnlockRuleDefinition)null)
+        {
+        }
+
+        /// <summary>
+        /// Temporary Item 14B constructor bridge for existing test/caller code. The prerequisite
+        /// string is converted immediately and is not stored; Item 14C removes this overload.
+        /// </summary>
+        public FundingProgramme(
+            string id,
+            string name,
+            string celestialBodyName,
+            int requiredSatellites,
+            double rewardFunds,
+            bool isAvailable,
+            string unlockRequirement,
+            string prerequisiteMilestoneId)
+            : this(
+                id,
+                name,
+                celestialBodyName,
+                requiredSatellites,
+                rewardFunds,
+                isAvailable,
+                unlockRequirement,
+                string.IsNullOrEmpty(prerequisiteMilestoneId)
+                    ? null
+                    : UnlockRuleDefinition.AnyAgencyAchievement(prerequisiteMilestoneId))
         {
         }
 

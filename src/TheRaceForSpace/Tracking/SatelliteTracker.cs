@@ -12,8 +12,9 @@ namespace TheRaceForSpace.Tracking
     public static class SatelliteTracker
     {
         /// <summary>
-        /// Refreshes player satellite counts and records available milestones from normalized
-        /// orbiting-vessel snapshots supplied by the KSP integration boundary.
+        /// Refreshes player satellite counts from every observed Probe/Relay body and records
+        /// available milestones from the same normalized orbiting-vessel snapshots.
+        /// Satellite body tracking does not depend on the milestone catalogue.
         /// </summary>
         public static void RefreshPlayerSatelliteCounts(
             SpaceProgramState playerProgram,
@@ -22,27 +23,12 @@ namespace TheRaceForSpace.Tracking
             IList<VesselTrackingSnapshot> vesselSnapshots,
             double currentUniversalTime)
         {
-            if (playerProgram == null
-                || milestoneDefinitions == null
-                || vesselSnapshots == null)
+            if (playerProgram == null || vesselSnapshots == null)
             {
                 return;
             }
 
             var countsByBody = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-            for (int milestoneIndex = 0; milestoneIndex < milestoneDefinitions.Count; milestoneIndex++)
-            {
-                MilestoneDefinition milestone = milestoneDefinitions[milestoneIndex];
-                if (milestone == null
-                    || string.IsNullOrEmpty(milestone.CelestialBodyName)
-                    || countsByBody.ContainsKey(milestone.CelestialBodyName))
-                {
-                    continue;
-                }
-
-                countsByBody.Add(milestone.CelestialBodyName, 0);
-            }
-
             var observations = new List<MilestoneVesselObservation>();
 
             for (int vesselIndex = 0; vesselIndex < vesselSnapshots.Count; vesselIndex++)
@@ -74,22 +60,28 @@ namespace TheRaceForSpace.Tracking
                         crewQualification));
                 }
 
-                // The prototype treats Probe and Relay vessel types as satellites. Only bodies
-                // represented by milestone definitions need maintained counts in the current design.
-                if (isPrototypeSatellite && countsByBody.ContainsKey(vesselSnapshot.CelestialBodyName))
+                if (isPrototypeSatellite)
                 {
-                    countsByBody[vesselSnapshot.CelestialBodyName] =
-                        countsByBody[vesselSnapshot.CelestialBodyName] + 1;
+                    int currentCount;
+                    countsByBody.TryGetValue(vesselSnapshot.CelestialBodyName, out currentCount);
+                    countsByBody[vesselSnapshot.CelestialBodyName] = currentCount + 1;
                 }
             }
 
-            EvaluateMilestones(
-                playerProgram,
-                milestoneDefinitions,
-                availableMilestoneIds,
-                observations,
-                currentUniversalTime);
+            if (milestoneDefinitions != null)
+            {
+                EvaluateMilestones(
+                    playerProgram,
+                    milestoneDefinitions,
+                    availableMilestoneIds,
+                    observations,
+                    currentUniversalTime);
+            }
 
+            // A successful snapshot refresh is authoritative for player vessel presence. Clear
+            // stale body counts first so removing the last satellite from any body returns it to zero,
+            // including bodies that are not represented by the current milestone catalogue.
+            playerProgram.ClearSatelliteCounts();
             foreach (KeyValuePair<string, int> bodyCount in countsByBody)
             {
                 playerProgram.SetSatelliteCount(bodyCount.Key, bodyCount.Value);

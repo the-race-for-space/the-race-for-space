@@ -31,7 +31,7 @@ namespace TheRaceForSpace.Tests.Simulation
 
             RivalSimulation.Refresh(
                 new List<SpaceProgramState> { player, aster, cobalt, delta },
-                0.0,
+                1.0,
                 achievementProgrammes,
                 new List<FundingProgramme>());
 
@@ -66,6 +66,53 @@ namespace TheRaceForSpace.Tests.Simulation
                 new List<FundingProgramme>());
 
             TestAssert.Equal(null, aster.NextMissionTargetId);
+        }
+
+        public static void FlexibleRuleUsesRivalScopeCountAndHistoricalTime()
+        {
+            var player = new SpaceProgramState("player", "Player", true);
+            var aster = new SpaceProgramState("aster", "Aster", false);
+            var cobalt = new SpaceProgramState("cobalt", "Cobalt", false);
+            var delta = new SpaceProgramState("delta", "Delta", false);
+            aster.RecordAchievement(PrototypeMilestones.ProbeOrbitId, 100.0);
+            delta.RecordAchievement(PrototypeMilestones.ProbeOrbitId, 200.0);
+
+            MilestoneDefinition milestone = PrototypeMilestones.FindById(
+                PrototypeMilestones.MinmusCrewedOrbitId);
+            var achievementProgrammes = new List<AchievementFundingProgramme>
+            {
+                new AchievementFundingProgramme(
+                    milestone.Id,
+                    milestone.Name,
+                    milestone.ObjectiveDescription,
+                    300000.0,
+                    "Display text",
+                    new UnlockRuleDefinition(
+                        new UnlockPathDefinition(
+                            UnlockConditionDefinition.Achievement(
+                                PrototypeMilestones.ProbeOrbitId,
+                                UnlockProgramScope.AnyRival,
+                                2))))
+            };
+            var programs = new List<SpaceProgramState> { player, aster, cobalt, delta };
+
+            RivalSimulation.Refresh(
+                programs,
+                199.0,
+                achievementProgrammes,
+                new List<FundingProgramme>());
+            TestAssert.Equal(
+                null,
+                cobalt.NextMissionTargetId);
+
+            RivalSimulation.Refresh(
+                programs,
+                200.0,
+                achievementProgrammes,
+                new List<FundingProgramme>());
+            TestAssert.Equal(
+                PrototypeMilestones.MinmusCrewedOrbitId,
+                cobalt.NextMissionTargetId);
         }
 
         public static void SatelliteProgrammeRemainsRepeatable()

@@ -113,6 +113,11 @@ namespace TheRaceForSpace.Programs
 
         public int GetSatelliteCount(string celestialBodyName)
         {
+            if (string.IsNullOrEmpty(celestialBodyName))
+            {
+                return 0;
+            }
+
             int count;
             return _satellitesByBody.TryGetValue(celestialBodyName, out count) ? count : 0;
         }

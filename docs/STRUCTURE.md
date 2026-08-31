@@ -6,7 +6,7 @@ This scaffold mirrors the current design direction for **The Race for Space** wi
 
 - `Core/` — mod lifecycle, shared state and cross-module coordination. `RaceRuntime` owns the current race controller and advances progression on the controlled five-second refresh cadence independently of the UI.
 - `Programs/` — player and rival space-program models/state.
-- `Tracking/` — KSP-independent vessel classification and body-presence tracking from project-owned vessel snapshots.
+- `Tracking/` — KSP-independent vessel classification and body-presence tracking from project-owned vessel snapshots. Probe/Relay counts are maintained for observed celestial bodies independently of milestone definitions; milestone definitions are used only when evaluating achievements.
 - `Milestones/` — achievement/goal definitions and evaluation.
 - `Competition/` — first-to-achieve and comparative-coverage race logic.
 - `Funding/` — nation/corporation sponsors, offers and awards.

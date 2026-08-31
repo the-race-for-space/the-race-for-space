@@ -7,9 +7,9 @@ This scaffold mirrors the current design direction for **The Race for Space** wi
 - `Core/` — mod lifecycle, shared state and cross-module coordination. `RaceRuntime` owns the current race controller and advances progression on the controlled five-second refresh cadence independently of the UI.
 - `Programs/` — player and rival space-program models/state.
 - `Tracking/` — KSP-independent vessel classification and body-presence tracking from project-owned vessel snapshots. Probe/Relay counts are maintained for observed celestial bodies independently of milestone definitions; milestone definitions are used only when evaluating achievements.
-- `Milestones/` — achievement/goal definitions and evaluation.
-- `Competition/` — first-to-achieve and comparative-coverage race logic.
-- `Funding/` — nation/corporation sponsors, offers and awards.
+- `Milestones/` — achievement/goal definitions and evaluation. `PrototypeMilestones` is the code-defined catalogue of current prototype achievement targets.
+- `Competition/` — first-to-achieve and comparative-coverage race logic. `SatelliteRaceController` consumes programme collections and does not construct individual funding targets.
+- `Funding/` — nation/corporation sponsors, offers and awards. `PrototypeFundingCatalogue` owns the code-defined achievement rewards and satellite-network programme bootstrap for the current prototype.
 - `Simulation/` — lightweight rival-program simulation for prototype use.
 - `Scoring/` — progress/coverage calculations kept separate from funding rules.
 - `Persistence/` — simple save-state models for Race for Space values that must survive KSP save/load cycles. Rival programs are persisted as a collection keyed by stable program ID rather than fixed agency save slots.

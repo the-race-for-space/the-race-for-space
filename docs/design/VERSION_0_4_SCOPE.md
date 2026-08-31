@@ -82,12 +82,28 @@ Rival persistence has now been changed from fixed Aster/Cobalt save slots to a c
 
 This is intentionally a save-format break for rival state. The older fixed `ASTER` and `COBALT` ScenarioModule nodes are no longer imported by the new collection path.
 
+### Centralized prototype funding catalogue
+
+The code-defined funding target bootstrap has now been moved out of `Competition/SatelliteRaceController` with explicit approval under the structural-change gate in `AGENTS.md`.
+
+- `Milestones/PrototypeMilestones` remains the catalogue of achievement definitions and their stable IDs, bodies, vessel requirements, descriptions, and prerequisite milestones.
+- `Funding/PrototypeFundingCatalogue` now owns achievement reward amounts and the satellite-network definitions for the current prototype.
+- Achievement funding programmes are created from the milestone catalogue, so names, objective text, and prerequisite IDs are not repeated in the controller.
+- `SatelliteRaceController` consumes the two programme collections and no longer constructs Kerbin, Mun, Minmus, or Duna funding targets individually.
+- The original named controller programme properties remain as compatibility aliases resolved from the collections by stable ID. New targets do not require another named property.
+- The standalone logic suite verifies the current eight achievement programmes, four satellite programmes, rewards, prerequisites, and fresh campaign-state creation.
+- No funding calculation, unlock rule, rival rule, tracking rule, or save format changed as part of this move.
+
+This makes target expansion a catalogue change instead of a controller-constructor change while deliberately stopping short of a configuration framework or general rule engine.
+
 ## Compatibility
 
 Player race progress, funding-programme state, achievement-contract state, and Command Center visibility keep their existing persistence paths.
 
 Rival state now uses the new `RIVALS` collection format. Saves written before this Item 7 change will not restore the old fixed Aster/Cobalt rival state; those rivals will start from their constructor defaults when such a save is loaded. This compatibility break was explicitly accepted for the 0.4 structural work.
 
+The named current-prototype programme properties on `SatelliteRaceController` remain available for compatibility even though normal gameplay now uses the programme collections.
+
 ## Next Decisions
 
-Larger 0.4 work can continue to be selected separately. The main remaining expansion-preparation decision is centralising the currently code-defined target/programme bootstrap so new celestial bodies and race targets do not require edits across the controller constructor. That work remains outside the current implementation unless separately approved where required by `AGENTS.md`.
+The major 0.4 expansion blockers identified in the initial review are now separated from the controller, tracking, runtime, and rival persistence paths. Remaining cleanup candidates include compatibility API cleanup, controller-level regression tests, GitHub Actions CI, and later performance work. Flexible multi-condition unlock rules remain a separate future gameplay/design decision.

@@ -43,7 +43,7 @@ namespace TheRaceForSpace.Milestones
 
     /// <summary>
     /// Immutable definition of one race milestone. Gameplay state remains owned by space programs;
-    /// this type describes what an achievement is and which earlier milestone unlocks it.
+    /// this type describes the objective and the campaign rule that makes it available.
     /// </summary>
     public sealed class MilestoneDefinition
     {
@@ -54,7 +54,7 @@ namespace TheRaceForSpace.Milestones
             MilestoneSituation situation,
             MilestoneCrewRequirement crewRequirement,
             string objectiveDescription,
-            string prerequisiteMilestoneId)
+            UnlockRuleDefinition unlockRule)
         {
             Id = id;
             Name = name;
@@ -62,7 +62,7 @@ namespace TheRaceForSpace.Milestones
             Situation = situation;
             CrewRequirement = crewRequirement;
             ObjectiveDescription = objectiveDescription;
-            PrerequisiteMilestoneId = prerequisiteMilestoneId;
+            UnlockRule = unlockRule;
         }
 
         public string Id { get; private set; }
@@ -71,7 +71,25 @@ namespace TheRaceForSpace.Milestones
         public MilestoneSituation Situation { get; private set; }
         public MilestoneCrewRequirement CrewRequirement { get; private set; }
         public string ObjectiveDescription { get; private set; }
-        public string PrerequisiteMilestoneId { get; private set; }
+        public UnlockRuleDefinition UnlockRule { get; private set; }
+
+        /// <summary>
+        /// Temporary Item 14B bridge for the existing tracker/controller/simulation paths. The
+        /// prerequisite is derived from UnlockRule rather than stored separately, so the rule is
+        /// already the single source of truth. Item 14C removes this projection when all consumers
+        /// use UnlockRuleEvaluator directly.
+        /// </summary>
+        public string PrerequisiteMilestoneId
+        {
+            get
+            {
+                string milestoneId;
+                return UnlockRule != null
+                    && UnlockRule.TryGetSingleAnyAgencyAchievementMilestoneId(out milestoneId)
+                    ? milestoneId
+                    : null;
+            }
+        }
 
         /// <summary>
         /// Returns whether one KSP-independent vessel observation satisfies this milestone.

@@ -47,28 +47,28 @@ namespace TheRaceForSpace.Funding
                     "Kerbin",
                     10,
                     200000.0,
-                    PrototypeMilestones.ProbeOrbitId),
+                    UnlockRuleDefinition.AnyAgencyAchievement(PrototypeMilestones.ProbeOrbitId)),
                 CreateSatelliteProgramme(
                     MunNetworkId,
                     "Mun Survey Network",
                     "Mun",
                     5,
                     100000.0,
-                    PrototypeMilestones.MunProbeOrbitId),
+                    UnlockRuleDefinition.AnyAgencyAchievement(PrototypeMilestones.MunProbeOrbitId)),
                 CreateSatelliteProgramme(
                     MinmusNetworkId,
                     "Minmus Relay Initiative",
                     "Minmus",
                     5,
                     100000.0,
-                    PrototypeMilestones.MinmusProbeOrbitId),
+                    UnlockRuleDefinition.AnyAgencyAchievement(PrototypeMilestones.MinmusProbeOrbitId)),
                 CreateSatelliteProgramme(
                     DunaNetworkId,
                     "Duna Orbital Network",
                     "Duna",
                     5,
                     100000.0,
-                    PrototypeMilestones.DunaProbeOrbitId)
+                    UnlockRuleDefinition.AnyAgencyAchievement(PrototypeMilestones.DunaProbeOrbitId))
             };
         }
 
@@ -78,8 +78,7 @@ namespace TheRaceForSpace.Funding
             double baseRewardFunds)
         {
             MilestoneDefinition milestone = FindRequiredMilestone(milestoneId);
-            string prerequisiteMilestoneId = milestone.PrerequisiteMilestoneId;
-            if (string.IsNullOrEmpty(prerequisiteMilestoneId))
+            if (milestone.UnlockRule == null)
             {
                 programmes.Add(new AchievementFundingProgramme(
                     milestone.Id,
@@ -89,13 +88,12 @@ namespace TheRaceForSpace.Funding
                 return;
             }
 
-            MilestoneDefinition prerequisite = FindRequiredMilestone(prerequisiteMilestoneId);
             programmes.Add(new AchievementFundingProgramme(
                 milestone.Id,
                 milestone.Name,
                 milestone.ObjectiveDescription,
                 baseRewardFunds,
-                "Any agency must achieve " + prerequisite.Name + ".",
+                CreateCurrentPrototypeUnlockRequirement(milestone.UnlockRule),
                 milestone.UnlockRule));
         }
 
@@ -105,9 +103,8 @@ namespace TheRaceForSpace.Funding
             string celestialBodyName,
             int requiredSatellites,
             double rewardFunds,
-            string prerequisiteMilestoneId)
+            UnlockRuleDefinition unlockRule)
         {
-            MilestoneDefinition prerequisite = FindRequiredMilestone(prerequisiteMilestoneId);
             return new FundingProgramme(
                 id,
                 name,
@@ -115,8 +112,41 @@ namespace TheRaceForSpace.Funding
                 requiredSatellites,
                 rewardFunds,
                 false,
-                "Any agency must achieve " + prerequisite.Name + ".",
-                UnlockRuleDefinition.AnyAgencyAchievement(prerequisiteMilestoneId));
+                CreateCurrentPrototypeUnlockRequirement(unlockRule),
+                unlockRule);
+        }
+
+        private static string CreateCurrentPrototypeUnlockRequirement(UnlockRuleDefinition unlockRule)
+        {
+            if (unlockRule == null)
+            {
+                return "Available from the start of the campaign";
+            }
+
+            // Item 14C keeps the current 0.4 presentation text unchanged while gameplay rules are
+            // evaluated only by UnlockRuleEvaluator. Item 14D will provide richer formatting for
+            // arbitrary OR/AND rule paths in the strategic UI.
+            if (unlockRule.Paths.Count != 1
+                || unlockRule.Paths[0] == null
+                || unlockRule.Paths[0].Conditions.Count != 1)
+            {
+                throw new InvalidOperationException(
+                    "Current prototype funding text requires one simple achievement unlock condition.");
+            }
+
+            UnlockConditionDefinition condition = unlockRule.Paths[0].Conditions[0];
+            if (condition == null
+                || condition.ConditionType != UnlockConditionType.Achievement
+                || condition.ProgramScope != UnlockProgramScope.AnyAgency
+                || condition.RequiredProgramCount != 1
+                || string.IsNullOrEmpty(condition.MilestoneId))
+            {
+                throw new InvalidOperationException(
+                    "Current prototype funding text requires one AnyAgency achievement condition.");
+            }
+
+            MilestoneDefinition prerequisite = FindRequiredMilestone(condition.MilestoneId);
+            return "Any agency must achieve " + prerequisite.Name + ".";
         }
 
         private static MilestoneDefinition FindRequiredMilestone(string milestoneId)

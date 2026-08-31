@@ -165,33 +165,5 @@ namespace TheRaceForSpace.Milestones
                         milestoneId,
                         UnlockProgramScope.AnyAgency)));
         }
-
-        /// <summary>
-        /// Returns the milestone ID when this rule is exactly the current prototype's simple
-        /// one-agency achievement rule. Item 14B uses this as a temporary bridge for consumers
-        /// that still read PrerequisiteMilestoneId; Item 14C will move those consumers to the
-        /// shared evaluator and remove the bridge.
-        /// </summary>
-        internal bool TryGetSingleAnyAgencyAchievementMilestoneId(out string milestoneId)
-        {
-            milestoneId = null;
-            if (_paths.Count != 1 || _paths[0] == null || _paths[0].Conditions.Count != 1)
-            {
-                return false;
-            }
-
-            UnlockConditionDefinition condition = _paths[0].Conditions[0];
-            if (condition == null
-                || condition.ConditionType != UnlockConditionType.Achievement
-                || condition.ProgramScope != UnlockProgramScope.AnyAgency
-                || condition.RequiredProgramCount != 1
-                || string.IsNullOrEmpty(condition.MilestoneId))
-            {
-                return false;
-            }
-
-            milestoneId = condition.MilestoneId;
-            return true;
-        }
     }
 }

@@ -59,7 +59,14 @@ namespace TheRaceForSpace.Milestones
                     MilestoneSituation.Orbit,
                     MilestoneCrewRequirement.UncrewedProbe,
                     "Achieve orbit around Duna with an uncrewed Probe or Relay vessel.",
-                    UnlockRuleDefinition.AnyAgencyAchievement(ProbeOrbitId)),
+                    new UnlockRuleDefinition(
+                        new UnlockPathDefinition(
+                            UnlockConditionDefinition.Achievement(
+                                MunProbeOrbitId,
+                                UnlockProgramScope.AnyAgency),
+                            UnlockConditionDefinition.Achievement(
+                                MinmusProbeOrbitId,
+                                UnlockProgramScope.AnyAgency)))),
                 new MilestoneDefinition(
                     MunCrewedOrbitId,
                     "Mun Crewed Orbit",
@@ -83,7 +90,14 @@ namespace TheRaceForSpace.Milestones
                     MilestoneSituation.Orbit,
                     MilestoneCrewRequirement.Crewed,
                     "Achieve orbit around Duna with at least one live Kerbal aboard.",
-                    UnlockRuleDefinition.AnyAgencyAchievement(CrewedOrbitId))
+                    new UnlockRuleDefinition(
+                        new UnlockPathDefinition(
+                            UnlockConditionDefinition.Achievement(
+                                MunCrewedOrbitId,
+                                UnlockProgramScope.AnyAgency),
+                            UnlockConditionDefinition.Achievement(
+                                MinmusCrewedOrbitId,
+                                UnlockProgramScope.AnyAgency))))
             }.AsReadOnly();
 
         public static IList<MilestoneDefinition> All

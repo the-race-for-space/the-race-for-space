@@ -20,13 +20,11 @@ namespace TheRaceForSpace.Tests
             AssertAchievement(
                 achievements,
                 PrototypeMilestones.ProbeOrbitId,
-                100000.0,
-                null);
+                100000.0);
             AssertAchievement(
                 achievements,
                 PrototypeMilestones.CrewedOrbitId,
-                200000.0,
-                null);
+                200000.0);
             AssertAchievement(
                 achievements,
                 PrototypeMilestones.MunProbeOrbitId,
@@ -41,7 +39,8 @@ namespace TheRaceForSpace.Tests
                 achievements,
                 PrototypeMilestones.DunaProbeOrbitId,
                 200000.0,
-                PrototypeMilestones.ProbeOrbitId);
+                PrototypeMilestones.MunProbeOrbitId,
+                PrototypeMilestones.MinmusProbeOrbitId);
             AssertAchievement(
                 achievements,
                 PrototypeMilestones.MunCrewedOrbitId,
@@ -56,7 +55,15 @@ namespace TheRaceForSpace.Tests
                 achievements,
                 PrototypeMilestones.DunaCrewedOrbitId,
                 300000.0,
-                PrototypeMilestones.CrewedOrbitId);
+                PrototypeMilestones.MunCrewedOrbitId,
+                PrototypeMilestones.MinmusCrewedOrbitId);
+
+            Equal(
+                "Any agency must achieve Mun Probe Orbit and Minmus Probe Orbit.",
+                FindAchievement(achievements, PrototypeMilestones.DunaProbeOrbitId).UnlockRequirement);
+            Equal(
+                "Any agency must achieve Mun Crewed Orbit and Minmus Crewed Orbit.",
+                FindAchievement(achievements, PrototypeMilestones.DunaCrewedOrbitId).UnlockRequirement);
 
             AssertSatellite(
                 satelliteProgrammes,
@@ -113,12 +120,12 @@ namespace TheRaceForSpace.Tests
             IList<AchievementFundingProgramme> programmes,
             string id,
             double rewardFunds,
-            string prerequisiteMilestoneId)
+            params string[] prerequisiteMilestoneIds)
         {
             AchievementFundingProgramme programme = FindAchievement(programmes, id);
             Require(programme != null, "Missing achievement funding programme '" + id + "'.");
             Equal(rewardFunds, programme.BaseRewardFunds);
-            AssertSimpleAnyAgencyRule(programme.UnlockRule, prerequisiteMilestoneId);
+            AssertAnyAgencyRule(programme.UnlockRule, prerequisiteMilestoneIds);
         }
 
         private static void AssertSatellite(
@@ -134,15 +141,15 @@ namespace TheRaceForSpace.Tests
             Equal(celestialBodyName, programme.CelestialBodyName);
             Equal(requiredSatellites, programme.RequiredSatellites);
             Equal(rewardFunds, programme.RewardFunds);
-            AssertSimpleAnyAgencyRule(programme.UnlockRule, prerequisiteMilestoneId);
+            AssertAnyAgencyRule(programme.UnlockRule, prerequisiteMilestoneId);
             Require(!programme.IsAvailable, "Prototype satellite programmes should begin locked.");
         }
 
-        private static void AssertSimpleAnyAgencyRule(
+        private static void AssertAnyAgencyRule(
             UnlockRuleDefinition rule,
-            string expectedMilestoneId)
+            params string[] expectedMilestoneIds)
         {
-            if (expectedMilestoneId == null)
+            if (expectedMilestoneIds == null || expectedMilestoneIds.Length == 0)
             {
                 Equal(null, rule);
                 return;
@@ -151,14 +158,19 @@ namespace TheRaceForSpace.Tests
             Require(rule != null, "Locked prototype targets should carry an unlock rule.");
             Equal(1, rule.Paths.Count);
             Require(rule.Paths[0] != null, "Prototype unlock path should not be null.");
-            Equal(1, rule.Paths[0].Conditions.Count);
+            Equal(expectedMilestoneIds.Length, rule.Paths[0].Conditions.Count);
 
-            UnlockConditionDefinition condition = rule.Paths[0].Conditions[0];
-            Require(condition != null, "Prototype unlock condition should not be null.");
-            Equal(UnlockConditionType.Achievement, condition.ConditionType);
-            Equal(UnlockProgramScope.AnyAgency, condition.ProgramScope);
-            Equal(1, condition.RequiredProgramCount);
-            Equal(expectedMilestoneId, condition.MilestoneId);
+            for (int conditionIndex = 0;
+                conditionIndex < expectedMilestoneIds.Length;
+                conditionIndex++)
+            {
+                UnlockConditionDefinition condition = rule.Paths[0].Conditions[conditionIndex];
+                Require(condition != null, "Prototype unlock condition should not be null.");
+                Equal(UnlockConditionType.Achievement, condition.ConditionType);
+                Equal(UnlockProgramScope.AnyAgency, condition.ProgramScope);
+                Equal(1, condition.RequiredProgramCount);
+                Equal(expectedMilestoneIds[conditionIndex], condition.MilestoneId);
+            }
         }
 
         private static AchievementFundingProgramme FindAchievement(

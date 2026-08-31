@@ -154,8 +154,7 @@ namespace TheRaceForSpace.Milestones
         }
 
         /// <summary>
-        /// Creates the simple one-condition rule used by every locked target in the current 0.4
-        /// prototype: one achievement by any agency unlocks the target.
+        /// Creates a simple one-condition rule where one achievement by any agency unlocks the target.
         /// </summary>
         public static UnlockRuleDefinition AnyAgencyAchievement(string milestoneId)
         {

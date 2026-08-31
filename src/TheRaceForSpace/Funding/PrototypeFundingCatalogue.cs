@@ -123,30 +123,35 @@ namespace TheRaceForSpace.Funding
                 return "Available from the start of the campaign";
             }
 
-            // Item 14C keeps the current 0.4 presentation text unchanged while gameplay rules are
-            // evaluated only by UnlockRuleEvaluator. Item 14D will provide richer formatting for
-            // arbitrary OR/AND rule paths in the strategic UI.
+            // Availability is always decided by UnlockRuleEvaluator. This text is only a concise
+            // description for funding-programme presentation paths that still expose UnlockRequirement.
             if (unlockRule.Paths.Count != 1
                 || unlockRule.Paths[0] == null
-                || unlockRule.Paths[0].Conditions.Count != 1)
+                || unlockRule.Paths[0].Conditions.Count == 0)
             {
                 throw new InvalidOperationException(
-                    "Current prototype funding text requires one simple achievement unlock condition.");
+                    "Current prototype funding text requires one AnyAgency achievement unlock path.");
             }
 
-            UnlockConditionDefinition condition = unlockRule.Paths[0].Conditions[0];
-            if (condition == null
-                || condition.ConditionType != UnlockConditionType.Achievement
-                || condition.ProgramScope != UnlockProgramScope.AnyAgency
-                || condition.RequiredProgramCount != 1
-                || string.IsNullOrEmpty(condition.MilestoneId))
+            UnlockPathDefinition path = unlockRule.Paths[0];
+            var prerequisiteNames = new string[path.Conditions.Count];
+            for (int conditionIndex = 0; conditionIndex < path.Conditions.Count; conditionIndex++)
             {
-                throw new InvalidOperationException(
-                    "Current prototype funding text requires one AnyAgency achievement condition.");
+                UnlockConditionDefinition condition = path.Conditions[conditionIndex];
+                if (condition == null
+                    || condition.ConditionType != UnlockConditionType.Achievement
+                    || condition.ProgramScope != UnlockProgramScope.AnyAgency
+                    || condition.RequiredProgramCount != 1
+                    || string.IsNullOrEmpty(condition.MilestoneId))
+                {
+                    throw new InvalidOperationException(
+                        "Current prototype funding text requires AnyAgency achievement conditions.");
+                }
+
+                prerequisiteNames[conditionIndex] = FindRequiredMilestone(condition.MilestoneId).Name;
             }
 
-            MilestoneDefinition prerequisite = FindRequiredMilestone(condition.MilestoneId);
-            return "Any agency must achieve " + prerequisite.Name + ".";
+            return "Any agency must achieve " + string.Join(" and ", prerequisiteNames) + ".";
         }
 
         private static MilestoneDefinition FindRequiredMilestone(string milestoneId)

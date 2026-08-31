@@ -10,16 +10,20 @@ namespace TheRaceForSpace.KspIntegration
     public static class KspVesselDiscovery
     {
         /// <summary>
-        /// Captures the orbiting vessels available in the current save. Returns false while
-        /// KSP flight-state data is not ready so callers can preserve their last known counts.
+        /// Captures the orbiting vessels available in the current save together with the KSP
+        /// universal time for that observation. Returns false while required game state is not ready.
         /// </summary>
-        public static bool TryCaptureOrbitingVessels(out IList<VesselTrackingSnapshot> vesselSnapshots)
+        public static bool TryCaptureOrbitingVessels(
+            out IList<VesselTrackingSnapshot> vesselSnapshots,
+            out double currentUniversalTime)
         {
             vesselSnapshots = null;
+            currentUniversalTime = -1.0;
 
             if (HighLogic.CurrentGame == null
                 || HighLogic.CurrentGame.flightState == null
-                || HighLogic.CurrentGame.flightState.protoVessels == null)
+                || HighLogic.CurrentGame.flightState.protoVessels == null
+                || Planetarium.fetch == null)
             {
                 return false;
             }
@@ -93,6 +97,7 @@ namespace TheRaceForSpace.KspIntegration
             }
 
             vesselSnapshots = snapshots;
+            currentUniversalTime = Planetarium.GetUniversalTime();
             return true;
         }
 

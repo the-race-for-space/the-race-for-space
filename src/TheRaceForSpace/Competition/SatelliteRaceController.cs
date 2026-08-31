@@ -480,10 +480,20 @@ namespace TheRaceForSpace.Competition
                 }
             }
 
-            SatelliteTracker.RefreshPlayerSatelliteCounts(
-                PlayerProgram,
-                PrototypeMilestones.All,
-                _availableAchievementMilestoneIds);
+            IList<VesselTrackingSnapshot> vesselSnapshots;
+            double vesselObservationUniversalTime;
+            if (KspVesselDiscovery.TryCaptureOrbitingVessels(
+                out vesselSnapshots,
+                out vesselObservationUniversalTime))
+            {
+                SatelliteTracker.RefreshPlayerSatelliteCounts(
+                    PlayerProgram,
+                    PrototypeMilestones.All,
+                    _availableAchievementMilestoneIds,
+                    vesselSnapshots,
+                    vesselObservationUniversalTime);
+            }
+
             UpdateFundingAvailability();
 
             if (!hasDueFunding)

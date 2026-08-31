@@ -74,32 +74,71 @@ namespace TheRaceForSpace.Tests.Persistence
 
         public static void RivalRoundTripsArbitraryBodyAndTargetId()
         {
-            var rival = new SpaceProgramState("Aster", false)
+            var aster = new SpaceProgramState("aster", "Aster", false)
             {
                 Funds = 54321.0,
                 NextMissionTargetId = "duna-network",
                 LaunchProgressPercent = 60,
                 NextLaunchProgressCheckUniversalTime = 9876.0
             };
-            rival.RecordAchievement("duna-probe-orbit", 4321.0);
-            rival.SetSatelliteCount("Duna", 4);
+            aster.RecordAchievement("duna-probe-orbit", 4321.0);
+            aster.SetSatelliteCount("Duna", 4);
 
-            var saved = new RivalProgramSaveState();
-            saved.Capture(rival);
+            var delta = new SpaceProgramState("delta", "Delta", false)
+            {
+                Funds = 22222.0,
+                NextMissionTargetId = "eve-network",
+                LaunchProgressPercent = 30,
+                NextLaunchProgressCheckUniversalTime = 7654.0
+            };
+            delta.RecordAchievement("eve-probe-orbit", 3456.0);
+            delta.SetSatelliteCount("Eve", 2);
+
+            var saved = new RivalProgramsSaveState();
+            saved.Capture(new List<SpaceProgramState> { aster, delta });
             var node = new ConfigNode();
             saved.Save(node);
 
-            var loaded = new RivalProgramSaveState();
-            loaded.Load(node);
-            var restored = new SpaceProgramState("Aster", false);
-            loaded.ApplyTo(restored);
+            Equal(2, node.GetNodes("RIVAL").Length);
 
-            Equal(54321.0, restored.Funds);
-            Equal(4321.0, restored.GetAchievementUniversalTime("duna-probe-orbit"));
-            Equal(4, restored.GetSatelliteCount("Duna"));
-            Equal("duna-network", restored.NextMissionTargetId);
-            Equal(60, restored.LaunchProgressPercent);
-            Equal(9876.0, restored.NextLaunchProgressCheckUniversalTime);
+            var loaded = new RivalProgramsSaveState();
+            loaded.Load(node);
+
+            // Restore in a different order and with changed display names to prove identity comes
+            // from stable IDs rather than fixed Aster/Cobalt slots or list position.
+            var restoredDelta = new SpaceProgramState("delta", "Delta Renamed", false);
+            var unsavedRival = new SpaceProgramState("echo", "Echo", false)
+            {
+                Funds = 777.0,
+                NextMissionTargetId = "constructor-default",
+                LaunchProgressPercent = 20
+            };
+            var restoredAster = new SpaceProgramState("aster", "Aster Renamed", false);
+
+            loaded.ApplyTo(new List<SpaceProgramState>
+            {
+                restoredDelta,
+                unsavedRival,
+                restoredAster
+            });
+
+            Equal(54321.0, restoredAster.Funds);
+            Equal(4321.0, restoredAster.GetAchievementUniversalTime("duna-probe-orbit"));
+            Equal(4, restoredAster.GetSatelliteCount("Duna"));
+            Equal("duna-network", restoredAster.NextMissionTargetId);
+            Equal(60, restoredAster.LaunchProgressPercent);
+            Equal(9876.0, restoredAster.NextLaunchProgressCheckUniversalTime);
+
+            Equal(22222.0, restoredDelta.Funds);
+            Equal(3456.0, restoredDelta.GetAchievementUniversalTime("eve-probe-orbit"));
+            Equal(2, restoredDelta.GetSatelliteCount("Eve"));
+            Equal("eve-network", restoredDelta.NextMissionTargetId);
+            Equal(30, restoredDelta.LaunchProgressPercent);
+            Equal(7654.0, restoredDelta.NextLaunchProgressCheckUniversalTime);
+
+            Equal(777.0, unsavedRival.Funds);
+            Equal("constructor-default", unsavedRival.NextMissionTargetId);
+            Equal(20, unsavedRival.LaunchProgressPercent);
         }
 
         public static void MalformedCollectionNodesAreHandledSafely()

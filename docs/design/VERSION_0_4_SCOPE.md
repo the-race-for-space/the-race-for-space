@@ -110,6 +110,20 @@ The remaining 0.3 rival-simulation compatibility surface has now been removed wi
 
 This removes duplicate prototype-era entry points before more rivals and targets are added, so new gameplay has one supported identity and collection model.
 
+### Controller regression coverage and CI
+
+Controller-level regression coverage and continuous integration have now been added without introducing production test seams.
+
+- `tests/TheRaceForSpace.ControllerTests/` compiles the real `SatelliteRaceController` together with its KSP-independent production dependencies.
+- Small test-only stand-ins implement the controller's existing KSP-facing boundaries for universal time, vessel discovery, ScenarioModule readiness/capture, and Career funding awards.
+- Controller regressions cover the player Probe observation flowing through tracking into achievement/funding unlocks, the exact first shared funding-boundary payout for existing eligible state, and the rule that a vessel first observed on a crossed funding boundary is not paid retroactively for that boundary.
+- The original `tests/TheRaceForSpace.Tests/` domain suite remains independent and unchanged in responsibility.
+- `tools/run-logic-tests.sh` runs both the domain suite and controller suite in Release configuration.
+- `.github/workflows/logic-tests.yml` runs that same script on Ubuntu with .NET 8 for pushes and pull requests.
+- CI deliberately does not build the KSP-targeted mod assembly because KSP/Unity assemblies are not stored in the repository. Loaded/unloaded vessel API behavior and real Career-funds integration remain manual in-game checks.
+
+This gives the current controller orchestration an automated regression boundary while keeping KSP-specific runtime validation separate.
+
 ## Compatibility
 
 Player race progress, funding-programme state, achievement-contract state, and Command Center visibility keep their existing persistence paths.
@@ -120,4 +134,4 @@ Within rival state, current 0.4 `programId`, `nextMissionTargetId`, achievement 
 
 ## Next Decisions
 
-The major 0.4 expansion blockers identified in the initial review are now separated from the controller, tracking, runtime, rival persistence, and prototype compatibility paths. Remaining cleanup candidates include controller-level regression tests, GitHub Actions CI, and later performance work. Flexible multi-condition unlock rules remain a separate future gameplay/design decision.
+The major 0.4 expansion blockers identified in the initial review are now separated from the controller, tracking, runtime, rival persistence, and prototype compatibility paths, with automated domain/controller regression coverage running in GitHub Actions. Remaining cleanup candidates are the later performance items: caching repeated funding calculations and reducing `OnGUI` allocations. Flexible multi-condition unlock rules remain a separate future gameplay/design decision.

@@ -86,12 +86,12 @@ This is intentionally a save-format break for rival state. The older fixed `ASTE
 
 The code-defined funding target bootstrap has now been moved out of `Competition/SatelliteRaceController` with explicit approval under the structural-change gate in `AGENTS.md`.
 
-- `Milestones/PrototypeMilestones` remains the catalogue of achievement definitions and their stable IDs, bodies, vessel requirements, descriptions, and prerequisite milestones.
-- `Funding/PrototypeFundingCatalogue` now owns achievement reward amounts and the satellite-network definitions for the current prototype.
-- Achievement funding programmes are created from the milestone catalogue, so names, objective text, and prerequisite IDs are not repeated in the controller.
+- `Milestones/PrototypeMilestones` remains the catalogue of achievement definitions and their stable IDs, bodies, vessel requirements, descriptions, and unlock definitions.
+- `Funding/PrototypeFundingCatalogue` owns achievement reward amounts and the satellite-network definitions for the current prototype.
+- Achievement funding programmes are created from the milestone catalogue, so names, objective text, and unlock definitions are not repeated in the controller.
 - `SatelliteRaceController` consumes the two programme collections and no longer constructs Kerbin, Mun, Minmus, or Duna funding targets individually.
-- The standalone logic suite verifies the current eight achievement programmes, four satellite programmes, rewards, prerequisites, and fresh campaign-state creation.
-- No funding calculation, unlock rule, rival rule, tracking rule, or save format changed as part of this move.
+- The standalone logic suite verifies the current eight achievement programmes, four satellite programmes, rewards, unlocks, and fresh campaign-state creation.
+- No funding calculation, rival rule, tracking rule, or save format changed as part of this move.
 
 This makes target expansion a catalogue change instead of a controller-constructor change while deliberately stopping short of a configuration framework or general rule engine.
 
@@ -139,6 +139,32 @@ The two low-priority prototype performance items have now been completed togethe
 
 No persistence field, save node, unlock condition, reward amount, funding cadence, rival rule, tracking rule, or Command Center layout was changed by this performance pass.
 
+### Flexible unlock foundation and target migration
+
+Item 14 is being introduced in staged checkpoints so the rule representation can be proven before campaign balance changes.
+
+**Item 14A** added the KSP-independent rule foundation in `Milestones/`:
+
+- `UnlockRuleDefinition` contains alternative unlock paths (OR).
+- `UnlockPathDefinition` contains conditions that must all be satisfied (AND).
+- Achievement conditions support `AnyAgency`, `Player`, and `AnyRival` scopes plus a required agency count.
+- Universal-time conditions support future era/time-gated progression.
+- `UnlockRuleEvaluator` evaluates achievement timestamps against an explicit universal time so historical replay can use the same rule semantics later.
+- A null rule means available from campaign start; malformed or empty definitions fail closed.
+- Focused regressions cover AND/OR behavior, scopes, agency counts, historical timestamps, exact time boundaries, and invalid definitions.
+
+**Item 14B** migrates the current code-defined targets onto that representation without changing gameplay:
+
+- `MilestoneDefinition`, `AchievementFundingProgramme`, and `FundingProgramme` now store `UnlockRuleDefinition` instead of storing a prerequisite milestone string as campaign data.
+- Probe Orbit and Crewed Orbit retain null rules and therefore remain available from campaign start.
+- The six Mun/Minmus/Duna achievement targets use one-condition `AnyAgency` achievement rules matching their previous prerequisites exactly.
+- The four satellite-network programmes use the same one-condition `AnyAgency` rules as before.
+- `PrototypeFundingCatalogue` passes milestone rules into achievement funding programmes and creates equivalent rules for network programmes.
+- `PrerequisiteMilestoneId` remains only as a temporary derived projection for the still-unmigrated tracker/controller/rival consumers. It is not separately stored and will be removed in Item 14C.
+- Tests verify the current 8 achievement and 4 satellite targets retain the same rewards and simple unlock semantics.
+
+No target timing, reward, tracking behavior, rival selection behavior, funding cadence, or save-data field changes in Item 14A/14B. The rule objects are code-defined immutable definitions and do not require persistence.
+
 ## Compatibility
 
 Player race progress, funding-programme state, achievement-contract state, and Command Center visibility keep their existing persistence paths.
@@ -147,6 +173,8 @@ Rival state uses the `RIVALS` collection format introduced during Item 7. Saves 
 
 Within rival state, current 0.4 `programId`, `nextMissionTargetId`, achievement collection, and satellite collection fields remain supported. Older rival migration fields and the old public rival-simulation compatibility APIs are no longer supported; this additional compatibility cleanup was explicitly accepted for Item 9.
 
+Item 14B changes code-defined target metadata rather than persisted campaign state. The user has explicitly accepted that backward save compatibility is not a requirement during this prototype phase, but no save schema change is required by this checkpoint.
+
 ## Next Decisions
 
-Items 1 through 13 of the original 0.4 cleanup roadmap are now complete. The remaining numbered roadmap item is the larger future gameplay/design decision: flexible multi-condition unlock rules.
+Items 1 through 13 are complete. Item 14A and 14B are now the foundation and zero-gameplay-change target migration. The next implementation checkpoint is Item 14C: move `SatelliteTracker`, `SatelliteRaceController`, and `RivalSimulation` onto `UnlockRuleEvaluator` directly and remove the temporary single-prerequisite projection. Item 14D can then turn the Space Race tab into a live progression/unlock view before campaign rules are deliberately rebalanced and expanded.

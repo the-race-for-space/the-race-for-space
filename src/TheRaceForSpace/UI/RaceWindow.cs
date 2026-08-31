@@ -730,13 +730,13 @@ namespace TheRaceForSpace.UI
                 : Planetarium.GetUniversalTime();
             SpaceProgramState player = _raceController.PlayerProgram;
 
-            GUILayout.Label("SPACE RACE");
+            GUILayout.Label("Space Race");
             GUILayout.Label("Campaign Date: " + FormatKerbinDate(currentUniversalTime));
             GUILayout.Space(8.0f);
 
             _spaceRaceScrollPosition = GUILayout.BeginScrollView(_spaceRaceScrollPosition);
 
-            GUILayout.Label("CURRENT OPPORTUNITIES", _boldLabelStyle);
+            GUILayout.Label("Available Funding", _boldLabelStyle);
             bool hasCurrentOpportunity = false;
 
             for (int programmeIndex = 0;
@@ -786,7 +786,7 @@ namespace TheRaceForSpace.UI
             }
 
             GUILayout.Space(12.0f);
-            GUILayout.Label("COMING NEXT", _boldLabelStyle);
+            GUILayout.Label("Locked Funding", _boldLabelStyle);
             bool hasComingNext = false;
 
             for (int programmeIndex = 0;
@@ -834,7 +834,7 @@ namespace TheRaceForSpace.UI
             }
 
             GUILayout.Space(12.0f);
-            GUILayout.Label("COMPLETED / HISTORICAL", _boldLabelStyle);
+            GUILayout.Label("Retired Funding", _boldLabelStyle);
             bool hasHistoricalAchievement = false;
 
             for (int programmeIndex = 0;
@@ -858,7 +858,7 @@ namespace TheRaceForSpace.UI
                 GUILayout.Label(
                     programme.Name
                     + ": "
-                    + (playerAchieved ? "ACHIEVED" : "EXPIRED - NOT ACHIEVED"));
+                    + (playerAchieved ? "Achieved" : "Expired - Not Achieved"));
             }
 
             if (hasHistoricalAchievement)
@@ -881,7 +881,7 @@ namespace TheRaceForSpace.UI
             GUILayout.BeginVertical("box");
             GUILayout.Label(programme.Name, _boldLabelStyle);
             GUILayout.Label("Objective: " + programme.ObjectiveDescription);
-            GUILayout.Label("State: " + (isLocked ? "LOCKED" : "AVAILABLE"));
+            GUILayout.Label("State: " + (isLocked ? "Locked" : "Available"));
 
             if (isLocked)
             {
@@ -889,7 +889,7 @@ namespace TheRaceForSpace.UI
             }
             else
             {
-                GUILayout.Label("Player: NOT ACHIEVED");
+                GUILayout.Label("Player: Not Achieved");
             }
 
             GUILayout.EndVertical();
@@ -908,7 +908,7 @@ namespace TheRaceForSpace.UI
                 + " qualifying satellite(s) in orbit around "
                 + programme.CelestialBodyName
                 + ".");
-            GUILayout.Label("State: " + (isLocked ? "LOCKED" : "UNLOCKED"));
+            GUILayout.Label("State: " + (isLocked ? "Locked" : "Unlocked"));
 
             if (isLocked)
             {
@@ -953,7 +953,7 @@ namespace TheRaceForSpace.UI
                 if (pathIndex > 0)
                 {
                     GUILayout.Space(4.0f);
-                    GUILayout.Label("OR", _boldLabelStyle);
+                    GUILayout.Label("Or", _boldLabelStyle);
                 }
 
                 if (rule.Paths.Count > 1)

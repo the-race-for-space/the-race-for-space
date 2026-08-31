@@ -141,7 +141,12 @@ namespace TheRaceForSpace.Tests.Simulation
         {
             var aster = new SpaceProgramState("Aster", false)
             {
-                NextMissionTargetId = "duna-network"
+                NextMissionTargetId = "duna-network",
+                NextLaunchBodyName = "Stored presentation text"
+            };
+            var legacyTarget = new SpaceProgramState("Legacy", false)
+            {
+                NextLaunchBodyName = "Duna Orbital Network"
             };
             var fundingProgrammes = new List<FundingProgramme>
             {
@@ -155,13 +160,23 @@ namespace TheRaceForSpace.Tests.Simulation
                     null,
                     null)
             };
+            var achievementProgrammes = new List<AchievementFundingProgramme>();
 
             double cost = RivalSimulation.CalculateLaunchProgressCost(
                 aster,
-                new List<AchievementFundingProgramme>(),
+                achievementProgrammes,
+                fundingProgrammes);
+            double legacyCost = RivalSimulation.CalculateLaunchProgressCost(
+                legacyTarget,
+                achievementProgrammes,
                 fundingProgrammes);
 
             TestAssert.Equal(40000.0, cost);
+            TestAssert.Equal(40000.0, legacyCost);
+            TestAssert.Equal("duna-network", aster.NextMissionTargetId);
+            TestAssert.Equal("Stored presentation text", aster.NextLaunchBodyName);
+            TestAssert.Equal(null, legacyTarget.NextMissionTargetId);
+            TestAssert.Equal("Duna Orbital Network", legacyTarget.NextLaunchBodyName);
         }
 
         public static void AchievementCompletionUsesMilestoneDefinition()

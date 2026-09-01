@@ -9,6 +9,7 @@ namespace TheRaceForSpace.Tests.Persistence
     {
         public static void RaceProgressRoundTripsArbitraryIds()
         {
+            const double nextFundingUniversalTime = 98765.0;
             var player = new SpaceProgramState("Player", true);
             player.RecordAchievement("duna-probe-orbit", 1234.0);
 
@@ -37,7 +38,11 @@ namespace TheRaceForSpace.Tests.Persistence
             achievementProgrammes[0].AdvancePayout();
 
             var saved = new RaceProgressSaveState();
-            saved.Capture(player, fundingProgrammes, achievementProgrammes);
+            saved.Capture(
+                player,
+                fundingProgrammes,
+                achievementProgrammes,
+                nextFundingUniversalTime);
             var node = new ConfigNode();
             saved.Save(node);
 
@@ -70,6 +75,7 @@ namespace TheRaceForSpace.Tests.Persistence
             Require(restoredFunding[0].IsAvailable, "Arbitrary funding programme IDs should round trip.");
             Require(restoredAchievements[0].HasStarted, "Arbitrary achievement contracts should remain started.");
             Equal(3, restoredAchievements[0].PaymentsProcessed);
+            Equal(nextFundingUniversalTime, loaded.NextFundingUniversalTime);
         }
 
         public static void RivalRoundTripsArbitraryBodyAndTargetId()
@@ -144,6 +150,7 @@ namespace TheRaceForSpace.Tests.Persistence
         public static void MalformedCollectionNodesAreHandledSafely()
         {
             var raceNode = new ConfigNode();
+            raceNode.AddValue("nextFundingUniversalTime", "NaN");
             ConfigNode badAchievement = raceNode.AddNode("ACHIEVEMENT");
             badAchievement.AddValue("id", "bad-time");
             badAchievement.AddValue("universalTime", "NaN");
@@ -171,6 +178,7 @@ namespace TheRaceForSpace.Tests.Persistence
             Require(!player.HasAchievement("bad-time"), "Non-finite achievement times should be ignored.");
             Equal(0.0, player.GetAchievementUniversalTime("early-milestone"));
             Equal(10, achievementProgrammes[0].PaymentsProcessed);
+            Equal(-1.0, raceState.NextFundingUniversalTime);
             Require(
                 achievementProgrammes[0].HasStarted,
                 "Processed payments should normalize the restored contract to started.");
@@ -218,6 +226,7 @@ namespace TheRaceForSpace.Tests.Persistence
             Require(!funding[0].IsAvailable, "Empty race state should restore funding programmes as locked.");
             Require(!achievements[0].HasStarted, "Empty race state should reset contract lifecycle state.");
             Equal(0, achievements[0].PaymentsProcessed);
+            Equal(-1.0, raceState.NextFundingUniversalTime);
 
             var rivalState = new RivalProgramSaveState();
             rivalState.Load(new ConfigNode());

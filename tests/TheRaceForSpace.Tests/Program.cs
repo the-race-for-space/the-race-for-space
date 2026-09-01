@@ -177,7 +177,7 @@ namespace TheRaceForSpace.Tests
 
         private static void PrototypeMilestoneDefinitionsMatchCurrentCampaign()
         {
-            AssertEqual(8, PrototypeMilestones.All.Count);
+            AssertEqual(32, PrototypeMilestones.All.Count);
 
             AssertMilestone(
                 PrototypeMilestones.All[0],

@@ -101,7 +101,7 @@ The remaining 0.3 rival-simulation compatibility surface has now been removed wi
 
 - `RivalSimulation` now exposes one collection-driven progression path instead of the old three-program and boolean-state overloads.
 - Display-name lookup, launch-progress cost, and ETA calculations use the current collection-aware APIs rather than fixed Kerbin/Mun/Minmus compatibility overloads.
-- `SpaceProgramState.NextMissionTargetId` is the authoritative rival mission identity. `NextLaunchBodyName` remains a presentation mirror and is never translated back into gameplay identity.
+- `SpaceProgramState.NextMissionTargetId` is the authoritative rival mission identity. `NextMissionDisplayName` is presentation-only and is never translated back into gameplay identity.
 - The fixed public rival target-name and three-network compatibility constants have been removed from `RivalSimulation`.
 - `SatelliteRaceController` no longer exposes named achievement/network programme properties; callers use `AchievementFundingProgrammes` and `FundingProgrammes`.
 - `RivalProgramSaveState` stores and restores the current stable `nextMissionTargetId` directly and no longer imports old display-name mission fields, fixed rival achievement flags, or fixed Kerbin/Mun/Minmus satellite fields.
@@ -153,14 +153,14 @@ Item 14 was introduced in staged checkpoints so the rule representation could be
 - A null rule means available from campaign start; malformed or empty definitions fail closed.
 - Focused regressions cover AND/OR behavior, scopes, agency counts, historical timestamps, exact time boundaries, and invalid definitions.
 
-**Item 14B** migrated the current code-defined targets onto that representation without changing gameplay:
+**Item 14B** migrated the current code-defined targets onto that representation while preserving the current campaign rules:
 
 - `MilestoneDefinition`, `AchievementFundingProgramme`, and `FundingProgramme` store `UnlockRuleDefinition` instead of a prerequisite milestone string as campaign data.
 - Probe Orbit and Crewed Orbit retain null rules and therefore remain available from campaign start.
-- The six Mun/Minmus/Duna achievement targets use one-condition `AnyAgency` achievement rules matching their previous prerequisites exactly.
+- The Mun and Minmus achievement targets use one-condition `AnyAgency` achievement rules. Duna Probe Orbit requires both Mun Probe Orbit and Minmus Probe Orbit in one AND path, while Duna Crewed Orbit requires both Mun Crewed Orbit and Minmus Crewed Orbit in one AND path.
 - The four satellite-network programmes use the same one-condition `AnyAgency` rules as before.
 - `PrototypeFundingCatalogue` passes milestone rules into achievement funding programmes and creates equivalent rules for network programmes.
-- Tests verify the current 8 achievement and 4 satellite targets retain the same rewards and simple unlock semantics.
+- Tests verify the current 8 achievement and 4 satellite targets retain their current rewards and unlock semantics.
 
 **Item 14C** made the shared evaluator authoritative for every live availability consumer:
 
@@ -185,9 +185,19 @@ Item 14 was introduced in staged checkpoints so the rule representation could be
 
 Items 14A-14D establish flexible rules, shared evaluation, and readable progression presentation without deliberately rebalancing the current Kerbin/Mun/Minmus/Duna campaign.
 
+### Funding-boundary persistence and mission display naming
+
+Two focused cleanup items identified during the 0.4 review have now been implemented with explicit approval for the affected save field and public API name.
+
+- `RACE_PROGRESS` now stores `nextFundingUniversalTime`, allowing a save made after a shared funding boundary but before the controller's next refresh to restore that overdue boundary and process it normally.
+- Saves without `nextFundingUniversalTime`, including earlier 0.4 saves, retain the existing fallback that calculates the next 90-day boundary from the current universal time.
+- Malformed or non-finite saved funding timestamps are ignored and use the same fallback.
+- Controller and persistence regressions cover round-tripping the timestamp and restoring an overdue boundary without skipping the associated funding cycle.
+- The public rival presentation property is now `SpaceProgramState.NextMissionDisplayName`, reflecting that achievement targets can display milestone names while satellite targets can display body names. Stable `NextMissionTargetId` remains authoritative for gameplay and persistence.
+
 ## Compatibility
 
-Player race progress, funding-programme state, achievement-contract state, and Command Center visibility keep their existing persistence paths.
+Player race progress, funding-programme state, achievement-contract state, and Command Center visibility keep their existing persistence paths. The `RACE_PROGRESS` node now has an optional `nextFundingUniversalTime` value; its absence is backward-safe and falls back to the existing calendar calculation.
 
 Rival state uses the `RIVALS` collection format introduced during Item 7. Saves written before that collection change do not restore the old fixed Aster/Cobalt rival state.
 

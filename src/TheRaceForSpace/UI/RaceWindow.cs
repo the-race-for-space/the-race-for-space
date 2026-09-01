@@ -1102,7 +1102,7 @@ namespace TheRaceForSpace.UI
             if (entry.IsAchievement)
             {
                 AchievementFundingProgramme programme = entry.AchievementProgramme;
-                if (programme.IsExpired || _raceController.HasProgramAchieved(player, programme))
+                if (programme.IsExpired)
                 {
                     return SpaceRaceFundingCategory.Expired;
                 }

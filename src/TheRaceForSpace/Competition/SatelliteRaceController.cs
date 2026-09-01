@@ -55,8 +55,8 @@ namespace TheRaceForSpace.Competition
             MilestoneDefinition openingMilestone = PrototypeMilestones.FindById(
                 PrototypeMilestones.ProbeOrbitId);
             string openingMissionName = openingMilestone == null ? null : openingMilestone.Name;
-            AsterProgram.NextLaunchBodyName = openingMissionName;
-            CobaltProgram.NextLaunchBodyName = openingMissionName;
+            AsterProgram.NextMissionDisplayName = openingMissionName;
+            CobaltProgram.NextMissionDisplayName = openingMissionName;
 
             _programs.Add(PlayerProgram);
             _programs.Add(AsterProgram);
@@ -328,14 +328,23 @@ namespace TheRaceForSpace.Competition
             if (!_hasRestoredPersistentState)
             {
                 bool restoredRivals = RacePersistenceScenario.TryRestoreRivalState(_rivalPrograms);
+                double restoredNextFundingUniversalTime;
                 bool restoredRaceProgress = RacePersistenceScenario.TryRestoreRaceProgress(
                     PlayerProgram,
                     _fundingProgrammes,
-                    _achievementFundingProgrammes);
+                    _achievementFundingProgrammes,
+                    out restoredNextFundingUniversalTime);
 
                 if (!restoredRivals || !restoredRaceProgress)
                 {
                     return;
+                }
+
+                // Older saves do not contain the funding timestamp and return -1. The existing
+                // calendar fallback below remains authoritative for those saves.
+                if (restoredNextFundingUniversalTime >= 0.0)
+                {
+                    _nextFundingUniversalTime = restoredNextFundingUniversalTime;
                 }
 
                 _hasRestoredPersistentState = true;
@@ -398,7 +407,8 @@ namespace TheRaceForSpace.Competition
             RacePersistenceScenario.CaptureRaceProgress(
                 PlayerProgram,
                 _fundingProgrammes,
-                _achievementFundingProgrammes);
+                _achievementFundingProgrammes,
+                _nextFundingUniversalTime);
         }
 
         private void RefreshRivals(double currentUniversalTime)

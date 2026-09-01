@@ -92,6 +92,29 @@ namespace TheRaceForSpace.ControllerTests
             Equal(110000.0, controller.PlayerProgram.NextPayoutFunds);
         }
 
+        public static void RestoredOverdueFundingBoundaryIsProcessed()
+        {
+            ResetEnvironment();
+            Planetarium.CurrentUniversalTime = FundingIntervalSeconds + 1.0;
+            RacePersistenceScenario.RestoredNextFundingUniversalTime = FundingIntervalSeconds;
+            KspVesselDiscovery.SetUnavailable();
+
+            var controller = new SatelliteRaceController();
+            controller.AsterProgram.Funds = 0.0;
+            controller.CobaltProgram.Funds = 0.0;
+
+            controller.Refresh();
+
+            // Restoring the overdue boundary must replay it instead of recomputing the next date
+            // from the current UT and silently skipping the 90-day rival base payment.
+            Equal(20000.0, controller.AsterProgram.Funds);
+            Equal(20000.0, controller.CobaltProgram.Funds);
+            Equal(FundingIntervalSeconds * 2.0, controller.NextFundingUniversalTime);
+            Equal(
+                FundingIntervalSeconds * 2.0,
+                RacePersistenceScenario.LastCapturedNextFundingUniversalTime);
+        }
+
         public static void BoundaryObservationIsNotPaidRetroactively()
         {
             ResetEnvironment();

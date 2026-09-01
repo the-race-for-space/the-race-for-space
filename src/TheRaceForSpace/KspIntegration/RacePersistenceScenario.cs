@@ -109,14 +109,16 @@ namespace TheRaceForSpace.KspIntegration
         }
 
         /// <summary>
-        /// Restores player achievements, programme unlocks, and achievement-contract lifecycle
-        /// state by stable ID rather than by a fixed prototype parameter list.
+        /// Restores player achievements, programme unlocks, achievement-contract lifecycle state,
+        /// and the next shared funding boundary by stable persisted values.
         /// </summary>
         public static bool TryRestoreRaceProgress(
             SpaceProgramState playerProgram,
             IList<FundingProgramme> fundingProgrammes,
-            IList<AchievementFundingProgramme> achievementProgrammes)
+            IList<AchievementFundingProgramme> achievementProgrammes,
+            out double nextFundingUniversalTime)
         {
+            nextFundingUniversalTime = -1.0;
             if (!_stateReady
                 || _loadedGame == null
                 || _loadedGame != HighLogic.CurrentGame
@@ -126,6 +128,7 @@ namespace TheRaceForSpace.KspIntegration
             }
 
             RaceProgressState.ApplyTo(playerProgram, fundingProgrammes, achievementProgrammes);
+            nextFundingUniversalTime = RaceProgressState.NextFundingUniversalTime;
             return true;
         }
 
@@ -143,20 +146,26 @@ namespace TheRaceForSpace.KspIntegration
         }
 
         /// <summary>
-        /// Captures player achievement state and programme lifecycle state by stable ID. Player
-        /// satellite counts remain owned by live KSP vessel tracking and are not persisted here.
+        /// Captures player achievement state, programme lifecycle state, and the next shared
+        /// funding boundary by stable values. Player satellite counts remain owned by live KSP
+        /// vessel tracking and are not persisted here.
         /// </summary>
         public static void CaptureRaceProgress(
             SpaceProgramState playerProgram,
             IList<FundingProgramme> fundingProgrammes,
-            IList<AchievementFundingProgramme> achievementProgrammes)
+            IList<AchievementFundingProgramme> achievementProgrammes,
+            double nextFundingUniversalTime)
         {
             if (!_stateReady || _loadedGame == null || _loadedGame != HighLogic.CurrentGame)
             {
                 return;
             }
 
-            RaceProgressState.Capture(playerProgram, fundingProgrammes, achievementProgrammes);
+            RaceProgressState.Capture(
+                playerProgram,
+                fundingProgrammes,
+                achievementProgrammes,
+                nextFundingUniversalTime);
         }
     }
 }

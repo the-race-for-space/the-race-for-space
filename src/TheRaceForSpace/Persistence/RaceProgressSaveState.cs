@@ -21,6 +21,7 @@ namespace TheRaceForSpace.Persistence
         private const string UniversalTimeValueName = "universalTime";
         private const string StartedValueName = "started";
         private const string PaymentsProcessedValueName = "paymentsProcessed";
+        private const string NextFundingUniversalTimeValueName = "nextFundingUniversalTime";
 
         private readonly Dictionary<string, double> _achievementTimesById =
             new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
@@ -32,11 +33,21 @@ namespace TheRaceForSpace.Persistence
             new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 
         public bool HasData { get; private set; }
+        public double NextFundingUniversalTime { get; private set; }
 
         public void Capture(
             SpaceProgramState playerProgram,
             IList<FundingProgramme> fundingProgrammes,
             IList<AchievementFundingProgramme> achievementProgrammes)
+        {
+            Capture(playerProgram, fundingProgrammes, achievementProgrammes, -1.0);
+        }
+
+        public void Capture(
+            SpaceProgramState playerProgram,
+            IList<FundingProgramme> fundingProgrammes,
+            IList<AchievementFundingProgramme> achievementProgrammes,
+            double nextFundingUniversalTime)
         {
             if (playerProgram == null || fundingProgrammes == null || achievementProgrammes == null)
             {
@@ -45,6 +56,13 @@ namespace TheRaceForSpace.Persistence
 
             ClearState();
             HasData = true;
+
+            if (!double.IsNaN(nextFundingUniversalTime)
+                && !double.IsInfinity(nextFundingUniversalTime)
+                && nextFundingUniversalTime >= 0.0)
+            {
+                NextFundingUniversalTime = nextFundingUniversalTime;
+            }
 
             foreach (KeyValuePair<string, double> achievement in playerProgram.RecordedAchievements)
             {
@@ -197,6 +215,15 @@ namespace TheRaceForSpace.Persistence
                 return;
             }
 
+            double nextFundingUniversalTime;
+            if (TryParseFiniteDouble(
+                node.GetValue(NextFundingUniversalTimeValueName),
+                out nextFundingUniversalTime)
+                && nextFundingUniversalTime >= 0.0)
+            {
+                NextFundingUniversalTime = nextFundingUniversalTime;
+            }
+
             ConfigNode[] achievementNodes = node.GetNodes(AchievementNodeName);
             for (int nodeIndex = 0; nodeIndex < achievementNodes.Length; nodeIndex++)
             {
@@ -288,6 +315,13 @@ namespace TheRaceForSpace.Persistence
                 return;
             }
 
+            if (NextFundingUniversalTime >= 0.0)
+            {
+                node.AddValue(
+                    NextFundingUniversalTimeValueName,
+                    NextFundingUniversalTime.ToString("R", CultureInfo.InvariantCulture));
+            }
+
             var achievementIds = new List<string>(_achievementTimesById.Keys);
             achievementIds.Sort(StringComparer.OrdinalIgnoreCase);
             for (int idIndex = 0; idIndex < achievementIds.Count; idIndex++)
@@ -325,6 +359,7 @@ namespace TheRaceForSpace.Persistence
         private void ClearState()
         {
             HasData = false;
+            NextFundingUniversalTime = -1.0;
             _achievementTimesById.Clear();
             _unlockedFundingProgrammeIds.Clear();
             _contractStartedById.Clear();

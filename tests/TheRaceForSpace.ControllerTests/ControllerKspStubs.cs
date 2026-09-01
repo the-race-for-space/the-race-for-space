@@ -105,6 +105,8 @@ namespace TheRaceForSpace.KspIntegration
         public static bool IsReady { get; set; }
         public static int RivalCaptureCalls { get; private set; }
         public static int RaceProgressCaptureCalls { get; private set; }
+        public static double RestoredNextFundingUniversalTime { get; set; }
+        public static double LastCapturedNextFundingUniversalTime { get; private set; }
 
         public static bool TryRestoreRivalState(IList<SpaceProgramState> rivalPrograms)
         {
@@ -114,8 +116,10 @@ namespace TheRaceForSpace.KspIntegration
         public static bool TryRestoreRaceProgress(
             SpaceProgramState playerProgram,
             IList<FundingProgramme> fundingProgrammes,
-            IList<AchievementFundingProgramme> achievementProgrammes)
+            IList<AchievementFundingProgramme> achievementProgrammes,
+            out double nextFundingUniversalTime)
         {
+            nextFundingUniversalTime = RestoredNextFundingUniversalTime;
             return IsReady
                 && playerProgram != null
                 && fundingProgrammes != null
@@ -133,7 +137,8 @@ namespace TheRaceForSpace.KspIntegration
         public static void CaptureRaceProgress(
             SpaceProgramState playerProgram,
             IList<FundingProgramme> fundingProgrammes,
-            IList<AchievementFundingProgramme> achievementProgrammes)
+            IList<AchievementFundingProgramme> achievementProgrammes,
+            double nextFundingUniversalTime)
         {
             if (IsReady
                 && playerProgram != null
@@ -141,6 +146,7 @@ namespace TheRaceForSpace.KspIntegration
                 && achievementProgrammes != null)
             {
                 RaceProgressCaptureCalls++;
+                LastCapturedNextFundingUniversalTime = nextFundingUniversalTime;
             }
         }
 
@@ -149,6 +155,8 @@ namespace TheRaceForSpace.KspIntegration
             IsReady = true;
             RivalCaptureCalls = 0;
             RaceProgressCaptureCalls = 0;
+            RestoredNextFundingUniversalTime = -1.0;
+            LastCapturedNextFundingUniversalTime = -1.0;
         }
     }
 }

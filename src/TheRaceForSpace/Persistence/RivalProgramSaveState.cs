@@ -101,7 +101,7 @@ namespace TheRaceForSpace.Persistence
             program.NextMissionTargetId = NextMissionTargetId;
             // Presentation text is derived from the live target collections on the next rival
             // simulation refresh. Persistence stores only the stable mission identity.
-            program.NextLaunchBodyName = null;
+            program.NextMissionDisplayName = null;
             program.LaunchProgressPercent = Math.Max(0, Math.Min(100, LaunchProgressPercent));
             program.NextLaunchProgressCheckUniversalTime = Math.Max(
                 0.0,

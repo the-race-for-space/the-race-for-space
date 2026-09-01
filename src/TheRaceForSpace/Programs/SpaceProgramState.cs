@@ -38,7 +38,7 @@ namespace TheRaceForSpace.Programs
         public double NextPayoutFunds { get; set; }
 
         public string NextMissionTargetId { get; set; }
-        public string NextLaunchBodyName { get; set; }
+        public string NextMissionDisplayName { get; set; }
         public int LaunchProgressPercent { get; set; }
         public double NextLaunchProgressCheckUniversalTime { get; set; }
 

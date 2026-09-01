@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Text;
 using KSP.UI.Screens;
 using TheRaceForSpace.Competition;
@@ -27,11 +28,57 @@ namespace TheRaceForSpace.UI
             SpaceRace
         }
 
+        private enum SpaceRaceFundingCategory
+        {
+            Available,
+            Locked,
+            Expired
+        }
+
+        private sealed class SpaceRaceFundingEntry
+        {
+            public SpaceRaceFundingEntry(
+                AchievementFundingProgramme achievementProgramme,
+                FundingProgramme satelliteProgramme,
+                string celestialBodyName,
+                double bodySortDistance,
+                int catalogueOrder)
+            {
+                AchievementProgramme = achievementProgramme;
+                SatelliteProgramme = satelliteProgramme;
+                CelestialBodyName = celestialBodyName;
+                BodySortDistance = bodySortDistance;
+                CatalogueOrder = catalogueOrder;
+            }
+
+            public AchievementFundingProgramme AchievementProgramme { get; private set; }
+            public FundingProgramme SatelliteProgramme { get; private set; }
+            public string CelestialBodyName { get; private set; }
+            public double BodySortDistance { get; private set; }
+            public int CatalogueOrder { get; private set; }
+
+            public bool IsAchievement
+            {
+                get { return AchievementProgramme != null; }
+            }
+
+            public string Id
+            {
+                get { return IsAchievement ? AchievementProgramme.Id : SatelliteProgramme.Id; }
+            }
+
+            public string Name
+            {
+                get { return IsAchievement ? AchievementProgramme.Name : SatelliteProgramme.Name; }
+            }
+        }
+
         private const double KerbinDaySeconds = 21600.0;
         private const float WindowBackgroundOpacity = 0.82f;
         private const float WindowWidth = 900.0f;
         private const float WindowHeight = 720.0f;
         private const int HighlightedCardTitleFontSize = 16;
+        private const int SpaceRaceFundingButtonsPerRow = 4;
         private const string LauncherIconTexturePath =
             "Squad/PartList/SimpleIcons/R&D_node_icon_basicprobes";
 
@@ -47,6 +94,10 @@ namespace TheRaceForSpace.UI
         private static readonly GUILayoutOption[] RivalDetailsOptions = { GUILayout.Width(320.0f) };
         private static readonly GUILayoutOption[] RivalIncomeLabelOptions = { GUILayout.Width(245.0f) };
         private static readonly GUILayoutOption[] RivalIncomeAmountOptions = { GUILayout.Width(125.0f) };
+        private static readonly GUILayoutOption[] SpaceRaceFundingButtonOptions =
+            { GUILayout.Width(195.0f), GUILayout.Height(40.0f) };
+        private static readonly GUILayoutOption[] SpaceRaceSectionToggleOptions =
+            { GUILayout.Width(32.0f), GUILayout.Height(24.0f) };
         private static readonly GUILayoutOption[] ExpandWidthOptions = { GUILayout.ExpandWidth(true) };
         private static readonly GUILayoutOption[] NoExpandWidthOptions = { GUILayout.ExpandWidth(false) };
 
@@ -61,6 +112,8 @@ namespace TheRaceForSpace.UI
         private Game _visibilityGame;
 
         private readonly StringBuilder _listTextBuilder = new StringBuilder(128);
+        private readonly List<SpaceRaceFundingEntry> _spaceRaceFundingEntries =
+            new List<SpaceRaceFundingEntry>();
         private Vector2 _fundingScrollPosition;
         private Vector2 _rivalsScrollPosition;
         private Vector2 _spaceRaceScrollPosition;
@@ -71,6 +124,14 @@ namespace TheRaceForSpace.UI
         private GUI.WindowFunction _drawWindowFunction;
         private double[] _payoutScratch;
         private string[] _agencyNameScratch;
+        private SatelliteRaceController _spaceRaceFundingEntriesController;
+        private int _spaceRaceAchievementFundingCount = -1;
+        private int _spaceRaceSatelliteFundingCount = -1;
+        private string _selectedSpaceRaceFundingId;
+        private bool _selectedSpaceRaceFundingIsAchievement;
+        private bool _spaceRaceAvailableExpanded = true;
+        private bool _spaceRaceLockedExpanded;
+        private bool _spaceRaceExpiredExpanded;
         private bool _hasRestoredVisibilityState;
         private bool _isDuplicateInstance;
         private bool _isVisible;
@@ -507,68 +568,17 @@ namespace TheRaceForSpace.UI
                     continue;
                 }
 
-                _listTextBuilder.Length = 0;
-                _listTextBuilder.Append("Satellites: ");
-                bool hasSatelliteSummary = false;
-                double claimedPayout = 0.0;
-
-                for (int programIndex = 0; programIndex < _raceController.Programs.Count; programIndex++)
-                {
-                    SpaceProgramState program = _raceController.Programs[programIndex];
-                    int satelliteCount = program.GetSatelliteCount(programme.CelestialBodyName);
-                    double nextPayout = _raceController.GetSatelliteCurrentPayout(program, programme);
-                    _payoutScratch[programIndex] = nextPayout;
-                    claimedPayout += nextPayout;
-
-                    if (satelliteCount <= 0)
-                    {
-                        continue;
-                    }
-
-                    if (hasSatelliteSummary)
-                    {
-                        _listTextBuilder.Append(", ");
-                    }
-
-                    _listTextBuilder.Append(GetProgramDisplayName(program));
-                    _listTextBuilder.Append(' ');
-                    _listTextBuilder.Append(satelliteCount);
-                    hasSatelliteSummary = true;
-                }
-
-                if (!hasSatelliteSummary)
-                {
-                    _listTextBuilder.Append("None");
-                }
-
-                double unclaimedPayout = Math.Max(0.0, programme.RewardFunds - claimedPayout);
-
-                GUILayout.BeginVertical("box");
-                DrawCenteredCardTitle("Satellite Funding - " + programme.Name);
-
-                GUILayout.BeginHorizontal();
-                GUILayout.BeginVertical(FundingCardLeftOptions);
-                GUILayout.Label("Target: " + programme.CelestialBodyName);
-                GUILayout.Label("Requirement: " + programme.RequiredSatellites + " qualifying satellite(s) in orbit");
-                GUILayout.Label("Total Available Payout: " + programme.RewardFunds.ToString("N0"));
-                GUILayout.EndVertical();
-
-                GUILayout.Space(24.0f);
-                GUILayout.BeginVertical(ExpandWidthOptions);
-                GUILayout.Label(_listTextBuilder.ToString());
-                DrawPayoutLinesByAmount(_payoutScratch);
-                GUILayout.Label("Unclaimed Payout: " + unclaimedPayout.ToString("N0"));
-                GUILayout.EndVertical();
-
-                GUILayout.EndHorizontal();
-                GUILayout.EndVertical();
+                DrawSatelliteFundingCard(programme);
                 GUILayout.Space(8.0f);
             }
 
             GUILayout.EndScrollView();
         }
 
-        private void DrawAchievementFundingCard(AchievementFundingProgramme programme)
+        private void DrawAchievementFundingCard(
+            AchievementFundingProgramme programme,
+            string stateLabel = null,
+            double? unlockEvaluationUniversalTime = null)
         {
             _listTextBuilder.Length = 0;
             _listTextBuilder.Append("Completed by: ");
@@ -601,6 +611,11 @@ namespace TheRaceForSpace.UI
             GUILayout.BeginVertical("box");
             DrawCenteredCardTitle(programme.Name);
 
+            if (!string.IsNullOrEmpty(stateLabel))
+            {
+                GUILayout.Label("State: " + stateLabel, _boldLabelStyle);
+            }
+
             GUILayout.BeginHorizontal();
             GUILayout.BeginVertical(FundingCardLeftOptions);
             GUILayout.Label(
@@ -622,6 +637,85 @@ namespace TheRaceForSpace.UI
             GUILayout.EndVertical();
 
             GUILayout.EndHorizontal();
+
+            if (unlockEvaluationUniversalTime.HasValue)
+            {
+                DrawUnlockRuleProgress(programme.UnlockRule, unlockEvaluationUniversalTime.Value);
+            }
+
+            GUILayout.EndVertical();
+        }
+
+        private void DrawSatelliteFundingCard(
+            FundingProgramme programme,
+            string stateLabel = null,
+            double? unlockEvaluationUniversalTime = null)
+        {
+            _listTextBuilder.Length = 0;
+            _listTextBuilder.Append("Satellites: ");
+            bool hasSatelliteSummary = false;
+            double claimedPayout = 0.0;
+
+            for (int programIndex = 0; programIndex < _raceController.Programs.Count; programIndex++)
+            {
+                SpaceProgramState program = _raceController.Programs[programIndex];
+                int satelliteCount = program.GetSatelliteCount(programme.CelestialBodyName);
+                double nextPayout = _raceController.GetSatelliteCurrentPayout(program, programme);
+                _payoutScratch[programIndex] = nextPayout;
+                claimedPayout += nextPayout;
+
+                if (satelliteCount <= 0)
+                {
+                    continue;
+                }
+
+                if (hasSatelliteSummary)
+                {
+                    _listTextBuilder.Append(", ");
+                }
+
+                _listTextBuilder.Append(GetProgramDisplayName(program));
+                _listTextBuilder.Append(' ');
+                _listTextBuilder.Append(satelliteCount);
+                hasSatelliteSummary = true;
+            }
+
+            if (!hasSatelliteSummary)
+            {
+                _listTextBuilder.Append("None");
+            }
+
+            double unclaimedPayout = Math.Max(0.0, programme.RewardFunds - claimedPayout);
+
+            GUILayout.BeginVertical("box");
+            DrawCenteredCardTitle("Satellite Funding - " + programme.Name);
+
+            if (!string.IsNullOrEmpty(stateLabel))
+            {
+                GUILayout.Label("State: " + stateLabel, _boldLabelStyle);
+            }
+
+            GUILayout.BeginHorizontal();
+            GUILayout.BeginVertical(FundingCardLeftOptions);
+            GUILayout.Label("Target: " + programme.CelestialBodyName);
+            GUILayout.Label("Requirement: " + programme.RequiredSatellites + " qualifying satellite(s) in orbit");
+            GUILayout.Label("Total Available Payout: " + programme.RewardFunds.ToString("N0"));
+            GUILayout.EndVertical();
+
+            GUILayout.Space(24.0f);
+            GUILayout.BeginVertical(ExpandWidthOptions);
+            GUILayout.Label(_listTextBuilder.ToString());
+            DrawPayoutLinesByAmount(_payoutScratch);
+            GUILayout.Label("Unclaimed Payout: " + unclaimedPayout.ToString("N0"));
+            GUILayout.EndVertical();
+
+            GUILayout.EndHorizontal();
+
+            if (unlockEvaluationUniversalTime.HasValue)
+            {
+                DrawUnlockRuleProgress(programme.UnlockRule, unlockEvaluationUniversalTime.Value);
+            }
+
             GUILayout.EndVertical();
         }
 
@@ -730,203 +824,284 @@ namespace TheRaceForSpace.UI
                 : Planetarium.GetUniversalTime();
             SpaceProgramState player = _raceController.PlayerProgram;
 
-            GUILayout.Label("Space Race");
-            GUILayout.Label("Campaign Date: " + FormatKerbinDate(currentUniversalTime));
-            GUILayout.Space(8.0f);
+            EnsurePayoutScratchBuffers();
+            EnsureSpaceRaceFundingEntries();
 
             _spaceRaceScrollPosition = GUILayout.BeginScrollView(_spaceRaceScrollPosition);
 
-            GUILayout.Label("Available Funding", _boldLabelStyle);
-            bool hasCurrentOpportunity = false;
-
-            for (int programmeIndex = 0;
-                programmeIndex < _raceController.AchievementFundingProgrammes.Count;
-                programmeIndex++)
+            GUILayout.Label("FUNDING CONTRACT INFO", _boldLabelStyle);
+            SpaceRaceFundingEntry selectedEntry = EnsureSelectedSpaceRaceFundingEntry(player);
+            if (selectedEntry == null)
             {
-                AchievementFundingProgramme programme =
-                    _raceController.AchievementFundingProgrammes[programmeIndex];
-                if (programme.IsExpired
-                    || !_raceController.IsAchievementProgrammeAvailable(programme)
-                    || _raceController.HasProgramAchieved(player, programme))
-                {
-                    continue;
-                }
-
-                if (hasCurrentOpportunity)
-                {
-                    GUILayout.Space(8.0f);
-                }
-
-                DrawSpaceRaceAchievementCard(programme, false, currentUniversalTime);
-                hasCurrentOpportunity = true;
-            }
-
-            for (int programmeIndex = 0;
-                programmeIndex < _raceController.FundingProgrammes.Count;
-                programmeIndex++)
-            {
-                FundingProgramme programme = _raceController.FundingProgrammes[programmeIndex];
-                if (!programme.IsAvailable)
-                {
-                    continue;
-                }
-
-                if (hasCurrentOpportunity)
-                {
-                    GUILayout.Space(8.0f);
-                }
-
-                DrawSpaceRaceSatelliteCard(programme, false, currentUniversalTime);
-                hasCurrentOpportunity = true;
-            }
-
-            if (!hasCurrentOpportunity)
-            {
-                GUILayout.Label("None");
-            }
-
-            GUILayout.Space(12.0f);
-            GUILayout.Label("Locked Funding", _boldLabelStyle);
-            bool hasComingNext = false;
-
-            for (int programmeIndex = 0;
-                programmeIndex < _raceController.AchievementFundingProgrammes.Count;
-                programmeIndex++)
-            {
-                AchievementFundingProgramme programme =
-                    _raceController.AchievementFundingProgrammes[programmeIndex];
-                if (programme.IsExpired || _raceController.IsAchievementProgrammeAvailable(programme))
-                {
-                    continue;
-                }
-
-                if (hasComingNext)
-                {
-                    GUILayout.Space(8.0f);
-                }
-
-                DrawSpaceRaceAchievementCard(programme, true, currentUniversalTime);
-                hasComingNext = true;
-            }
-
-            for (int programmeIndex = 0;
-                programmeIndex < _raceController.FundingProgrammes.Count;
-                programmeIndex++)
-            {
-                FundingProgramme programme = _raceController.FundingProgrammes[programmeIndex];
-                if (programme.IsAvailable)
-                {
-                    continue;
-                }
-
-                if (hasComingNext)
-                {
-                    GUILayout.Space(8.0f);
-                }
-
-                DrawSpaceRaceSatelliteCard(programme, true, currentUniversalTime);
-                hasComingNext = true;
-            }
-
-            if (!hasComingNext)
-            {
-                GUILayout.Label("None");
-            }
-
-            GUILayout.Space(12.0f);
-            GUILayout.Label("Retired Funding", _boldLabelStyle);
-            bool hasHistoricalAchievement = false;
-
-            for (int programmeIndex = 0;
-                programmeIndex < _raceController.AchievementFundingProgrammes.Count;
-                programmeIndex++)
-            {
-                AchievementFundingProgramme programme =
-                    _raceController.AchievementFundingProgrammes[programmeIndex];
-                bool playerAchieved = _raceController.HasProgramAchieved(player, programme);
-                if (!playerAchieved && !programme.IsExpired)
-                {
-                    continue;
-                }
-
-                if (!hasHistoricalAchievement)
-                {
-                    GUILayout.BeginVertical("box");
-                    hasHistoricalAchievement = true;
-                }
-
-                GUILayout.Label(
-                    programme.Name
-                    + ": "
-                    + (playerAchieved ? "Achieved" : "Expired - Not Achieved"));
-            }
-
-            if (hasHistoricalAchievement)
-            {
-                GUILayout.EndVertical();
+                GUILayout.Label("No funding contracts configured.");
             }
             else
             {
-                GUILayout.Label("None");
+                DrawSelectedSpaceRaceFundingEntry(selectedEntry, player, currentUniversalTime);
             }
+
+            GUILayout.Space(12.0f);
+            DrawSpaceRaceFundingSection(
+                "AVAILABLE NOW",
+                SpaceRaceFundingCategory.Available,
+                player,
+                ref _spaceRaceAvailableExpanded);
+            DrawSpaceRaceFundingSection(
+                "LOCKED",
+                SpaceRaceFundingCategory.Locked,
+                player,
+                ref _spaceRaceLockedExpanded);
+            DrawSpaceRaceFundingSection(
+                "EXPIRED",
+                SpaceRaceFundingCategory.Expired,
+                player,
+                ref _spaceRaceExpiredExpanded);
 
             GUILayout.EndScrollView();
         }
 
-        private void DrawSpaceRaceAchievementCard(
-            AchievementFundingProgramme programme,
-            bool isLocked,
+        private void DrawSelectedSpaceRaceFundingEntry(
+            SpaceRaceFundingEntry entry,
+            SpaceProgramState player,
             double evaluationUniversalTime)
         {
-            GUILayout.BeginVertical("box");
-            GUILayout.Label(programme.Name, _boldLabelStyle);
-            GUILayout.Label("Objective: " + programme.ObjectiveDescription);
-            GUILayout.Label("State: " + (isLocked ? "Locked" : "Available"));
+            SpaceRaceFundingCategory category = GetSpaceRaceFundingCategory(entry, player);
+            string stateLabel;
 
-            if (isLocked)
+            if (category == SpaceRaceFundingCategory.Available)
             {
-                DrawUnlockRuleProgress(programme.UnlockRule, evaluationUniversalTime);
+                stateLabel = "Available";
+            }
+            else if (category == SpaceRaceFundingCategory.Locked)
+            {
+                stateLabel = "Locked";
+            }
+            else if (entry.IsAchievement && !entry.AchievementProgramme.IsExpired)
+            {
+                stateLabel = "Completed";
             }
             else
             {
-                GUILayout.Label("Player: Not Achieved");
+                stateLabel = "Expired";
             }
 
-            GUILayout.EndVertical();
+            double? unlockEvaluationUniversalTime = category == SpaceRaceFundingCategory.Locked
+                ? (double?)evaluationUniversalTime
+                : null;
+
+            if (entry.IsAchievement)
+            {
+                DrawAchievementFundingCard(
+                    entry.AchievementProgramme,
+                    stateLabel,
+                    unlockEvaluationUniversalTime);
+            }
+            else
+            {
+                DrawSatelliteFundingCard(
+                    entry.SatelliteProgramme,
+                    stateLabel,
+                    unlockEvaluationUniversalTime);
+            }
         }
 
-        private void DrawSpaceRaceSatelliteCard(
-            FundingProgramme programme,
-            bool isLocked,
-            double evaluationUniversalTime)
+        private void DrawSpaceRaceFundingSection(
+            string heading,
+            SpaceRaceFundingCategory category,
+            SpaceProgramState player,
+            ref bool isExpanded)
         {
-            GUILayout.BeginVertical("box");
-            GUILayout.Label(programme.Name, _boldLabelStyle);
-            GUILayout.Label(
-                "Objective: maintain "
-                + programme.RequiredSatellites
-                + " qualifying satellite(s) in orbit around "
-                + programme.CelestialBodyName
-                + ".");
-            GUILayout.Label("State: " + (isLocked ? "Locked" : "Unlocked"));
-
-            if (isLocked)
+            GUILayout.BeginHorizontal();
+            GUILayout.Label(heading, _boldLabelStyle);
+            GUILayout.FlexibleSpace();
+            if (GUILayout.Button(isExpanded ? "-" : "+", SpaceRaceSectionToggleOptions))
             {
-                DrawUnlockRuleProgress(programme.UnlockRule, evaluationUniversalTime);
+                isExpanded = !isExpanded;
             }
-            else
+            GUILayout.EndHorizontal();
+
+            if (!isExpanded)
             {
-                int satelliteCount = _raceController.PlayerProgram.GetSatelliteCount(
-                    programme.CelestialBodyName);
-                GUILayout.Label(
-                    "Your progress: "
-                    + satelliteCount
-                    + " / "
-                    + programme.RequiredSatellites
-                    + " qualifying satellite(s)");
+                GUILayout.Space(8.0f);
+                return;
             }
 
-            GUILayout.EndVertical();
+            int buttonCount = 0;
+            bool hasOpenRow = false;
+
+            for (int entryIndex = 0; entryIndex < _spaceRaceFundingEntries.Count; entryIndex++)
+            {
+                SpaceRaceFundingEntry entry = _spaceRaceFundingEntries[entryIndex];
+                if (GetSpaceRaceFundingCategory(entry, player) != category)
+                {
+                    continue;
+                }
+
+                if ((buttonCount % SpaceRaceFundingButtonsPerRow) == 0)
+                {
+                    GUILayout.BeginHorizontal();
+                    hasOpenRow = true;
+                }
+
+                bool isSelected = string.Equals(
+                        _selectedSpaceRaceFundingId,
+                        entry.Id,
+                        StringComparison.Ordinal)
+                    && _selectedSpaceRaceFundingIsAchievement == entry.IsAchievement;
+                string buttonLabel = isSelected ? "> " + entry.Name : entry.Name;
+
+                if (GUILayout.Button(buttonLabel, SpaceRaceFundingButtonOptions))
+                {
+                    _selectedSpaceRaceFundingId = entry.Id;
+                    _selectedSpaceRaceFundingIsAchievement = entry.IsAchievement;
+                }
+
+                buttonCount++;
+                if ((buttonCount % SpaceRaceFundingButtonsPerRow) == 0)
+                {
+                    GUILayout.EndHorizontal();
+                    hasOpenRow = false;
+                }
+            }
+
+            if (hasOpenRow)
+            {
+                GUILayout.EndHorizontal();
+            }
+
+            if (buttonCount == 0)
+            {
+                GUILayout.Label("None");
+            }
+
+            GUILayout.Space(8.0f);
+        }
+
+        private void EnsureSpaceRaceFundingEntries()
+        {
+            int achievementFundingCount = _raceController.AchievementFundingProgrammes.Count;
+            int satelliteFundingCount = _raceController.FundingProgrammes.Count;
+            if (ReferenceEquals(_spaceRaceFundingEntriesController, _raceController)
+                && _spaceRaceAchievementFundingCount == achievementFundingCount
+                && _spaceRaceSatelliteFundingCount == satelliteFundingCount)
+            {
+                return;
+            }
+
+            _spaceRaceFundingEntries.Clear();
+
+            for (int programmeIndex = 0; programmeIndex < achievementFundingCount; programmeIndex++)
+            {
+                AchievementFundingProgramme programme =
+                    _raceController.AchievementFundingProgrammes[programmeIndex];
+                MilestoneDefinition milestone = PrototypeMilestones.FindById(programme.Id);
+                string celestialBodyName = milestone == null ? null : milestone.CelestialBodyName;
+
+                _spaceRaceFundingEntries.Add(new SpaceRaceFundingEntry(
+                    programme,
+                    null,
+                    celestialBodyName,
+                    KspCelestialBodyOrdering.GetSortDistanceFromKerbin(celestialBodyName),
+                    programmeIndex));
+            }
+
+            for (int programmeIndex = 0; programmeIndex < satelliteFundingCount; programmeIndex++)
+            {
+                FundingProgramme programme = _raceController.FundingProgrammes[programmeIndex];
+                _spaceRaceFundingEntries.Add(new SpaceRaceFundingEntry(
+                    null,
+                    programme,
+                    programme.CelestialBodyName,
+                    KspCelestialBodyOrdering.GetSortDistanceFromKerbin(programme.CelestialBodyName),
+                    achievementFundingCount + programmeIndex));
+            }
+
+            _spaceRaceFundingEntries.Sort(CompareSpaceRaceFundingEntries);
+            _spaceRaceFundingEntriesController = _raceController;
+            _spaceRaceAchievementFundingCount = achievementFundingCount;
+            _spaceRaceSatelliteFundingCount = satelliteFundingCount;
+        }
+
+        private static int CompareSpaceRaceFundingEntries(
+            SpaceRaceFundingEntry firstEntry,
+            SpaceRaceFundingEntry secondEntry)
+        {
+            int distanceComparison = firstEntry.BodySortDistance.CompareTo(secondEntry.BodySortDistance);
+            if (distanceComparison != 0)
+            {
+                return distanceComparison;
+            }
+
+            int bodyNameComparison = string.Compare(
+                firstEntry.CelestialBodyName,
+                secondEntry.CelestialBodyName,
+                StringComparison.OrdinalIgnoreCase);
+            if (bodyNameComparison != 0)
+            {
+                return bodyNameComparison;
+            }
+
+            return firstEntry.CatalogueOrder.CompareTo(secondEntry.CatalogueOrder);
+        }
+
+        private SpaceRaceFundingEntry EnsureSelectedSpaceRaceFundingEntry(SpaceProgramState player)
+        {
+            for (int entryIndex = 0; entryIndex < _spaceRaceFundingEntries.Count; entryIndex++)
+            {
+                SpaceRaceFundingEntry entry = _spaceRaceFundingEntries[entryIndex];
+                if (string.Equals(
+                        _selectedSpaceRaceFundingId,
+                        entry.Id,
+                        StringComparison.Ordinal)
+                    && _selectedSpaceRaceFundingIsAchievement == entry.IsAchievement)
+                {
+                    return entry;
+                }
+            }
+
+            for (int categoryIndex = (int)SpaceRaceFundingCategory.Available;
+                categoryIndex <= (int)SpaceRaceFundingCategory.Expired;
+                categoryIndex++)
+            {
+                SpaceRaceFundingCategory category = (SpaceRaceFundingCategory)categoryIndex;
+                for (int entryIndex = 0; entryIndex < _spaceRaceFundingEntries.Count; entryIndex++)
+                {
+                    SpaceRaceFundingEntry entry = _spaceRaceFundingEntries[entryIndex];
+                    if (GetSpaceRaceFundingCategory(entry, player) != category)
+                    {
+                        continue;
+                    }
+
+                    _selectedSpaceRaceFundingId = entry.Id;
+                    _selectedSpaceRaceFundingIsAchievement = entry.IsAchievement;
+                    return entry;
+                }
+            }
+
+            _selectedSpaceRaceFundingId = null;
+            return null;
+        }
+
+        private SpaceRaceFundingCategory GetSpaceRaceFundingCategory(
+            SpaceRaceFundingEntry entry,
+            SpaceProgramState player)
+        {
+            if (entry.IsAchievement)
+            {
+                AchievementFundingProgramme programme = entry.AchievementProgramme;
+                if (programme.IsExpired || _raceController.HasProgramAchieved(player, programme))
+                {
+                    return SpaceRaceFundingCategory.Expired;
+                }
+
+                return _raceController.IsAchievementProgrammeAvailable(programme)
+                    ? SpaceRaceFundingCategory.Available
+                    : SpaceRaceFundingCategory.Locked;
+            }
+
+            return entry.SatelliteProgramme.IsAvailable
+                ? SpaceRaceFundingCategory.Available
+                : SpaceRaceFundingCategory.Locked;
         }
 
         private void DrawUnlockRuleProgress(

@@ -1,11 +1,12 @@
 using System;
+using System.Collections.Generic;
 
 namespace TheRaceForSpace.KspIntegration
 {
     /// <summary>
     /// Provides a stable presentation distance for ordering funding objectives from Kerbin outward.
-    /// The value is based on mean orbital radii rather than live body positions, so UI ordering does
-    /// not move around as planets progress through their orbits.
+    /// Mean orbital radii are used instead of live body positions so the UI order does not move as
+    /// planets progress through their orbits.
     /// </summary>
     internal static class KspCelestialBodyOrdering
     {
@@ -25,50 +26,93 @@ namespace TheRaceForSpace.KspIntegration
                 return 0.0;
             }
 
-            CelestialBody commonAncestor = FindCommonAncestor(homeBody, targetBody);
-            if (commonAncestor == null)
+            // This runs only when the cached funding catalogue is rebuilt, not on every IMGUI
+            // repaint, so short path lists keep the orbital-tree comparison straightforward.
+            IList<CelestialBody> homePath = CreatePathToRoot(homeBody);
+            IList<CelestialBody> targetPath = CreatePathToRoot(targetBody);
+            int homeBranchIndex = homePath.Count - 1;
+            int targetBranchIndex = targetPath.Count - 1;
+            bool foundCommonAncestor = false;
+
+            while (homeBranchIndex >= 0
+                && targetBranchIndex >= 0
+                && ReferenceEquals(homePath[homeBranchIndex], targetPath[targetBranchIndex]))
+            {
+                foundCommonAncestor = true;
+                homeBranchIndex--;
+                targetBranchIndex--;
+            }
+
+            if (!foundCommonAncestor)
             {
                 return double.MaxValue;
             }
 
-            if (ReferenceEquals(commonAncestor, homeBody))
+            if (homeBranchIndex < 0)
             {
-                return SumOrbitRadiiToAncestor(targetBody, homeBody);
+                return SumOrbitRadii(targetPath, targetBranchIndex);
             }
 
-            if (ReferenceEquals(commonAncestor, targetBody))
+            if (targetBranchIndex < 0)
             {
-                return SumOrbitRadiiToAncestor(homeBody, targetBody);
+                return SumOrbitRadii(homePath, homeBranchIndex);
             }
 
-            CelestialBody homeBranch = FindBranchBelowAncestor(homeBody, commonAncestor);
-            CelestialBody targetBranch = FindBranchBelowAncestor(targetBody, commonAncestor);
-            if (homeBranch == null || targetBranch == null)
-            {
-                return double.MaxValue;
-            }
-
-            double homeBranchRadius = GetOrbitRadius(homeBranch);
-            double targetBranchRadius = GetOrbitRadius(targetBranch);
+            double homeBranchRadius = GetOrbitRadius(homePath[homeBranchIndex]);
+            double targetBranchRadius = GetOrbitRadius(targetPath[targetBranchIndex]);
             if (homeBranchRadius == double.MaxValue || targetBranchRadius == double.MaxValue)
             {
                 return double.MaxValue;
             }
 
-            double homeLocalDistance = SumOrbitRadiiToAncestor(homeBody, homeBranch);
-            double targetLocalDistance = SumOrbitRadiiToAncestor(targetBody, targetBranch);
+            double homeLocalDistance = SumOrbitRadii(homePath, homeBranchIndex - 1);
+            double targetLocalDistance = SumOrbitRadii(targetPath, targetBranchIndex - 1);
             if (homeLocalDistance == double.MaxValue || targetLocalDistance == double.MaxValue)
             {
                 return double.MaxValue;
             }
 
-            // Bodies on separate branches are ordered by the difference between the branches'
-            // mean orbital radii, plus any moon-system distance below those branches. For the
-            // stock system this keeps Kerbin first, then Mun, Minmus, nearby planets, and their
-            // moons without depending on their changing live positions.
+            // Separate planetary branches are compared by their mean orbital-radius difference.
+            // Any moon-system distance below those branches is then added to keep nearby moons
+            // grouped naturally with their parent body's part of the progression.
             return Math.Abs(targetBranchRadius - homeBranchRadius)
                 + homeLocalDistance
                 + targetLocalDistance;
+        }
+
+        private static IList<CelestialBody> CreatePathToRoot(CelestialBody body)
+        {
+            var path = new List<CelestialBody>();
+            CelestialBody currentBody = body;
+
+            while (currentBody != null)
+            {
+                path.Add(currentBody);
+                currentBody = GetParent(currentBody);
+            }
+
+            return path;
+        }
+
+        private static double SumOrbitRadii(IList<CelestialBody> path, int lastIndexInclusive)
+        {
+            double distance = 0.0;
+            for (int pathIndex = 0; pathIndex <= lastIndexInclusive; pathIndex++)
+            {
+                double orbitRadius = GetOrbitRadius(path[pathIndex]);
+                if (orbitRadius == double.MaxValue)
+                {
+                    return double.MaxValue;
+                }
+
+                distance += orbitRadius;
+                if (double.IsNaN(distance) || double.IsInfinity(distance))
+                {
+                    return double.MaxValue;
+                }
+            }
+
+            return distance;
         }
 
         private static CelestialBody FindBody(string celestialBodyName)
@@ -92,73 +136,6 @@ namespace TheRaceForSpace.KspIntegration
             }
 
             return null;
-        }
-
-        private static CelestialBody FindCommonAncestor(CelestialBody firstBody, CelestialBody secondBody)
-        {
-            for (CelestialBody firstAncestor = firstBody;
-                firstAncestor != null;
-                firstAncestor = GetParent(firstAncestor))
-            {
-                for (CelestialBody secondAncestor = secondBody;
-                    secondAncestor != null;
-                    secondAncestor = GetParent(secondAncestor))
-                {
-                    if (ReferenceEquals(firstAncestor, secondAncestor))
-                    {
-                        return firstAncestor;
-                    }
-                }
-            }
-
-            return null;
-        }
-
-        private static CelestialBody FindBranchBelowAncestor(CelestialBody body, CelestialBody ancestor)
-        {
-            CelestialBody currentBody = body;
-            CelestialBody parentBody = GetParent(currentBody);
-
-            while (currentBody != null && parentBody != null && !ReferenceEquals(parentBody, ancestor))
-            {
-                currentBody = parentBody;
-                parentBody = GetParent(currentBody);
-            }
-
-            return parentBody != null && ReferenceEquals(parentBody, ancestor)
-                ? currentBody
-                : null;
-        }
-
-        private static double SumOrbitRadiiToAncestor(CelestialBody body, CelestialBody ancestor)
-        {
-            if (ReferenceEquals(body, ancestor))
-            {
-                return 0.0;
-            }
-
-            double distance = 0.0;
-            CelestialBody currentBody = body;
-            while (currentBody != null && !ReferenceEquals(currentBody, ancestor))
-            {
-                double orbitRadius = GetOrbitRadius(currentBody);
-                if (orbitRadius == double.MaxValue)
-                {
-                    return double.MaxValue;
-                }
-
-                distance += orbitRadius;
-                if (double.IsNaN(distance) || double.IsInfinity(distance))
-                {
-                    return double.MaxValue;
-                }
-
-                currentBody = GetParent(currentBody);
-            }
-
-            return currentBody != null && ReferenceEquals(currentBody, ancestor)
-                ? distance
-                : double.MaxValue;
         }
 
         private static double GetOrbitRadius(CelestialBody body)

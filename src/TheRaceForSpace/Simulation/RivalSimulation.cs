@@ -224,7 +224,7 @@ namespace TheRaceForSpace.Simulation
             {
                 // Stable IDs are authoritative. Keep the display mirror synchronized from the
                 // live definitions rather than allowing presentation text to define simulation state.
-                program.NextLaunchBodyName = GetMissionTargetDisplayName(
+                program.NextMissionDisplayName = GetMissionTargetDisplayName(
                     targetId,
                     context.AchievementProgrammes,
                     context.FundingProgrammes);
@@ -495,7 +495,7 @@ namespace TheRaceForSpace.Simulation
             }
 
             program.NextMissionTargetId = targetId;
-            program.NextLaunchBodyName = GetMissionTargetDisplayName(
+            program.NextMissionDisplayName = GetMissionTargetDisplayName(
                 targetId,
                 context.AchievementProgrammes,
                 context.FundingProgrammes);

@@ -77,6 +77,7 @@ namespace TheRaceForSpace.UI
         private const float WindowBackgroundOpacity = 0.82f;
         private const float WindowWidth = 900.0f;
         private const float WindowHeight = 720.0f;
+        private const float SpaceRaceFundingInfoHeight = 240.0f;
         private const int HighlightedCardTitleFontSize = 16;
         private const int SpaceRaceFundingButtonsPerRow = 4;
         private const string LauncherIconTexturePath =
@@ -98,6 +99,8 @@ namespace TheRaceForSpace.UI
             { GUILayout.Width(195.0f), GUILayout.Height(40.0f) };
         private static readonly GUILayoutOption[] SpaceRaceSectionToggleOptions =
             { GUILayout.Width(32.0f), GUILayout.Height(24.0f) };
+        private static readonly GUILayoutOption[] SpaceRaceFundingInfoOptions =
+            { GUILayout.Height(SpaceRaceFundingInfoHeight) };
         private static readonly GUILayoutOption[] ExpandWidthOptions = { GUILayout.ExpandWidth(true) };
         private static readonly GUILayoutOption[] NoExpandWidthOptions = { GUILayout.ExpandWidth(false) };
 
@@ -117,6 +120,7 @@ namespace TheRaceForSpace.UI
         private Vector2 _fundingScrollPosition;
         private Vector2 _rivalsScrollPosition;
         private Vector2 _spaceRaceScrollPosition;
+        private Vector2 _spaceRaceFundingInfoScrollPosition;
         private Vector2 _helpScrollPosition;
         private ApplicationLauncherButton _launcherButton;
         private GUIStyle _highlightedCardTitleStyle;
@@ -829,8 +833,15 @@ namespace TheRaceForSpace.UI
 
             _spaceRaceScrollPosition = GUILayout.BeginScrollView(_spaceRaceScrollPosition);
 
-            GUILayout.Label("FUNDING CONTRACT INFO", _boldLabelStyle);
+            GUILayout.Label("CURRENT FUNDING INFO", _boldLabelStyle);
             SpaceRaceFundingEntry selectedEntry = EnsureSelectedSpaceRaceFundingEntry(player);
+
+            // Keep the selected contract area stable as users switch between contracts with
+            // different amounts of descriptive or unlock text. Longer cards scroll internally
+            // instead of pushing the funding button sections up and down.
+            _spaceRaceFundingInfoScrollPosition = GUILayout.BeginScrollView(
+                _spaceRaceFundingInfoScrollPosition,
+                SpaceRaceFundingInfoOptions);
             if (selectedEntry == null)
             {
                 GUILayout.Label("No funding contracts configured.");
@@ -839,6 +850,7 @@ namespace TheRaceForSpace.UI
             {
                 DrawSelectedSpaceRaceFundingEntry(selectedEntry, player, currentUniversalTime);
             }
+            GUILayout.EndScrollView();
 
             GUILayout.Space(12.0f);
             DrawSpaceRaceFundingSection(
@@ -954,6 +966,7 @@ namespace TheRaceForSpace.UI
                 {
                     _selectedSpaceRaceFundingId = entry.Id;
                     _selectedSpaceRaceFundingIsAchievement = entry.IsAchievement;
+                    _spaceRaceFundingInfoScrollPosition = Vector2.zero;
                 }
 
                 buttonCount++;

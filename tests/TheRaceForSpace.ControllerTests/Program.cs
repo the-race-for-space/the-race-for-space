@@ -52,6 +52,9 @@ namespace TheRaceForSpace.ControllerTests
                 "Controller existing state pays at shared funding boundary",
                 SatelliteRaceControllerTests.ExistingStatePaysAtSharedFundingBoundary);
             Run(
+                "Controller restored overdue funding boundary is processed",
+                SatelliteRaceControllerTests.RestoredOverdueFundingBoundaryIsProcessed);
+            Run(
                 "Controller boundary observation is not paid retroactively",
                 SatelliteRaceControllerTests.BoundaryObservationIsNotPaidRetroactively);
             Run(

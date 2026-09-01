@@ -15,7 +15,7 @@ namespace TheRaceForSpace.Tests
                 PrototypeFundingCatalogue.CreateSatelliteProgrammes();
 
             Equal(PrototypeMilestones.All.Count, achievements.Count);
-            Equal(4, satelliteProgrammes.Count);
+            Equal(16, satelliteProgrammes.Count);
 
             AssertAchievement(
                 achievements,
@@ -57,6 +57,120 @@ namespace TheRaceForSpace.Tests
                 300000.0,
                 PrototypeMilestones.MunCrewedOrbitId,
                 PrototypeMilestones.MinmusCrewedOrbitId);
+
+            string[] interplanetaryProbePrerequisites =
+                { PrototypeMilestones.MunProbeOrbitId, PrototypeMilestones.MinmusProbeOrbitId };
+            string[] interplanetaryCrewedPrerequisites =
+                { PrototypeMilestones.MunCrewedOrbitId, PrototypeMilestones.MinmusCrewedOrbitId };
+
+            AssertBodyFundingSet(
+                achievements,
+                satelliteProgrammes,
+                PrototypeMilestones.MohoProbeOrbitId,
+                PrototypeMilestones.MohoCrewedOrbitId,
+                PrototypeFundingCatalogue.MohoNetworkId,
+                "Moho",
+                interplanetaryProbePrerequisites,
+                interplanetaryCrewedPrerequisites);
+            AssertBodyFundingSet(
+                achievements,
+                satelliteProgrammes,
+                PrototypeMilestones.EveProbeOrbitId,
+                PrototypeMilestones.EveCrewedOrbitId,
+                PrototypeFundingCatalogue.EveNetworkId,
+                "Eve",
+                interplanetaryProbePrerequisites,
+                interplanetaryCrewedPrerequisites);
+            AssertBodyFundingSet(
+                achievements,
+                satelliteProgrammes,
+                PrototypeMilestones.GillyProbeOrbitId,
+                PrototypeMilestones.GillyCrewedOrbitId,
+                PrototypeFundingCatalogue.GillyNetworkId,
+                "Gilly",
+                new[] { PrototypeMilestones.EveProbeOrbitId },
+                new[] { PrototypeMilestones.EveCrewedOrbitId });
+            AssertBodyFundingSet(
+                achievements,
+                satelliteProgrammes,
+                PrototypeMilestones.IkeProbeOrbitId,
+                PrototypeMilestones.IkeCrewedOrbitId,
+                PrototypeFundingCatalogue.IkeNetworkId,
+                "Ike",
+                new[] { PrototypeMilestones.DunaProbeOrbitId },
+                new[] { PrototypeMilestones.DunaCrewedOrbitId });
+            AssertBodyFundingSet(
+                achievements,
+                satelliteProgrammes,
+                PrototypeMilestones.DresProbeOrbitId,
+                PrototypeMilestones.DresCrewedOrbitId,
+                PrototypeFundingCatalogue.DresNetworkId,
+                "Dres",
+                interplanetaryProbePrerequisites,
+                interplanetaryCrewedPrerequisites);
+            AssertBodyFundingSet(
+                achievements,
+                satelliteProgrammes,
+                PrototypeMilestones.JoolProbeOrbitId,
+                PrototypeMilestones.JoolCrewedOrbitId,
+                PrototypeFundingCatalogue.JoolNetworkId,
+                "Jool",
+                interplanetaryProbePrerequisites,
+                interplanetaryCrewedPrerequisites);
+            AssertBodyFundingSet(
+                achievements,
+                satelliteProgrammes,
+                PrototypeMilestones.LaytheProbeOrbitId,
+                PrototypeMilestones.LaytheCrewedOrbitId,
+                PrototypeFundingCatalogue.LaytheNetworkId,
+                "Laythe",
+                new[] { PrototypeMilestones.JoolProbeOrbitId },
+                new[] { PrototypeMilestones.JoolCrewedOrbitId });
+            AssertBodyFundingSet(
+                achievements,
+                satelliteProgrammes,
+                PrototypeMilestones.VallProbeOrbitId,
+                PrototypeMilestones.VallCrewedOrbitId,
+                PrototypeFundingCatalogue.VallNetworkId,
+                "Vall",
+                new[] { PrototypeMilestones.JoolProbeOrbitId },
+                new[] { PrototypeMilestones.JoolCrewedOrbitId });
+            AssertBodyFundingSet(
+                achievements,
+                satelliteProgrammes,
+                PrototypeMilestones.TyloProbeOrbitId,
+                PrototypeMilestones.TyloCrewedOrbitId,
+                PrototypeFundingCatalogue.TyloNetworkId,
+                "Tylo",
+                new[] { PrototypeMilestones.JoolProbeOrbitId },
+                new[] { PrototypeMilestones.JoolCrewedOrbitId });
+            AssertBodyFundingSet(
+                achievements,
+                satelliteProgrammes,
+                PrototypeMilestones.BopProbeOrbitId,
+                PrototypeMilestones.BopCrewedOrbitId,
+                PrototypeFundingCatalogue.BopNetworkId,
+                "Bop",
+                new[] { PrototypeMilestones.JoolProbeOrbitId },
+                new[] { PrototypeMilestones.JoolCrewedOrbitId });
+            AssertBodyFundingSet(
+                achievements,
+                satelliteProgrammes,
+                PrototypeMilestones.PolProbeOrbitId,
+                PrototypeMilestones.PolCrewedOrbitId,
+                PrototypeFundingCatalogue.PolNetworkId,
+                "Pol",
+                new[] { PrototypeMilestones.JoolProbeOrbitId },
+                new[] { PrototypeMilestones.JoolCrewedOrbitId });
+            AssertBodyFundingSet(
+                achievements,
+                satelliteProgrammes,
+                PrototypeMilestones.EelooProbeOrbitId,
+                PrototypeMilestones.EelooCrewedOrbitId,
+                PrototypeFundingCatalogue.EelooNetworkId,
+                "Eeloo",
+                interplanetaryProbePrerequisites,
+                interplanetaryCrewedPrerequisites);
 
             Equal(
                 "Any agency must achieve Mun Probe Orbit and Minmus Probe Orbit.",
@@ -114,6 +228,35 @@ namespace TheRaceForSpace.Tests
             Require(!secondAchievements[0].HasStarted, "A new catalogue build must not reuse achievement campaign state.");
             Equal(0, secondAchievements[0].PaymentsProcessed);
             Require(!secondSatellites[0].IsAvailable, "A new catalogue build must not reuse satellite unlock state.");
+        }
+
+        private static void AssertBodyFundingSet(
+            IList<AchievementFundingProgramme> achievements,
+            IList<FundingProgramme> satelliteProgrammes,
+            string probeMilestoneId,
+            string crewedMilestoneId,
+            string networkId,
+            string celestialBodyName,
+            string[] probePrerequisiteMilestoneIds,
+            string[] crewedPrerequisiteMilestoneIds)
+        {
+            AssertAchievement(
+                achievements,
+                probeMilestoneId,
+                200000.0,
+                probePrerequisiteMilestoneIds);
+            AssertAchievement(
+                achievements,
+                crewedMilestoneId,
+                300000.0,
+                crewedPrerequisiteMilestoneIds);
+            AssertSatellite(
+                satelliteProgrammes,
+                networkId,
+                celestialBodyName,
+                5,
+                100000.0,
+                probeMilestoneId);
         }
 
         private static void AssertAchievement(

@@ -14,6 +14,18 @@ namespace TheRaceForSpace.Funding
         public const string MunNetworkId = "mun-survey";
         public const string MinmusNetworkId = "minmus-relay";
         public const string DunaNetworkId = "duna-network";
+        public const string MohoNetworkId = "moho-network";
+        public const string EveNetworkId = "eve-network";
+        public const string GillyNetworkId = "gilly-network";
+        public const string IkeNetworkId = "ike-network";
+        public const string DresNetworkId = "dres-network";
+        public const string JoolNetworkId = "jool-network";
+        public const string LaytheNetworkId = "laythe-network";
+        public const string VallNetworkId = "vall-network";
+        public const string TyloNetworkId = "tylo-network";
+        public const string BopNetworkId = "bop-network";
+        public const string PolNetworkId = "pol-network";
+        public const string EelooNetworkId = "eeloo-network";
 
         /// <summary>
         /// Creates fresh achievement funding state for a new race controller from the milestone catalogue.
@@ -30,6 +42,30 @@ namespace TheRaceForSpace.Funding
             AddAchievementProgramme(programmes, PrototypeMilestones.MunCrewedOrbitId, 300000.0);
             AddAchievementProgramme(programmes, PrototypeMilestones.MinmusCrewedOrbitId, 300000.0);
             AddAchievementProgramme(programmes, PrototypeMilestones.DunaCrewedOrbitId, 300000.0);
+            AddAchievementProgramme(programmes, PrototypeMilestones.MohoProbeOrbitId, 200000.0);
+            AddAchievementProgramme(programmes, PrototypeMilestones.MohoCrewedOrbitId, 300000.0);
+            AddAchievementProgramme(programmes, PrototypeMilestones.EveProbeOrbitId, 200000.0);
+            AddAchievementProgramme(programmes, PrototypeMilestones.EveCrewedOrbitId, 300000.0);
+            AddAchievementProgramme(programmes, PrototypeMilestones.GillyProbeOrbitId, 200000.0);
+            AddAchievementProgramme(programmes, PrototypeMilestones.GillyCrewedOrbitId, 300000.0);
+            AddAchievementProgramme(programmes, PrototypeMilestones.IkeProbeOrbitId, 200000.0);
+            AddAchievementProgramme(programmes, PrototypeMilestones.IkeCrewedOrbitId, 300000.0);
+            AddAchievementProgramme(programmes, PrototypeMilestones.DresProbeOrbitId, 200000.0);
+            AddAchievementProgramme(programmes, PrototypeMilestones.DresCrewedOrbitId, 300000.0);
+            AddAchievementProgramme(programmes, PrototypeMilestones.JoolProbeOrbitId, 200000.0);
+            AddAchievementProgramme(programmes, PrototypeMilestones.JoolCrewedOrbitId, 300000.0);
+            AddAchievementProgramme(programmes, PrototypeMilestones.LaytheProbeOrbitId, 200000.0);
+            AddAchievementProgramme(programmes, PrototypeMilestones.LaytheCrewedOrbitId, 300000.0);
+            AddAchievementProgramme(programmes, PrototypeMilestones.VallProbeOrbitId, 200000.0);
+            AddAchievementProgramme(programmes, PrototypeMilestones.VallCrewedOrbitId, 300000.0);
+            AddAchievementProgramme(programmes, PrototypeMilestones.TyloProbeOrbitId, 200000.0);
+            AddAchievementProgramme(programmes, PrototypeMilestones.TyloCrewedOrbitId, 300000.0);
+            AddAchievementProgramme(programmes, PrototypeMilestones.BopProbeOrbitId, 200000.0);
+            AddAchievementProgramme(programmes, PrototypeMilestones.BopCrewedOrbitId, 300000.0);
+            AddAchievementProgramme(programmes, PrototypeMilestones.PolProbeOrbitId, 200000.0);
+            AddAchievementProgramme(programmes, PrototypeMilestones.PolCrewedOrbitId, 300000.0);
+            AddAchievementProgramme(programmes, PrototypeMilestones.EelooProbeOrbitId, 200000.0);
+            AddAchievementProgramme(programmes, PrototypeMilestones.EelooCrewedOrbitId, 300000.0);
 
             return programmes;
         }
@@ -68,7 +104,91 @@ namespace TheRaceForSpace.Funding
                     "Duna",
                     5,
                     100000.0,
-                    UnlockRuleDefinition.AnyAgencyAchievement(PrototypeMilestones.DunaProbeOrbitId))
+                    UnlockRuleDefinition.AnyAgencyAchievement(PrototypeMilestones.DunaProbeOrbitId)),
+                CreateSatelliteProgramme(
+                    MohoNetworkId,
+                    "Moho Orbital Network",
+                    "Moho",
+                    5,
+                    100000.0,
+                    UnlockRuleDefinition.AnyAgencyAchievement(PrototypeMilestones.MohoProbeOrbitId)),
+                CreateSatelliteProgramme(
+                    EveNetworkId,
+                    "Eve Orbital Network",
+                    "Eve",
+                    5,
+                    100000.0,
+                    UnlockRuleDefinition.AnyAgencyAchievement(PrototypeMilestones.EveProbeOrbitId)),
+                CreateSatelliteProgramme(
+                    GillyNetworkId,
+                    "Gilly Relay/Survey Network",
+                    "Gilly",
+                    5,
+                    100000.0,
+                    UnlockRuleDefinition.AnyAgencyAchievement(PrototypeMilestones.GillyProbeOrbitId)),
+                CreateSatelliteProgramme(
+                    IkeNetworkId,
+                    "Ike Relay/Survey Network",
+                    "Ike",
+                    5,
+                    100000.0,
+                    UnlockRuleDefinition.AnyAgencyAchievement(PrototypeMilestones.IkeProbeOrbitId)),
+                CreateSatelliteProgramme(
+                    DresNetworkId,
+                    "Dres Orbital Network",
+                    "Dres",
+                    5,
+                    100000.0,
+                    UnlockRuleDefinition.AnyAgencyAchievement(PrototypeMilestones.DresProbeOrbitId)),
+                CreateSatelliteProgramme(
+                    JoolNetworkId,
+                    "Jool Orbital Network",
+                    "Jool",
+                    5,
+                    100000.0,
+                    UnlockRuleDefinition.AnyAgencyAchievement(PrototypeMilestones.JoolProbeOrbitId)),
+                CreateSatelliteProgramme(
+                    LaytheNetworkId,
+                    "Laythe Orbital Network",
+                    "Laythe",
+                    5,
+                    100000.0,
+                    UnlockRuleDefinition.AnyAgencyAchievement(PrototypeMilestones.LaytheProbeOrbitId)),
+                CreateSatelliteProgramme(
+                    VallNetworkId,
+                    "Vall Relay/Survey Network",
+                    "Vall",
+                    5,
+                    100000.0,
+                    UnlockRuleDefinition.AnyAgencyAchievement(PrototypeMilestones.VallProbeOrbitId)),
+                CreateSatelliteProgramme(
+                    TyloNetworkId,
+                    "Tylo Relay/Survey Network",
+                    "Tylo",
+                    5,
+                    100000.0,
+                    UnlockRuleDefinition.AnyAgencyAchievement(PrototypeMilestones.TyloProbeOrbitId)),
+                CreateSatelliteProgramme(
+                    BopNetworkId,
+                    "Bop Relay/Survey Network",
+                    "Bop",
+                    5,
+                    100000.0,
+                    UnlockRuleDefinition.AnyAgencyAchievement(PrototypeMilestones.BopProbeOrbitId)),
+                CreateSatelliteProgramme(
+                    PolNetworkId,
+                    "Pol Relay/Survey Network",
+                    "Pol",
+                    5,
+                    100000.0,
+                    UnlockRuleDefinition.AnyAgencyAchievement(PrototypeMilestones.PolProbeOrbitId)),
+                CreateSatelliteProgramme(
+                    EelooNetworkId,
+                    "Eeloo Orbital Network",
+                    "Eeloo",
+                    5,
+                    100000.0,
+                    UnlockRuleDefinition.AnyAgencyAchievement(PrototypeMilestones.EelooProbeOrbitId))
             };
         }
 

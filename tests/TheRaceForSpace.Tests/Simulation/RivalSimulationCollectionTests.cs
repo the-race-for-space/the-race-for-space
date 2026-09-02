@@ -184,26 +184,17 @@ namespace TheRaceForSpace.Tests.Simulation
         {
             var aster = new SpaceProgramState("Aster", false)
             {
-                NextMissionTargetId = "duna-network",
+                NextMissionTargetId = PrototypeFundingCatalogue.DunaNetworkId,
                 NextLaunchBodyName = "Stored presentation text"
             };
             var presentationOnlyTarget = new SpaceProgramState("PresentationOnly", false)
             {
                 NextLaunchBodyName = "Duna Orbital Network"
             };
-            var fundingProgrammes = new List<FundingProgramme>
-            {
-                new FundingProgramme(
-                    "duna-network",
-                    "Duna Orbital Network",
-                    "Duna",
-                    5,
-                    100000.0,
-                    true,
-                    null,
-                    (UnlockRuleDefinition)null)
-            };
-            var achievementProgrammes = new List<AchievementFundingProgramme>();
+            IList<FundingProgramme> fundingProgrammes =
+                PrototypeFundingCatalogue.CreateSatelliteProgrammes();
+            IList<AchievementFundingProgramme> achievementProgrammes =
+                PrototypeFundingCatalogue.CreateAchievementProgrammes();
 
             double cost = RivalSimulation.CalculateLaunchProgressCost(
                 aster,
@@ -214,12 +205,36 @@ namespace TheRaceForSpace.Tests.Simulation
                 achievementProgrammes,
                 fundingProgrammes);
 
-            TestAssert.Equal(40000.0, cost);
+            TestAssert.Equal(80000.0, cost);
             TestAssert.Equal(20000.0, presentationOnlyCost);
-            TestAssert.Equal("duna-network", aster.NextMissionTargetId);
+            TestAssert.Equal(PrototypeFundingCatalogue.DunaNetworkId, aster.NextMissionTargetId);
             TestAssert.Equal("Stored presentation text", aster.NextLaunchBodyName);
             TestAssert.Equal(null, presentationOnlyTarget.NextMissionTargetId);
             TestAssert.Equal("Duna Orbital Network", presentationOnlyTarget.NextLaunchBodyName);
+
+            aster.NextMissionTargetId = PrototypeMilestones.MunCrewedOrbitId;
+            TestAssert.Equal(
+                60000.0,
+                RivalSimulation.CalculateLaunchProgressCost(
+                    aster,
+                    achievementProgrammes,
+                    fundingProgrammes));
+
+            aster.NextMissionTargetId = PrototypeMilestones.DunaProbeOrbitId;
+            TestAssert.Equal(
+                60000.0,
+                RivalSimulation.CalculateLaunchProgressCost(
+                    aster,
+                    achievementProgrammes,
+                    fundingProgrammes));
+
+            aster.NextMissionTargetId = PrototypeMilestones.DunaCrewedOrbitId;
+            TestAssert.Equal(
+                100000.0,
+                RivalSimulation.CalculateLaunchProgressCost(
+                    aster,
+                    achievementProgrammes,
+                    fundingProgrammes));
         }
 
         public static void AchievementCompletionUsesMilestoneDefinition()

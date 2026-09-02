@@ -56,7 +56,7 @@ namespace TheRaceForSpace.ControllerTests
                 controller.IsAchievementProgrammeAvailable(munProbeOrbit),
                 "Probe Orbit should make the downstream Mun Probe Orbit contract available.");
             Require(!munNetwork.IsAvailable, "Mun satellite funding should remain locked before Mun Probe Orbit.");
-            Equal(120000.0, controller.PlayerProgram.NextPayoutFunds);
+            Equal(95000.0, controller.PlayerProgram.NextPayoutFunds);
             Equal(1, RacePersistenceScenario.RivalCaptureCalls);
             Equal(1, RacePersistenceScenario.RaceProgressCaptureCalls);
         }
@@ -83,13 +83,13 @@ namespace TheRaceForSpace.ControllerTests
                 PrototypeMilestones.ProbeOrbitId);
 
             // The one existing Kerbin satellite earns 20k of the 200k/10 network pool and
-            // the sole Probe Orbit achiever receives the first 100k achievement payment.
-            Equal(120000.0, CareerFundingAdapter.TotalAddedFunds);
+            // the sole Probe Orbit achiever receives the first 75k achievement payment.
+            Equal(95000.0, CareerFundingAdapter.TotalAddedFunds);
             Equal(2, CareerFundingAdapter.AddFundsCalls);
             Equal(1, probeOrbit.PaymentsProcessed);
             Equal(90, probeOrbit.CurrentInterestPercent);
             Equal(FundingIntervalSeconds * 2.0, controller.NextFundingUniversalTime);
-            Equal(110000.0, controller.PlayerProgram.NextPayoutFunds);
+            Equal(87500.0, controller.PlayerProgram.NextPayoutFunds);
         }
 
         public static void RestoredOverdueFundingBoundaryIsProcessed()
@@ -151,7 +151,7 @@ namespace TheRaceForSpace.ControllerTests
                 controller.PlayerProgram.HasAchievement(PrototypeMilestones.ProbeOrbitId),
                 "The boundary snapshot should still be recorded after due funding is processed.");
             Require(kerbinNetwork.IsAvailable, "The newly observed Probe Orbit should unlock future Kerbin funding.");
-            Equal(120000.0, controller.PlayerProgram.NextPayoutFunds);
+            Equal(95000.0, controller.PlayerProgram.NextPayoutFunds);
         }
 
         public static void ProjectedPayoutCacheRebuildsOnRefresh()
@@ -181,7 +181,7 @@ namespace TheRaceForSpace.ControllerTests
                 20000.0,
                 controller.GetSatelliteCurrentPayout(controller.PlayerProgram, kerbinNetwork));
             Equal(
-                100000.0,
+                75000.0,
                 controller.GetAchievementCurrentPayout(controller.PlayerProgram, probeOrbit));
 
             Planetarium.CurrentUniversalTime = 2000.0;
@@ -192,9 +192,9 @@ namespace TheRaceForSpace.ControllerTests
                 0.0,
                 controller.GetSatelliteCurrentPayout(controller.PlayerProgram, kerbinNetwork));
             Equal(
-                100000.0,
+                75000.0,
                 controller.GetAchievementCurrentPayout(controller.PlayerProgram, probeOrbit));
-            Equal(100000.0, controller.PlayerProgram.NextPayoutFunds);
+            Equal(75000.0, controller.PlayerProgram.NextPayoutFunds);
         }
 
         private static AchievementFundingProgramme FindAchievementProgramme(

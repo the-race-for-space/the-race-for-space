@@ -81,17 +81,21 @@ Do not deploy a build if the automated tests fail.
 bash tools/test-prototype.sh Alpha/Cleanup-0.4
 ```
 
-The deployed DLL should be written to:
+The deploy copies both the compiled assembly and the current user-editable race settings config to KSP:
 
 ```text
 /home/deck/.local/share/Steam/steamapps/common/Kerbal Space Program/GameData/TheRaceForSpace/Plugins/TheRaceForSpace.dll
+/home/deck/.local/share/Steam/steamapps/common/Kerbal Space Program/GameData/TheRaceForSpace/Config/RaceSettings.cfg
 ```
 
-Confirm it exists with:
+Confirm both exist with:
 
 ```bash
 ls -l "$KSP_ROOT/GameData/TheRaceForSpace/Plugins/TheRaceForSpace.dll"
+ls -l "$KSP_ROOT/GameData/TheRaceForSpace/Config/RaceSettings.cfg"
 ```
+
+The test helper performs these checks automatically and stops if either deployed file is missing.
 
 ## 5. Test in KSP
 
@@ -102,6 +106,8 @@ ls -l "$KSP_ROOT/GameData/TheRaceForSpace/Plugins/TheRaceForSpace.dll"
 5. Test the feature or change being worked on.
 6. Save and reload when testing persistence-related behaviour.
 
+When testing balance config changes, edit the deployed `GameData/TheRaceForSpace/Config/RaceSettings.cfg` and restart KSP before checking the changed values.
+
 ### 0.4 Core runtime verification
 
 Use these checks after changes to race lifecycle or runtime ownership:
@@ -110,7 +116,7 @@ Use these checks after changes to race lifecycle or runtime ownership:
 2. Hide the Command Center with `F8` and continue playing or time-warping for more than one five-second runtime refresh.
 3. Reopen the Command Center and confirm the race state is still current.
 4. Move between normal KSP game scenes, for example Space Center and Flight or Tracking Station, and confirm rival funds/progress do not reset to new-game values.
-5. When practical, cross one shared 90-day funding boundary and confirm it is processed once and the next funding date advances normally.
+5. When practical, cross one shared funding boundary and confirm it is processed once and the next funding date advances normally.
 6. Save, return to the menu, reload the save, and confirm the persisted race state is restored.
 
 These checks verify that `Core/RaceRuntime` owns progression while `UI/RaceWindow` only displays the current controller state.
@@ -241,10 +247,11 @@ All prototype logic tests passed.
 bash tools/test-prototype.sh Alpha/Cleanup-0.4
 ```
 
-Verify the DLL:
+Verify both deployment files:
 
 ```bash
 ls -l "$KSP_ROOT/GameData/TheRaceForSpace/Plugins/TheRaceForSpace.dll"
+ls -l "$KSP_ROOT/GameData/TheRaceForSpace/Config/RaceSettings.cfg"
 ```
 
 After this succeeds, the machine is set up. Future testing should use **Part 1** only.

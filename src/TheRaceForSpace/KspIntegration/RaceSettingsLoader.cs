@@ -26,35 +26,43 @@ namespace TheRaceForSpace.KspIntegration
 
             if (GameDatabase.Instance == null)
             {
-                Debug.LogWarning("[TheRaceForSpace] GameDatabase was unavailable; using default race settings.");
+                Debug.LogWarning("[TheRaceForSpace] GameDatabase unavailable; using default race settings.");
                 return;
             }
 
             ConfigNode[] settingsNodes = GameDatabase.Instance.GetConfigNodes(RootNodeName);
             if (settingsNodes == null || settingsNodes.Length == 0)
             {
-                Debug.LogWarning("[TheRaceForSpace] RaceSettings.cfg was not found; using default race settings.");
+                Debug.LogWarning("[TheRaceForSpace] RaceSettings.cfg not found; using default race settings.");
                 return;
             }
 
             // If another config patch creates the same node, the last loaded node wins.
             ConfigNode rootNode = settingsNodes[settingsNodes.Length - 1];
-            RaceSettings.FundingIntervalDays = ReadPositiveDouble(
+            RaceSettings.FundingIntervalDays = ReadDouble(
                 rootNode,
                 "fundingIntervalDays",
-                RaceSettings.FundingIntervalDays);
-            RaceSettings.RivalStartingFunds = ReadNonNegativeDouble(
+                RaceSettings.FundingIntervalDays,
+                0.000001,
+                double.MaxValue);
+            RaceSettings.RivalStartingFunds = ReadDouble(
                 rootNode,
                 "rivalStartingFunds",
-                RaceSettings.RivalStartingFunds);
-            RaceSettings.RivalProgressChance = ReadPercent(
+                RaceSettings.RivalStartingFunds,
+                0.0,
+                double.MaxValue);
+            RaceSettings.RivalProgressChance = ReadDouble(
                 rootNode,
                 "rivalProgressChancePercent",
-                RaceSettings.RivalProgressChance);
-            RaceSettings.NumberOfRivals = ReadNonNegativeInt(
+                RaceSettings.RivalProgressChance * 100.0,
+                0.0,
+                100.0) / 100.0;
+            RaceSettings.NumberOfRivals = ReadInt(
                 rootNode,
                 "numberOfRivals",
-                RaceSettings.NumberOfRivals);
+                RaceSettings.NumberOfRivals,
+                0,
+                int.MaxValue);
 
             ApplyBodySettings(rootNode.GetNode("KERBIN"), RaceSettings.Kerbin);
             ApplyBodySettings(rootNode.GetNode("KERBIN_MOONS"), RaceSettings.KerbinMoons);
@@ -70,44 +78,35 @@ namespace TheRaceForSpace.KspIntegration
 
         private static void ApplyBodySettings(ConfigNode node, RaceBodySettings settings)
         {
-            if (node == null || settings == null)
+            if (node == null)
             {
                 return;
             }
 
-            settings.ProbeProgressCostFunds = ReadNonNegativeDouble(
-                node,
-                "probeProgressCost",
-                settings.ProbeProgressCostFunds);
-            settings.CrewedProgressCostFunds = ReadNonNegativeDouble(
-                node,
-                "crewedProgressCost",
-                settings.CrewedProgressCostFunds);
-            settings.ProbeRewardFunds = ReadNonNegativeDouble(
-                node,
-                "probeReward",
-                settings.ProbeRewardFunds);
-            settings.CrewedRewardFunds = ReadNonNegativeDouble(
-                node,
-                "crewedReward",
-                settings.CrewedRewardFunds);
-            settings.SatelliteProgressCostFunds = ReadNonNegativeDouble(
-                node,
-                "satelliteProgressCost",
-                settings.SatelliteProgressCostFunds);
-            settings.SatelliteNetworkSize = ReadPositiveInt(
-                node,
-                "satelliteNetworkSize",
-                settings.SatelliteNetworkSize);
-            settings.SatelliteNetworkValueFunds = ReadNonNegativeDouble(
-                node,
-                "satelliteNetworkValue",
-                settings.SatelliteNetworkValueFunds);
+            settings.ProbeProgressCostFunds = ReadDouble(
+                node, "probeProgressCost", settings.ProbeProgressCostFunds, 0.0, double.MaxValue);
+            settings.CrewedProgressCostFunds = ReadDouble(
+                node, "crewedProgressCost", settings.CrewedProgressCostFunds, 0.0, double.MaxValue);
+            settings.ProbeRewardFunds = ReadDouble(
+                node, "probeReward", settings.ProbeRewardFunds, 0.0, double.MaxValue);
+            settings.CrewedRewardFunds = ReadDouble(
+                node, "crewedReward", settings.CrewedRewardFunds, 0.0, double.MaxValue);
+            settings.SatelliteProgressCostFunds = ReadDouble(
+                node, "satelliteProgressCost", settings.SatelliteProgressCostFunds, 0.0, double.MaxValue);
+            settings.SatelliteNetworkSize = ReadInt(
+                node, "satelliteNetworkSize", settings.SatelliteNetworkSize, 1, int.MaxValue);
+            settings.SatelliteNetworkValueFunds = ReadDouble(
+                node, "satelliteNetworkValue", settings.SatelliteNetworkValueFunds, 0.0, double.MaxValue);
         }
 
-        private static double ReadNonNegativeDouble(ConfigNode node, string valueName, double defaultValue)
+        private static double ReadDouble(
+            ConfigNode node,
+            string valueName,
+            double defaultValue,
+            double minimumValue,
+            double maximumValue)
         {
-            string text = node == null ? null : node.GetValue(valueName);
+            string text = node.GetValue(valueName);
             if (string.IsNullOrEmpty(text))
             {
                 return defaultValue;
@@ -121,7 +120,8 @@ namespace TheRaceForSpace.KspIntegration
                     out parsedValue)
                 && !double.IsNaN(parsedValue)
                 && !double.IsInfinity(parsedValue)
-                && parsedValue >= 0.0)
+                && parsedValue >= minimumValue
+                && parsedValue <= maximumValue)
             {
                 return parsedValue;
             }
@@ -130,34 +130,23 @@ namespace TheRaceForSpace.KspIntegration
             return defaultValue;
         }
 
-        private static double ReadPositiveDouble(ConfigNode node, string valueName, double defaultValue)
+        private static int ReadInt(
+            ConfigNode node,
+            string valueName,
+            int defaultValue,
+            int minimumValue,
+            int maximumValue)
         {
-            double parsedValue = ReadNonNegativeDouble(node, valueName, defaultValue);
-            if (parsedValue > 0.0)
-            {
-                return parsedValue;
-            }
-
-            string text = node == null ? null : node.GetValue(valueName);
-            if (!string.IsNullOrEmpty(text))
-            {
-                LogInvalidValue(valueName, text, defaultValue);
-            }
-
-            return defaultValue;
-        }
-
-        private static int ReadNonNegativeInt(ConfigNode node, string valueName, int defaultValue)
-        {
-            string text = node == null ? null : node.GetValue(valueName);
-            int parsedValue;
+            string text = node.GetValue(valueName);
             if (string.IsNullOrEmpty(text))
             {
                 return defaultValue;
             }
 
+            int parsedValue;
             if (int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out parsedValue)
-                && parsedValue >= 0)
+                && parsedValue >= minimumValue
+                && parsedValue <= maximumValue)
             {
                 return parsedValue;
             }
@@ -166,45 +155,14 @@ namespace TheRaceForSpace.KspIntegration
             return defaultValue;
         }
 
-        private static int ReadPositiveInt(ConfigNode node, string valueName, int defaultValue)
-        {
-            int parsedValue = ReadNonNegativeInt(node, valueName, defaultValue);
-            if (parsedValue > 0)
-            {
-                return parsedValue;
-            }
-
-            string text = node == null ? null : node.GetValue(valueName);
-            if (!string.IsNullOrEmpty(text))
-            {
-                LogInvalidValue(valueName, text, defaultValue);
-            }
-
-            return defaultValue;
-        }
-
-        private static double ReadPercent(ConfigNode node, string valueName, double defaultProbability)
-        {
-            double defaultPercent = defaultProbability * 100.0;
-            double parsedPercent = ReadNonNegativeDouble(node, valueName, defaultPercent);
-            if (parsedPercent <= 100.0)
-            {
-                return parsedPercent / 100.0;
-            }
-
-            string text = node == null ? null : node.GetValue(valueName);
-            LogInvalidValue(valueName, text, defaultPercent);
-            return defaultProbability;
-        }
-
         private static void LogInvalidValue(string valueName, string suppliedValue, object defaultValue)
         {
             Debug.LogWarning(
-                "[TheRaceForSpace] Invalid config value "
+                "[TheRaceForSpace] Invalid config "
                 + valueName
                 + "='"
                 + suppliedValue
-                + "'. Using default "
+                + "'; using "
                 + defaultValue
                 + ".");
         }

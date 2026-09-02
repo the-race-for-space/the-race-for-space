@@ -10,6 +10,17 @@ namespace TheRaceForSpace.Funding
     /// </summary>
     public static class PrototypeFundingCatalogue
     {
+        private const double KerbinProbeRewardFunds = 75000.0;
+        private const double KerbinCrewedRewardFunds = 150000.0;
+        private const double KerbinMoonProbeRewardFunds = 150000.0;
+        private const double KerbinMoonCrewedRewardFunds = 300000.0;
+        private const double InterplanetaryProbeRewardFunds = 300000.0;
+        private const double InterplanetaryCrewedRewardFunds = 500000.0;
+        private const int PlanetNetworkRequiredSatellites = 10;
+        private const int MoonNetworkRequiredSatellites = 5;
+        private const double PlanetNetworkRewardFunds = 200000.0;
+        private const double MoonNetworkRewardFunds = 100000.0;
+
         public const string KerbinNetworkId = "kerbin-network";
         public const string MunNetworkId = "mun-survey";
         public const string MinmusNetworkId = "minmus-relay";
@@ -34,38 +45,12 @@ namespace TheRaceForSpace.Funding
         {
             var programmes = new List<AchievementFundingProgramme>();
 
-            AddAchievementProgramme(programmes, PrototypeMilestones.ProbeOrbitId, 100000.0);
-            AddAchievementProgramme(programmes, PrototypeMilestones.CrewedOrbitId, 200000.0);
-            AddAchievementProgramme(programmes, PrototypeMilestones.MunProbeOrbitId, 200000.0);
-            AddAchievementProgramme(programmes, PrototypeMilestones.MinmusProbeOrbitId, 200000.0);
-            AddAchievementProgramme(programmes, PrototypeMilestones.DunaProbeOrbitId, 200000.0);
-            AddAchievementProgramme(programmes, PrototypeMilestones.MunCrewedOrbitId, 300000.0);
-            AddAchievementProgramme(programmes, PrototypeMilestones.MinmusCrewedOrbitId, 300000.0);
-            AddAchievementProgramme(programmes, PrototypeMilestones.DunaCrewedOrbitId, 300000.0);
-            AddAchievementProgramme(programmes, PrototypeMilestones.MohoProbeOrbitId, 200000.0);
-            AddAchievementProgramme(programmes, PrototypeMilestones.MohoCrewedOrbitId, 300000.0);
-            AddAchievementProgramme(programmes, PrototypeMilestones.EveProbeOrbitId, 200000.0);
-            AddAchievementProgramme(programmes, PrototypeMilestones.EveCrewedOrbitId, 300000.0);
-            AddAchievementProgramme(programmes, PrototypeMilestones.GillyProbeOrbitId, 200000.0);
-            AddAchievementProgramme(programmes, PrototypeMilestones.GillyCrewedOrbitId, 300000.0);
-            AddAchievementProgramme(programmes, PrototypeMilestones.IkeProbeOrbitId, 200000.0);
-            AddAchievementProgramme(programmes, PrototypeMilestones.IkeCrewedOrbitId, 300000.0);
-            AddAchievementProgramme(programmes, PrototypeMilestones.DresProbeOrbitId, 200000.0);
-            AddAchievementProgramme(programmes, PrototypeMilestones.DresCrewedOrbitId, 300000.0);
-            AddAchievementProgramme(programmes, PrototypeMilestones.JoolProbeOrbitId, 200000.0);
-            AddAchievementProgramme(programmes, PrototypeMilestones.JoolCrewedOrbitId, 300000.0);
-            AddAchievementProgramme(programmes, PrototypeMilestones.LaytheProbeOrbitId, 200000.0);
-            AddAchievementProgramme(programmes, PrototypeMilestones.LaytheCrewedOrbitId, 300000.0);
-            AddAchievementProgramme(programmes, PrototypeMilestones.VallProbeOrbitId, 200000.0);
-            AddAchievementProgramme(programmes, PrototypeMilestones.VallCrewedOrbitId, 300000.0);
-            AddAchievementProgramme(programmes, PrototypeMilestones.TyloProbeOrbitId, 200000.0);
-            AddAchievementProgramme(programmes, PrototypeMilestones.TyloCrewedOrbitId, 300000.0);
-            AddAchievementProgramme(programmes, PrototypeMilestones.BopProbeOrbitId, 200000.0);
-            AddAchievementProgramme(programmes, PrototypeMilestones.BopCrewedOrbitId, 300000.0);
-            AddAchievementProgramme(programmes, PrototypeMilestones.PolProbeOrbitId, 200000.0);
-            AddAchievementProgramme(programmes, PrototypeMilestones.PolCrewedOrbitId, 300000.0);
-            AddAchievementProgramme(programmes, PrototypeMilestones.EelooProbeOrbitId, 200000.0);
-            AddAchievementProgramme(programmes, PrototypeMilestones.EelooCrewedOrbitId, 300000.0);
+            // Achievement rewards are derived from the milestone body and crew requirement so a
+            // newly added milestone automatically uses the current campaign balance defaults.
+            for (int milestoneIndex = 0; milestoneIndex < PrototypeMilestones.All.Count; milestoneIndex++)
+            {
+                AddAchievementProgramme(programmes, PrototypeMilestones.All[milestoneIndex]);
+            }
 
             return programmes;
         }
@@ -81,123 +66,90 @@ namespace TheRaceForSpace.Funding
                     KerbinNetworkId,
                     "Kerbin Orbital Network",
                     "Kerbin",
-                    10,
-                    200000.0,
                     UnlockRuleDefinition.AnyAgencyAchievement(PrototypeMilestones.ProbeOrbitId)),
                 CreateSatelliteProgramme(
                     MunNetworkId,
                     "Mun Survey Network",
                     "Mun",
-                    5,
-                    100000.0,
                     UnlockRuleDefinition.AnyAgencyAchievement(PrototypeMilestones.MunProbeOrbitId)),
                 CreateSatelliteProgramme(
                     MinmusNetworkId,
                     "Minmus Relay Initiative",
                     "Minmus",
-                    5,
-                    100000.0,
                     UnlockRuleDefinition.AnyAgencyAchievement(PrototypeMilestones.MinmusProbeOrbitId)),
                 CreateSatelliteProgramme(
                     DunaNetworkId,
                     "Duna Orbital Network",
                     "Duna",
-                    5,
-                    100000.0,
                     UnlockRuleDefinition.AnyAgencyAchievement(PrototypeMilestones.DunaProbeOrbitId)),
                 CreateSatelliteProgramme(
                     MohoNetworkId,
                     "Moho Orbital Network",
                     "Moho",
-                    5,
-                    100000.0,
                     UnlockRuleDefinition.AnyAgencyAchievement(PrototypeMilestones.MohoProbeOrbitId)),
                 CreateSatelliteProgramme(
                     EveNetworkId,
                     "Eve Orbital Network",
                     "Eve",
-                    5,
-                    100000.0,
                     UnlockRuleDefinition.AnyAgencyAchievement(PrototypeMilestones.EveProbeOrbitId)),
                 CreateSatelliteProgramme(
                     GillyNetworkId,
                     "Gilly Relay/Survey Network",
                     "Gilly",
-                    5,
-                    100000.0,
                     UnlockRuleDefinition.AnyAgencyAchievement(PrototypeMilestones.GillyProbeOrbitId)),
                 CreateSatelliteProgramme(
                     IkeNetworkId,
                     "Ike Relay/Survey Network",
                     "Ike",
-                    5,
-                    100000.0,
                     UnlockRuleDefinition.AnyAgencyAchievement(PrototypeMilestones.IkeProbeOrbitId)),
                 CreateSatelliteProgramme(
                     DresNetworkId,
                     "Dres Orbital Network",
                     "Dres",
-                    5,
-                    100000.0,
                     UnlockRuleDefinition.AnyAgencyAchievement(PrototypeMilestones.DresProbeOrbitId)),
                 CreateSatelliteProgramme(
                     JoolNetworkId,
                     "Jool Orbital Network",
                     "Jool",
-                    5,
-                    100000.0,
                     UnlockRuleDefinition.AnyAgencyAchievement(PrototypeMilestones.JoolProbeOrbitId)),
                 CreateSatelliteProgramme(
                     LaytheNetworkId,
                     "Laythe Orbital Network",
                     "Laythe",
-                    5,
-                    100000.0,
                     UnlockRuleDefinition.AnyAgencyAchievement(PrototypeMilestones.LaytheProbeOrbitId)),
                 CreateSatelliteProgramme(
                     VallNetworkId,
                     "Vall Relay/Survey Network",
                     "Vall",
-                    5,
-                    100000.0,
                     UnlockRuleDefinition.AnyAgencyAchievement(PrototypeMilestones.VallProbeOrbitId)),
                 CreateSatelliteProgramme(
                     TyloNetworkId,
                     "Tylo Relay/Survey Network",
                     "Tylo",
-                    5,
-                    100000.0,
                     UnlockRuleDefinition.AnyAgencyAchievement(PrototypeMilestones.TyloProbeOrbitId)),
                 CreateSatelliteProgramme(
                     BopNetworkId,
                     "Bop Relay/Survey Network",
                     "Bop",
-                    5,
-                    100000.0,
                     UnlockRuleDefinition.AnyAgencyAchievement(PrototypeMilestones.BopProbeOrbitId)),
                 CreateSatelliteProgramme(
                     PolNetworkId,
                     "Pol Relay/Survey Network",
                     "Pol",
-                    5,
-                    100000.0,
                     UnlockRuleDefinition.AnyAgencyAchievement(PrototypeMilestones.PolProbeOrbitId)),
                 CreateSatelliteProgramme(
                     EelooNetworkId,
                     "Eeloo Orbital Network",
                     "Eeloo",
-                    5,
-                    100000.0,
                     UnlockRuleDefinition.AnyAgencyAchievement(PrototypeMilestones.EelooProbeOrbitId))
             };
         }
 
         private static void AddAchievementProgramme(
             IList<AchievementFundingProgramme> programmes,
-            string milestoneId,
-            double baseRewardFunds)
+            MilestoneDefinition milestone)
         {
-            MilestoneDefinition milestone = FindRequiredMilestone(milestoneId);
+            double baseRewardFunds = GetAchievementRewardFunds(milestone);
             if (milestone.UnlockRule == null)
             {
                 programmes.Add(new AchievementFundingProgramme(
@@ -217,23 +169,52 @@ namespace TheRaceForSpace.Funding
                 milestone.UnlockRule));
         }
 
+        private static double GetAchievementRewardFunds(MilestoneDefinition milestone)
+        {
+            bool isCrewed = milestone.CrewRequirement == MilestoneCrewRequirement.Crewed;
+            if (string.Equals(milestone.CelestialBodyName, "Kerbin", StringComparison.OrdinalIgnoreCase))
+            {
+                return isCrewed ? KerbinCrewedRewardFunds : KerbinProbeRewardFunds;
+            }
+
+            if (string.Equals(milestone.CelestialBodyName, "Mun", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(milestone.CelestialBodyName, "Minmus", StringComparison.OrdinalIgnoreCase))
+            {
+                return isCrewed ? KerbinMoonCrewedRewardFunds : KerbinMoonProbeRewardFunds;
+            }
+
+            return isCrewed ? InterplanetaryCrewedRewardFunds : InterplanetaryProbeRewardFunds;
+        }
+
         private static FundingProgramme CreateSatelliteProgramme(
             string id,
             string name,
             string celestialBodyName,
-            int requiredSatellites,
-            double rewardFunds,
             UnlockRuleDefinition unlockRule)
         {
+            bool isMoon = IsStockMoon(celestialBodyName);
             return new FundingProgramme(
                 id,
                 name,
                 celestialBodyName,
-                requiredSatellites,
-                rewardFunds,
+                isMoon ? MoonNetworkRequiredSatellites : PlanetNetworkRequiredSatellites,
+                isMoon ? MoonNetworkRewardFunds : PlanetNetworkRewardFunds,
                 false,
                 CreateCurrentPrototypeUnlockRequirement(unlockRule),
                 unlockRule);
+        }
+
+        private static bool IsStockMoon(string celestialBodyName)
+        {
+            return string.Equals(celestialBodyName, "Mun", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(celestialBodyName, "Minmus", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(celestialBodyName, "Gilly", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(celestialBodyName, "Ike", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(celestialBodyName, "Laythe", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(celestialBodyName, "Vall", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(celestialBodyName, "Tylo", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(celestialBodyName, "Bop", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(celestialBodyName, "Pol", StringComparison.OrdinalIgnoreCase);
         }
 
         private static string CreateCurrentPrototypeUnlockRequirement(UnlockRuleDefinition unlockRule)

@@ -46,6 +46,12 @@ namespace TheRaceForSpace.ControllerTests
                 UnlockConsumerIntegrationTests.RivalSelectionUsesScopeCountAndHistoricalTime);
 
             Run(
+                "Controller uses configured rival count and starting funds",
+                SatelliteRaceControllerTests.ConfiguredRivalCountAndStartingFundsAreUsed);
+            Run(
+                "Controller uses configured funding interval",
+                SatelliteRaceControllerTests.ConfiguredFundingIntervalSetsNextBoundary);
+            Run(
                 "Controller probe observation unlocks funding flow",
                 SatelliteRaceControllerTests.ProbeObservationUnlocksFundingFlow);
             Run(

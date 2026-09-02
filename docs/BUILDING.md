@@ -29,8 +29,8 @@ The helper:
 3. creates a local tracking branch when the requested branch only exists on GitHub;
 4. switches to the requested branch and pulls it with fast-forward-only behaviour;
 5. uses `KSP_ROOT` when already set, otherwise checks the standard Linux Steam KSP locations;
-6. builds the current prototype with `DeployToKsp=true`;
-7. verifies that `TheRaceForSpace.dll` exists in the KSP plugin folder.
+6. builds the current prototype with `DeployToKsp=true`, which copies both the DLL and `RaceSettings.cfg`;
+7. verifies that both deployed files exist in the KSP `GameData/TheRaceForSpace` folders.
 
 If no branch is supplied, the helper updates, builds and deploys the currently checked-out branch:
 
@@ -85,22 +85,24 @@ src/TheRaceForSpace/bin/Debug/net472/TheRaceForSpace.dll
 
 ### Linux build and deploy into KSP
 
-For local testing, build and copy the DLL directly into the KSP plugin folder:
+For local testing, build and copy the DLL and user-editable config directly into the KSP install:
 
 ```bash
 dotnet build ./src/TheRaceForSpace/TheRaceForSpace.csproj -c Debug -p:DeployToKsp=true
 ```
 
-This copies the assembly to:
+This deploys:
 
 ```text
 $KSP_ROOT/GameData/TheRaceForSpace/Plugins/TheRaceForSpace.dll
+$KSP_ROOT/GameData/TheRaceForSpace/Config/RaceSettings.cfg
 ```
 
 Confirm deployment with:
 
 ```bash
-test -f "$KSP_ROOT/GameData/TheRaceForSpace/Plugins/TheRaceForSpace.dll" && echo "Prototype deployed"
+test -f "$KSP_ROOT/GameData/TheRaceForSpace/Plugins/TheRaceForSpace.dll" && echo "DLL deployed"
+test -f "$KSP_ROOT/GameData/TheRaceForSpace/Config/RaceSettings.cfg" && echo "Config deployed"
 ```
 
 ## Windows PowerShell
@@ -123,10 +125,11 @@ $env:KSP_ROOT = "C:\Program Files (x86)\Steam\steamapps\common\Kerbal Space Prog
 dotnet build .\src\TheRaceForSpace\TheRaceForSpace.csproj -c Debug -p:DeployToKsp=true
 ```
 
-This copies `TheRaceForSpace.dll` to:
+This deploys:
 
 ```text
-<KSP_ROOT>\GameData\TheRaceForSpace\Plugins\
+<KSP_ROOT>\GameData\TheRaceForSpace\Plugins\TheRaceForSpace.dll
+<KSP_ROOT>\GameData\TheRaceForSpace\Config\RaceSettings.cfg
 ```
 
 The deploy action is opt-in so an ordinary build never modifies a KSP installation.
@@ -161,7 +164,7 @@ Install the .NET Framework 4.7.2 Developer Pack / targeting pack, or build the p
 
 ## Prototype verification
 
-After deploying the DLL:
+After deploying the DLL and config:
 
 1. Start KSP 1.12.x.
 2. Load a disposable test save.

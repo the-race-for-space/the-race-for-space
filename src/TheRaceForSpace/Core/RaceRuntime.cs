@@ -1,4 +1,5 @@
 using TheRaceForSpace.Competition;
+using TheRaceForSpace.KspIntegration;
 using UnityEngine;
 
 namespace TheRaceForSpace.Core
@@ -103,6 +104,10 @@ namespace TheRaceForSpace.Core
             {
                 return;
             }
+
+            // KSP has finished loading GameData before saved-game scenes begin, so configuration
+            // is read once here before any controller-owned funding or rival state is constructed.
+            RaceSettingsLoader.EnsureLoaded();
 
             // Keep one controller across scene changes inside a save, but never carry race or
             // rival state into a different save loaded during the same KSP process.

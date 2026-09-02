@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using TheRaceForSpace.Core;
 using TheRaceForSpace.Funding;
 using TheRaceForSpace.Milestones;
 using TheRaceForSpace.Programs;
@@ -13,18 +14,8 @@ namespace TheRaceForSpace.Simulation
     {
         private const double KerbinDaySeconds = 21600.0;
         private const double LaunchProgressIntervalSeconds = 5.0 * KerbinDaySeconds;
-        private const double LaunchProgressChance = 0.30;
         private const double SatelliteMissionSelectionChance = 0.60;
         private const int LaunchProgressIncrementPercent = 10;
-        private const double KerbinProbeLaunchProgressCostFunds = 20000.0;
-        private const double KerbinCrewedLaunchProgressCostFunds = 40000.0;
-        private const double KerbinMoonProbeLaunchProgressCostFunds = 40000.0;
-        private const double KerbinMoonCrewedLaunchProgressCostFunds = 60000.0;
-        private const double InterplanetaryProbeLaunchProgressCostFunds = 60000.0;
-        private const double InterplanetaryCrewedLaunchProgressCostFunds = 100000.0;
-        private const double KerbinNetworkLaunchProgressCostFunds = 20000.0;
-        private const double KerbinMoonNetworkLaunchProgressCostFunds = 40000.0;
-        private const double InterplanetaryNetworkLaunchProgressCostFunds = 80000.0;
 
         private static readonly Random RandomGenerator = new Random();
 
@@ -114,7 +105,7 @@ namespace TheRaceForSpace.Simulation
         {
             if (program == null)
             {
-                return KerbinProbeLaunchProgressCostFunds;
+                return RaceSettings.Kerbin.ProbeProgressCostFunds;
             }
 
             return CalculateLaunchProgressCostForTarget(
@@ -125,7 +116,7 @@ namespace TheRaceForSpace.Simulation
         /// <summary>
         /// Estimates the average Kerbin days until a rival completes its planned mission.
         /// Returns null when current funds and projected scheduled payouts cannot finance
-        /// all remaining development steps.
+        /// all remaining development steps, or when rival progress chance is configured to zero.
         /// </summary>
         public static int? CalculateEstimatedLaunchDays(
             SpaceProgramState program,
@@ -150,7 +141,7 @@ namespace TheRaceForSpace.Simulation
             double fundingIntervalSeconds,
             double launchProgressCostFunds)
         {
-            if (program == null)
+            if (program == null || RaceSettings.RivalProgressChance <= 0.0)
             {
                 return null;
             }
@@ -167,7 +158,7 @@ namespace TheRaceForSpace.Simulation
             double availableFunds = Math.Max(0.0, program.Funds);
             double projectedPayoutFunds = Math.Max(0.0, program.NextPayoutFunds);
             double expectedDaysPerSuccessfulStep =
-                (LaunchProgressIntervalSeconds / KerbinDaySeconds) / LaunchProgressChance;
+                (LaunchProgressIntervalSeconds / KerbinDaySeconds) / RaceSettings.RivalProgressChance;
             double fundingIntervalDays = fundingIntervalSeconds / KerbinDaySeconds;
             double nextFundingInDays = nextFundingUniversalTime >= 0.0
                 ? Math.Max(0.0, (nextFundingUniversalTime - currentUniversalTime) / KerbinDaySeconds)
@@ -279,7 +270,7 @@ namespace TheRaceForSpace.Simulation
 
                     if (program.LaunchProgressPercent < 100
                         && program.Funds >= launchProgressCostFunds
-                        && RandomGenerator.NextDouble() < LaunchProgressChance)
+                        && RandomGenerator.NextDouble() < RaceSettings.RivalProgressChance)
                     {
                         program.Funds -= launchProgressCostFunds;
                         program.LaunchProgressPercent = Math.Min(
@@ -460,68 +451,20 @@ namespace TheRaceForSpace.Simulation
             MilestoneDefinition milestone = PrototypeMilestones.FindById(targetId);
             if (milestone != null)
             {
-                bool isKerbin = string.Equals(
-                    milestone.CelestialBodyName,
-                    "Kerbin",
-                    StringComparison.OrdinalIgnoreCase);
-                bool isKerbinMoon = string.Equals(
-                        milestone.CelestialBodyName,
-                        "Mun",
-                        StringComparison.OrdinalIgnoreCase)
-                    || string.Equals(
-                        milestone.CelestialBodyName,
-                        "Minmus",
-                        StringComparison.OrdinalIgnoreCase);
-
-                if (milestone.CrewRequirement == MilestoneCrewRequirement.Crewed)
-                {
-                    if (isKerbin)
-                    {
-                        return KerbinCrewedLaunchProgressCostFunds;
-                    }
-
-                    return isKerbinMoon
-                        ? KerbinMoonCrewedLaunchProgressCostFunds
-                        : InterplanetaryCrewedLaunchProgressCostFunds;
-                }
-
-                if (isKerbin)
-                {
-                    return KerbinProbeLaunchProgressCostFunds;
-                }
-
-                return isKerbinMoon
-                    ? KerbinMoonProbeLaunchProgressCostFunds
-                    : InterplanetaryProbeLaunchProgressCostFunds;
+                RaceBodySettings bodySettings = RaceSettings.GetBodySettings(milestone.CelestialBodyName);
+                return milestone.CrewRequirement == MilestoneCrewRequirement.Crewed
+                    ? bodySettings.CrewedProgressCostFunds
+                    : bodySettings.ProbeProgressCostFunds;
             }
 
             FundingProgramme fundingProgramme = FindFundingProgramme(targetId, fundingProgrammes);
             if (fundingProgramme != null)
             {
-                if (string.Equals(
-                    fundingProgramme.CelestialBodyName,
-                    "Kerbin",
-                    StringComparison.OrdinalIgnoreCase))
-                {
-                    return KerbinNetworkLaunchProgressCostFunds;
-                }
-
-                if (string.Equals(
-                        fundingProgramme.CelestialBodyName,
-                        "Mun",
-                        StringComparison.OrdinalIgnoreCase)
-                    || string.Equals(
-                        fundingProgramme.CelestialBodyName,
-                        "Minmus",
-                        StringComparison.OrdinalIgnoreCase))
-                {
-                    return KerbinMoonNetworkLaunchProgressCostFunds;
-                }
-
-                return InterplanetaryNetworkLaunchProgressCostFunds;
+                return RaceSettings.GetBodySettings(fundingProgramme.CelestialBodyName)
+                    .SatelliteProgressCostFunds;
             }
 
-            return KerbinProbeLaunchProgressCostFunds;
+            return RaceSettings.Kerbin.ProbeProgressCostFunds;
         }
 
         private static void SetMissionTarget(

@@ -74,9 +74,16 @@ echo "Building and deploying $targetBranch..."
 dotnet build "$projectPath" -c Debug -p:DeployToKsp=true
 
 deployedAssembly="$KSP_ROOT/GameData/TheRaceForSpace/Plugins/TheRaceForSpace.dll"
+deployedConfig="$KSP_ROOT/GameData/TheRaceForSpace/Config/RaceSettings.cfg"
 if [[ ! -f "$deployedAssembly" ]]; then
     echo "Build completed but the deployed DLL was not found at:"
     echo "  $deployedAssembly"
+    exit 1
+fi
+
+if [[ ! -f "$deployedConfig" ]]; then
+    echo "Build completed but the deployed config was not found at:"
+    echo "  $deployedConfig"
     exit 1
 fi
 
@@ -85,3 +92,4 @@ echo "Prototype ready to test."
 echo "Branch: $targetBranch"
 echo "KSP:    $KSP_ROOT"
 echo "DLL:    $deployedAssembly"
+echo "Config: $deployedConfig"

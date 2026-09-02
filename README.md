@@ -20,6 +20,12 @@ The mod project is `src/TheRaceForSpace/TheRaceForSpace.csproj`. It builds again
 
 See `docs/BUILDING.md` for prerequisites, `KSP_ROOT` setup, build commands and optional deployment into `GameData/TheRaceForSpace/Plugins/`.
 
+## Balance configuration
+
+`GameData/TheRaceForSpace/Config/RaceSettings.cfg` contains the user-editable gameplay balance values. It exposes the Kerbin, Kerbin-moon, interplanetary-planet and interplanetary-moon funding/cost tiers, plus the funding interval, rival starting funds, rival progress chance and number of rivals.
+
+The file is read through KSP's GameDatabase before the race controller is first created. Restart KSP after editing the file. Missing or invalid values retain the built-in defaults, and no in-game settings UI is required.
+
 ## Interface target
 
 The primary interface target is a Steam Machine or conventional desktop PC using a normal PC-sized display. Prototype UI layouts should use the available desktop screen space rather than assume handheld-screen constraints.

@@ -24,7 +24,7 @@ See `docs/BUILDING.md` for prerequisites, `KSP_ROOT` setup, build commands and o
 
 `GameData/TheRaceForSpace/Config/RaceSettings.cfg` contains the user-editable gameplay balance values. It exposes the Kerbin, Kerbin-moon, interplanetary-planet and interplanetary-moon funding/cost tiers, plus the funding interval, rival starting funds, rival progress chance and number of rivals.
 
-The file is read through KSP's GameDatabase before the race controller is first created. Restart KSP after editing the file. Missing or invalid values retain the built-in defaults, and no in-game settings UI is required.
+The mod reads this file once before the first race controller is created. Restart KSP after editing the file. Missing or invalid values retain the built-in defaults, and no in-game settings UI is required.
 
 ## Interface target
 

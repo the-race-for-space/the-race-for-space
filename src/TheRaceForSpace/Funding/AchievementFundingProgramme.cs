@@ -4,7 +4,7 @@ using TheRaceForSpace.Milestones;
 namespace TheRaceForSpace.Funding
 {
     /// <summary>
-    /// Competitive achievement contract paid on the shared 90-day funding calendar.
+    /// Competitive achievement contract paid on the shared funding calendar.
     /// The first eligible funding date pays 100%, then each later payment declines
     /// by 10 percentage points until the final 10% payment expires the contract.
     /// </summary>
@@ -142,7 +142,7 @@ namespace TheRaceForSpace.Funding
         /// <summary>
         /// Restores persisted lifecycle state without performing gameplay calculations.
         /// Payout timing is intentionally not stored here because all contracts use the
-        /// controller's single global 90-day funding date.
+        /// controller's single global funding date.
         /// </summary>
         public void RestoreState(bool hasStarted, int paymentsProcessed)
         {

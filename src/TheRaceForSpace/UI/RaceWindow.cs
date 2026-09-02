@@ -831,8 +831,6 @@ namespace TheRaceForSpace.UI
             EnsurePayoutScratchBuffers();
             EnsureSpaceRaceFundingEntries();
 
-            _spaceRaceScrollPosition = GUILayout.BeginScrollView(_spaceRaceScrollPosition);
-
             GUILayout.Label("CURRENT FUNDING INFO", _boldLabelStyle);
             SpaceRaceFundingEntry selectedEntry = EnsureSelectedSpaceRaceFundingEntry(player);
 
@@ -853,6 +851,10 @@ namespace TheRaceForSpace.UI
             GUILayout.EndScrollView();
 
             GUILayout.Space(12.0f);
+
+            // Keep the selected funding information pinned while the catalogue sections below
+            // scroll independently through the larger stock-body contract list.
+            _spaceRaceScrollPosition = GUILayout.BeginScrollView(_spaceRaceScrollPosition);
             DrawSpaceRaceFundingSection(
                 "AVAILABLE NOW",
                 SpaceRaceFundingCategory.Available,

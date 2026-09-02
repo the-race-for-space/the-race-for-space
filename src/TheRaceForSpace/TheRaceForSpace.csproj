@@ -77,13 +77,16 @@
 
   <!--
     Normal builds stay under bin/. Set DeployToKsp=true when you explicitly
-    want the freshly built mod DLL copied into the local KSP installation.
+    want the freshly built mod DLL and user-editable config copied into KSP.
   -->
   <Target Name="DeployToKspInstallation" AfterTargets="Build" Condition="'$(DeployToKsp)' == 'true'">
     <PropertyGroup>
       <KspPluginPath>$(KSP_ROOT)/GameData/TheRaceForSpace/Plugins</KspPluginPath>
+      <KspConfigPath>$(KSP_ROOT)/GameData/TheRaceForSpace/Config</KspConfigPath>
+      <RaceSettingsConfigPath>$(MSBuildProjectDirectory)/../../GameData/TheRaceForSpace/Config/RaceSettings.cfg</RaceSettingsConfigPath>
     </PropertyGroup>
-    <MakeDir Directories="$(KspPluginPath)" />
+    <MakeDir Directories="$(KspPluginPath);$(KspConfigPath)" />
     <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(KspPluginPath)" />
+    <Copy SourceFiles="$(RaceSettingsConfigPath)" DestinationFolder="$(KspConfigPath)" />
   </Target>
 </Project>

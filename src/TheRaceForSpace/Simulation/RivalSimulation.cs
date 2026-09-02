@@ -16,9 +16,15 @@ namespace TheRaceForSpace.Simulation
         private const double LaunchProgressChance = 0.30;
         private const double SatelliteMissionSelectionChance = 0.60;
         private const int LaunchProgressIncrementPercent = 10;
-        private const double LaunchProgressCostFunds = 20000.0;
-        private const double DistantLaunchProgressCostMultiplier = 2.0;
-        private const double CrewedOrbitLaunchProgressCostMultiplier = 2.0;
+        private const double KerbinProbeLaunchProgressCostFunds = 20000.0;
+        private const double KerbinCrewedLaunchProgressCostFunds = 40000.0;
+        private const double KerbinMoonProbeLaunchProgressCostFunds = 40000.0;
+        private const double KerbinMoonCrewedLaunchProgressCostFunds = 60000.0;
+        private const double InterplanetaryProbeLaunchProgressCostFunds = 60000.0;
+        private const double InterplanetaryCrewedLaunchProgressCostFunds = 100000.0;
+        private const double KerbinNetworkLaunchProgressCostFunds = 20000.0;
+        private const double KerbinMoonNetworkLaunchProgressCostFunds = 40000.0;
+        private const double InterplanetaryNetworkLaunchProgressCostFunds = 80000.0;
 
         private static readonly Random RandomGenerator = new Random();
 
@@ -108,7 +114,7 @@ namespace TheRaceForSpace.Simulation
         {
             if (program == null)
             {
-                return LaunchProgressCostFunds;
+                return KerbinProbeLaunchProgressCostFunds;
             }
 
             return CalculateLaunchProgressCostForTarget(
@@ -454,34 +460,68 @@ namespace TheRaceForSpace.Simulation
             MilestoneDefinition milestone = PrototypeMilestones.FindById(targetId);
             if (milestone != null)
             {
-                if (milestone.CrewRequirement == MilestoneCrewRequirement.Crewed)
-                {
-                    return LaunchProgressCostFunds * CrewedOrbitLaunchProgressCostMultiplier;
-                }
-
-                if (!string.Equals(
+                bool isKerbin = string.Equals(
                     milestone.CelestialBodyName,
                     "Kerbin",
-                    StringComparison.OrdinalIgnoreCase))
+                    StringComparison.OrdinalIgnoreCase);
+                bool isKerbinMoon = string.Equals(
+                        milestone.CelestialBodyName,
+                        "Mun",
+                        StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(
+                        milestone.CelestialBodyName,
+                        "Minmus",
+                        StringComparison.OrdinalIgnoreCase);
+
+                if (milestone.CrewRequirement == MilestoneCrewRequirement.Crewed)
                 {
-                    return LaunchProgressCostFunds * DistantLaunchProgressCostMultiplier;
+                    if (isKerbin)
+                    {
+                        return KerbinCrewedLaunchProgressCostFunds;
+                    }
+
+                    return isKerbinMoon
+                        ? KerbinMoonCrewedLaunchProgressCostFunds
+                        : InterplanetaryCrewedLaunchProgressCostFunds;
                 }
 
-                return LaunchProgressCostFunds;
+                if (isKerbin)
+                {
+                    return KerbinProbeLaunchProgressCostFunds;
+                }
+
+                return isKerbinMoon
+                    ? KerbinMoonProbeLaunchProgressCostFunds
+                    : InterplanetaryProbeLaunchProgressCostFunds;
             }
 
             FundingProgramme fundingProgramme = FindFundingProgramme(targetId, fundingProgrammes);
             if (fundingProgramme != null)
             {
-                return string.Equals(
+                if (string.Equals(
                     fundingProgramme.CelestialBodyName,
                     "Kerbin",
-                    StringComparison.OrdinalIgnoreCase)
-                    ? LaunchProgressCostFunds
-                    : LaunchProgressCostFunds * DistantLaunchProgressCostMultiplier;
+                    StringComparison.OrdinalIgnoreCase))
+                {
+                    return KerbinNetworkLaunchProgressCostFunds;
+                }
+
+                if (string.Equals(
+                        fundingProgramme.CelestialBodyName,
+                        "Mun",
+                        StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(
+                        fundingProgramme.CelestialBodyName,
+                        "Minmus",
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    return KerbinMoonNetworkLaunchProgressCostFunds;
+                }
+
+                return InterplanetaryNetworkLaunchProgressCostFunds;
             }
 
-            return LaunchProgressCostFunds;
+            return KerbinProbeLaunchProgressCostFunds;
         }
 
         private static void SetMissionTarget(

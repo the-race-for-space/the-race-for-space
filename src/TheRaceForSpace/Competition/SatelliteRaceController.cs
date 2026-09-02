@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using TheRaceForSpace.Core;
 using TheRaceForSpace.Funding;
 using TheRaceForSpace.KspIntegration;
 using TheRaceForSpace.Milestones;
@@ -20,8 +21,6 @@ namespace TheRaceForSpace.Competition
 
         private const double KerbinDaySeconds = 21600.0;
         private const int KerbinDaysPerYear = 426;
-        private const double FundingIntervalSeconds = 90.0 * KerbinDaySeconds;
-        private const double RivalStartingFunds = 200000.0;
         private const double RivalBaseIncomeFunds = 20000.0;
 
         private readonly List<SpaceProgramState> _programs = new List<SpaceProgramState>();
@@ -35,38 +34,65 @@ namespace TheRaceForSpace.Competition
         private readonly IList<AchievementFundingProgramme> _achievementFundingProgrammesView;
         private readonly double[,] _satellitePayoutCache;
         private readonly double[,] _achievementPayoutCache;
+        private readonly double _fundingIntervalSeconds;
         private double _nextFundingUniversalTime = -1.0;
         private bool _hasFundingPayoutCache;
         private bool _hasRestoredPersistentState;
 
         public SatelliteRaceController()
         {
+            _fundingIntervalSeconds = Math.Max(1.0, RaceSettings.FundingIntervalDays) * KerbinDaySeconds;
             PlayerProgram = new SpaceProgramState(PlayerProgramId, "Kerbal Space Agency", true);
-            AsterProgram = new SpaceProgramState(AsterProgramId, "Aster Aerospace Directorate", false);
-            CobaltProgram = new SpaceProgramState(CobaltProgramId, "Cobalt Orbital Bureau", false);
-
-            // New games begin with enough simulated cash for one complete Probe Orbit
-            // development cycle. Probe Orbit is deliberately the fixed opening rival mission.
-            AsterProgram.Funds = RivalStartingFunds;
-            CobaltProgram.Funds = RivalStartingFunds;
-            AsterProgram.NextMissionTargetId = PrototypeMilestones.ProbeOrbitId;
-            CobaltProgram.NextMissionTargetId = PrototypeMilestones.ProbeOrbitId;
+            _programs.Add(PlayerProgram);
 
             MilestoneDefinition openingMilestone = PrototypeMilestones.FindById(
                 PrototypeMilestones.ProbeOrbitId);
             string openingMissionName = openingMilestone == null ? null : openingMilestone.Name;
-            AsterProgram.NextMissionDisplayName = openingMissionName;
-            CobaltProgram.NextMissionDisplayName = openingMissionName;
 
-            _programs.Add(PlayerProgram);
-            _programs.Add(AsterProgram);
-            _programs.Add(CobaltProgram);
-            _rivalPrograms.Add(AsterProgram);
-            _rivalPrograms.Add(CobaltProgram);
+            // Aster and Cobalt keep their established stable IDs and names. Extra configured rivals
+            // use simple numbered identities so collection-based persistence can restore them later.
+            int configuredRivalCount = Math.Max(0, RaceSettings.NumberOfRivals);
+            for (int rivalIndex = 0; rivalIndex < configuredRivalCount; rivalIndex++)
+            {
+                string rivalId;
+                string rivalName;
+                if (rivalIndex == 0)
+                {
+                    rivalId = AsterProgramId;
+                    rivalName = "Aster Aerospace Directorate";
+                }
+                else if (rivalIndex == 1)
+                {
+                    rivalId = CobaltProgramId;
+                    rivalName = "Cobalt Orbital Bureau";
+                }
+                else
+                {
+                    int rivalNumber = rivalIndex + 1;
+                    rivalId = "rival-" + rivalNumber;
+                    rivalName = "Rival Agency " + rivalNumber;
+                }
 
-            // Funding content is code-defined for 0.4, but the catalogue owns the complete target
-            // set. The controller only consumes collections, so adding another target does not
-            // require another constructor branch here.
+                var rivalProgram = new SpaceProgramState(rivalId, rivalName, false);
+                rivalProgram.Funds = Math.Max(0.0, RaceSettings.RivalStartingFunds);
+                rivalProgram.NextMissionTargetId = PrototypeMilestones.ProbeOrbitId;
+                rivalProgram.NextMissionDisplayName = openingMissionName;
+
+                if (rivalIndex == 0)
+                {
+                    AsterProgram = rivalProgram;
+                }
+                else if (rivalIndex == 1)
+                {
+                    CobaltProgram = rivalProgram;
+                }
+
+                _programs.Add(rivalProgram);
+                _rivalPrograms.Add(rivalProgram);
+            }
+
+            // Target content remains code-defined, while the catalogue reads user-configured
+            // reward and network balance values before constructing fresh campaign state.
             IList<AchievementFundingProgramme> achievementProgrammes =
                 PrototypeFundingCatalogue.CreateAchievementProgrammes();
             for (int programmeIndex = 0; programmeIndex < achievementProgrammes.Count; programmeIndex++)
@@ -127,7 +153,7 @@ namespace TheRaceForSpace.Competition
         }
 
         /// <summary>
-        /// Guaranteed funds each rival receives on every shared 90-day funding date.
+        /// Guaranteed funds each rival receives on every shared funding date.
         /// </summary>
         public double RivalBaseIncomePerFundingPeriod { get { return RivalBaseIncomeFunds; } }
 
@@ -203,7 +229,7 @@ namespace TheRaceForSpace.Competition
 
         /// <summary>
         /// Returns the current expected Kerbin days until a rival mission completes, using the
-        /// same shared 90-day funding date shown in the command center for projected income.
+        /// same configured funding date shown in the command center for projected income.
         /// </summary>
         public int? GetEstimatedRivalLaunchDays(SpaceProgramState program)
         {
@@ -216,7 +242,7 @@ namespace TheRaceForSpace.Competition
                 program,
                 Planetarium.GetUniversalTime(),
                 _nextFundingUniversalTime,
-                FundingIntervalSeconds,
+                _fundingIntervalSeconds,
                 _achievementFundingProgrammes,
                 _fundingProgrammes);
         }
@@ -352,11 +378,11 @@ namespace TheRaceForSpace.Competition
 
             if (_nextFundingUniversalTime < 0.0)
             {
-                // Every contract uses the same 90-day Kerbin calendar boundary. Orbit
+                // Every contract uses the same configured Kerbin-day funding boundary. Orbit
                 // achievements change eligibility and interest but never create their own date.
                 _nextFundingUniversalTime =
-                    (Math.Floor(currentUniversalTime / FundingIntervalSeconds) + 1.0)
-                    * FundingIntervalSeconds;
+                    (Math.Floor(currentUniversalTime / _fundingIntervalSeconds) + 1.0)
+                    * _fundingIntervalSeconds;
             }
 
             bool hasDueFunding = currentUniversalTime >= _nextFundingUniversalTime;
@@ -455,9 +481,9 @@ namespace TheRaceForSpace.Competition
         }
 
         /// <summary>
-        /// Processes every crossed global 90-day funding boundary. Rivals are advanced only to
-        /// each boundary before that boundary pays, so they cannot spend funding before receiving
-        /// it and their satellite/achievement state is evaluated at the correct historical time.
+        /// Processes every crossed global funding boundary. Rivals are advanced only to each
+        /// boundary before that boundary pays, so they cannot spend funding before receiving it
+        /// and their satellite/achievement state is evaluated at the correct historical time.
         /// Satellite and achievement programmes then pay on the same shared date.
         /// </summary>
         private void ProcessDueFunding(double currentUniversalTime)
@@ -519,7 +545,7 @@ namespace TheRaceForSpace.Competition
                     programme.AdvancePayout();
                 }
 
-                _nextFundingUniversalTime += FundingIntervalSeconds;
+                _nextFundingUniversalTime += _fundingIntervalSeconds;
             }
         }
 

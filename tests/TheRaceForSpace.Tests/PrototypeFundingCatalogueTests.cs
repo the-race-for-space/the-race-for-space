@@ -20,25 +20,25 @@ namespace TheRaceForSpace.Tests
             AssertAchievement(
                 achievements,
                 PrototypeMilestones.ProbeOrbitId,
-                100000.0);
+                75000.0);
             AssertAchievement(
                 achievements,
                 PrototypeMilestones.CrewedOrbitId,
-                200000.0);
+                150000.0);
             AssertAchievement(
                 achievements,
                 PrototypeMilestones.MunProbeOrbitId,
-                200000.0,
+                150000.0,
                 PrototypeMilestones.ProbeOrbitId);
             AssertAchievement(
                 achievements,
                 PrototypeMilestones.MinmusProbeOrbitId,
-                200000.0,
+                150000.0,
                 PrototypeMilestones.ProbeOrbitId);
             AssertAchievement(
                 achievements,
                 PrototypeMilestones.DunaProbeOrbitId,
-                200000.0,
+                300000.0,
                 PrototypeMilestones.MunProbeOrbitId,
                 PrototypeMilestones.MinmusProbeOrbitId);
             AssertAchievement(
@@ -54,7 +54,7 @@ namespace TheRaceForSpace.Tests
             AssertAchievement(
                 achievements,
                 PrototypeMilestones.DunaCrewedOrbitId,
-                300000.0,
+                500000.0,
                 PrototypeMilestones.MunCrewedOrbitId,
                 PrototypeMilestones.MinmusCrewedOrbitId);
 
@@ -70,6 +70,8 @@ namespace TheRaceForSpace.Tests
                 PrototypeMilestones.MohoCrewedOrbitId,
                 PrototypeFundingCatalogue.MohoNetworkId,
                 "Moho",
+                10,
+                200000.0,
                 interplanetaryProbePrerequisites,
                 interplanetaryCrewedPrerequisites);
             AssertBodyFundingSet(
@@ -79,6 +81,8 @@ namespace TheRaceForSpace.Tests
                 PrototypeMilestones.EveCrewedOrbitId,
                 PrototypeFundingCatalogue.EveNetworkId,
                 "Eve",
+                10,
+                200000.0,
                 interplanetaryProbePrerequisites,
                 interplanetaryCrewedPrerequisites);
             AssertBodyFundingSet(
@@ -88,6 +92,8 @@ namespace TheRaceForSpace.Tests
                 PrototypeMilestones.GillyCrewedOrbitId,
                 PrototypeFundingCatalogue.GillyNetworkId,
                 "Gilly",
+                5,
+                100000.0,
                 new[] { PrototypeMilestones.EveProbeOrbitId },
                 new[] { PrototypeMilestones.EveCrewedOrbitId });
             AssertBodyFundingSet(
@@ -97,6 +103,8 @@ namespace TheRaceForSpace.Tests
                 PrototypeMilestones.IkeCrewedOrbitId,
                 PrototypeFundingCatalogue.IkeNetworkId,
                 "Ike",
+                5,
+                100000.0,
                 new[] { PrototypeMilestones.DunaProbeOrbitId },
                 new[] { PrototypeMilestones.DunaCrewedOrbitId });
             AssertBodyFundingSet(
@@ -106,6 +114,8 @@ namespace TheRaceForSpace.Tests
                 PrototypeMilestones.DresCrewedOrbitId,
                 PrototypeFundingCatalogue.DresNetworkId,
                 "Dres",
+                10,
+                200000.0,
                 interplanetaryProbePrerequisites,
                 interplanetaryCrewedPrerequisites);
             AssertBodyFundingSet(
@@ -115,6 +125,8 @@ namespace TheRaceForSpace.Tests
                 PrototypeMilestones.JoolCrewedOrbitId,
                 PrototypeFundingCatalogue.JoolNetworkId,
                 "Jool",
+                10,
+                200000.0,
                 interplanetaryProbePrerequisites,
                 interplanetaryCrewedPrerequisites);
             AssertBodyFundingSet(
@@ -124,6 +136,8 @@ namespace TheRaceForSpace.Tests
                 PrototypeMilestones.LaytheCrewedOrbitId,
                 PrototypeFundingCatalogue.LaytheNetworkId,
                 "Laythe",
+                5,
+                100000.0,
                 new[] { PrototypeMilestones.JoolProbeOrbitId },
                 new[] { PrototypeMilestones.JoolCrewedOrbitId });
             AssertBodyFundingSet(
@@ -133,6 +147,8 @@ namespace TheRaceForSpace.Tests
                 PrototypeMilestones.VallCrewedOrbitId,
                 PrototypeFundingCatalogue.VallNetworkId,
                 "Vall",
+                5,
+                100000.0,
                 new[] { PrototypeMilestones.JoolProbeOrbitId },
                 new[] { PrototypeMilestones.JoolCrewedOrbitId });
             AssertBodyFundingSet(
@@ -142,6 +158,8 @@ namespace TheRaceForSpace.Tests
                 PrototypeMilestones.TyloCrewedOrbitId,
                 PrototypeFundingCatalogue.TyloNetworkId,
                 "Tylo",
+                5,
+                100000.0,
                 new[] { PrototypeMilestones.JoolProbeOrbitId },
                 new[] { PrototypeMilestones.JoolCrewedOrbitId });
             AssertBodyFundingSet(
@@ -151,6 +169,8 @@ namespace TheRaceForSpace.Tests
                 PrototypeMilestones.BopCrewedOrbitId,
                 PrototypeFundingCatalogue.BopNetworkId,
                 "Bop",
+                5,
+                100000.0,
                 new[] { PrototypeMilestones.JoolProbeOrbitId },
                 new[] { PrototypeMilestones.JoolCrewedOrbitId });
             AssertBodyFundingSet(
@@ -160,6 +180,8 @@ namespace TheRaceForSpace.Tests
                 PrototypeMilestones.PolCrewedOrbitId,
                 PrototypeFundingCatalogue.PolNetworkId,
                 "Pol",
+                5,
+                100000.0,
                 new[] { PrototypeMilestones.JoolProbeOrbitId },
                 new[] { PrototypeMilestones.JoolCrewedOrbitId });
             AssertBodyFundingSet(
@@ -169,6 +191,8 @@ namespace TheRaceForSpace.Tests
                 PrototypeMilestones.EelooCrewedOrbitId,
                 PrototypeFundingCatalogue.EelooNetworkId,
                 "Eeloo",
+                10,
+                200000.0,
                 interplanetaryProbePrerequisites,
                 interplanetaryCrewedPrerequisites);
 
@@ -204,8 +228,8 @@ namespace TheRaceForSpace.Tests
                 satelliteProgrammes,
                 PrototypeFundingCatalogue.DunaNetworkId,
                 "Duna",
-                5,
-                100000.0,
+                10,
+                200000.0,
                 PrototypeMilestones.DunaProbeOrbitId);
         }
 
@@ -237,25 +261,27 @@ namespace TheRaceForSpace.Tests
             string crewedMilestoneId,
             string networkId,
             string celestialBodyName,
+            int requiredSatellites,
+            double networkRewardFunds,
             string[] probePrerequisiteMilestoneIds,
             string[] crewedPrerequisiteMilestoneIds)
         {
             AssertAchievement(
                 achievements,
                 probeMilestoneId,
-                200000.0,
+                300000.0,
                 probePrerequisiteMilestoneIds);
             AssertAchievement(
                 achievements,
                 crewedMilestoneId,
-                300000.0,
+                500000.0,
                 crewedPrerequisiteMilestoneIds);
             AssertSatellite(
                 satelliteProgrammes,
                 networkId,
                 celestialBodyName,
-                5,
-                100000.0,
+                requiredSatellites,
+                networkRewardFunds,
                 probeMilestoneId);
         }
 

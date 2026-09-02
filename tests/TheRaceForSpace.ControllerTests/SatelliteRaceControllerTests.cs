@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using TheRaceForSpace.Competition;
+using TheRaceForSpace.Core;
 using TheRaceForSpace.Funding;
 using TheRaceForSpace.KspIntegration;
 using TheRaceForSpace.Milestones;
@@ -12,6 +13,37 @@ namespace TheRaceForSpace.ControllerTests
     {
         private const double KerbinDaySeconds = 21600.0;
         private const double FundingIntervalSeconds = 90.0 * KerbinDaySeconds;
+
+        public static void ConfiguredRivalCountAndStartingFundsAreUsed()
+        {
+            ResetEnvironment();
+            RaceSettings.NumberOfRivals = 3;
+            RaceSettings.RivalStartingFunds = 123456.0;
+
+            var controller = new SatelliteRaceController();
+
+            Equal(3, controller.RivalPrograms.Count);
+            Equal(4, controller.Programs.Count);
+            Equal(123456.0, controller.RivalPrograms[0].Funds);
+            Equal(123456.0, controller.RivalPrograms[1].Funds);
+            Equal(123456.0, controller.RivalPrograms[2].Funds);
+            Equal(SatelliteRaceController.AsterProgramId, controller.RivalPrograms[0].Id);
+            Equal(SatelliteRaceController.CobaltProgramId, controller.RivalPrograms[1].Id);
+            Equal("rival-3", controller.RivalPrograms[2].Id);
+        }
+
+        public static void ConfiguredFundingIntervalSetsNextBoundary()
+        {
+            ResetEnvironment();
+            RaceSettings.FundingIntervalDays = 30.0;
+            Planetarium.CurrentUniversalTime = 0.0;
+            KspVesselDiscovery.SetUnavailable();
+
+            var controller = new SatelliteRaceController();
+            controller.Refresh();
+
+            Equal(30.0 * KerbinDaySeconds, controller.NextFundingUniversalTime);
+        }
 
         public static void ProbeObservationUnlocksFundingFlow()
         {
@@ -106,7 +138,7 @@ namespace TheRaceForSpace.ControllerTests
             controller.Refresh();
 
             // Restoring the overdue boundary must replay it instead of recomputing the next date
-            // from the current UT and silently skipping the 90-day rival base payment.
+            // from the current UT and silently skipping the rival base payment.
             Equal(20000.0, controller.AsterProgram.Funds);
             Equal(20000.0, controller.CobaltProgram.Funds);
             Equal(FundingIntervalSeconds * 2.0, controller.NextFundingUniversalTime);
@@ -238,6 +270,7 @@ namespace TheRaceForSpace.ControllerTests
 
         private static void ResetEnvironment()
         {
+            RaceSettings.ResetToDefaults();
             Planetarium.Reset();
             CareerFundingAdapter.Reset();
             KspVesselDiscovery.Reset();

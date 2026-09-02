@@ -6,12 +6,13 @@ using UnityEngine;
 namespace TheRaceForSpace.KspIntegration
 {
     /// <summary>
-    /// Loads the user-editable race balance config once after KSP's GameDatabase is ready.
+    /// Loads the user-editable race balance config once before the first race controller is created.
     /// Missing or invalid values keep the built-in defaults from RaceSettings.
     /// </summary>
     internal static class RaceSettingsLoader
     {
         private const string RootNodeName = "THE_RACE_FOR_SPACE_SETTINGS";
+        private const string ConfigRelativePath = "GameData/TheRaceForSpace/Config/RaceSettings.cfg";
         private static bool _hasLoaded;
 
         public static void EnsureLoaded()
@@ -24,21 +25,26 @@ namespace TheRaceForSpace.KspIntegration
             _hasLoaded = true;
             RaceSettings.ResetToDefaults();
 
-            if (GameDatabase.Instance == null)
+            ConfigNode configFile;
+            try
             {
-                Debug.LogWarning("[TheRaceForSpace] GameDatabase unavailable; using default race settings.");
+                configFile = ConfigNode.Load(KSPUtil.ApplicationRootPath + ConfigRelativePath);
+            }
+            catch (Exception exception)
+            {
+                Debug.LogError(
+                    "[TheRaceForSpace] Could not read RaceSettings.cfg; using defaults. "
+                    + exception.Message);
                 return;
             }
 
-            ConfigNode[] settingsNodes = GameDatabase.Instance.GetConfigNodes(RootNodeName);
-            if (settingsNodes == null || settingsNodes.Length == 0)
+            ConfigNode rootNode = configFile == null ? null : configFile.GetNode(RootNodeName);
+            if (rootNode == null)
             {
-                Debug.LogWarning("[TheRaceForSpace] RaceSettings.cfg not found; using default race settings.");
+                Debug.LogWarning("[TheRaceForSpace] RaceSettings.cfg missing settings node; using defaults.");
                 return;
             }
 
-            // If another config patch creates the same node, the last loaded node wins.
-            ConfigNode rootNode = settingsNodes[settingsNodes.Length - 1];
             RaceSettings.FundingIntervalDays = ReadDouble(
                 rootNode,
                 "fundingIntervalDays",
@@ -73,7 +79,7 @@ namespace TheRaceForSpace.KspIntegration
                 rootNode.GetNode("INTERPLANETARY_MOONS"),
                 RaceSettings.InterplanetaryMoons);
 
-            Debug.Log("[TheRaceForSpace] Loaded race settings from GameData config.");
+            Debug.Log("[TheRaceForSpace] Loaded RaceSettings.cfg.");
         }
 
         private static void ApplyBodySettings(ConfigNode node, RaceBodySettings settings)

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using TheRaceForSpace.Core;
 using TheRaceForSpace.Milestones;
 
 namespace TheRaceForSpace.Funding
@@ -10,17 +11,6 @@ namespace TheRaceForSpace.Funding
     /// </summary>
     public static class PrototypeFundingCatalogue
     {
-        private const double KerbinProbeRewardFunds = 75000.0;
-        private const double KerbinCrewedRewardFunds = 150000.0;
-        private const double KerbinMoonProbeRewardFunds = 150000.0;
-        private const double KerbinMoonCrewedRewardFunds = 300000.0;
-        private const double InterplanetaryProbeRewardFunds = 300000.0;
-        private const double InterplanetaryCrewedRewardFunds = 500000.0;
-        private const int PlanetNetworkRequiredSatellites = 10;
-        private const int MoonNetworkRequiredSatellites = 5;
-        private const double PlanetNetworkRewardFunds = 200000.0;
-        private const double MoonNetworkRewardFunds = 100000.0;
-
         public const string KerbinNetworkId = "kerbin-network";
         public const string MunNetworkId = "mun-survey";
         public const string MinmusNetworkId = "minmus-relay";
@@ -46,7 +36,7 @@ namespace TheRaceForSpace.Funding
             var programmes = new List<AchievementFundingProgramme>();
 
             // Achievement rewards are derived from the milestone body and crew requirement so a
-            // newly added milestone automatically uses the current campaign balance defaults.
+            // newly added milestone automatically uses the configured balance tier for its body.
             for (int milestoneIndex = 0; milestoneIndex < PrototypeMilestones.All.Count; milestoneIndex++)
             {
                 AddAchievementProgramme(programmes, PrototypeMilestones.All[milestoneIndex]);
@@ -149,7 +139,11 @@ namespace TheRaceForSpace.Funding
             IList<AchievementFundingProgramme> programmes,
             MilestoneDefinition milestone)
         {
-            double baseRewardFunds = GetAchievementRewardFunds(milestone);
+            RaceBodySettings bodySettings = RaceSettings.GetBodySettings(milestone.CelestialBodyName);
+            double baseRewardFunds = milestone.CrewRequirement == MilestoneCrewRequirement.Crewed
+                ? bodySettings.CrewedRewardFunds
+                : bodySettings.ProbeRewardFunds;
+
             if (milestone.UnlockRule == null)
             {
                 programmes.Add(new AchievementFundingProgramme(
@@ -169,52 +163,22 @@ namespace TheRaceForSpace.Funding
                 milestone.UnlockRule));
         }
 
-        private static double GetAchievementRewardFunds(MilestoneDefinition milestone)
-        {
-            bool isCrewed = milestone.CrewRequirement == MilestoneCrewRequirement.Crewed;
-            if (string.Equals(milestone.CelestialBodyName, "Kerbin", StringComparison.OrdinalIgnoreCase))
-            {
-                return isCrewed ? KerbinCrewedRewardFunds : KerbinProbeRewardFunds;
-            }
-
-            if (string.Equals(milestone.CelestialBodyName, "Mun", StringComparison.OrdinalIgnoreCase)
-                || string.Equals(milestone.CelestialBodyName, "Minmus", StringComparison.OrdinalIgnoreCase))
-            {
-                return isCrewed ? KerbinMoonCrewedRewardFunds : KerbinMoonProbeRewardFunds;
-            }
-
-            return isCrewed ? InterplanetaryCrewedRewardFunds : InterplanetaryProbeRewardFunds;
-        }
-
         private static FundingProgramme CreateSatelliteProgramme(
             string id,
             string name,
             string celestialBodyName,
             UnlockRuleDefinition unlockRule)
         {
-            bool isMoon = IsStockMoon(celestialBodyName);
+            RaceBodySettings bodySettings = RaceSettings.GetBodySettings(celestialBodyName);
             return new FundingProgramme(
                 id,
                 name,
                 celestialBodyName,
-                isMoon ? MoonNetworkRequiredSatellites : PlanetNetworkRequiredSatellites,
-                isMoon ? MoonNetworkRewardFunds : PlanetNetworkRewardFunds,
+                bodySettings.SatelliteNetworkSize,
+                bodySettings.SatelliteNetworkValueFunds,
                 false,
                 CreateCurrentPrototypeUnlockRequirement(unlockRule),
                 unlockRule);
-        }
-
-        private static bool IsStockMoon(string celestialBodyName)
-        {
-            return string.Equals(celestialBodyName, "Mun", StringComparison.OrdinalIgnoreCase)
-                || string.Equals(celestialBodyName, "Minmus", StringComparison.OrdinalIgnoreCase)
-                || string.Equals(celestialBodyName, "Gilly", StringComparison.OrdinalIgnoreCase)
-                || string.Equals(celestialBodyName, "Ike", StringComparison.OrdinalIgnoreCase)
-                || string.Equals(celestialBodyName, "Laythe", StringComparison.OrdinalIgnoreCase)
-                || string.Equals(celestialBodyName, "Vall", StringComparison.OrdinalIgnoreCase)
-                || string.Equals(celestialBodyName, "Tylo", StringComparison.OrdinalIgnoreCase)
-                || string.Equals(celestialBodyName, "Bop", StringComparison.OrdinalIgnoreCase)
-                || string.Equals(celestialBodyName, "Pol", StringComparison.OrdinalIgnoreCase);
         }
 
         private static string CreateCurrentPrototypeUnlockRequirement(UnlockRuleDefinition unlockRule)

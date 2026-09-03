@@ -398,7 +398,7 @@ namespace TheRaceForSpace.Tests
                 Equal(starterLine, milestone.StarterLine);
                 Equal(level, milestone.StarterLevel);
                 Equal(level * 10000.0, milestone.BaseRewardFunds);
-                Equal((level + 1) * 1000.0, milestone.RivalProgressCostFunds);
+                Equal((level + 1) * 2000.0, milestone.RivalProgressCostFunds);
                 Equal(level * 10000.0, programme.BaseRewardFunds);
                 Equal(level == 1, programme.IsOffered);
 

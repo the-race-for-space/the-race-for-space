@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using TheRaceForSpace.Funding;
 using TheRaceForSpace.Persistence;
 using TheRaceForSpace.Programs;
+using TheRaceForSpace.Tracking;
 
 namespace TheRaceForSpace.KspIntegration
 {
@@ -17,10 +18,12 @@ namespace TheRaceForSpace.KspIntegration
     {
         private const string RivalProgramsNodeName = "RIVALS";
         private const string RaceProgressNodeName = "RACE_PROGRESS";
+        private const string StarterFlightNodeName = "STARTER_FLIGHT";
         private const string CommandCenterVisibleValueName = "commandCenterVisible";
 
         private static readonly RivalProgramsSaveState RivalProgramsState = new RivalProgramsSaveState();
         private static readonly RaceProgressSaveState RaceProgressState = new RaceProgressSaveState();
+        private static readonly StarterFlightSaveState StarterFlightState = new StarterFlightSaveState();
         private static Game _loadedGame;
         private static bool _commandCenterVisible;
         private static bool _stateReady;
@@ -33,6 +36,7 @@ namespace TheRaceForSpace.KspIntegration
             {
                 RivalProgramsState.Load(node == null ? null : node.GetNode(RivalProgramsNodeName));
                 RaceProgressState.Load(node == null ? null : node.GetNode(RaceProgressNodeName));
+                StarterFlightState.Load(node == null ? null : node.GetNode(StarterFlightNodeName));
 
                 bool parsedCommandCenterVisible;
                 _commandCenterVisible = node != null
@@ -64,6 +68,11 @@ namespace TheRaceForSpace.KspIntegration
             if (RaceProgressState.HasData)
             {
                 RaceProgressState.Save(node.AddNode(RaceProgressNodeName));
+            }
+
+            if (StarterFlightState.HasData)
+            {
+                StarterFlightState.Save(node.AddNode(StarterFlightNodeName));
             }
         }
 
@@ -132,6 +141,24 @@ namespace TheRaceForSpace.KspIntegration
             return true;
         }
 
+        /// <summary>
+        /// Restores the active pre-orbit flight attempt. Missing data in an older save simply clears
+        /// the tracker so the next controlled vessel starts a fresh attempt.
+        /// </summary>
+        public static bool TryRestoreStarterFlightState(StarterFlightTracker starterFlightTracker)
+        {
+            if (!_stateReady
+                || _loadedGame == null
+                || _loadedGame != HighLogic.CurrentGame
+                || starterFlightTracker == null)
+            {
+                return false;
+            }
+
+            StarterFlightState.ApplyTo(starterFlightTracker);
+            return true;
+        }
+
         public static void CaptureRivalState(IList<SpaceProgramState> rivalPrograms)
         {
             if (!_stateReady
@@ -166,6 +193,23 @@ namespace TheRaceForSpace.KspIntegration
                 fundingProgrammes,
                 achievementProgrammes,
                 nextFundingUniversalTime);
+        }
+
+        /// <summary>
+        /// Captures the current in-memory starter flight attempt. This only updates ScenarioModule
+        /// state; KSP writes it to disk during the normal save path.
+        /// </summary>
+        public static void CaptureStarterFlightState(StarterFlightTracker starterFlightTracker)
+        {
+            if (!_stateReady
+                || _loadedGame == null
+                || _loadedGame != HighLogic.CurrentGame
+                || starterFlightTracker == null)
+            {
+                return;
+            }
+
+            StarterFlightState.Capture(starterFlightTracker);
         }
     }
 }

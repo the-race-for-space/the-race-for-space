@@ -95,8 +95,11 @@ Test each Level V route independently in a disposable save or by restoring a bac
 1. Confirm Level I-V starter base payouts are 10,000 / 20,000 / 30,000 / 40,000 / 50,000.
 2. After first completion of a starter achievement, confirm its funding contract starts and follows the normal ten-payment sequence: 100%, 90%, 80%, 70%, 60%, 50%, 40%, 30%, 20%, 10%.
 3. Confirm multiple agencies completing the same starter achievement split later payouts using the same existing achievement rules.
-4. Confirm rival successful 10% progress steps cost 2,000 / 3,000 / 4,000 / 5,000 / 6,000 for Levels I-V respectively.
-5. Confirm current starter-line offers remain available independently of the normal two unfinished achievement offers throughout this progression.
+4. Confirm each successful rival progress check on a starter contract advances launch progress by 20%, following 0% -> 20% -> 40% -> 60% -> 80% -> 100%.
+5. Confirm the corresponding Level I-V starter progress-step costs are 4,000 / 6,000 / 8,000 / 10,000 / 12,000. Five successful steps should therefore preserve the previous full-development costs of 20,000 / 30,000 / 40,000 / 50,000 / 60,000.
+6. Confirm normal orbital and satellite rival missions still advance by 10% per successful progress check and retain their existing costs.
+7. Confirm the Rival Agencies ETA reflects five successful development steps from 0% for a starter mission rather than ten, while normal orbit/satellite ETA calculation still uses ten 10% steps.
+8. Confirm current starter-line offers remain available independently of the normal two unfinished achievement offers throughout this progression.
 
 ## Persistence and scene changes
 

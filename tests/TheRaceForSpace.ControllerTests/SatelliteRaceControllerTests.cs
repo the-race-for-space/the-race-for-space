@@ -122,10 +122,60 @@ namespace TheRaceForSpace.ControllerTests
             Require(
                 controller.IsAchievementProgrammeAvailable(munProbeOrbit),
                 "Probe Orbit should make the downstream Mun Probe Orbit contract available.");
-            Require(!munNetwork.IsAvailable, "Mun satellite funding should remain locked before Mun Probe Orbit.");
+            Require(
+                !munNetwork.IsAvailable,
+                "Mun satellite funding should remain locked before the Kerbin network reaches 60% completion.");
             Equal(95000.0, controller.PlayerProgram.NextPayoutFunds);
             Equal(1, RacePersistenceScenario.RivalCaptureCalls);
             Equal(1, RacePersistenceScenario.RaceProgressCaptureCalls);
+        }
+
+        public static void KerbinNetworkProgressUnlocksMoonFunding()
+        {
+            ResetEnvironment();
+            const double observationUniversalTime = 2000.0;
+            Planetarium.CurrentUniversalTime = observationUniversalTime;
+            KspVesselDiscovery.SetSnapshots(
+                new List<VesselTrackingSnapshot>
+                {
+                    new VesselTrackingSnapshot("Kerbin", TrackedVesselType.Probe, 0),
+                    new VesselTrackingSnapshot("Kerbin", TrackedVesselType.Probe, 0),
+                    new VesselTrackingSnapshot("Kerbin", TrackedVesselType.Probe, 0),
+                    new VesselTrackingSnapshot("Kerbin", TrackedVesselType.Probe, 0),
+                    new VesselTrackingSnapshot("Kerbin", TrackedVesselType.Probe, 0),
+                    new VesselTrackingSnapshot("Kerbin", TrackedVesselType.Probe, 0)
+                },
+                observationUniversalTime);
+
+            var controller = new SatelliteRaceController();
+            controller.AsterProgram.Funds = 0.0;
+            controller.CobaltProgram.Funds = 0.0;
+
+            controller.Refresh();
+
+            FundingProgramme munNetwork = FindFundingProgramme(
+                controller,
+                PrototypeFundingCatalogue.MunNetworkId);
+            FundingProgramme minmusNetwork = FindFundingProgramme(
+                controller,
+                PrototypeFundingCatalogue.MinmusNetworkId);
+
+            Equal(6, controller.PlayerProgram.GetSatelliteCount("Kerbin"));
+            Require(
+                controller.PlayerProgram.HasAchievement(PrototypeMilestones.ProbeOrbitId),
+                "The Kerbin network progression rule should still require Probe Orbit.");
+            Require(
+                !controller.PlayerProgram.HasAchievement(PrototypeMilestones.MunProbeOrbitId),
+                "Mun satellite funding should not depend on already completing Mun Probe Orbit.");
+            Require(
+                !controller.PlayerProgram.HasAchievement(PrototypeMilestones.MinmusProbeOrbitId),
+                "Minmus satellite funding should not depend on already completing Minmus Probe Orbit.");
+            Require(
+                munNetwork.IsAvailable,
+                "Six collective Kerbin satellites plus Probe Orbit should unlock Mun satellite funding.");
+            Require(
+                minmusNetwork.IsAvailable,
+                "Six collective Kerbin satellites plus Probe Orbit should unlock Minmus satellite funding.");
         }
 
         public static void ExistingStatePaysAtSharedFundingBoundary()

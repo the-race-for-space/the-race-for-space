@@ -61,6 +61,11 @@ namespace TheRaceForSpace.Milestones
                 return evaluationUniversalTime >= condition.RequiredUniversalTime;
             }
 
+            if (condition.ConditionType == UnlockConditionType.SatelliteCount)
+            {
+                return GetSatelliteCount(condition, programs) >= condition.RequiredSatelliteCount;
+            }
+
             if (condition.ConditionType != UnlockConditionType.Achievement)
             {
                 return false;
@@ -103,6 +108,38 @@ namespace TheRaceForSpace.Milestones
             }
 
             return achievedProgramCount;
+        }
+
+        /// <summary>
+        /// Returns the collective qualifying satellite count for a satellite-count condition.
+        /// Satellite state is a current project-owned snapshot rather than timestamped history;
+        /// historical callers preserve ordering by evaluating before observing newer player vessels.
+        /// </summary>
+        public static int GetSatelliteCount(
+            UnlockConditionDefinition condition,
+            IList<SpaceProgramState> programs)
+        {
+            if (condition == null
+                || condition.ConditionType != UnlockConditionType.SatelliteCount
+                || programs == null
+                || string.IsNullOrEmpty(condition.CelestialBodyName))
+            {
+                return 0;
+            }
+
+            int satelliteCount = 0;
+            for (int programIndex = 0; programIndex < programs.Count; programIndex++)
+            {
+                SpaceProgramState program = programs[programIndex];
+                if (program == null)
+                {
+                    continue;
+                }
+
+                satelliteCount += program.GetSatelliteCount(condition.CelestialBodyName);
+            }
+
+            return satelliteCount;
         }
 
         /// <summary>

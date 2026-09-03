@@ -62,6 +62,8 @@ namespace TheRaceForSpace.Tests
                 { PrototypeMilestones.MunProbeOrbitId, PrototypeMilestones.MinmusProbeOrbitId };
             string[] interplanetaryCrewedPrerequisites =
                 { PrototypeMilestones.MunCrewedOrbitId, PrototypeMilestones.MinmusCrewedOrbitId };
+            string[] interplanetaryNetworkPrerequisiteBodies = { "Mun", "Minmus" };
+            int[] interplanetaryNetworkPrerequisiteCounts = { 3, 3 };
 
             AssertBodyFundingSet(
                 achievements,
@@ -73,7 +75,9 @@ namespace TheRaceForSpace.Tests
                 10,
                 200000.0,
                 interplanetaryProbePrerequisites,
-                interplanetaryCrewedPrerequisites);
+                interplanetaryCrewedPrerequisites,
+                interplanetaryNetworkPrerequisiteBodies,
+                interplanetaryNetworkPrerequisiteCounts);
             AssertBodyFundingSet(
                 achievements,
                 satelliteProgrammes,
@@ -84,7 +88,9 @@ namespace TheRaceForSpace.Tests
                 10,
                 200000.0,
                 interplanetaryProbePrerequisites,
-                interplanetaryCrewedPrerequisites);
+                interplanetaryCrewedPrerequisites,
+                interplanetaryNetworkPrerequisiteBodies,
+                interplanetaryNetworkPrerequisiteCounts);
             AssertBodyFundingSet(
                 achievements,
                 satelliteProgrammes,
@@ -95,7 +101,9 @@ namespace TheRaceForSpace.Tests
                 5,
                 100000.0,
                 new[] { PrototypeMilestones.EveProbeOrbitId },
-                new[] { PrototypeMilestones.EveCrewedOrbitId });
+                new[] { PrototypeMilestones.EveCrewedOrbitId },
+                new[] { "Eve" },
+                new[] { 6 });
             AssertBodyFundingSet(
                 achievements,
                 satelliteProgrammes,
@@ -106,7 +114,9 @@ namespace TheRaceForSpace.Tests
                 5,
                 100000.0,
                 new[] { PrototypeMilestones.DunaProbeOrbitId },
-                new[] { PrototypeMilestones.DunaCrewedOrbitId });
+                new[] { PrototypeMilestones.DunaCrewedOrbitId },
+                new[] { "Duna" },
+                new[] { 6 });
             AssertBodyFundingSet(
                 achievements,
                 satelliteProgrammes,
@@ -117,7 +127,9 @@ namespace TheRaceForSpace.Tests
                 10,
                 200000.0,
                 interplanetaryProbePrerequisites,
-                interplanetaryCrewedPrerequisites);
+                interplanetaryCrewedPrerequisites,
+                interplanetaryNetworkPrerequisiteBodies,
+                interplanetaryNetworkPrerequisiteCounts);
             AssertBodyFundingSet(
                 achievements,
                 satelliteProgrammes,
@@ -128,7 +140,9 @@ namespace TheRaceForSpace.Tests
                 10,
                 200000.0,
                 interplanetaryProbePrerequisites,
-                interplanetaryCrewedPrerequisites);
+                interplanetaryCrewedPrerequisites,
+                interplanetaryNetworkPrerequisiteBodies,
+                interplanetaryNetworkPrerequisiteCounts);
             AssertBodyFundingSet(
                 achievements,
                 satelliteProgrammes,
@@ -139,7 +153,9 @@ namespace TheRaceForSpace.Tests
                 5,
                 100000.0,
                 new[] { PrototypeMilestones.JoolProbeOrbitId },
-                new[] { PrototypeMilestones.JoolCrewedOrbitId });
+                new[] { PrototypeMilestones.JoolCrewedOrbitId },
+                new[] { "Jool" },
+                new[] { 6 });
             AssertBodyFundingSet(
                 achievements,
                 satelliteProgrammes,
@@ -150,7 +166,9 @@ namespace TheRaceForSpace.Tests
                 5,
                 100000.0,
                 new[] { PrototypeMilestones.JoolProbeOrbitId },
-                new[] { PrototypeMilestones.JoolCrewedOrbitId });
+                new[] { PrototypeMilestones.JoolCrewedOrbitId },
+                new[] { "Jool" },
+                new[] { 6 });
             AssertBodyFundingSet(
                 achievements,
                 satelliteProgrammes,
@@ -161,7 +179,9 @@ namespace TheRaceForSpace.Tests
                 5,
                 100000.0,
                 new[] { PrototypeMilestones.JoolProbeOrbitId },
-                new[] { PrototypeMilestones.JoolCrewedOrbitId });
+                new[] { PrototypeMilestones.JoolCrewedOrbitId },
+                new[] { "Jool" },
+                new[] { 6 });
             AssertBodyFundingSet(
                 achievements,
                 satelliteProgrammes,
@@ -172,7 +192,9 @@ namespace TheRaceForSpace.Tests
                 5,
                 100000.0,
                 new[] { PrototypeMilestones.JoolProbeOrbitId },
-                new[] { PrototypeMilestones.JoolCrewedOrbitId });
+                new[] { PrototypeMilestones.JoolCrewedOrbitId },
+                new[] { "Jool" },
+                new[] { 6 });
             AssertBodyFundingSet(
                 achievements,
                 satelliteProgrammes,
@@ -183,7 +205,9 @@ namespace TheRaceForSpace.Tests
                 5,
                 100000.0,
                 new[] { PrototypeMilestones.JoolProbeOrbitId },
-                new[] { PrototypeMilestones.JoolCrewedOrbitId });
+                new[] { PrototypeMilestones.JoolCrewedOrbitId },
+                new[] { "Jool" },
+                new[] { 6 });
             AssertBodyFundingSet(
                 achievements,
                 satelliteProgrammes,
@@ -194,7 +218,9 @@ namespace TheRaceForSpace.Tests
                 10,
                 200000.0,
                 interplanetaryProbePrerequisites,
-                interplanetaryCrewedPrerequisites);
+                interplanetaryCrewedPrerequisites,
+                interplanetaryNetworkPrerequisiteBodies,
+                interplanetaryNetworkPrerequisiteCounts);
 
             Equal(
                 "Any agency must achieve Mun Probe Orbit and Minmus Probe Orbit.",
@@ -209,28 +235,46 @@ namespace TheRaceForSpace.Tests
                 "Kerbin",
                 10,
                 200000.0,
-                PrototypeMilestones.ProbeOrbitId);
+                PrototypeMilestones.ProbeOrbitId,
+                new string[0],
+                new int[0]);
             AssertSatellite(
                 satelliteProgrammes,
                 PrototypeFundingCatalogue.MunNetworkId,
                 "Mun",
                 5,
                 100000.0,
-                PrototypeMilestones.MunProbeOrbitId);
+                PrototypeMilestones.ProbeOrbitId,
+                new[] { "Kerbin" },
+                new[] { 6 });
             AssertSatellite(
                 satelliteProgrammes,
                 PrototypeFundingCatalogue.MinmusNetworkId,
                 "Minmus",
                 5,
                 100000.0,
-                PrototypeMilestones.MinmusProbeOrbitId);
+                PrototypeMilestones.ProbeOrbitId,
+                new[] { "Kerbin" },
+                new[] { 6 });
             AssertSatellite(
                 satelliteProgrammes,
                 PrototypeFundingCatalogue.DunaNetworkId,
                 "Duna",
                 10,
                 200000.0,
-                PrototypeMilestones.DunaProbeOrbitId);
+                PrototypeMilestones.DunaProbeOrbitId,
+                interplanetaryNetworkPrerequisiteBodies,
+                interplanetaryNetworkPrerequisiteCounts);
+
+            Equal(
+                "Any agency must achieve Probe Orbit and the Kerbin satellite network must reach 6 qualifying satellites.",
+                FindSatellite(satelliteProgrammes, PrototypeFundingCatalogue.MunNetworkId).UnlockRequirement);
+            Equal(
+                "Any agency must achieve Duna Probe Orbit and the Mun satellite network must reach 3 qualifying satellites and the Minmus satellite network must reach 3 qualifying satellites.",
+                FindSatellite(satelliteProgrammes, PrototypeFundingCatalogue.DunaNetworkId).UnlockRequirement);
+            Equal(
+                "Any agency must achieve Ike Probe Orbit and the Duna satellite network must reach 6 qualifying satellites.",
+                FindSatellite(satelliteProgrammes, PrototypeFundingCatalogue.IkeNetworkId).UnlockRequirement);
         }
 
         public static void CatalogueCreatesFreshCampaignState()
@@ -264,7 +308,9 @@ namespace TheRaceForSpace.Tests
             int requiredSatellites,
             double networkRewardFunds,
             string[] probePrerequisiteMilestoneIds,
-            string[] crewedPrerequisiteMilestoneIds)
+            string[] crewedPrerequisiteMilestoneIds,
+            string[] networkPrerequisiteBodyNames,
+            int[] networkPrerequisiteSatelliteCounts)
         {
             AssertAchievement(
                 achievements,
@@ -282,7 +328,9 @@ namespace TheRaceForSpace.Tests
                 celestialBodyName,
                 requiredSatellites,
                 networkRewardFunds,
-                probeMilestoneId);
+                probeMilestoneId,
+                networkPrerequisiteBodyNames,
+                networkPrerequisiteSatelliteCounts);
         }
 
         private static void AssertAchievement(
@@ -303,15 +351,54 @@ namespace TheRaceForSpace.Tests
             string celestialBodyName,
             int requiredSatellites,
             double rewardFunds,
-            string prerequisiteMilestoneId)
+            string prerequisiteMilestoneId,
+            string[] prerequisiteSatelliteBodyNames,
+            int[] prerequisiteSatelliteCounts)
         {
             FundingProgramme programme = FindSatellite(programmes, id);
             Require(programme != null, "Missing satellite funding programme '" + id + "'.");
             Equal(celestialBodyName, programme.CelestialBodyName);
             Equal(requiredSatellites, programme.RequiredSatellites);
             Equal(rewardFunds, programme.RewardFunds);
-            AssertAnyAgencyRule(programme.UnlockRule, prerequisiteMilestoneId);
+            AssertSatelliteRule(
+                programme.UnlockRule,
+                prerequisiteMilestoneId,
+                prerequisiteSatelliteBodyNames,
+                prerequisiteSatelliteCounts);
             Require(!programme.IsAvailable, "Prototype satellite programmes should begin locked.");
+        }
+
+        private static void AssertSatelliteRule(
+            UnlockRuleDefinition rule,
+            string expectedMilestoneId,
+            string[] expectedSatelliteBodyNames,
+            int[] expectedSatelliteCounts)
+        {
+            Require(rule != null, "Satellite funding targets should carry an unlock rule.");
+            Require(
+                expectedSatelliteBodyNames != null
+                && expectedSatelliteCounts != null
+                && expectedSatelliteBodyNames.Length == expectedSatelliteCounts.Length,
+                "Satellite prerequisite expectations must use matching body/count arrays.");
+            Equal(1, rule.Paths.Count);
+            Require(rule.Paths[0] != null, "Satellite unlock path should not be null.");
+            Equal(1 + expectedSatelliteBodyNames.Length, rule.Paths[0].Conditions.Count);
+
+            AssertAnyAgencyAchievementCondition(
+                rule.Paths[0].Conditions[0],
+                expectedMilestoneId);
+
+            for (int prerequisiteIndex = 0;
+                prerequisiteIndex < expectedSatelliteBodyNames.Length;
+                prerequisiteIndex++)
+            {
+                UnlockConditionDefinition condition =
+                    rule.Paths[0].Conditions[prerequisiteIndex + 1];
+                Require(condition != null, "Satellite-count unlock condition should not be null.");
+                Equal(UnlockConditionType.SatelliteCount, condition.ConditionType);
+                Equal(expectedSatelliteBodyNames[prerequisiteIndex], condition.CelestialBodyName);
+                Equal(expectedSatelliteCounts[prerequisiteIndex], condition.RequiredSatelliteCount);
+            }
         }
 
         private static void AssertAnyAgencyRule(
@@ -333,13 +420,21 @@ namespace TheRaceForSpace.Tests
                 conditionIndex < expectedMilestoneIds.Length;
                 conditionIndex++)
             {
-                UnlockConditionDefinition condition = rule.Paths[0].Conditions[conditionIndex];
-                Require(condition != null, "Prototype unlock condition should not be null.");
-                Equal(UnlockConditionType.Achievement, condition.ConditionType);
-                Equal(UnlockProgramScope.AnyAgency, condition.ProgramScope);
-                Equal(1, condition.RequiredProgramCount);
-                Equal(expectedMilestoneIds[conditionIndex], condition.MilestoneId);
+                AssertAnyAgencyAchievementCondition(
+                    rule.Paths[0].Conditions[conditionIndex],
+                    expectedMilestoneIds[conditionIndex]);
             }
+        }
+
+        private static void AssertAnyAgencyAchievementCondition(
+            UnlockConditionDefinition condition,
+            string expectedMilestoneId)
+        {
+            Require(condition != null, "Prototype unlock condition should not be null.");
+            Equal(UnlockConditionType.Achievement, condition.ConditionType);
+            Equal(UnlockProgramScope.AnyAgency, condition.ProgramScope);
+            Equal(1, condition.RequiredProgramCount);
+            Equal(expectedMilestoneId, condition.MilestoneId);
         }
 
         private static AchievementFundingProgramme FindAchievement(

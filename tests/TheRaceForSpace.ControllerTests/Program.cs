@@ -30,6 +30,9 @@ namespace TheRaceForSpace.ControllerTests
                 "Unlock time condition uses exact boundary",
                 UnlockRuleEvaluatorTests.UniversalTimeConditionUsesExactBoundary);
             Run(
+                "Unlock satellite count uses collective program state",
+                UnlockRuleEvaluatorTests.SatelliteCountConditionUsesCollectiveProgramState);
+            Run(
                 "Unlock condition progress matches rule evaluation",
                 UnlockRuleEvaluatorTests.ConditionProgressMatchesRuleEvaluation);
             Run(
@@ -57,6 +60,9 @@ namespace TheRaceForSpace.ControllerTests
             Run(
                 "Controller probe observation unlocks funding flow",
                 SatelliteRaceControllerTests.ProbeObservationUnlocksFundingFlow);
+            Run(
+                "Controller Kerbin network progress unlocks moon funding",
+                SatelliteRaceControllerTests.KerbinNetworkProgressUnlocksMoonFunding);
             Run(
                 "Controller existing state pays at shared funding boundary",
                 SatelliteRaceControllerTests.ExistingStatePaysAtSharedFundingBoundary);

@@ -1190,6 +1190,18 @@ namespace TheRaceForSpace.UI
                     isSatisfied,
                     evaluationUniversalTime);
             }
+            else if (condition.ConditionType == UnlockConditionType.SatelliteCount)
+            {
+                int satelliteCount = UnlockRuleEvaluator.GetSatelliteCount(
+                    condition,
+                    _raceController.Programs);
+                _listTextBuilder.Append(condition.CelestialBodyName);
+                _listTextBuilder.Append(" satellite network: ");
+                _listTextBuilder.Append(satelliteCount);
+                _listTextBuilder.Append(" / ");
+                _listTextBuilder.Append(condition.RequiredSatelliteCount);
+                _listTextBuilder.Append(" qualifying satellites");
+            }
             else if (condition.ConditionType == UnlockConditionType.UniversalTime)
             {
                 if (isSatisfied)

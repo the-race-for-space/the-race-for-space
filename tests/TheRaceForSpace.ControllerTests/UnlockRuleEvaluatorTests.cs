@@ -132,6 +132,39 @@ namespace TheRaceForSpace.ControllerTests
                 "A time condition should unlock exactly at its threshold.");
         }
 
+        public static void SatelliteCountConditionUsesCollectiveProgramState()
+        {
+            IList<SpaceProgramState> programs = CreatePrograms();
+            programs[0].SetSatelliteCount("Kerbin", 2);
+            programs[1].SetSatelliteCount("Kerbin", 3);
+
+            UnlockConditionDefinition condition =
+                UnlockConditionDefinition.SatelliteCount("Kerbin", 6);
+            var rule = new UnlockRuleDefinition(new UnlockPathDefinition(condition));
+
+            Require(
+                UnlockRuleEvaluator.GetSatelliteCount(condition, programs) == 5,
+                "Satellite progress should sum qualifying satellites across all race programs.");
+            Require(
+                !UnlockRuleEvaluator.IsConditionSatisfied(condition, programs, 100.0),
+                "Five collective Kerbin satellites should not satisfy a six-satellite threshold.");
+            Require(
+                !UnlockRuleEvaluator.IsSatisfied(rule, programs, 100.0),
+                "The containing rule should remain locked below the collective satellite threshold.");
+
+            programs[2].SetSatelliteCount("KERBIN", 1);
+
+            Require(
+                UnlockRuleEvaluator.GetSatelliteCount(condition, programs) == 6,
+                "Satellite progress should include another agency and match body names case-insensitively.");
+            Require(
+                UnlockRuleEvaluator.IsConditionSatisfied(condition, programs, 100.0),
+                "The satellite condition should complete when the race total reaches its threshold.");
+            Require(
+                UnlockRuleEvaluator.IsSatisfied(rule, programs, 100.0),
+                "The full rule should agree with the completed satellite-count condition.");
+        }
+
         public static void ConditionProgressMatchesRuleEvaluation()
         {
             IList<SpaceProgramState> programs = CreatePrograms();
@@ -235,6 +268,16 @@ namespace TheRaceForSpace.ControllerTests
             RequireThrows<ArgumentOutOfRangeException>(delegate
             {
                 UnlockConditionDefinition.AfterUniversalTime(double.NaN);
+            });
+
+            RequireThrows<ArgumentException>(delegate
+            {
+                UnlockConditionDefinition.SatelliteCount(string.Empty, 6);
+            });
+
+            RequireThrows<ArgumentOutOfRangeException>(delegate
+            {
+                UnlockConditionDefinition.SatelliteCount("Kerbin", 0);
             });
         }
 

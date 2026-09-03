@@ -10,7 +10,8 @@ namespace TheRaceForSpace.Milestones
     public enum UnlockConditionType
     {
         Achievement,
-        UniversalTime
+        UniversalTime,
+        SatelliteCount
     }
 
     /// <summary>
@@ -25,7 +26,8 @@ namespace TheRaceForSpace.Milestones
 
     /// <summary>
     /// Immutable requirement inside one unlock path. Achievement conditions may require one or
-    /// more qualifying agencies; universal-time conditions become true at a fixed campaign time.
+    /// more qualifying agencies; universal-time conditions become true at a fixed campaign time;
+    /// satellite-count conditions require a collective number of qualifying satellites around a body.
     /// </summary>
     public sealed class UnlockConditionDefinition
     {
@@ -34,13 +36,17 @@ namespace TheRaceForSpace.Milestones
             UnlockProgramScope programScope,
             string milestoneId,
             int requiredProgramCount,
-            double requiredUniversalTime)
+            double requiredUniversalTime,
+            string celestialBodyName,
+            int requiredSatelliteCount)
         {
             ConditionType = conditionType;
             ProgramScope = programScope;
             MilestoneId = milestoneId;
             RequiredProgramCount = requiredProgramCount;
             RequiredUniversalTime = requiredUniversalTime;
+            CelestialBodyName = celestialBodyName;
+            RequiredSatelliteCount = requiredSatelliteCount;
         }
 
         public UnlockConditionType ConditionType { get; private set; }
@@ -48,6 +54,8 @@ namespace TheRaceForSpace.Milestones
         public string MilestoneId { get; private set; }
         public int RequiredProgramCount { get; private set; }
         public double RequiredUniversalTime { get; private set; }
+        public string CelestialBodyName { get; private set; }
+        public int RequiredSatelliteCount { get; private set; }
 
         /// <summary>
         /// Creates an achievement condition satisfied by one qualifying agency.
@@ -84,7 +92,9 @@ namespace TheRaceForSpace.Milestones
                 programScope,
                 milestoneId,
                 requiredProgramCount,
-                -1.0);
+                -1.0,
+                null,
+                0);
         }
 
         /// <summary>
@@ -106,7 +116,40 @@ namespace TheRaceForSpace.Milestones
                 UnlockProgramScope.AnyAgency,
                 null,
                 0,
-                requiredUniversalTime);
+                requiredUniversalTime,
+                null,
+                0);
+        }
+
+        /// <summary>
+        /// Creates a collective satellite-count condition across all race programs for one body.
+        /// </summary>
+        public static UnlockConditionDefinition SatelliteCount(
+            string celestialBodyName,
+            int requiredSatelliteCount)
+        {
+            if (string.IsNullOrEmpty(celestialBodyName))
+            {
+                throw new ArgumentException(
+                    "A satellite-count unlock condition requires a celestial body name.",
+                    "celestialBodyName");
+            }
+
+            if (requiredSatelliteCount <= 0)
+            {
+                throw new ArgumentOutOfRangeException(
+                    "requiredSatelliteCount",
+                    "A satellite-count unlock condition must require at least one satellite.");
+            }
+
+            return new UnlockConditionDefinition(
+                UnlockConditionType.SatelliteCount,
+                UnlockProgramScope.AnyAgency,
+                null,
+                0,
+                -1.0,
+                celestialBodyName,
+                requiredSatelliteCount);
         }
     }
 

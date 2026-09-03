@@ -8,6 +8,27 @@ namespace TheRaceForSpace.Milestones
     /// </summary>
     public static class PrototypeMilestones
     {
+        public const string DirectedPower1Id = "directed-power-1";
+        public const string DirectedPower2Id = "directed-power-2";
+        public const string DirectedPower3Id = "directed-power-3";
+        public const string DirectedPower4Id = "directed-power-4";
+        public const string DirectedPower5Id = "directed-power-5";
+        public const string Mass1Id = "mass-1";
+        public const string Mass2Id = "mass-2";
+        public const string Mass3Id = "mass-3";
+        public const string Mass4Id = "mass-4";
+        public const string Mass5Id = "mass-5";
+        public const string Control1Id = "control-1";
+        public const string Control2Id = "control-2";
+        public const string Control3Id = "control-3";
+        public const string Control4Id = "control-4";
+        public const string Control5Id = "control-5";
+        public const string Biome1Id = "biome-1";
+        public const string Biome2Id = "biome-2";
+        public const string Biome3Id = "biome-3";
+        public const string Biome4Id = "biome-4";
+        public const string Biome5Id = "biome-5";
+
         public const string ProbeOrbitId = "probe-orbit";
         public const string CrewedOrbitId = "crewed-orbit";
         public const string MunProbeOrbitId = "mun-probe-orbit";
@@ -41,9 +62,181 @@ namespace TheRaceForSpace.Milestones
         public const string EelooProbeOrbitId = "eeloo-probe-orbit";
         public const string EelooCrewedOrbitId = "eeloo-crewed-orbit";
 
+        private const double StarterRewardFundsPerLevel = 10000.0;
+        private const double StarterRivalProgressCostFundsPerLevel = 1000.0;
+
         private static readonly IList<MilestoneDefinition> Definitions =
             new List<MilestoneDefinition>
             {
+                CreateStarterMilestone(
+                    DirectedPower1Id,
+                    "Directed Power I",
+                    MilestoneObjectiveType.DirectedPower,
+                    StarterContractLine.DirectedPower,
+                    1,
+                    "Reach 600 m/s without exceeding 70 km altitude, then impact Kerbin.",
+                    null),
+                CreateStarterMilestone(
+                    DirectedPower2Id,
+                    "Directed Power II",
+                    MilestoneObjectiveType.DirectedPower,
+                    StarterContractLine.DirectedPower,
+                    2,
+                    "Reach 1,100 m/s without exceeding 70 km altitude, then impact Kerbin.",
+                    DirectedPower1Id),
+                CreateStarterMilestone(
+                    DirectedPower3Id,
+                    "Directed Power III",
+                    MilestoneObjectiveType.DirectedPower,
+                    StarterContractLine.DirectedPower,
+                    3,
+                    "Reach 1,400 m/s without exceeding 70 km altitude, then impact Kerbin.",
+                    DirectedPower2Id),
+                CreateStarterMilestone(
+                    DirectedPower4Id,
+                    "Directed Power IV",
+                    MilestoneObjectiveType.DirectedPower,
+                    StarterContractLine.DirectedPower,
+                    4,
+                    "Reach 1,700 m/s without exceeding 70 km altitude, then impact Kerbin.",
+                    DirectedPower3Id),
+                CreateStarterMilestone(
+                    DirectedPower5Id,
+                    "Directed Power V",
+                    MilestoneObjectiveType.DirectedPower,
+                    StarterContractLine.DirectedPower,
+                    5,
+                    "Reach 2,000 m/s without exceeding 70 km altitude, then impact Kerbin.",
+                    DirectedPower4Id),
+
+                CreateStarterMilestone(
+                    Mass1Id,
+                    "Mass I",
+                    MilestoneObjectiveType.DeliveredMass,
+                    StarterContractLine.Mass,
+                    1,
+                    "Carry at least 1 t of remaining vessel mass 25 km from the Space Centre.",
+                    null),
+                CreateStarterMilestone(
+                    Mass2Id,
+                    "Mass II",
+                    MilestoneObjectiveType.DeliveredMass,
+                    StarterContractLine.Mass,
+                    2,
+                    "Carry at least 2.5 t of remaining vessel mass 75 km from the Space Centre.",
+                    Mass1Id),
+                CreateStarterMilestone(
+                    Mass3Id,
+                    "Mass III",
+                    MilestoneObjectiveType.DeliveredMass,
+                    StarterContractLine.Mass,
+                    3,
+                    "Carry at least 5 t of remaining vessel mass 150 km from the Space Centre.",
+                    Mass2Id),
+                CreateStarterMilestone(
+                    Mass4Id,
+                    "Mass IV",
+                    MilestoneObjectiveType.DeliveredMass,
+                    StarterContractLine.Mass,
+                    4,
+                    "Carry at least 10 t of remaining vessel mass 300 km from the Space Centre.",
+                    Mass3Id),
+                CreateStarterMilestone(
+                    Mass5Id,
+                    "Mass V",
+                    MilestoneObjectiveType.DeliveredMass,
+                    StarterContractLine.Mass,
+                    5,
+                    "Carry at least 20 t of remaining vessel mass 600 km from the Space Centre.",
+                    Mass4Id),
+
+                CreateStarterMilestone(
+                    Control1Id,
+                    "Control I",
+                    MilestoneObjectiveType.AltitudeHold,
+                    StarterContractLine.Control,
+                    1,
+                    "With crew aboard, remain between 2-5 km for 30 seconds, then land safely on Kerbin.",
+                    null,
+                    MilestoneCrewRequirement.Crewed),
+                CreateStarterMilestone(
+                    Control2Id,
+                    "Control II",
+                    MilestoneObjectiveType.AltitudeHold,
+                    StarterContractLine.Control,
+                    2,
+                    "With crew aboard, remain between 8-12 km for 45 seconds, then land safely on Kerbin.",
+                    Control1Id,
+                    MilestoneCrewRequirement.Crewed),
+                CreateStarterMilestone(
+                    Control3Id,
+                    "Control III",
+                    MilestoneObjectiveType.AltitudeHold,
+                    StarterContractLine.Control,
+                    3,
+                    "With crew aboard, remain between 15-25 km for 60 seconds, then land safely on Kerbin.",
+                    Control2Id,
+                    MilestoneCrewRequirement.Crewed),
+                CreateStarterMilestone(
+                    Control4Id,
+                    "Control IV",
+                    MilestoneObjectiveType.AltitudeHold,
+                    StarterContractLine.Control,
+                    4,
+                    "With crew aboard, remain between 30-40 km for 75 seconds, then land safely on Kerbin.",
+                    Control3Id,
+                    MilestoneCrewRequirement.Crewed),
+                CreateStarterMilestone(
+                    Control5Id,
+                    "Control V",
+                    MilestoneObjectiveType.AltitudeHold,
+                    StarterContractLine.Control,
+                    5,
+                    "With crew aboard, remain between 50-65 km for 90 seconds, then land safely on Kerbin.",
+                    Control4Id,
+                    MilestoneCrewRequirement.Crewed),
+
+                CreateStarterMilestone(
+                    Biome1Id,
+                    "Biome I - Grasslands",
+                    MilestoneObjectiveType.BiomeVisit,
+                    StarterContractLine.Biome,
+                    1,
+                    "Visit Kerbin's Grasslands biome without entering orbit.",
+                    null),
+                CreateStarterMilestone(
+                    Biome2Id,
+                    "Biome II - Highlands",
+                    MilestoneObjectiveType.BiomeVisit,
+                    StarterContractLine.Biome,
+                    2,
+                    "Visit Kerbin's Highlands biome without entering orbit.",
+                    Biome1Id),
+                CreateStarterMilestone(
+                    Biome3Id,
+                    "Biome III - Mountains",
+                    MilestoneObjectiveType.BiomeVisit,
+                    StarterContractLine.Biome,
+                    3,
+                    "Visit Kerbin's Mountains biome without entering orbit.",
+                    Biome2Id),
+                CreateStarterMilestone(
+                    Biome4Id,
+                    "Biome IV - Deserts",
+                    MilestoneObjectiveType.BiomeVisit,
+                    StarterContractLine.Biome,
+                    4,
+                    "Visit Kerbin's Deserts biome without entering orbit.",
+                    Biome3Id),
+                CreateStarterMilestone(
+                    Biome5Id,
+                    "Biome V - Ice Caps",
+                    MilestoneObjectiveType.BiomeVisit,
+                    StarterContractLine.Biome,
+                    5,
+                    "Visit Kerbin's Ice Caps biome without entering orbit.",
+                    Biome4Id),
+
                 new MilestoneDefinition(
                     ProbeOrbitId,
                     "Probe Orbit",
@@ -51,7 +244,7 @@ namespace TheRaceForSpace.Milestones
                     MilestoneSituation.Orbit,
                     MilestoneCrewRequirement.UncrewedProbe,
                     "Achieve orbit around Kerbin with an uncrewed Probe or Relay vessel.",
-                    null),
+                    CreateProbeOrbitUnlockRule()),
                 new MilestoneDefinition(
                     CrewedOrbitId,
                     "Crewed Orbit",
@@ -327,6 +520,56 @@ namespace TheRaceForSpace.Milestones
             }
 
             return null;
+        }
+
+        private static MilestoneDefinition CreateStarterMilestone(
+            string id,
+            string name,
+            MilestoneObjectiveType objectiveType,
+            StarterContractLine starterLine,
+            int starterLevel,
+            string objectiveDescription,
+            string previousMilestoneId,
+            MilestoneCrewRequirement crewRequirement = MilestoneCrewRequirement.UncrewedProbe)
+        {
+            UnlockRuleDefinition unlockRule = string.IsNullOrEmpty(previousMilestoneId)
+                ? null
+                : UnlockRuleDefinition.AnyAgencyAchievement(previousMilestoneId);
+
+            return new MilestoneDefinition(
+                id,
+                name,
+                "Kerbin",
+                MilestoneSituation.Orbit,
+                crewRequirement,
+                objectiveDescription,
+                unlockRule,
+                objectiveType,
+                starterLine,
+                starterLevel,
+                starterLevel * StarterRewardFundsPerLevel,
+                (starterLevel + 1) * StarterRivalProgressCostFundsPerLevel);
+        }
+
+        private static UnlockRuleDefinition CreateProbeOrbitUnlockRule()
+        {
+            return new UnlockRuleDefinition(
+                new UnlockPathDefinition(
+                    UnlockConditionDefinition.Achievement(
+                        DirectedPower5Id,
+                        UnlockProgramScope.AnyAgency)),
+                new UnlockPathDefinition(
+                    UnlockConditionDefinition.Achievement(
+                        Mass5Id,
+                        UnlockProgramScope.AnyAgency)),
+                new UnlockPathDefinition(
+                    UnlockConditionDefinition.Achievement(
+                        Control5Id,
+                        UnlockProgramScope.AnyAgency)),
+                new UnlockPathDefinition(
+                    UnlockConditionDefinition.Achievement(
+                        Biome5Id,
+                        UnlockProgramScope.AnyAgency)));
         }
 
         private static UnlockRuleDefinition CreateInterplanetaryProbeUnlockRule()

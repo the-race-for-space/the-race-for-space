@@ -109,6 +109,7 @@ namespace TheRaceForSpace.Simulation
 
             return CalculateLaunchProgressCostForTarget(
                 program.NextMissionTargetId,
+                achievementProgrammes,
                 fundingProgrammes);
         }
 
@@ -168,9 +169,6 @@ namespace TheRaceForSpace.Simulation
             {
                 double expectedStepDay = elapsedDays + expectedDaysPerSuccessfulStep;
 
-                // Include scheduled payouts that arrive before the next average successful
-                // roll. Achievement-contract payouts are intentionally treated as part of the
-                // rival's current projected income estimate rather than an exact forecast here.
                 while (projectedPayoutFunds > 0.0
                     && fundingIntervalDays > 0.0
                     && nextFundingInDays < expectedStepDay)
@@ -218,8 +216,6 @@ namespace TheRaceForSpace.Simulation
             string targetId = program.NextMissionTargetId;
             if (!string.IsNullOrEmpty(targetId))
             {
-                // Stable IDs are authoritative. Keep the display mirror synchronized from the
-                // live definitions rather than allowing presentation text to define simulation state.
                 program.NextMissionDisplayName = GetMissionTargetDisplayName(
                     targetId,
                     context.AchievementProgrammes,
@@ -228,8 +224,6 @@ namespace TheRaceForSpace.Simulation
 
             if (!IsTargetAvailable(targetId, program, context))
             {
-                // Invalid saved targets, unoffered targets and expired one-off contracts are
-                // abandoned before any more simulated funds can be spent on them.
                 SetMissionTarget(program, null, context);
                 program.LaunchProgressPercent = 0;
             }
@@ -241,8 +235,6 @@ namespace TheRaceForSpace.Simulation
 
             if (program.NextLaunchProgressCheckUniversalTime <= 0.0)
             {
-                // Align checks to the next five-day Kerbin calendar boundary so each rival
-                // advances on a predictable cadence even when the controller starts mid-save.
                 program.NextLaunchProgressCheckUniversalTime =
                     (Math.Floor(context.CurrentUniversalTime / LaunchProgressIntervalSeconds) + 1.0)
                     * LaunchProgressIntervalSeconds;
@@ -313,10 +305,11 @@ namespace TheRaceForSpace.Simulation
                     milestone.Id,
                     Math.Max(0.0, completionUniversalTime));
                 if (recordedAchievement
+                    && milestone.ObjectiveType == MilestoneObjectiveType.Orbit
                     && milestone.CrewRequirement == MilestoneCrewRequirement.UncrewedProbe)
                 {
-                    // An uncrewed achievement mission represents a real probe occupying one
-                    // satellite slot around the milestone body, matching player tracking rules.
+                    // Only an actual uncrewed orbital milestone creates persistent satellite presence.
+                    // Starter contracts can be uncrewed but represent atmospheric/ballistic work.
                     program.SetSatelliteCount(
                         milestone.CelestialBodyName,
                         program.GetSatelliteCount(milestone.CelestialBodyName) + 1);
@@ -423,8 +416,6 @@ namespace TheRaceForSpace.Simulation
             }
             else
             {
-                // Mission type is selected first so repeatable satellite work keeps a stable 60%
-                // share regardless of how many one-off contracts are live at the time.
                 selectedTargetType = RandomGenerator.NextDouble() < SatelliteMissionSelectionChance
                     ? availableSatelliteTargets
                     : availableOneOffTargets;
@@ -435,11 +426,17 @@ namespace TheRaceForSpace.Simulation
 
         private static double CalculateLaunchProgressCostForTarget(
             string targetId,
+            IList<AchievementFundingProgramme> achievementProgrammes,
             IList<FundingProgramme> fundingProgrammes)
         {
             MilestoneDefinition milestone = PrototypeMilestones.FindById(targetId);
             if (milestone != null)
             {
+                if (milestone.IsStarterContract && milestone.RivalProgressCostFunds > 0.0)
+                {
+                    return milestone.RivalProgressCostFunds;
+                }
+
                 RaceBodySettings bodySettings = RaceSettings.GetBodySettings(milestone.CelestialBodyName);
                 return milestone.CrewRequirement == MilestoneCrewRequirement.Crewed
                     ? bodySettings.CrewedProgressCostFunds

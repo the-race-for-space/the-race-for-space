@@ -46,6 +46,25 @@ namespace TheRaceForSpace.Core
             }
         }
 
+        /// <summary>
+        /// Read-only access to the runtime-owned starter-flight state for presentation. UI callers
+        /// must not advance this tracker; the one-second runtime observation remains authoritative.
+        /// </summary>
+        public static StarterFlightTracker StarterFlightState
+        {
+            get
+            {
+                if (!HighLogic.LoadedSceneIsGame
+                    || HighLogic.CurrentGame == null
+                    || _controllerGame != HighLogic.CurrentGame)
+                {
+                    return null;
+                }
+
+                return _starterFlightTracker;
+            }
+        }
+
         public void Awake()
         {
             // EveryScene also instantiates addons during loading and on the main menu. Race

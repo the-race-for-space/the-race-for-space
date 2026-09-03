@@ -11,20 +11,24 @@ This checklist covers behavior that the standalone logic/controller suites canno
 
 ## Fresh-campaign offers and UI
 
-1. Confirm the initial starter choices are Directed Power I, Mass I, Control I, and Biome I.
-2. Confirm those four special choices do not consume the normal maximum of two random achievement-offer slots.
-3. In Space Race, confirm `STARTER PROGRAMMES` appears above the normal funding catalogue with four cards in one usable row at common resolutions.
-4. Confirm each card shows `0 / 5`, its Level I objective, and a 10,000 100% payout.
-5. Confirm the normal Space Race Offered/Unlocked/Locked/Expired catalogue does not duplicate the twenty starter contracts.
-6. Confirm Funding Targets still shows offered starter contracts and, after completion, their continuing payout state.
-7. Confirm Overview shows only the current starter objective from each line rather than every previously completed starter contract that is still paying.
-8. Confirm the Help guide explains the four starter lines and the Level V to Probe Orbit convergence.
+1. Confirm the initial starter offers are Directed Power I, Mass I, Control I, and Biome I.
+2. In Space Race, confirm those four contracts appear in the normal `Offered` section.
+3. Confirm Directed Power II-V, Mass II-V, Control II-V, and Biome II-V appear in the normal `Locked` section at campaign start: sixteen locked starter contracts in total.
+4. Confirm there is no separate `STARTER PROGRAMMES` four-card panel taking space above the catalogue.
+5. Open each starter contract from the normal Space Race catalogue and confirm its objective, payout, state, and unlock requirements use the same presentation as other achievement contracts.
+6. Complete one Level I contract with the player and confirm its Level II successor moves from `Locked` to `Unlocked` rather than immediately becoming `Offered`.
+7. In a disposable save, allow a rival to complete one Level I starter contract first and confirm the same Level II successor also moves from `Locked` to `Unlocked`; starter prerequisites are `Any Agency`.
+8. Cross a funding-review boundary with unlocked starter contracts available and confirm they participate in the ordinary achievement sponsor review and move to `Offered` only when selected.
+9. Confirm Funding Targets shows offered starter contracts and, for the player's current offered starter objective during an active flight, shows the live starter telemetry inside that funding card.
+10. Confirm Space Race itself does not duplicate that live-flight panel; it remains focused on `Offered`, `Unlocked`, `Locked`, and `Expired` catalogue state.
+11. Confirm Overview treats offered starter contracts the same way as other offered one-off achievements.
+12. Confirm the Help guide explains the four opening starter offers, same-line progression, Any Agency unlocks, and the Level V to Probe Orbit convergence.
 
 ## Directed Power line
 
 Repeat the relevant threshold for each level: 600, 1,100, 1,400, 1,700, and 2,000 m/s.
 
-1. Launch a Kerbin vehicle, reach the required surface speed while remaining at or below 70,000 m, and confirm the Space Race card updates maximum speed and maximum altitude approximately once per second.
+1. Launch a Kerbin vehicle with the relevant starter contract offered, reach the required surface speed while remaining at or below 70,000 m, and confirm its Funding Targets card updates maximum speed and maximum altitude approximately once per second.
 2. Land or recover a qualifying-speed vehicle without destroying it and confirm Directed Power does not complete.
 3. Destroy the qualifying tracked vehicle in a genuine Kerbin surface impact and confirm the current Directed Power level completes.
 4. Exceed 70,000 m at any point, later descend below 70,000 m and impact at sufficient speed, and confirm the attempt remains invalid.
@@ -38,7 +42,7 @@ Repeat the relevant threshold for each level: 600, 1,100, 1,400, 1,700, and 2,00
 
 Required pairs are 1 t / 25 km, 2.5 t / 75 km, 5 t / 150 km, 10 t / 300 km, and 20 t / 600 km.
 
-1. Confirm the card displays current remaining vessel mass and distance from the launch origin during flight.
+1. Confirm the offered Mass contract card in Funding Targets displays current remaining vessel mass and distance from the launch origin during flight.
 2. Reach the required distance with insufficient remaining mass and confirm no completion.
 3. Meet the required remaining mass while still short of the required distance and confirm no completion.
 4. Meet both requirements simultaneously and confirm the current Mass level completes immediately.
@@ -51,8 +55,8 @@ Required pairs are 1 t / 25 km, 2.5 t / 75 km, 5 t / 150 km, 10 t / 300 km, and 
 
 Required bands/times are 2-5 km / 30 s, 8-12 km / 45 s, 15-25 km / 60 s, 30-40 km / 75 s, and 50-65 km / 90 s.
 
-1. Launch with at least one Kerbal and enter the required band. Confirm altitude, hold time, and crew count update in the live card.
-2. Remain continuously inside the band for the required time and confirm the UI changes to the qualified state instructing the player to land safely.
+1. Launch with at least one Kerbal and enter the required band. Confirm altitude, hold time, and crew count update in the offered Control contract card in Funding Targets.
+2. Remain continuously inside the band for the required time and confirm the Funding Targets live status changes to the qualified state instructing the player to land safely.
 3. Land on Kerbin with crew aboard and confirm completion.
 4. Leave the altitude band before qualification and confirm the continuous timer resets.
 5. Remove/lose all crew before the hold completes and confirm no qualification.
@@ -66,7 +70,7 @@ Required bands/times are 2-5 km / 30 s, 8-12 km / 45 s, 15-25 km / 60 s, 30-40 k
 
 Targets are Grasslands, Highlands, Mountains, Deserts, and Ice Caps.
 
-1. Confirm the live card reports the stock Kerbin biome of the active vessel and the current target biome.
+1. Confirm the offered Biome contract card in Funding Targets reports the stock Kerbin biome of the active vessel and the current target biome.
 2. Enter the required biome without orbiting and confirm the current Biome level completes immediately.
 3. Continue into the next required biome during the same launch and confirm a second Biome level does not complete from that launch.
 4. Start a fresh launch and confirm the next unlocked Biome level can complete.
@@ -86,7 +90,7 @@ Test each Level V route independently in a disposable save or by restoring a bac
 
 1. Complete Directed Power V and confirm Probe Orbit is offered immediately without waiting for a funding review.
 2. Repeat with Mass V, Control V, and Biome V and confirm each one independently satisfies the OR gate.
-3. Allow a rival to complete a starter Level V first and confirm Probe Orbit becomes available to the whole race.
+3. Allow a rival to complete a starter Level V first and confirm Probe Orbit is offered immediately to the whole race.
 4. Confirm Probe Orbit itself remains a normal uncrewed orbital milestone and a qualifying player Probe/Relay can complete it through the existing orbital vessel tracker.
 5. Confirm completing a starter contract by a rival does not create a fake Kerbin satellite; only an actual uncrewed orbit milestone may do so.
 
@@ -99,7 +103,7 @@ Test each Level V route independently in a disposable save or by restoring a bac
 5. Confirm the corresponding Level I-V starter progress-step costs are 4,000 / 6,000 / 8,000 / 10,000 / 12,000. Five successful steps should therefore preserve the previous full-development costs of 20,000 / 30,000 / 40,000 / 50,000 / 60,000.
 6. Confirm normal orbital and satellite rival missions still advance by 10% per successful progress check and retain their existing costs.
 7. Confirm the Rival Agencies ETA reflects five successful development steps from 0% for a starter mission rather than ten, while normal orbit/satellite ETA calculation still uses ten 10% steps.
-8. Confirm current starter-line offers remain available independently of the normal two unfinished achievement offers throughout this progression.
+8. Confirm Levels II-V of the starter lines do not bypass the normal achievement sponsor review: once a predecessor is completed by any agency, the successor is `Unlocked` and waits to be selected as an `Offered` contract.
 
 ## Persistence and scene changes
 
@@ -116,6 +120,10 @@ The v0.5 candidate is ready for merge/release only when:
 
 - the GitHub `Logic Tests` workflow is green and its log explicitly includes `PASS: Starter flight contracts and persistence`;
 - the production assembly builds against the target KSP 1.12.x installation;
+- a fresh campaign shows exactly the four Level I starter offers and the other sixteen starter contracts locked in the normal Space Race catalogue;
+- player and rival starter completions both unlock the correct next same-line contract;
+- unlocked starter contracts participate in the normal sponsor-review flow;
+- live starter telemetry is usable inside Funding Targets without a separate Space Race starter panel blocking the catalogue;
 - all four starter lines can be completed end-to-end in KSP;
 - at least one Level V route has been followed through a real Probe Orbit completion;
 - no starter line can be advanced twice by one launch;

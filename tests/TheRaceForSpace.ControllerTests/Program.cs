@@ -83,8 +83,11 @@ namespace TheRaceForSpace.ControllerTests
                 "Rival starter completion unlocks the next level for sponsor review",
                 FundingOfferControllerTests.RivalStarterCompletionUnlocksNextLevelForSponsorReview);
             Run(
-                "Unlocked starter levels join the normal sponsor review",
+                "All unlocked starter levels are offered at sponsor review",
                 FundingOfferControllerTests.UnlockedStarterLevelsJoinSponsorReview);
+            Run(
+                "Starter offers do not consume the normal achievement limit",
+                FundingOfferControllerTests.StarterOffersDoNotConsumeNormalAchievementLimit);
             Run(
                 "Any starter level five offers Probe Orbit",
                 FundingOfferControllerTests.AnyStarterLevelFiveOffersProbeOrbit);

@@ -8,7 +8,7 @@ namespace TheRaceForSpace.ControllerTests
 {
     internal static class UnlockConsumerIntegrationTests
     {
-        public static void RivalSelectionUsesScopeCountAndHistoricalTime()
+        public static void RivalSelectionRequiresOfferedContract()
         {
             var player = new SpaceProgramState("player", "Player", true);
             var aster = new SpaceProgramState("aster", "Aster", false);
@@ -19,33 +19,34 @@ namespace TheRaceForSpace.ControllerTests
 
             MilestoneDefinition milestone = PrototypeMilestones.FindById(
                 PrototypeMilestones.MinmusCrewedOrbitId);
-            var achievementProgrammes = new List<AchievementFundingProgramme>
-            {
-                new AchievementFundingProgramme(
-                    milestone.Id,
-                    milestone.Name,
-                    milestone.ObjectiveDescription,
-                    300000.0,
-                    "Display text",
-                    new UnlockRuleDefinition(
-                        new UnlockPathDefinition(
-                            UnlockConditionDefinition.Achievement(
-                                PrototypeMilestones.ProbeOrbitId,
-                                UnlockProgramScope.AnyRival,
-                                2))))
-            };
+            var programme = new AchievementFundingProgramme(
+                milestone.Id,
+                milestone.Name,
+                milestone.ObjectiveDescription,
+                300000.0,
+                "Display text",
+                new UnlockRuleDefinition(
+                    new UnlockPathDefinition(
+                        UnlockConditionDefinition.Achievement(
+                            PrototypeMilestones.ProbeOrbitId,
+                            UnlockProgramScope.AnyRival,
+                            2))));
+            var achievementProgrammes = new List<AchievementFundingProgramme> { programme };
             var programs = new List<SpaceProgramState> { player, aster, cobalt, delta };
 
+            // The unlock rule is satisfied at this time, but sponsors have not selected the
+            // contract yet. Rivals must therefore leave it alone.
             RivalSimulation.Refresh(
                 programs,
-                199.0,
+                200.0,
                 achievementProgrammes,
                 new List<FundingProgramme>());
             RequireEqual(
                 null,
                 cobalt.NextMissionTargetId,
-                "A future second rival achievement must not satisfy the rule early.");
+                "An unlocked but unoffered target must not be selected by a rival.");
 
+            programme.Offer();
             RivalSimulation.Refresh(
                 programs,
                 200.0,
@@ -54,7 +55,7 @@ namespace TheRaceForSpace.ControllerTests
             RequireEqual(
                 PrototypeMilestones.MinmusCrewedOrbitId,
                 cobalt.NextMissionTargetId,
-                "The rival target should unlock exactly when two rival agencies qualify.");
+                "The same target should become selectable once sponsors mark it Offered.");
         }
 
         private static void RequireEqual<T>(T expected, T actual, string message)

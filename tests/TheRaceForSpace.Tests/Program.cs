@@ -47,9 +47,9 @@ namespace TheRaceForSpace.Tests
             Run("Rival ETA detects unaffordable mission", RivalEtaDetectsUnaffordableMission);
             Run("Unavailable rival target is abandoned", UnavailableRivalTargetIsAbandoned);
             Run("Invalid rival target id is abandoned", InvalidRivalTargetIdIsAbandoned);
-            Run("Rival selects the only available target", RivalSelectsOnlyAvailableTarget);
+            Run("Rival selects the only offered target", RivalSelectsOnlyAvailableTarget);
             Run("Rival completion uses replay timestamp", RivalCompletionUsesReplayTimestamp);
-            Run("Rival collection selects available achievement", RivalSimulationCollectionTests.SelectsOnlyAvailableAchievementFromCollection);
+            Run("Rival collection selects offered achievement", RivalSimulationCollectionTests.SelectsOnlyAvailableAchievementFromCollection);
             Run("Rival collection excludes locked achievement", RivalSimulationCollectionTests.LockedAchievementIsExcludedFromCollection);
             Run("Rival satellite programme remains repeatable", RivalSimulationCollectionTests.SatelliteProgrammeRemainsRepeatable);
             Run("Rival completes arbitrary satellite programme", RivalSimulationCollectionTests.CompletesArbitrarySatelliteProgramme);
@@ -485,6 +485,7 @@ namespace TheRaceForSpace.Tests
                     "Display text",
                     milestone.UnlockRule)
             };
+            achievementProgrammes[0].Offer();
 
             RivalSimulation.Refresh(
                 new List<SpaceProgramState> { player, aster, cobalt },
@@ -516,6 +517,7 @@ namespace TheRaceForSpace.Tests
                     milestone.ObjectiveDescription,
                     100000.0)
             };
+            achievementProgrammes[0].Offer();
 
             RivalSimulation.Refresh(
                 new List<SpaceProgramState> { player, aster, cobalt },

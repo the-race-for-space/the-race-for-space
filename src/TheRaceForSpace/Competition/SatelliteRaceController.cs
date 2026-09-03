@@ -22,6 +22,10 @@ namespace TheRaceForSpace.Competition
         private const double KerbinDaySeconds = 21600.0;
         private const int KerbinDaysPerYear = 426;
         private const double RivalBaseIncomeFunds = 20000.0;
+        private const int MaximumUncompletedAchievementOffers = 2;
+        private const int MaximumUnfulfilledSatelliteOffers = 2;
+
+        private static readonly Random OfferRandomGenerator = new Random();
 
         private readonly List<SpaceProgramState> _programs = new List<SpaceProgramState>();
         private readonly List<SpaceProgramState> _rivalPrograms = new List<SpaceProgramState>();
@@ -258,6 +262,7 @@ namespace TheRaceForSpace.Competition
 
         /// <summary>
         /// Returns whether an achievement funding target is unlocked at the current campaign time.
+        /// Unlock state is intentionally separate from whether sponsors have offered the contract.
         /// </summary>
         public bool IsAchievementProgrammeAvailable(AchievementFundingProgramme achievementProgramme)
         {
@@ -295,7 +300,10 @@ namespace TheRaceForSpace.Competition
             SpaceProgramState program,
             FundingProgramme fundingProgramme)
         {
-            if (program == null || fundingProgramme == null || !fundingProgramme.IsAvailable)
+            if (program == null
+                || fundingProgramme == null
+                || !fundingProgramme.IsAvailable
+                || !fundingProgramme.IsOffered)
             {
                 return 0.0;
             }
@@ -322,7 +330,7 @@ namespace TheRaceForSpace.Competition
             SpaceProgramState program,
             AchievementFundingProgramme achievementProgramme)
         {
-            if (program == null || achievementProgramme == null)
+            if (program == null || achievementProgramme == null || !achievementProgramme.IsOffered)
             {
                 return 0.0;
             }
@@ -430,12 +438,13 @@ namespace TheRaceForSpace.Competition
 
             if (!hasDueFunding)
             {
-                // Without a crossed funding boundary, keep the normal immediate-response path:
-                // current player achievements can influence rival target selection this refresh.
+                // Rivals continue progressing against the current Offered set. Unlock state may
+                // change during normal refreshes, but new sponsor offers wait for a funding day.
                 RefreshRivals(stateEvaluationUniversalTime);
                 UpdateFundingAvailability(stateEvaluationUniversalTime);
             }
 
+            UpdateSatelliteTargetReachedState();
             StartAchievementContracts(stateEvaluationUniversalTime);
             EvaluateFundingProgrammes();
 
@@ -478,13 +487,33 @@ namespace TheRaceForSpace.Competition
             }
         }
 
+        private void UpdateSatelliteTargetReachedState()
+        {
+            for (int programmeIndex = 0; programmeIndex < _fundingProgrammes.Count; programmeIndex++)
+            {
+                FundingProgramme programme = _fundingProgrammes[programmeIndex];
+                if (programme == null
+                    || programme.HasReachedSatelliteTarget
+                    || programme.RequiredSatellites <= 0)
+                {
+                    continue;
+                }
+
+                if (GetCollectiveSatelliteCount(programme.CelestialBodyName) >= programme.RequiredSatellites)
+                {
+                    programme.MarkSatelliteTargetReached();
+                }
+            }
+        }
+
         private void StartAchievementContracts(double evaluationUniversalTime)
         {
             for (int programmeIndex = 0; programmeIndex < _achievementFundingProgrammes.Count; programmeIndex++)
             {
                 AchievementFundingProgramme programme = _achievementFundingProgrammes[programmeIndex];
-                if (IsAchievementProgrammeAvailableAtTime(programme, evaluationUniversalTime)
+                if (programme.IsOffered
                     && !programme.HasStarted
+                    && !programme.IsExpired
                     && GetAchievementAgencyCountAtTime(programme.Id, evaluationUniversalTime) > 0)
                 {
                     programme.Start();
@@ -494,9 +523,8 @@ namespace TheRaceForSpace.Competition
 
         /// <summary>
         /// Processes every crossed global funding boundary. Rivals are advanced only to each
-        /// boundary before that boundary pays, so they cannot spend funding before receiving it
-        /// and their satellite/achievement state is evaluated at the correct historical time.
-        /// Satellite and achievement programmes then pay on the same shared date.
+        /// boundary before that boundary pays, so they cannot spend funding before receiving it.
+        /// Existing offers pay first; the sponsor review then fills vacancies for the next period.
         /// </summary>
         private void ProcessDueFunding(double currentUniversalTime)
         {
@@ -506,6 +534,7 @@ namespace TheRaceForSpace.Competition
 
                 RefreshRivals(payoutUniversalTime);
                 UpdateFundingAvailability(payoutUniversalTime);
+                UpdateSatelliteTargetReachedState();
                 StartAchievementContracts(payoutUniversalTime);
 
                 for (int programIndex = 0; programIndex < _programs.Count; programIndex++)
@@ -526,9 +555,7 @@ namespace TheRaceForSpace.Competition
                 for (int programmeIndex = 0; programmeIndex < _achievementFundingProgrammes.Count; programmeIndex++)
                 {
                     AchievementFundingProgramme programme = _achievementFundingProgrammes[programmeIndex];
-                    if (!IsAchievementProgrammeAvailableAtTime(programme, payoutUniversalTime)
-                        || !programme.HasStarted
-                        || programme.IsExpired)
+                    if (!programme.IsOffered || !programme.HasStarted || programme.IsExpired)
                     {
                         continue;
                     }
@@ -557,7 +584,89 @@ namespace TheRaceForSpace.Competition
                     programme.AdvancePayout();
                 }
 
+                ReviewFundingOffers(payoutUniversalTime);
                 _nextFundingUniversalTime += _fundingIntervalSeconds;
+            }
+        }
+
+        private void ReviewFundingOffers(double evaluationUniversalTime)
+        {
+            var achievementCandidates = new List<AchievementFundingProgramme>();
+            int uncompletedAchievementOfferCount = 0;
+
+            for (int programmeIndex = 0;
+                programmeIndex < _achievementFundingProgrammes.Count;
+                programmeIndex++)
+            {
+                AchievementFundingProgramme programme = _achievementFundingProgrammes[programmeIndex];
+                if (programme == null || programme.IsExpired)
+                {
+                    continue;
+                }
+
+                if (programme.IsOffered)
+                {
+                    if (!programme.HasStarted)
+                    {
+                        uncompletedAchievementOfferCount++;
+                    }
+                    continue;
+                }
+
+                if (IsAchievementProgrammeAvailableAtTime(programme, evaluationUniversalTime))
+                {
+                    achievementCandidates.Add(programme);
+                }
+            }
+
+            int achievementVacancies = Math.Max(
+                0,
+                MaximumUncompletedAchievementOffers - uncompletedAchievementOfferCount);
+            for (int offerIndex = 0;
+                offerIndex < achievementVacancies && achievementCandidates.Count > 0;
+                offerIndex++)
+            {
+                int candidateIndex = OfferRandomGenerator.Next(achievementCandidates.Count);
+                achievementCandidates[candidateIndex].Offer();
+                achievementCandidates.RemoveAt(candidateIndex);
+            }
+
+            var satelliteCandidates = new List<FundingProgramme>();
+            int unfulfilledSatelliteOfferCount = 0;
+
+            for (int programmeIndex = 0; programmeIndex < _fundingProgrammes.Count; programmeIndex++)
+            {
+                FundingProgramme programme = _fundingProgrammes[programmeIndex];
+                if (programme == null)
+                {
+                    continue;
+                }
+
+                if (programme.IsOffered)
+                {
+                    if (!programme.HasReachedSatelliteTarget)
+                    {
+                        unfulfilledSatelliteOfferCount++;
+                    }
+                    continue;
+                }
+
+                if (programme.IsAvailable)
+                {
+                    satelliteCandidates.Add(programme);
+                }
+            }
+
+            int satelliteVacancies = Math.Max(
+                0,
+                MaximumUnfulfilledSatelliteOffers - unfulfilledSatelliteOfferCount);
+            for (int offerIndex = 0;
+                offerIndex < satelliteVacancies && satelliteCandidates.Count > 0;
+                offerIndex++)
+            {
+                int candidateIndex = OfferRandomGenerator.Next(satelliteCandidates.Count);
+                satelliteCandidates[candidateIndex].Offer();
+                satelliteCandidates.RemoveAt(candidateIndex);
             }
         }
 
@@ -611,18 +720,14 @@ namespace TheRaceForSpace.Competition
 
             if (_nextFundingUniversalTime >= 0.0)
             {
-                // All projected amounts below are due on the same next funding date. Achievement
-                // eligibility and unlock rules are evaluated against that date, matching payment.
+                // All projected amounts below are due on the same next funding date. Offered
+                // achievement contracts remain active without rechecking their earlier unlock rule.
                 for (int programmeIndex = 0;
                     programmeIndex < _achievementFundingProgrammes.Count;
                     programmeIndex++)
                 {
                     AchievementFundingProgramme programme = _achievementFundingProgrammes[programmeIndex];
-                    if (!IsAchievementProgrammeAvailableAtTime(
-                            programme,
-                            _nextFundingUniversalTime)
-                        || !programme.HasStarted
-                        || programme.IsExpired)
+                    if (!programme.IsOffered || !programme.HasStarted || programme.IsExpired)
                     {
                         continue;
                     }
@@ -674,21 +779,35 @@ namespace TheRaceForSpace.Competition
             SpaceProgramState program,
             FundingProgramme fundingProgramme)
         {
-            if (program == null || fundingProgramme == null || !fundingProgramme.IsAvailable)
+            if (program == null
+                || fundingProgramme == null
+                || !fundingProgramme.IsAvailable
+                || !fundingProgramme.IsOffered)
             {
                 return 0.0;
+            }
+
+            int totalSatelliteCount = GetCollectiveSatelliteCount(fundingProgramme.CelestialBodyName);
+
+            return fundingProgramme.CalculateCurrentPayout(
+                program.GetSatelliteCount(fundingProgramme.CelestialBodyName),
+                totalSatelliteCount);
+        }
+
+        private int GetCollectiveSatelliteCount(string celestialBodyName)
+        {
+            if (string.IsNullOrEmpty(celestialBodyName))
+            {
+                return 0;
             }
 
             int totalSatelliteCount = 0;
             for (int programIndex = 0; programIndex < _programs.Count; programIndex++)
             {
-                totalSatelliteCount += _programs[programIndex].GetSatelliteCount(
-                    fundingProgramme.CelestialBodyName);
+                totalSatelliteCount += _programs[programIndex].GetSatelliteCount(celestialBodyName);
             }
 
-            return fundingProgramme.CalculateCurrentPayout(
-                program.GetSatelliteCount(fundingProgramme.CelestialBodyName),
-                totalSatelliteCount);
+            return totalSatelliteCount;
         }
 
         private double CalculateAchievementCurrentPayout(
@@ -697,10 +816,8 @@ namespace TheRaceForSpace.Competition
         {
             if (program == null
                 || achievementProgramme == null
-                || _nextFundingUniversalTime < 0.0
-                || !IsAchievementProgrammeAvailableAtTime(
-                    achievementProgramme,
-                    _nextFundingUniversalTime))
+                || !achievementProgramme.IsOffered
+                || _nextFundingUniversalTime < 0.0)
             {
                 return 0.0;
             }

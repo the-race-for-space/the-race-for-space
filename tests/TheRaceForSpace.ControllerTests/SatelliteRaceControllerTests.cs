@@ -118,14 +118,20 @@ namespace TheRaceForSpace.ControllerTests
                 observationUniversalTime,
                 controller.PlayerProgram.GetAchievementUniversalTime(PrototypeMilestones.ProbeOrbitId));
             Require(kerbinNetwork.IsAvailable, "Probe Orbit should unlock the Kerbin satellite network.");
-            Require(probeOrbit.HasStarted, "The achieved Probe Orbit contract should start immediately.");
+            Require(
+                !kerbinNetwork.IsOffered,
+                "An unlocked satellite programme should wait for a funding-day sponsor review.");
+            Require(probeOrbit.HasStarted, "The achieved opening Probe Orbit offer should start immediately.");
             Require(
                 controller.IsAchievementProgrammeAvailable(munProbeOrbit),
                 "Probe Orbit should make the downstream Mun Probe Orbit contract available.");
             Require(
+                !munProbeOrbit.IsOffered,
+                "An unlocked one-off achievement should wait for a funding-day sponsor review.");
+            Require(
                 !munNetwork.IsAvailable,
                 "Mun satellite funding should remain locked before the Kerbin network reaches 60% completion.");
-            Equal(95000.0, controller.PlayerProgram.NextPayoutFunds);
+            Equal(75000.0, controller.PlayerProgram.NextPayoutFunds);
             Equal(1, RacePersistenceScenario.RivalCaptureCalls);
             Equal(1, RacePersistenceScenario.RaceProgressCaptureCalls);
         }
@@ -176,6 +182,9 @@ namespace TheRaceForSpace.ControllerTests
             Require(
                 minmusNetwork.IsAvailable,
                 "Six collective Kerbin satellites plus Probe Orbit should unlock Minmus satellite funding.");
+            Require(
+                !munNetwork.IsOffered && !minmusNetwork.IsOffered,
+                "Unlocked moon networks should remain unoffered until the next funding review.");
         }
 
         public static void ExistingStatePaysAtSharedFundingBoundary()
@@ -198,11 +207,15 @@ namespace TheRaceForSpace.ControllerTests
             AchievementFundingProgramme probeOrbit = FindAchievementProgramme(
                 controller,
                 PrototypeMilestones.ProbeOrbitId);
+            FundingProgramme kerbinNetwork = FindFundingProgramme(
+                controller,
+                PrototypeFundingCatalogue.KerbinNetworkId);
 
-            // The one existing Kerbin satellite earns 20k of the 200k/10 network pool and
-            // the sole Probe Orbit achiever receives the first 75k achievement payment.
-            Equal(95000.0, CareerFundingAdapter.TotalAddedFunds);
-            Equal(2, CareerFundingAdapter.AddFundsCalls);
+            // Probe Orbit was already offered and pays 75k. Kerbin unlocks at this boundary but
+            // is only offered after the payout, so its existing satellite cannot be paid retroactively.
+            Equal(75000.0, CareerFundingAdapter.TotalAddedFunds);
+            Equal(1, CareerFundingAdapter.AddFundsCalls);
+            Require(kerbinNetwork.IsOffered, "The funding review should offer the unlocked Kerbin network.");
             Equal(1, probeOrbit.PaymentsProcessed);
             Equal(90, probeOrbit.CurrentInterestPercent);
             Equal(FundingIntervalSeconds * 2.0, controller.NextFundingUniversalTime);
@@ -260,15 +273,18 @@ namespace TheRaceForSpace.ControllerTests
                 controller,
                 PrototypeFundingCatalogue.KerbinNetworkId);
 
-            // Due funding is replayed before current KSP vessel discovery. A craft first observed
-            // on the boundary therefore becomes eligible for the next date, not the date just paid.
+            // Due funding and its sponsor review are replayed before current KSP vessel discovery.
+            // The newly unlocked Kerbin network therefore waits for the following funding review.
             Equal(0.0, CareerFundingAdapter.TotalAddedFunds);
             Equal(0, probeOrbit.PaymentsProcessed);
             Require(
                 controller.PlayerProgram.HasAchievement(PrototypeMilestones.ProbeOrbitId),
                 "The boundary snapshot should still be recorded after due funding is processed.");
             Require(kerbinNetwork.IsAvailable, "The newly observed Probe Orbit should unlock future Kerbin funding.");
-            Equal(95000.0, controller.PlayerProgram.NextPayoutFunds);
+            Require(
+                !kerbinNetwork.IsOffered,
+                "A contract unlocked after the funding review must wait for the next funding date.");
+            Equal(75000.0, controller.PlayerProgram.NextPayoutFunds);
         }
 
         public static void ProjectedPayoutCacheRebuildsOnRefresh()
@@ -293,6 +309,11 @@ namespace TheRaceForSpace.ControllerTests
             FundingProgramme kerbinNetwork = FindFundingProgramme(
                 controller,
                 PrototypeFundingCatalogue.KerbinNetworkId);
+
+            // This cache regression is about refresh-scoped recalculation rather than sponsor
+            // timing, so explicitly offer the already-unlocked network before rebuilding the cache.
+            kerbinNetwork.Offer();
+            controller.Refresh(false);
 
             Equal(
                 20000.0,

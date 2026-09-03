@@ -82,8 +82,8 @@ namespace TheRaceForSpace.Funding
         }
 
         /// <summary>
-        /// Marks this network as one of the sponsor offers visible to all race agencies.
-        /// Step 1 stores this state only; offer limits and funding-day selection are applied later.
+        /// Marks this network as one of the sponsor offers active for all race agencies.
+        /// Satellite funding remains offered permanently after sponsor selection.
         /// </summary>
         public void Offer()
         {

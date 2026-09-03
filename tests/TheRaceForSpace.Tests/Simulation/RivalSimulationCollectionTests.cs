@@ -28,6 +28,7 @@ namespace TheRaceForSpace.Tests.Simulation
                     "Display text",
                     milestone.UnlockRule)
             };
+            achievementProgrammes[0].Offer();
 
             RivalSimulation.Refresh(
                 new List<SpaceProgramState> { player, aster, cobalt, delta },
@@ -105,6 +106,9 @@ namespace TheRaceForSpace.Tests.Simulation
                 null,
                 cobalt.NextMissionTargetId);
 
+            // Sponsor selection is now a controller responsibility. Once a contract is Offered,
+            // rival simulation consumes that stable state rather than reevaluating its unlock rule.
+            achievementProgrammes[0].Offer();
             RivalSimulation.Refresh(
                 programs,
                 200.0,
@@ -134,6 +138,7 @@ namespace TheRaceForSpace.Tests.Simulation
                     null,
                     (UnlockRuleDefinition)null)
             };
+            fundingProgrammes[0].Offer();
 
             RivalSimulation.Refresh(
                 new List<SpaceProgramState> { player, aster, cobalt },
@@ -168,6 +173,7 @@ namespace TheRaceForSpace.Tests.Simulation
                     null,
                     (UnlockRuleDefinition)null)
             };
+            fundingProgrammes[0].Offer();
 
             RivalSimulation.Refresh(
                 new List<SpaceProgramState> { player, aster, cobalt, delta },
@@ -262,6 +268,7 @@ namespace TheRaceForSpace.Tests.Simulation
                     "Display text",
                     milestone.UnlockRule)
             };
+            achievementProgrammes[0].Offer();
 
             RivalSimulation.Refresh(
                 new List<SpaceProgramState> { player, aster, cobalt },

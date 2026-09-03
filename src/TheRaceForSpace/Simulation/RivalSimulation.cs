@@ -8,7 +8,7 @@ using TheRaceForSpace.Programs;
 namespace TheRaceForSpace.Simulation
 {
     /// <summary>
-    /// Lightweight rival mission simulation used by the current prototype.
+    /// Lightweight rival-program simulation used by the current prototype.
     /// </summary>
     public static class RivalSimulation
     {
@@ -40,9 +40,8 @@ namespace TheRaceForSpace.Simulation
         }
 
         /// <summary>
-        /// Advances every non-player program in the supplied collection. Target availability
-        /// checks use the shared campaign unlock evaluator and the supplied historical time, so
-        /// adding another rival or target does not require another simulation-specific rule path.
+        /// Advances every non-player program in the supplied collection. The controller's sponsor
+        /// review owns unlock-rule evaluation; rivals can only select contracts already marked Offered.
         /// </summary>
         public static void Refresh(
             IList<SpaceProgramState> programs,
@@ -229,8 +228,8 @@ namespace TheRaceForSpace.Simulation
 
             if (!IsTargetAvailable(targetId, program, context))
             {
-                // Invalid saved targets and targets whose contracts have expired are abandoned
-                // before any more simulated funds can be spent on them.
+                // Invalid saved targets, unoffered targets and expired one-off contracts are
+                // abandoned before any more simulated funds can be spent on them.
                 SetMissionTarget(program, null, context);
                 program.LaunchProgressPercent = 0;
             }
@@ -358,25 +357,15 @@ namespace TheRaceForSpace.Simulation
                 context.AchievementProgrammes);
             if (achievementProgramme != null)
             {
-                if (achievementProgramme.IsExpired || program.HasAchievement(achievementProgramme.Id))
-                {
-                    return false;
-                }
-
-                return UnlockRuleEvaluator.IsSatisfied(
-                    achievementProgramme.UnlockRule,
-                    context.Programs,
-                    context.CurrentUniversalTime);
+                return achievementProgramme.IsOffered
+                    && !achievementProgramme.IsExpired
+                    && !program.HasAchievement(achievementProgramme.Id);
             }
 
             FundingProgramme fundingProgramme = FindFundingProgramme(targetId, context.FundingProgrammes);
             if (fundingProgramme != null)
             {
-                return fundingProgramme.IsAvailable
-                    || UnlockRuleEvaluator.IsSatisfied(
-                        fundingProgramme.UnlockRule,
-                        context.Programs,
-                        context.CurrentUniversalTime);
+                return fundingProgramme.IsAvailable && fundingProgramme.IsOffered;
             }
 
             return false;

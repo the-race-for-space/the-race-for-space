@@ -45,8 +45,8 @@ namespace TheRaceForSpace.ControllerTests
                 "Unlock invalid condition definitions fail fast",
                 UnlockRuleEvaluatorTests.InvalidConditionDefinitionsFailFast);
             Run(
-                "Rival selection uses shared scope/count/time rule",
-                UnlockConsumerIntegrationTests.RivalSelectionUsesScopeCountAndHistoricalTime);
+                "Rival selection requires offered contract",
+                UnlockConsumerIntegrationTests.RivalSelectionRequiresOfferedContract);
 
             Run(
                 "Controller uses configured rival count and starting funds",
@@ -75,6 +75,22 @@ namespace TheRaceForSpace.ControllerTests
             Run(
                 "Controller projected payout cache rebuilds on refresh",
                 SatelliteRaceControllerTests.ProjectedPayoutCacheRebuildsOnRefresh);
+
+            Run(
+                "Funding offers wait for sponsor review",
+                FundingOfferControllerTests.UnlockedFundingWaitsForFundingReview);
+            Run(
+                "Funding review does not cascade completed offers",
+                FundingOfferControllerTests.FundingReviewDoesNotCascadeCompletedOffers);
+            Run(
+                "Satellite fulfilment waits for sponsor review",
+                FundingOfferControllerTests.SatelliteFulfilmentWaitsForFundingReview);
+            Run(
+                "Satellite sponsor review caps unfinished offers",
+                FundingOfferControllerTests.SatelliteReviewCapsUnfulfilledOffersAtTwo);
+            Run(
+                "Crossed funding boundaries each run sponsor review",
+                FundingOfferControllerTests.CrossedFundingBoundariesEachRunSponsorReview);
 
             Console.WriteLine();
             Console.WriteLine(_failures == 0

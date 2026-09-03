@@ -99,8 +99,8 @@ namespace TheRaceForSpace.Funding
         }
 
         /// <summary>
-        /// Marks this contract as one of the sponsor offers visible to all race agencies.
-        /// Step 1 stores this state only; offer limits and funding-day selection are applied later.
+        /// Marks this contract as one of the sponsor offers active for all race agencies.
+        /// Once offered, a one-off contract remains offered until its normal payout lifecycle expires.
         /// </summary>
         public void Offer()
         {

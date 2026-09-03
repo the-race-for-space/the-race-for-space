@@ -93,7 +93,7 @@ namespace TheRaceForSpace.Core
                 100000.0);
 
             FundingIntervalDays = 90.0;
-            RivalStartingFunds = 200000.0;
+            RivalStartingFunds = 300000.0;
             RivalProgressChance = 0.30;
             NumberOfRivals = 2;
         }

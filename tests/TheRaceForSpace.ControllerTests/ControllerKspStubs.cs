@@ -64,6 +64,7 @@ namespace TheRaceForSpace.KspIntegration
         private static double _observationUniversalTime = -1.0;
 
         public static bool IsReady { get; private set; }
+        public static int CaptureCalls { get; private set; }
 
         public static void SetSnapshots(
             IList<VesselTrackingSnapshot> vesselSnapshots,
@@ -85,6 +86,7 @@ namespace TheRaceForSpace.KspIntegration
             out IList<VesselTrackingSnapshot> vesselSnapshots,
             out double currentUniversalTime)
         {
+            CaptureCalls++;
             vesselSnapshots = IsReady ? _vesselSnapshots : null;
             currentUniversalTime = IsReady ? _observationUniversalTime : -1.0;
             return IsReady;
@@ -93,6 +95,7 @@ namespace TheRaceForSpace.KspIntegration
         public static void Reset()
         {
             SetUnavailable();
+            CaptureCalls = 0;
         }
     }
 

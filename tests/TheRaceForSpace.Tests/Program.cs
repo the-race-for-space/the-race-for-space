@@ -37,6 +37,7 @@ namespace TheRaceForSpace.Tests
             Run("Tracking empty snapshots reset body counts", SatelliteTrackerTests.EmptySnapshotsResetTrackedBodyCounts);
             Run("Tracking crewed probe keeps satellite classification", SatelliteTrackerTests.CrewedProbeCountsAsSatelliteButNotProbeMilestone);
             Run("Tracking flexible unlock uses race state and time", SatelliteTrackerTests.FlexibleUnlockRuleUsesRaceStateAndTime);
+            Run("Starter flight contracts and persistence", StarterFlightTrackerTests.RunAll);
             Run("Generic achievement state starts empty", GenericAchievementStateStartsEmpty);
             Run("Generic achievement state records first timestamp", GenericAchievementStateRecordsFirstTimestamp);
             Run("Generic achievement state preserves first timestamp", GenericAchievementStatePreservesFirstTimestamp);

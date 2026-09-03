@@ -12,6 +12,7 @@ namespace TheRaceForSpace.Tracking
     public sealed class StarterFlightTracker
     {
         private const double LaunchTimeMatchToleranceSeconds = 1.0;
+        private const double MaximumContinuousSampleGapSeconds = 5.0;
 
         private string _vesselId;
         private string _celestialBodyName;
@@ -100,6 +101,20 @@ namespace TheRaceForSpace.Tracking
                 && snapshot.ObservationUniversalTime >= _lastSampleUniversalTime)
             {
                 sampleDeltaSeconds = snapshot.ObservationUniversalTime - _lastSampleUniversalTime;
+            }
+
+            // Control is explicitly a continuous hold. A large gap means the active vessel was not
+            // observed closely enough to prove that it remained inside the band for the missing time.
+            // Five seconds allows normal one-second sampling jitter and 4x physics warp without
+            // awarding time skipped while the vessel was packed or another scene was active.
+            if (sampleDeltaSeconds > MaximumContinuousSampleGapSeconds)
+            {
+                sampleDeltaSeconds = 0.0;
+                _wasControlSampleInBand = false;
+                if (string.IsNullOrEmpty(_qualifiedControlMilestoneId))
+                {
+                    _controlHoldSeconds = 0.0;
+                }
             }
 
             _currentAltitudeMeters = snapshot.AltitudeMeters;
@@ -283,6 +298,16 @@ namespace TheRaceForSpace.Tracking
                 ClearAttempt();
                 return;
             }
+
+            // Instantaneous telemetry is intentionally not persisted. Clear any previous live
+            // values before applying historical state so a scene/save restore cannot display stale data.
+            _currentAltitudeMeters = 0.0;
+            _currentSurfaceSpeedMetersPerSecond = 0.0;
+            _currentMassTonnes = 0.0;
+            _currentDistanceMeters = 0.0;
+            _currentBiomeName = null;
+            _currentCrewCount = 0;
+            _currentSituation = TrackedFlightSituation.Other;
 
             _vesselId = vesselId;
             _celestialBodyName = celestialBodyName;

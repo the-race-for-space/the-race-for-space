@@ -24,7 +24,7 @@ namespace TheRaceForSpace.Tests
             Run("Achievement payout declines and expires", AchievementPayoutDeclinesAndExpires);
             Run("Achievement restore normalizes lifecycle", AchievementRestoreNormalizesLifecycle);
             Run("Achievement funding stores unlock rule", AchievementFundingStoresStructuredPrerequisite);
-            Run("Prototype funding catalogue matches 0.4", PrototypeFundingCatalogueTests.CatalogueMatchesCurrentPrototype);
+            Run("Prototype funding catalogue matches current campaign", PrototypeFundingCatalogueTests.CatalogueMatchesCurrentPrototype);
             Run("Prototype funding catalogue creates fresh state", PrototypeFundingCatalogueTests.CatalogueCreatesFreshCampaignState);
             Run("Prototype milestone definitions match current campaign", PrototypeMilestoneDefinitionsMatchCurrentCampaign);
             Run("Prototype milestone ids are unique", PrototypeMilestoneIdsAreUnique);
@@ -44,6 +44,7 @@ namespace TheRaceForSpace.Tests
             Run("Generic achievement state validates timestamps", GenericAchievementStateValidatesTimestamps);
             Run("Rival mission target ids map to display names", RivalMissionTargetIdsMapToDisplayNames);
             Run("Rival launch costs match target type", RivalLaunchCostsMatchTargetType);
+            Run("Rival starter completion does not create satellite", RivalStarterCompletionDoesNotCreateSatellite);
             Run("Rival ETA detects unaffordable mission", RivalEtaDetectsUnaffordableMission);
             Run("Unavailable rival target is abandoned", UnavailableRivalTargetIsAbandoned);
             Run("Invalid rival target id is abandoned", InvalidRivalTargetIdIsAbandoned);
@@ -178,6 +179,7 @@ namespace TheRaceForSpace.Tests
         private static void PrototypeMilestoneDefinitionsMatchCurrentCampaign()
         {
             AssertEqual(32, PrototypeMilestones.All.Count);
+            AssertEqual(20, PrototypeMilestones.StarterContracts.Count);
 
             AssertMilestone(
                 PrototypeMilestones.All[0],
@@ -185,7 +187,10 @@ namespace TheRaceForSpace.Tests
                 "Probe Orbit",
                 "Kerbin",
                 MilestoneCrewRequirement.UncrewedProbe,
-                null);
+                PrototypeMilestones.DirectedPower5Id,
+                PrototypeMilestones.Mass5Id,
+                PrototypeMilestones.Control5Id,
+                PrototypeMilestones.Biome5Id);
             AssertMilestone(
                 PrototypeMilestones.All[1],
                 PrototypeMilestones.CrewedOrbitId,
@@ -249,12 +254,21 @@ namespace TheRaceForSpace.Tests
                     milestoneIds.Add(milestone.Id),
                     "Duplicate milestone id found: " + milestone.Id);
             }
+
+            for (int milestoneIndex = 0; milestoneIndex < PrototypeMilestones.StarterContracts.Count; milestoneIndex++)
+            {
+                MilestoneDefinition milestone = PrototypeMilestones.StarterContracts[milestoneIndex];
+                AssertTrue(
+                    milestoneIds.Add(milestone.Id),
+                    "Duplicate starter milestone id found: " + milestone.Id);
+            }
         }
 
         private static void PrototypeMilestoneLookupUsesStableIds()
         {
             MilestoneDefinition milestone = PrototypeMilestones.FindById("MUN-PROBE-ORBIT");
             MilestoneDefinition dunaMilestone = PrototypeMilestones.FindById("DUNA-PROBE-ORBIT");
+            MilestoneDefinition starterMilestone = PrototypeMilestones.FindById("DIRECTED-POWER-1");
 
             AssertTrue(milestone != null, "Known milestone IDs should resolve case-insensitively.");
             AssertEqual(PrototypeMilestones.MunProbeOrbitId, milestone.Id);
@@ -265,6 +279,8 @@ namespace TheRaceForSpace.Tests
                 dunaMilestone.UnlockRule,
                 PrototypeMilestones.MunProbeOrbitId,
                 PrototypeMilestones.MinmusProbeOrbitId);
+            AssertTrue(starterMilestone != null, "Starter milestone IDs should share the stable lookup path.");
+            AssertEqual(StarterContractLine.DirectedPower, starterMilestone.StarterLine);
             AssertEqual(null, PrototypeMilestones.FindById("not-a-milestone"));
         }
 
@@ -364,6 +380,22 @@ namespace TheRaceForSpace.Tests
             IList<FundingProgramme> fundingProgrammes =
                 PrototypeFundingCatalogue.CreateSatelliteProgrammes();
 
+            rival.NextMissionTargetId = PrototypeMilestones.DirectedPower1Id;
+            AssertEqual(
+                2000.0,
+                RivalSimulation.CalculateLaunchProgressCost(
+                    rival,
+                    achievementProgrammes,
+                    fundingProgrammes));
+
+            rival.NextMissionTargetId = PrototypeMilestones.Biome5Id;
+            AssertEqual(
+                6000.0,
+                RivalSimulation.CalculateLaunchProgressCost(
+                    rival,
+                    achievementProgrammes,
+                    fundingProgrammes));
+
             rival.NextMissionTargetId = PrototypeMilestones.ProbeOrbitId;
             AssertEqual(
                 20000.0,
@@ -387,6 +419,38 @@ namespace TheRaceForSpace.Tests
                     rival,
                     achievementProgrammes,
                     fundingProgrammes));
+        }
+
+        private static void RivalStarterCompletionDoesNotCreateSatellite()
+        {
+            SpaceProgramState player = new SpaceProgramState("Player", true);
+            SpaceProgramState rival = new SpaceProgramState("Rival", false)
+            {
+                NextMissionTargetId = PrototypeMilestones.DirectedPower1Id,
+                LaunchProgressPercent = 100
+            };
+            MilestoneDefinition milestone = PrototypeMilestones.FindById(
+                PrototypeMilestones.DirectedPower1Id);
+            var achievementProgrammes = new List<AchievementFundingProgramme>
+            {
+                new AchievementFundingProgramme(
+                    milestone.Id,
+                    milestone.Name,
+                    milestone.ObjectiveDescription,
+                    milestone.BaseRewardFunds)
+            };
+            achievementProgrammes[0].Offer();
+
+            RivalSimulation.Refresh(
+                new List<SpaceProgramState> { player, rival },
+                100.0,
+                achievementProgrammes,
+                new List<FundingProgramme>());
+
+            AssertTrue(
+                rival.HasAchievement(PrototypeMilestones.DirectedPower1Id),
+                "Completed starter mission should record its achievement.");
+            AssertEqual(0, rival.GetSatelliteCount("Kerbin"));
         }
 
         private static void RivalEtaDetectsUnaffordableMission()
@@ -735,6 +799,26 @@ namespace TheRaceForSpace.Tests
             }
 
             AssertTrue(rule != null, "Expected a milestone unlock rule.");
+
+            // Probe Orbit uses four alternative AnyAgency achievements. Existing campaign rules use
+            // one path whose multiple achievement conditions are all required.
+            if (expectedMilestoneIds.Length == 4)
+            {
+                AssertEqual(4, rule.Paths.Count);
+                for (int pathIndex = 0; pathIndex < expectedMilestoneIds.Length; pathIndex++)
+                {
+                    AssertTrue(rule.Paths[pathIndex] != null, "Expected a non-null alternative unlock path.");
+                    AssertEqual(1, rule.Paths[pathIndex].Conditions.Count);
+                    UnlockConditionDefinition condition = rule.Paths[pathIndex].Conditions[0];
+                    AssertTrue(condition != null, "Expected a non-null unlock condition.");
+                    AssertEqual(UnlockConditionType.Achievement, condition.ConditionType);
+                    AssertEqual(UnlockProgramScope.AnyAgency, condition.ProgramScope);
+                    AssertEqual(1, condition.RequiredProgramCount);
+                    AssertEqual(expectedMilestoneIds[pathIndex], condition.MilestoneId);
+                }
+                return;
+            }
+
             AssertEqual(1, rule.Paths.Count);
             AssertTrue(rule.Paths[0] != null, "Expected a non-null unlock path.");
             AssertEqual(expectedMilestoneIds.Length, rule.Paths[0].Conditions.Count);

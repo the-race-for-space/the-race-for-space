@@ -49,12 +49,8 @@ namespace TheRaceForSpace.Competition
             PlayerProgram = new SpaceProgramState(PlayerProgramId, "Kerbal Space Agency", true);
             _programs.Add(PlayerProgram);
 
-            MilestoneDefinition openingMilestone = PrototypeMilestones.FindById(
-                PrototypeMilestones.ProbeOrbitId);
-            string openingMissionName = openingMilestone == null ? null : openingMilestone.Name;
-
-            // Aster and Cobalt keep their established stable IDs and names. Extra configured rivals
-            // use simple numbered identities so collection-based persistence can restore them later.
+            // Rivals begin without a fixed target. Their first refresh chooses from the four
+            // offered starter lines rather than assuming Probe Orbit is available at campaign start.
             int configuredRivalCount = Math.Max(0, RaceSettings.NumberOfRivals);
             for (int rivalIndex = 0; rivalIndex < configuredRivalCount; rivalIndex++)
             {
@@ -79,8 +75,6 @@ namespace TheRaceForSpace.Competition
 
                 var rivalProgram = new SpaceProgramState(rivalId, rivalName, false);
                 rivalProgram.Funds = Math.Max(0.0, RaceSettings.RivalStartingFunds);
-                rivalProgram.NextMissionTargetId = PrototypeMilestones.ProbeOrbitId;
-                rivalProgram.NextMissionDisplayName = openingMissionName;
 
                 if (rivalIndex == 0)
                 {
@@ -379,8 +373,6 @@ namespace TheRaceForSpace.Competition
                     return false;
                 }
 
-                // Older saves do not contain the funding timestamp and return -1. The existing
-                // calendar fallback below remains authoritative for those saves.
                 if (restoredNextFundingUniversalTime >= 0.0)
                 {
                     _nextFundingUniversalTime = restoredNextFundingUniversalTime;
@@ -391,8 +383,6 @@ namespace TheRaceForSpace.Competition
 
             if (_nextFundingUniversalTime < 0.0)
             {
-                // Every contract uses the same configured Kerbin-day funding boundary. Orbit
-                // achievements change eligibility and interest but never create their own date.
                 _nextFundingUniversalTime =
                     (Math.Floor(currentUniversalTime / _fundingIntervalSeconds) + 1.0)
                     * _fundingIntervalSeconds;
@@ -402,10 +392,6 @@ namespace TheRaceForSpace.Competition
 
             if (hasDueFunding)
             {
-                // Replay crossed funding boundaries before observing new player vessel state.
-                // KSP exposes current vessel state but not the exact time each vessel entered
-                // orbit, so using the last observed player counts avoids retroactively paying
-                // newly detected satellites at historical funding dates.
                 ProcessDueFunding(currentUniversalTime);
                 RefreshRivals(currentUniversalTime);
                 UpdateFundingAvailability(currentUniversalTime);
@@ -438,12 +424,14 @@ namespace TheRaceForSpace.Competition
 
             if (!hasDueFunding)
             {
-                // Rivals continue progressing against the current Offered set. Unlock state may
-                // change during normal refreshes, but new sponsor offers wait for a funding day.
                 RefreshRivals(stateEvaluationUniversalTime);
                 UpdateFundingAvailability(stateEvaluationUniversalTime);
             }
 
+            // Starter lines are reviewed continuously rather than waiting for the shared funding day.
+            // This keeps exactly the next unlocked level available in each line while leaving the
+            // existing two-offer random sponsor pool unchanged for normal achievements.
+            UpdateSpecialAchievementOffers(stateEvaluationUniversalTime);
             UpdateSatelliteTargetReachedState();
             StartAchievementContracts(stateEvaluationUniversalTime);
             EvaluateFundingProgrammes();
@@ -483,6 +471,39 @@ namespace TheRaceForSpace.Competition
                     evaluationUniversalTime))
                 {
                     programme.Unlock();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Offers unlocked starter-line milestones immediately. Probe Orbit is also offered as soon
+        /// as any level-five starter achievement satisfies its four-way OR unlock rule.
+        /// </summary>
+        private void UpdateSpecialAchievementOffers(double evaluationUniversalTime)
+        {
+            for (int programmeIndex = 0;
+                programmeIndex < _achievementFundingProgrammes.Count;
+                programmeIndex++)
+            {
+                AchievementFundingProgramme programme = _achievementFundingProgrammes[programmeIndex];
+                if (programme == null || programme.IsOffered || programme.IsExpired)
+                {
+                    continue;
+                }
+
+                MilestoneDefinition milestone = PrototypeMilestones.FindById(programme.Id);
+                bool isProbeOrbit = string.Equals(
+                    programme.Id,
+                    PrototypeMilestones.ProbeOrbitId,
+                    StringComparison.OrdinalIgnoreCase);
+                if ((milestone == null || !milestone.IsStarterContract) && !isProbeOrbit)
+                {
+                    continue;
+                }
+
+                if (IsAchievementProgrammeAvailableAtTime(programme, evaluationUniversalTime))
+                {
+                    programme.Offer();
                 }
             }
         }
@@ -534,6 +555,7 @@ namespace TheRaceForSpace.Competition
 
                 RefreshRivals(payoutUniversalTime);
                 UpdateFundingAvailability(payoutUniversalTime);
+                UpdateSpecialAchievementOffers(payoutUniversalTime);
                 UpdateSatelliteTargetReachedState();
                 StartAchievementContracts(payoutUniversalTime);
 
@@ -542,8 +564,6 @@ namespace TheRaceForSpace.Competition
                     SpaceProgramState program = _programs[programIndex];
                     double payout = CalculateSatelliteFundingForProgram(program);
 
-                    // Rival agencies always retain a minimal national/base budget even when
-                    // they currently qualify for no competitive contract funding.
                     if (!program.IsPlayer)
                     {
                         payout += RivalBaseIncomeFunds;
@@ -565,8 +585,6 @@ namespace TheRaceForSpace.Competition
                         payoutUniversalTime);
                     if (eligibleAgencyCount <= 0)
                     {
-                        // The first achievement occurred after this historical funding boundary,
-                        // so this contract must wait for the next global date at the same 100% stage.
                         continue;
                     }
 
@@ -591,6 +609,8 @@ namespace TheRaceForSpace.Competition
 
         private void ReviewFundingOffers(double evaluationUniversalTime)
         {
+            UpdateSpecialAchievementOffers(evaluationUniversalTime);
+
             var achievementCandidates = new List<AchievementFundingProgramme>();
             int uncompletedAchievementOfferCount = 0;
 
@@ -599,7 +619,7 @@ namespace TheRaceForSpace.Competition
                 programmeIndex++)
             {
                 AchievementFundingProgramme programme = _achievementFundingProgrammes[programmeIndex];
-                if (programme == null || programme.IsExpired)
+                if (programme == null || programme.IsExpired || IsStarterAchievementProgramme(programme))
                 {
                     continue;
                 }
@@ -670,6 +690,17 @@ namespace TheRaceForSpace.Competition
             }
         }
 
+        private static bool IsStarterAchievementProgramme(AchievementFundingProgramme programme)
+        {
+            if (programme == null)
+            {
+                return false;
+            }
+
+            MilestoneDefinition milestone = PrototypeMilestones.FindById(programme.Id);
+            return milestone != null && milestone.IsStarterContract;
+        }
+
         private void AwardProgramFunds(SpaceProgramState program, double payout)
         {
             if (program == null || payout <= 0.0)
@@ -679,8 +710,6 @@ namespace TheRaceForSpace.Competition
 
             if (program.IsPlayer)
             {
-                // The player receives real KSP Career funds. In non-Career modes the
-                // adapter deliberately leaves KSP's economy untouched.
                 CareerFundingAdapter.TryAddFunds(payout);
                 return;
             }
@@ -710,8 +739,6 @@ namespace TheRaceForSpace.Competition
 
                 program.NextPayoutFunds = nextPayoutFunds;
 
-                // Show the guaranteed rival base income in projected funding so the displayed
-                // next payout and rival launch ETA use the same value that will actually be paid.
                 if (!program.IsPlayer)
                 {
                     program.NextPayoutFunds += RivalBaseIncomeFunds;
@@ -720,8 +747,6 @@ namespace TheRaceForSpace.Competition
 
             if (_nextFundingUniversalTime >= 0.0)
             {
-                // All projected amounts below are due on the same next funding date. Offered
-                // achievement contracts remain active without rechecking their earlier unlock rule.
                 for (int programmeIndex = 0;
                     programmeIndex < _achievementFundingProgrammes.Count;
                     programmeIndex++)
@@ -751,8 +776,6 @@ namespace TheRaceForSpace.Competition
                 }
             }
 
-            // UI can draw several times per rendered frame. Publish the complete cache only after
-            // every programme has been evaluated so presentation never observes a partial rebuild.
             _hasFundingPayoutCache = true;
         }
 
@@ -767,8 +790,6 @@ namespace TheRaceForSpace.Competition
 
             for (int programmeIndex = 0; programmeIndex < _fundingProgrammes.Count; programmeIndex++)
             {
-                // Historical funding replay must use state at that boundary rather than the cached
-                // projection from the previous completed refresh.
                 payout += CalculateSatelliteCurrentPayout(program, _fundingProgrammes[programmeIndex]);
             }
 

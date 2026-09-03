@@ -11,8 +11,8 @@ namespace TheRaceForSpace.Tests.Persistence
         {
             IList<AchievementFundingProgramme> freshAchievements =
                 PrototypeFundingCatalogue.CreateAchievementProgrammes();
-            Require(freshAchievements[0].IsOffered, "Probe Orbit should be an opening campaign offer.");
-            Require(freshAchievements[1].IsOffered, "Crewed Orbit should be an opening campaign offer.");
+            Require(freshAchievements[0].IsOffered, "Probe Orbit should be the opening campaign offer.");
+            Require(!freshAchievements[1].IsOffered, "Crewed Orbit should not be offered before Probe Orbit unlocks it.");
             Require(
                 !freshAchievements[2].IsOffered,
                 "Later achievement funding should begin unlocked/locked without being pre-offered.");

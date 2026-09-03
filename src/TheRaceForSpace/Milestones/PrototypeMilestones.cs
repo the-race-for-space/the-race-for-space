@@ -59,7 +59,7 @@ namespace TheRaceForSpace.Milestones
                     MilestoneSituation.Orbit,
                     MilestoneCrewRequirement.Crewed,
                     "Achieve orbit around Kerbin with at least one live Kerbal aboard.",
-                    null),
+                    UnlockRuleDefinition.AnyAgencyAchievement(ProbeOrbitId)),
                 new MilestoneDefinition(
                     MunProbeOrbitId,
                     "Mun Probe Orbit",

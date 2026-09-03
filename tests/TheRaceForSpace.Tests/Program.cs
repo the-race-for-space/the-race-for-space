@@ -192,7 +192,7 @@ namespace TheRaceForSpace.Tests
                 "Crewed Orbit",
                 "Kerbin",
                 MilestoneCrewRequirement.Crewed,
-                null);
+                PrototypeMilestones.ProbeOrbitId);
             AssertMilestone(
                 PrototypeMilestones.All[2],
                 PrototypeMilestones.MunProbeOrbitId,

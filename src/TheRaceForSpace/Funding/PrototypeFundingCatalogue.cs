@@ -32,7 +32,7 @@ namespace TheRaceForSpace.Funding
 
         /// <summary>
         /// Creates fresh achievement funding state for a new race controller from the milestone catalogue.
-        /// Probe Orbit and Crewed Orbit are the two opening sponsor offers for a new campaign.
+        /// Probe Orbit is the single opening sponsor offer for a new campaign.
         /// </summary>
         public static IList<AchievementFundingProgramme> CreateAchievementProgrammes()
         {
@@ -181,10 +181,9 @@ namespace TheRaceForSpace.Funding
                     milestone.UnlockRule);
             }
 
-            // These are the deliberate campaign bootstrap offers. Later offers will be selected
-            // only on funding boundaries once the Step 2 sponsor-review behaviour is introduced.
-            if (string.Equals(milestone.Id, PrototypeMilestones.ProbeOrbitId, StringComparison.OrdinalIgnoreCase)
-                || string.Equals(milestone.Id, PrototypeMilestones.CrewedOrbitId, StringComparison.OrdinalIgnoreCase))
+            // Probe Orbit is the deliberate campaign bootstrap offer. Every later achievement,
+            // including Crewed Orbit, must first unlock and then wait for a funding-day review.
+            if (string.Equals(milestone.Id, PrototypeMilestones.ProbeOrbitId, StringComparison.OrdinalIgnoreCase))
             {
                 programme.Offer();
             }

@@ -27,6 +27,9 @@ namespace TheRaceForSpace.ControllerTests
             AchievementFundingProgramme probeOrbit = FindAchievement(
                 controller,
                 PrototypeMilestones.ProbeOrbitId);
+            AchievementFundingProgramme crewedOrbit = FindAchievement(
+                controller,
+                PrototypeMilestones.CrewedOrbitId);
             AchievementFundingProgramme munProbeOrbit = FindAchievement(
                 controller,
                 PrototypeMilestones.MunProbeOrbitId);
@@ -44,10 +47,11 @@ namespace TheRaceForSpace.ControllerTests
             controller.Refresh(false);
 
             Require(probeOrbit.HasStarted, "The opening Probe Orbit offer should start after completion.");
+            Require(controller.IsAchievementProgrammeAvailable(crewedOrbit), "Crewed Orbit should unlock after Probe Orbit.");
             Require(controller.IsAchievementProgrammeAvailable(munProbeOrbit), "Mun Probe Orbit should be unlocked.");
             Require(controller.IsAchievementProgrammeAvailable(minmusProbeOrbit), "Minmus Probe Orbit should be unlocked.");
             Require(kerbinNetwork.IsAvailable, "Kerbin network funding should be unlocked.");
-            Require(!munProbeOrbit.IsOffered && !minmusProbeOrbit.IsOffered,
+            Require(!crewedOrbit.IsOffered && !munProbeOrbit.IsOffered && !minmusProbeOrbit.IsOffered,
                 "Unlocked achievement funding must wait for a funding review.");
             Require(!kerbinNetwork.IsOffered,
                 "Unlocked satellite funding must wait for a funding review.");
@@ -56,9 +60,10 @@ namespace TheRaceForSpace.ControllerTests
             Planetarium.CurrentUniversalTime = FundingIntervalSeconds;
             controller.Refresh(false);
 
-            int newAchievementOffers = (munProbeOrbit.IsOffered ? 1 : 0)
+            int newAchievementOffers = (crewedOrbit.IsOffered ? 1 : 0)
+                + (munProbeOrbit.IsOffered ? 1 : 0)
                 + (minmusProbeOrbit.IsOffered ? 1 : 0);
-            Equal(1, newAchievementOffers);
+            Equal(2, newAchievementOffers);
             Require(kerbinNetwork.IsOffered,
                 "The funding review should offer the only unlocked satellite candidate.");
 
@@ -95,6 +100,10 @@ namespace TheRaceForSpace.ControllerTests
                     controller.PlayerProgram.RecordAchievement(programme.Id, 1.0);
                 }
             }
+
+            // This regression is specifically about a one-slot review and no same-review cascade.
+            // Keep Crewed Orbit as an unfinished offered fixture so exactly one vacancy exists.
+            FindAchievement(controller, PrototypeMilestones.CrewedOrbitId).Offer();
 
             Planetarium.CurrentUniversalTime = 1000.0;
             controller.Refresh(false);
@@ -224,6 +233,10 @@ namespace TheRaceForSpace.ControllerTests
                 }
             }
 
+            // Keep one unfinished offer occupied so each crossed boundary has exactly one
+            // replacement vacancy; the test remains focused on chronological review replay.
+            FindAchievement(controller, PrototypeMilestones.CrewedOrbitId).Offer();
+
             Planetarium.CurrentUniversalTime = FundingIntervalSeconds * 2.0;
             controller.Refresh(false);
 
@@ -242,8 +255,7 @@ namespace TheRaceForSpace.ControllerTests
                 }
             }
 
-            // The first crossed boundary may issue one replacement because Crewed Orbit still
-            // occupies the other unfinished slot. That pre-completed replacement is recognized
+            // The first crossed boundary issues one pre-completed replacement. It is recognized
             // as complete before the second boundary, allowing exactly one more offer there.
             Equal(2, laterOfferedCount);
             Equal(FundingIntervalSeconds * 3.0, controller.NextFundingUniversalTime);

@@ -31,7 +31,7 @@ namespace TheRaceForSpace.Tests.Tracking
             RequireEqual(1, playerProgram.GetSatelliteCount("Mun"), "Relay should count as one Mun satellite.");
             RequireEqual(1, playerProgram.GetSatelliteCount("Eve"), "A body outside the milestone catalogue should still receive a satellite count.");
             Require(playerProgram.HasAchievement(PrototypeMilestones.ProbeOrbitId), "Uncrewed probe should satisfy Probe Orbit.");
-            Require(playerProgram.HasAchievement(PrototypeMilestones.CrewedOrbitId), "Crewed vessel should satisfy Crewed Orbit.");
+            Require(playerProgram.HasAchievement(PrototypeMilestones.CrewedOrbitId), "Crewed vessel should satisfy Crewed Orbit after Probe Orbit unlocks it in the same stable refresh.");
             Require(playerProgram.HasAchievement(PrototypeMilestones.MunProbeOrbitId), "Mun relay should satisfy Mun Probe Orbit after its unlock rule becomes satisfied.");
             RequireEqual(
                 1234.0,
@@ -76,7 +76,25 @@ namespace TheRaceForSpace.Tests.Tracking
 
             RequireEqual(1, playerProgram.GetSatelliteCount("Kerbin"), "A crewed probe remains a qualifying satellite for network counts.");
             Require(!playerProgram.HasAchievement(PrototypeMilestones.ProbeOrbitId), "A crewed probe should not satisfy the uncrewed Probe Orbit milestone.");
-            Require(playerProgram.HasAchievement(PrototypeMilestones.CrewedOrbitId), "A crewed probe should satisfy the Crewed Orbit milestone.");
+            Require(
+                !playerProgram.HasAchievement(PrototypeMilestones.CrewedOrbitId),
+                "Crewed Orbit must stay locked when no agency has achieved Probe Orbit.");
+
+            playerProgram.RecordAchievement(PrototypeMilestones.ProbeOrbitId, 3001.0);
+            SatelliteTracker.RefreshPlayerSatelliteCounts(
+                playerProgram,
+                programs,
+                PrototypeMilestones.All,
+                vesselSnapshots,
+                3002.0);
+
+            Require(
+                playerProgram.HasAchievement(PrototypeMilestones.CrewedOrbitId),
+                "The same crewed-orbit observation should become eligible after Probe Orbit is achieved.");
+            RequireEqual(
+                3002.0,
+                playerProgram.GetAchievementUniversalTime(PrototypeMilestones.CrewedOrbitId),
+                "Crewed Orbit should record the later observation time after its Probe Orbit prerequisite is met.");
         }
 
         public static void FlexibleUnlockRuleUsesRaceStateAndTime()

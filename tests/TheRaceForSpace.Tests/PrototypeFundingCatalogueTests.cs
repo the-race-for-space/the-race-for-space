@@ -24,7 +24,8 @@ namespace TheRaceForSpace.Tests
             AssertAchievement(
                 achievements,
                 PrototypeMilestones.CrewedOrbitId,
-                150000.0);
+                150000.0,
+                PrototypeMilestones.ProbeOrbitId);
             AssertAchievement(
                 achievements,
                 PrototypeMilestones.MunProbeOrbitId,
@@ -223,6 +224,9 @@ namespace TheRaceForSpace.Tests
                 interplanetaryNetworkPrerequisiteCounts);
 
             Equal(
+                "Any agency must achieve Probe Orbit.",
+                FindAchievement(achievements, PrototypeMilestones.CrewedOrbitId).UnlockRequirement);
+            Equal(
                 "Any agency must achieve Mun Probe Orbit and Minmus Probe Orbit.",
                 FindAchievement(achievements, PrototypeMilestones.DunaProbeOrbitId).UnlockRequirement);
             Equal(
@@ -298,6 +302,8 @@ namespace TheRaceForSpace.Tests
 
             Require(!secondAchievements[0].HasStarted, "A new catalogue build must not reuse achievement campaign state.");
             Equal(0, secondAchievements[0].PaymentsProcessed);
+            Require(secondAchievements[0].IsOffered, "Probe Orbit should be the opening achievement offer.");
+            Require(!secondAchievements[1].IsOffered, "Crewed Orbit should wait for Probe Orbit and a later funding review.");
             Require(!secondSatellites[0].IsAvailable, "A new catalogue build must not reuse satellite unlock state.");
         }
 

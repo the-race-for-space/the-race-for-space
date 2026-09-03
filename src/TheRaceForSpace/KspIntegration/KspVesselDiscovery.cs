@@ -459,9 +459,9 @@ namespace TheRaceForSpace.KspIntegration
                     continue;
                 }
 
-                for (int crewIndex = 0; crewIndex < protoPartSnapshots[partIndex].protoModuleCrew.Count; crewIndex++)
+                for (int crewIndex = 0; crewIndex < partSnapshot.protoModuleCrew.Count; crewIndex++)
                 {
-                    if (protoPartSnapshots[partIndex].protoModuleCrew[crewIndex] != null)
+                    if (partSnapshot.protoModuleCrew[crewIndex] != null)
                     {
                         crewCount++;
                     }

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using TheRaceForSpace.Tracking;
 
@@ -9,6 +10,16 @@ namespace TheRaceForSpace.KspIntegration
     /// </summary>
     public static class KspVesselDiscovery
     {
+        private const double SurfaceImpactProximityMeters = 100.0;
+        private const double MinimumSurfaceImpactSpeedMetersPerSecond = 5.0;
+
+        private static Game _activeTrackingGame;
+        private static Vessel _destructionTrackedVessel;
+        private static Callback _destructionCallback;
+        private static string _pendingImpactVesselId;
+        private static string _pendingImpactBodyName;
+        private static double _pendingImpactUniversalTime = -1.0;
+
         /// <summary>
         /// Captures the orbiting vessels available in the current save together with the KSP
         /// universal time for that observation. Returns false while required game state is not ready.
@@ -102,6 +113,190 @@ namespace TheRaceForSpace.KspIntegration
 
             vesselSnapshots = snapshots;
             return true;
+        }
+
+        /// <summary>
+        /// Captures only the currently controlled loaded vessel for the frequent starter-contract
+        /// path. This avoids repeating the expensive all-vessel scan every second.
+        /// </summary>
+        public static bool TryCaptureActiveVessel(out ActiveVesselTrackingSnapshot vesselSnapshot)
+        {
+            vesselSnapshot = null;
+            EnsureActiveTrackingGame();
+
+            if (!HighLogic.LoadedSceneIsFlight
+                || FlightGlobals.ActiveVessel == null
+                || Planetarium.fetch == null)
+            {
+                DetachDestructionCallback();
+                return false;
+            }
+
+            Vessel vessel = FlightGlobals.ActiveVessel;
+            if (!vessel.loaded
+                || vessel.isEVA
+                || vessel.mainBody == null
+                || string.IsNullOrEmpty(vessel.mainBody.bodyName))
+            {
+                DetachDestructionCallback();
+                return false;
+            }
+
+            TrackActiveVesselDestruction(vessel);
+
+            string biomeName = null;
+            if (vessel.mainBody.BiomeMap != null)
+            {
+                biomeName = ScienceUtil.GetExperimentBiome(
+                    vessel.mainBody,
+                    vessel.latitude,
+                    vessel.longitude);
+            }
+
+            vesselSnapshot = new ActiveVesselTrackingSnapshot(
+                vessel.id.ToString("D"),
+                vessel.mainBody.bodyName,
+                ConvertSituation(vessel.situation),
+                vessel.altitude,
+                vessel.srfSpeed,
+                vessel.GetTotalMass(),
+                vessel.latitude,
+                vessel.longitude,
+                vessel.mainBody.Radius,
+                biomeName,
+                vessel.GetCrewCount(),
+                vessel.launchTime,
+                Planetarium.GetUniversalTime());
+            return true;
+        }
+
+        /// <summary>
+        /// Returns one pending destruction event only when the actively tracked vessel was moving
+        /// and close enough to terrain or sea level to represent a Kerbin surface impact.
+        /// </summary>
+        public static bool TryConsumeActiveVesselSurfaceImpact(
+            out string vesselId,
+            out string celestialBodyName,
+            out double impactUniversalTime)
+        {
+            EnsureActiveTrackingGame();
+
+            vesselId = _pendingImpactVesselId;
+            celestialBodyName = _pendingImpactBodyName;
+            impactUniversalTime = _pendingImpactUniversalTime;
+
+            bool hasImpact = !string.IsNullOrEmpty(vesselId)
+                && !string.IsNullOrEmpty(celestialBodyName)
+                && impactUniversalTime >= 0.0;
+
+            _pendingImpactVesselId = null;
+            _pendingImpactBodyName = null;
+            _pendingImpactUniversalTime = -1.0;
+            return hasImpact;
+        }
+
+        /// <summary>
+        /// Clears active-vessel callback state when a different KSP save becomes current.
+        /// </summary>
+        public static void ResetActiveVesselTracking()
+        {
+            DetachDestructionCallback();
+            _activeTrackingGame = null;
+            _pendingImpactVesselId = null;
+            _pendingImpactBodyName = null;
+            _pendingImpactUniversalTime = -1.0;
+        }
+
+        private static void EnsureActiveTrackingGame()
+        {
+            if (_activeTrackingGame == HighLogic.CurrentGame)
+            {
+                return;
+            }
+
+            ResetActiveVesselTracking();
+            _activeTrackingGame = HighLogic.CurrentGame;
+        }
+
+        private static void TrackActiveVesselDestruction(Vessel vessel)
+        {
+            if (_destructionTrackedVessel == vessel)
+            {
+                return;
+            }
+
+            DetachDestructionCallback();
+            if (vessel == null)
+            {
+                return;
+            }
+
+            Vessel trackedVessel = vessel;
+            _destructionTrackedVessel = vessel;
+            _destructionCallback = delegate
+            {
+                RecordPotentialSurfaceImpact(trackedVessel);
+                _destructionTrackedVessel = null;
+                _destructionCallback = null;
+            };
+            vessel.OnJustAboutToBeDestroyed += _destructionCallback;
+        }
+
+        private static void DetachDestructionCallback()
+        {
+            if (_destructionTrackedVessel != null && _destructionCallback != null)
+            {
+                _destructionTrackedVessel.OnJustAboutToBeDestroyed -= _destructionCallback;
+            }
+
+            _destructionTrackedVessel = null;
+            _destructionCallback = null;
+        }
+
+        private static void RecordPotentialSurfaceImpact(Vessel vessel)
+        {
+            if (vessel == null
+                || vessel.mainBody == null
+                || vessel.LandedOrSplashed
+                || vessel.srfSpeed < MinimumSurfaceImpactSpeedMetersPerSecond)
+            {
+                return;
+            }
+
+            bool isNearTerrain = vessel.heightFromTerrain >= 0.0f
+                && vessel.heightFromTerrain <= SurfaceImpactProximityMeters;
+            bool isNearSeaLevel = vessel.altitude <= SurfaceImpactProximityMeters;
+            if (!isNearTerrain && !isNearSeaLevel)
+            {
+                return;
+            }
+
+            _pendingImpactVesselId = vessel.id.ToString("D");
+            _pendingImpactBodyName = vessel.mainBody.bodyName;
+            _pendingImpactUniversalTime = Planetarium.fetch == null
+                ? Math.Max(0.0, vessel.lastUT)
+                : Planetarium.GetUniversalTime();
+        }
+
+        private static TrackedFlightSituation ConvertSituation(Vessel.Situations situation)
+        {
+            switch (situation)
+            {
+                case Vessel.Situations.PRELAUNCH:
+                    return TrackedFlightSituation.Prelaunch;
+                case Vessel.Situations.FLYING:
+                    return TrackedFlightSituation.Flying;
+                case Vessel.Situations.SUB_ORBITAL:
+                    return TrackedFlightSituation.SubOrbital;
+                case Vessel.Situations.ORBITING:
+                    return TrackedFlightSituation.Orbiting;
+                case Vessel.Situations.LANDED:
+                    return TrackedFlightSituation.Landed;
+                case Vessel.Situations.SPLASHED:
+                    return TrackedFlightSituation.Splashed;
+                default:
+                    return TrackedFlightSituation.Other;
+            }
         }
 
         private static TrackedVesselType ConvertVesselType(VesselType vesselType)

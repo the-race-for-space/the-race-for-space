@@ -383,7 +383,7 @@ namespace TheRaceForSpace.Tests
 
             rival.NextMissionTargetId = PrototypeMilestones.DirectedPower1Id;
             AssertEqual(
-                2000.0,
+                4000.0,
                 RivalSimulation.CalculateLaunchProgressCost(
                     rival,
                     achievementProgrammes,
@@ -391,7 +391,7 @@ namespace TheRaceForSpace.Tests
 
             rival.NextMissionTargetId = PrototypeMilestones.Biome5Id;
             AssertEqual(
-                6000.0,
+                12000.0,
                 RivalSimulation.CalculateLaunchProgressCost(
                     rival,
                     achievementProgrammes,

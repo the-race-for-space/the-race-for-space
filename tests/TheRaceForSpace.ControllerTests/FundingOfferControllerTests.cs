@@ -480,7 +480,7 @@ namespace TheRaceForSpace.ControllerTests
                 }
 
                 programme.Offer();
-                controller.PlayerProgram.RecordAchievement(programme.Id, achievementUniversalTime);
+                controller.AsterProgram.RecordAchievement(programme.Id, achievementUniversalTime);
             }
         }
 

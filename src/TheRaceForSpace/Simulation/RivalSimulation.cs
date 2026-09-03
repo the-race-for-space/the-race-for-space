@@ -15,7 +15,8 @@ namespace TheRaceForSpace.Simulation
         private const double KerbinDaySeconds = 21600.0;
         private const double LaunchProgressIntervalSeconds = 5.0 * KerbinDaySeconds;
         private const double SatelliteMissionSelectionChance = 0.60;
-        private const int LaunchProgressIncrementPercent = 10;
+        private const int StandardLaunchProgressIncrementPercent = 10;
+        private const int StarterLaunchProgressIncrementPercent = 20;
 
         private static readonly Random RandomGenerator = new Random();
 
@@ -94,7 +95,25 @@ namespace TheRaceForSpace.Simulation
         }
 
         /// <summary>
-        /// Returns the funds required for the rival's next successful 10% mission-progress step.
+        /// Returns the mission-progress percentage gained by the rival on a successful progress check.
+        /// Starter contracts are smaller pre-orbit launches and advance at 20%; all other missions use 10%.
+        /// </summary>
+        public static int CalculateLaunchProgressIncrementPercent(SpaceProgramState program)
+        {
+            if (program == null)
+            {
+                return StandardLaunchProgressIncrementPercent;
+            }
+
+            MilestoneDefinition milestone = PrototypeMilestones.FindById(program.NextMissionTargetId);
+            return milestone != null && milestone.IsStarterContract
+                ? StarterLaunchProgressIncrementPercent
+                : StandardLaunchProgressIncrementPercent;
+        }
+
+        /// <summary>
+        /// Returns the funds required for the rival's next successful mission-progress step.
+        /// Starter steps advance 20%; orbital and satellite mission steps advance 10%.
         /// Stable mission target IDs are authoritative; presentation text is not used as a fallback.
         /// </summary>
         public static double CalculateLaunchProgressCost(
@@ -146,9 +165,10 @@ namespace TheRaceForSpace.Simulation
                 return null;
             }
 
+            int launchProgressIncrementPercent = CalculateLaunchProgressIncrementPercent(program);
             int remainingProgressPercent = Math.Max(0, 100 - program.LaunchProgressPercent);
-            int remainingProgressSteps = (remainingProgressPercent + LaunchProgressIncrementPercent - 1)
-                / LaunchProgressIncrementPercent;
+            int remainingProgressSteps = (remainingProgressPercent + launchProgressIncrementPercent - 1)
+                / launchProgressIncrementPercent;
 
             if (remainingProgressSteps <= 0)
             {
@@ -258,6 +278,7 @@ namespace TheRaceForSpace.Simulation
                         program,
                         context.AchievementProgrammes,
                         context.FundingProgrammes);
+                    int launchProgressIncrementPercent = CalculateLaunchProgressIncrementPercent(program);
 
                     if (program.LaunchProgressPercent < 100
                         && program.Funds >= launchProgressCostFunds
@@ -266,7 +287,7 @@ namespace TheRaceForSpace.Simulation
                         program.Funds -= launchProgressCostFunds;
                         program.LaunchProgressPercent = Math.Min(
                             100,
-                            program.LaunchProgressPercent + LaunchProgressIncrementPercent);
+                            program.LaunchProgressPercent + launchProgressIncrementPercent);
                     }
 
                     if (TryCompleteLaunch(program, program.NextLaunchProgressCheckUniversalTime, context))

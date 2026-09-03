@@ -30,7 +30,8 @@ namespace TheRaceForSpace.UI
 
         private enum SpaceRaceFundingCategory
         {
-            Available,
+            Offered,
+            Unlocked,
             Locked,
             Expired
         }
@@ -133,7 +134,8 @@ namespace TheRaceForSpace.UI
         private int _spaceRaceSatelliteFundingCount = -1;
         private string _selectedSpaceRaceFundingId;
         private bool _selectedSpaceRaceFundingIsAchievement;
-        private bool _spaceRaceAvailableExpanded = true;
+        private bool _spaceRaceOfferedExpanded = true;
+        private bool _spaceRaceUnlockedExpanded;
         private bool _spaceRaceLockedExpanded;
         private bool _spaceRaceExpiredExpanded;
         private bool _hasRestoredVisibilityState;
@@ -441,7 +443,7 @@ namespace TheRaceForSpace.UI
             {
                 AchievementFundingProgramme programme =
                     _raceController.AchievementFundingProgrammes[programmeIndex];
-                if (programme.IsExpired || !_raceController.IsAchievementProgrammeAvailable(programme))
+                if (programme.IsExpired || !programme.IsOffered)
                 {
                     continue;
                 }
@@ -555,7 +557,7 @@ namespace TheRaceForSpace.UI
             for (int i = 0; i < _raceController.AchievementFundingProgrammes.Count; i++)
             {
                 AchievementFundingProgramme programme = _raceController.AchievementFundingProgrammes[i];
-                if (programme.IsExpired || !_raceController.IsAchievementProgrammeAvailable(programme))
+                if (programme.IsExpired || !programme.IsOffered)
                 {
                     continue;
                 }
@@ -567,7 +569,7 @@ namespace TheRaceForSpace.UI
             for (int i = 0; i < _raceController.FundingProgrammes.Count; i++)
             {
                 FundingProgramme programme = _raceController.FundingProgrammes[i];
-                if (!programme.IsAvailable)
+                if (!programme.IsOffered)
                 {
                     continue;
                 }
@@ -582,7 +584,8 @@ namespace TheRaceForSpace.UI
         private void DrawAchievementFundingCard(
             AchievementFundingProgramme programme,
             string stateLabel = null,
-            double? unlockEvaluationUniversalTime = null)
+            double? unlockEvaluationUniversalTime = null,
+            string stateMessage = null)
         {
             _listTextBuilder.Length = 0;
             _listTextBuilder.Append("Completed by: ");
@@ -620,6 +623,11 @@ namespace TheRaceForSpace.UI
                 GUILayout.Label("State: " + stateLabel, _boldLabelStyle);
             }
 
+            if (!string.IsNullOrEmpty(stateMessage))
+            {
+                GUILayout.Label(stateMessage);
+            }
+
             GUILayout.BeginHorizontal();
             GUILayout.BeginVertical(FundingCardLeftOptions);
             GUILayout.Label(
@@ -653,7 +661,8 @@ namespace TheRaceForSpace.UI
         private void DrawSatelliteFundingCard(
             FundingProgramme programme,
             string stateLabel = null,
-            double? unlockEvaluationUniversalTime = null)
+            double? unlockEvaluationUniversalTime = null,
+            string stateMessage = null)
         {
             _listTextBuilder.Length = 0;
             _listTextBuilder.Append("Satellites: ");
@@ -697,6 +706,11 @@ namespace TheRaceForSpace.UI
             if (!string.IsNullOrEmpty(stateLabel))
             {
                 GUILayout.Label("State: " + stateLabel, _boldLabelStyle);
+            }
+
+            if (!string.IsNullOrEmpty(stateMessage))
+            {
+                GUILayout.Label(stateMessage);
             }
 
             GUILayout.BeginHorizontal();
@@ -831,7 +845,7 @@ namespace TheRaceForSpace.UI
             EnsurePayoutScratchBuffers();
             EnsureSpaceRaceFundingEntries();
 
-            GUILayout.Label("CURRENT FUNDING INFO", _boldLabelStyle);
+            GUILayout.Label("Current Funding Info", _boldLabelStyle);
             SpaceRaceFundingEntry selectedEntry = EnsureSelectedSpaceRaceFundingEntry(player);
 
             // Keep the selected contract area stable as users switch between contracts with
@@ -856,17 +870,22 @@ namespace TheRaceForSpace.UI
             // scroll independently through the larger stock-body contract list.
             _spaceRaceScrollPosition = GUILayout.BeginScrollView(_spaceRaceScrollPosition);
             DrawSpaceRaceFundingSection(
-                "AVAILABLE NOW",
-                SpaceRaceFundingCategory.Available,
+                "Offered",
+                SpaceRaceFundingCategory.Offered,
                 player,
-                ref _spaceRaceAvailableExpanded);
+                ref _spaceRaceOfferedExpanded);
             DrawSpaceRaceFundingSection(
-                "LOCKED",
+                "Unlocked",
+                SpaceRaceFundingCategory.Unlocked,
+                player,
+                ref _spaceRaceUnlockedExpanded);
+            DrawSpaceRaceFundingSection(
+                "Locked",
                 SpaceRaceFundingCategory.Locked,
                 player,
                 ref _spaceRaceLockedExpanded);
             DrawSpaceRaceFundingSection(
-                "EXPIRED",
+                "Expired",
                 SpaceRaceFundingCategory.Expired,
                 player,
                 ref _spaceRaceExpiredExpanded);
@@ -881,18 +900,20 @@ namespace TheRaceForSpace.UI
         {
             SpaceRaceFundingCategory category = GetSpaceRaceFundingCategory(entry, player);
             string stateLabel;
+            string stateMessage = null;
 
-            if (category == SpaceRaceFundingCategory.Available)
+            if (category == SpaceRaceFundingCategory.Offered)
             {
-                stateLabel = "Available";
+                stateLabel = "Offered";
+            }
+            else if (category == SpaceRaceFundingCategory.Unlocked)
+            {
+                stateLabel = "Unlocked";
+                stateMessage = "Funding requirements have been met. Waiting for a future funding review.";
             }
             else if (category == SpaceRaceFundingCategory.Locked)
             {
                 stateLabel = "Locked";
-            }
-            else if (entry.IsAchievement && !entry.AchievementProgramme.IsExpired)
-            {
-                stateLabel = "Completed";
             }
             else
             {
@@ -908,14 +929,16 @@ namespace TheRaceForSpace.UI
                 DrawAchievementFundingCard(
                     entry.AchievementProgramme,
                     stateLabel,
-                    unlockEvaluationUniversalTime);
+                    unlockEvaluationUniversalTime,
+                    stateMessage);
             }
             else
             {
                 DrawSatelliteFundingCard(
                     entry.SatelliteProgramme,
                     stateLabel,
-                    unlockEvaluationUniversalTime);
+                    unlockEvaluationUniversalTime,
+                    stateMessage);
             }
         }
 
@@ -1074,7 +1097,7 @@ namespace TheRaceForSpace.UI
                 }
             }
 
-            for (int categoryIndex = (int)SpaceRaceFundingCategory.Available;
+            for (int categoryIndex = (int)SpaceRaceFundingCategory.Offered;
                 categoryIndex <= (int)SpaceRaceFundingCategory.Expired;
                 categoryIndex++)
             {
@@ -1109,13 +1132,24 @@ namespace TheRaceForSpace.UI
                     return SpaceRaceFundingCategory.Expired;
                 }
 
+                if (programme.IsOffered)
+                {
+                    return SpaceRaceFundingCategory.Offered;
+                }
+
                 return _raceController.IsAchievementProgrammeAvailable(programme)
-                    ? SpaceRaceFundingCategory.Available
+                    ? SpaceRaceFundingCategory.Unlocked
                     : SpaceRaceFundingCategory.Locked;
             }
 
-            return entry.SatelliteProgramme.IsAvailable
-                ? SpaceRaceFundingCategory.Available
+            FundingProgramme satelliteProgramme = entry.SatelliteProgramme;
+            if (satelliteProgramme.IsOffered)
+            {
+                return SpaceRaceFundingCategory.Offered;
+            }
+
+            return satelliteProgramme.IsAvailable
+                ? SpaceRaceFundingCategory.Unlocked
                 : SpaceRaceFundingCategory.Locked;
         }
 

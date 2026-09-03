@@ -30,26 +30,30 @@ Repeat the relevant threshold for each level: 600, 1,100, 1,400, 1,700, and 2,00
 
 1. Launch a Kerbin vehicle with the relevant starter contract offered, reach the required surface speed while remaining at or below 70,000 m, and confirm its Funding Targets card updates maximum speed and maximum altitude approximately once per second.
 2. Land or recover a qualifying-speed vehicle without destroying it and confirm Directed Power does not complete.
-3. Destroy the qualifying tracked vehicle in a genuine Kerbin surface impact and confirm the current Directed Power level completes.
-4. Exceed 70,000 m at any point, later descend below 70,000 m and impact at sufficient speed, and confirm the attempt remains invalid.
-5. Enter `ORBITING`, then return and impact, and confirm the starter attempt remains invalid.
-6. Stage during a qualifying flight, keep control of the continuing stage, and confirm peak speed/altitude history follows the same launch.
-7. Save after exceeding the 70 km ceiling, reload, then impact; confirm the saved ceiling violation is not lost.
-8. Confirm ordinary vessel destruction away from the surface does not falsely complete Directed Power.
-9. Confirm a low-speed destruction/cleanup near the ground does not incorrectly count as the required high-energy surface impact.
+3. Crash the qualifying tracked vehicle into Kerbin and confirm the current Directed Power level completes even if KSP briefly reports the dying vessel as `LANDED` or zero surface speed during breakup.
+4. Repeat a qualifying crash at terrain rather than sea level and confirm the destruction is still recognised as a surface impact.
+5. Exceed 70,000 m at any point, later descend below 70,000 m and impact at sufficient speed, and confirm the attempt remains invalid.
+6. Enter `ORBITING`, then return and impact, and confirm the starter attempt remains invalid.
+7. Stage during a qualifying flight, keep control of the continuing stage, and confirm peak speed/altitude history follows the same launch and the final controlled stage may complete the impact.
+8. Save after exceeding the 70 km ceiling, reload, then impact; confirm the saved ceiling violation is not lost.
+9. Confirm ordinary vessel destruction well away from the surface does not falsely complete Directed Power.
+10. Confirm a low-speed vessel deletion/recovery near the ground does not incorrectly count as the required high-energy surface impact.
+11. Inspect `KSP.log` after the crash and confirm there are no repeated callback exceptions from either the vessel-local destruction callback or the global vessel-will-destroy fallback.
 
 ## Mass line
 
 Required pairs are 1 t / 25 km, 2.5 t / 75 km, 5 t / 150 km, 10 t / 300 km, and 20 t / 600 km.
 
 1. Confirm the offered Mass contract card in Funding Targets displays current remaining vessel mass and distance from the launch origin during flight.
-2. Reach the required distance with insufficient remaining mass and confirm no completion.
-3. Meet the required remaining mass while still short of the required distance and confirm no completion.
-4. Meet both requirements simultaneously and confirm the current Mass level completes immediately.
-5. Continue the same flight far enough/heavy enough for the next level and confirm only one Mass level can complete per launch.
-6. Start a new launch and confirm the newly unlocked next Mass level can complete.
-7. Confirm entering orbit invalidates the starter attempt.
-8. Note the current v0.5 rule: distance is measured from the tracked launch/start position. A normal KSC LaunchPad/Runway mission therefore behaves as distance from the Space Centre, while an alternate launch site uses that alternate origin. Record this explicitly if alternate launch sites are part of balance testing.
+2. Fly beyond the required distance while retaining enough mass and confirm the contract does **not** complete while the craft is still flying.
+3. Reach the required distance but land with less than the required final vessel mass and confirm no completion.
+4. Keep sufficient mass but land short of the required distance and confirm no completion.
+5. Land on Kerbin beyond the required distance with the finished landed craft still retaining at least the required mass and confirm the current Mass level completes.
+6. Continue or move the same landed craft so that it could satisfy the next level and confirm only one Mass level can complete per launch attempt.
+7. Start a new launch and confirm the newly unlocked/offered next Mass level can complete after another qualifying landing.
+8. Confirm `SPLASHED` does not count as `LANDED` for the Mass delivery requirement.
+9. Confirm entering orbit invalidates the starter attempt.
+10. Note the current v0.5 rule: distance is measured from the tracked launch/start position. A normal KSC LaunchPad/Runway mission therefore behaves as distance from the Space Centre, while an alternate launch site uses that alternate origin. Record this explicitly if alternate launch sites are part of balance testing.
 
 ## Control line
 
@@ -71,15 +75,17 @@ Required bands/times are 2-5 km / 30 s, 8-12 km / 45 s, 15-25 km / 60 s, 30-40 k
 Targets are Grasslands, Highlands, Mountains, Deserts, and Ice Caps.
 
 1. Confirm the offered Biome contract card in Funding Targets reports the stock Kerbin biome of the active vessel and the current target biome.
-2. Enter the required biome without orbiting and confirm the current Biome level completes immediately.
-3. Continue into the next required biome during the same launch and confirm a second Biome level does not complete from that launch.
-4. Start a fresh launch and confirm the next unlocked Biome level can complete.
-5. Confirm biome reporting remains stable across low flight, landed flight, and scene transitions where the active vessel remains available.
-6. Confirm no Biome completion occurs away from Kerbin.
+2. Fly over or through the required biome without landing and confirm the Biome contract does **not** complete.
+3. Land the craft in the required Kerbin biome and confirm the current Biome level completes only once the vessel situation is `LANDED`.
+4. Splash down in or beside the target biome and confirm `SPLASHED` does not count as the required landing.
+5. Continue or move the same craft into the next target biome and confirm a second Biome level does not complete from that launch attempt.
+6. Start a fresh launch and confirm the next unlocked/offered Biome level can complete after landing in its target biome.
+7. Confirm biome reporting remains stable during low flight and after touchdown so the landed sample reports the correct stock biome.
+8. Confirm no Biome completion occurs away from Kerbin.
 
 ## Cross-line behavior
 
-1. Use one launch that legitimately satisfies conditions in two different lines, such as Mass and Biome, and confirm both lines may advance once on that launch.
+1. Use one launch that legitimately satisfies conditions in two different lines, such as landing a sufficiently heavy craft in the required Biome at the required Mass distance, and confirm both lines may advance once on that landing.
 2. Confirm each individual line can advance no more than one level per launch.
 3. Confirm staging does not accidentally create a new attempt when launch time/body match the ongoing vehicle.
 4. Confirm switching to an unrelated vessel/launch begins a new tracked attempt rather than inheriting the previous vehicle's maxima or Control timer.
@@ -124,6 +130,9 @@ The v0.5 candidate is ready for merge/release only when:
 - player and rival starter completions both unlock the correct next same-line contract;
 - unlocked starter contracts participate in the normal sponsor-review flow;
 - live starter telemetry is usable inside Funding Targets without a separate Space Race starter panel blocking the catalogue;
+- Biome only completes on a landed craft in the target biome;
+- Mass only completes on a landed finished craft that still meets both final mass and distance requirements;
+- a real qualifying Directed Power surface crash reliably produces completion without turning normal recovery into a false crash;
 - all four starter lines can be completed end-to-end in KSP;
 - at least one Level V route has been followed through a real Probe Orbit completion;
 - no starter line can be advanced twice by one launch;

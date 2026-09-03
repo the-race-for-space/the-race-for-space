@@ -152,9 +152,12 @@ namespace TheRaceForSpace.Tracking
                         starterMilestones,
                         snapshot.ObservationUniversalTime);
                     if (massMilestone != null
+                        && snapshot.Situation == TrackedFlightSituation.Landed
                         && snapshot.MassTonnes >= massMilestone.RequiredMassTonnes
                         && _currentDistanceMeters >= massMilestone.RequiredDistanceMeters)
                     {
+                        // Mass represents delivery of a finished craft, so the final landed vessel
+                        // must still meet both the mass and distance requirement.
                         _completedMassThisAttempt = playerProgram.RecordAchievement(
                             massMilestone.Id,
                             snapshot.ObservationUniversalTime);
@@ -171,12 +174,14 @@ namespace TheRaceForSpace.Tracking
                         starterMilestones,
                         snapshot.ObservationUniversalTime);
                     if (biomeMilestone != null
+                        && snapshot.Situation == TrackedFlightSituation.Landed
                         && !string.IsNullOrEmpty(snapshot.BiomeName)
                         && string.Equals(
                             snapshot.BiomeName,
                             biomeMilestone.RequiredBiomeName,
                             StringComparison.OrdinalIgnoreCase))
                     {
+                        // Flying over a biome is not enough; the craft must finish landed there.
                         _completedBiomeThisAttempt = playerProgram.RecordAchievement(
                             biomeMilestone.Id,
                             snapshot.ObservationUniversalTime);

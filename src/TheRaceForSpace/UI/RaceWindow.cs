@@ -79,7 +79,7 @@ namespace TheRaceForSpace.UI
         private const float WindowBackgroundOpacity = 0.82f;
         private const float WindowWidth = 900.0f;
         private const float WindowHeight = 720.0f;
-        private const float SpaceRaceFundingInfoHeight = 220.0f;
+        private const float SpaceRaceFundingInfoHeight = 275.0f;
         private const int HighlightedCardTitleFontSize = 16;
         private const int SpaceRaceFundingButtonsPerRow = 4;
         private const string LauncherIconTexturePath =
@@ -678,27 +678,14 @@ namespace TheRaceForSpace.UI
                 return;
             }
 
-            double evaluationUniversalTime = Planetarium.fetch == null
-                ? 0.0
-                : Planetarium.GetUniversalTime();
-            MilestoneDefinition currentMilestone = StarterFlightTracker.GetCurrentMilestone(
-                milestone.StarterLine,
-                _raceController.PlayerProgram,
-                _raceController.Programs,
-                PrototypeMilestones.StarterContracts,
-                evaluationUniversalTime);
-            if (currentMilestone == null
-                || !string.Equals(currentMilestone.Id, milestone.Id, StringComparison.OrdinalIgnoreCase))
-            {
-                return;
-            }
-
             StarterFlightTracker tracker = RaceRuntime.StarterFlightState;
             if (tracker == null || !tracker.HasActiveAttempt)
             {
                 return;
             }
 
+            // Funding Targets deliberately compares the active craft against every offered,
+            // unfinished starter contract, even when a rival unlocked a later level first.
             GUILayout.Space(6.0f);
             DrawStarterLiveProgress(milestone.StarterLine, milestone, tracker);
         }
@@ -1094,6 +1081,9 @@ namespace TheRaceForSpace.UI
                     + " / "
                     + (currentMilestone.RequiredDistanceMeters / 1000.0).ToString("N0")
                     + " km");
+                GUILayout.Label(
+                    "Landed: "
+                    + (tracker.CurrentSituation == TrackedFlightSituation.Landed ? "YES" : "NO"));
                 return;
             }
 
@@ -1135,6 +1125,9 @@ namespace TheRaceForSpace.UI
                         ? "Unknown"
                         : tracker.CurrentBiomeName));
                 GUILayout.Label("Target: " + currentMilestone.RequiredBiomeName);
+                GUILayout.Label(
+                    "Landed: "
+                    + (tracker.CurrentSituation == TrackedFlightSituation.Landed ? "YES" : "NO"));
             }
         }
 

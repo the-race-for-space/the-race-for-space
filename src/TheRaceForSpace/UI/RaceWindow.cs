@@ -588,7 +588,8 @@ namespace TheRaceForSpace.UI
             string stateLabel = null,
             double? unlockEvaluationUniversalTime = null,
             string stateMessage = null,
-            bool showStarterLiveProgress = false)
+            bool showStarterLiveProgress = false,
+            bool showFundingLifecycleDetails = true)
         {
             _listTextBuilder.Length = 0;
             _listTextBuilder.Append("Completed by: ");
@@ -626,6 +627,11 @@ namespace TheRaceForSpace.UI
                 GUILayout.Label("State: " + stateLabel, _boldLabelStyle);
             }
 
+            if (unlockEvaluationUniversalTime.HasValue)
+            {
+                DrawUnlockRuleProgress(programme.UnlockRule, unlockEvaluationUniversalTime.Value);
+            }
+
             if (!string.IsNullOrEmpty(stateMessage))
             {
                 GUILayout.Label(stateMessage);
@@ -638,8 +644,11 @@ namespace TheRaceForSpace.UI
                 + programme.ObjectiveDescription
                 + " Interest in funding decreases by 10% after each payout.");
             GUILayout.Label("Base Payout: " + programme.BaseRewardFunds.ToString("N0"));
-            GUILayout.Label("Current Interest in Contract: " + programme.CurrentInterestPercent + "%");
-            GUILayout.Label("Next Total Payout: " + programme.CurrentTotalPayoutFunds.ToString("N0"));
+            if (showFundingLifecycleDetails)
+            {
+                GUILayout.Label("Current Interest in Contract: " + programme.CurrentInterestPercent + "%");
+                GUILayout.Label("Next Total Payout: " + programme.CurrentTotalPayoutFunds.ToString("N0"));
+            }
             GUILayout.Label(
                 "Contract Status: "
                 + (programme.HasStarted ? "Completed - Paying Out" : "Not yet Completed"));
@@ -652,11 +661,6 @@ namespace TheRaceForSpace.UI
             GUILayout.EndVertical();
 
             GUILayout.EndHorizontal();
-
-            if (unlockEvaluationUniversalTime.HasValue)
-            {
-                DrawUnlockRuleProgress(programme.UnlockRule, unlockEvaluationUniversalTime.Value);
-            }
 
             if (showStarterLiveProgress)
             {
@@ -740,6 +744,11 @@ namespace TheRaceForSpace.UI
                 GUILayout.Label("State: " + stateLabel, _boldLabelStyle);
             }
 
+            if (unlockEvaluationUniversalTime.HasValue)
+            {
+                DrawUnlockRuleProgress(programme.UnlockRule, unlockEvaluationUniversalTime.Value);
+            }
+
             if (!string.IsNullOrEmpty(stateMessage))
             {
                 GUILayout.Label(stateMessage);
@@ -760,12 +769,6 @@ namespace TheRaceForSpace.UI
             GUILayout.EndVertical();
 
             GUILayout.EndHorizontal();
-
-            if (unlockEvaluationUniversalTime.HasValue)
-            {
-                DrawUnlockRuleProgress(programme.UnlockRule, unlockEvaluationUniversalTime.Value);
-            }
-
             GUILayout.EndVertical();
         }
 
@@ -1208,7 +1211,8 @@ namespace TheRaceForSpace.UI
                     entry.AchievementProgramme,
                     stateLabel,
                     unlockEvaluationUniversalTime,
-                    stateMessage);
+                    stateMessage,
+                    showFundingLifecycleDetails: false);
             }
             else
             {

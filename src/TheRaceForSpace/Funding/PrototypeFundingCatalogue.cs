@@ -31,12 +31,19 @@ namespace TheRaceForSpace.Funding
         private const double NetworkUnlockCompletionRatio = 0.60;
 
         /// <summary>
-        /// Creates fresh achievement funding state for a new race controller from the milestone catalogue.
-        /// Level-one starter milestones are the four opening sponsor offers for a new campaign.
+        /// Creates fresh achievement funding state for a new race controller from both the special
+        /// starter catalogue and the normal orbital milestone catalogue.
         /// </summary>
         public static IList<AchievementFundingProgramme> CreateAchievementProgrammes()
         {
             var programmes = new List<AchievementFundingProgramme>();
+
+            for (int milestoneIndex = 0;
+                milestoneIndex < PrototypeMilestones.StarterContracts.Count;
+                milestoneIndex++)
+            {
+                AddAchievementProgramme(programmes, PrototypeMilestones.StarterContracts[milestoneIndex]);
+            }
 
             for (int milestoneIndex = 0; milestoneIndex < PrototypeMilestones.All.Count; milestoneIndex++)
             {
@@ -265,9 +272,6 @@ namespace TheRaceForSpace.Funding
                 return "Available from the start of the campaign";
             }
 
-            // Probe Orbit is the first rule with several one-condition OR paths. Keep the existing
-            // presentation formatter deliberately narrow: multi-path text supports only the simple
-            // AnyAgency achievement alternatives used by that gate.
             if (unlockRule.Paths.Count > 1)
             {
                 string alternatives = null;

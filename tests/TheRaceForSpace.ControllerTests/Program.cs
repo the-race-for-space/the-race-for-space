@@ -77,6 +77,15 @@ namespace TheRaceForSpace.ControllerTests
                 SatelliteRaceControllerTests.ProjectedPayoutCacheRebuildsOnRefresh);
 
             Run(
+                "Starter contracts open four independent offers",
+                FundingOfferControllerTests.StarterOffersRemainOutsideNormalLimit);
+            Run(
+                "Starter completion immediately offers next level",
+                FundingOfferControllerTests.StarterCompletionOffersNextLevelImmediately);
+            Run(
+                "Any starter level five offers Probe Orbit",
+                FundingOfferControllerTests.AnyStarterLevelFiveOffersProbeOrbit);
+            Run(
                 "Funding offers wait for sponsor review",
                 FundingOfferControllerTests.UnlockedFundingWaitsForFundingReview);
             Run(

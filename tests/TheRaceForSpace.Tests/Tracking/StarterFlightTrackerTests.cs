@@ -14,6 +14,7 @@ namespace TheRaceForSpace.Tests.Tracking
             DirectedPowerRequiresImpactBelowCeiling();
             MassUsesRemainingMassAndLaunchDistance();
             ControlRequiresContinuousCrewedHoldAndLanding();
+            UnobservedControlGapResetsHold();
             BiomeAllowsOnlyOneLineMilestonePerLaunch();
             StagingPreservesDirectedPowerAttempt();
             PartialControlHoldSurvivesSaveLoad();
@@ -121,21 +122,23 @@ namespace TheRaceForSpace.Tests.Tracking
             var programs = new List<SpaceProgramState> { player };
             var tracker = new StarterFlightTracker();
 
-            tracker.RefreshPlayerMilestones(
-                player,
-                programs,
-                PrototypeMilestones.StarterContracts,
-                Snapshot("control-a", 300.0, 300.0, 3000.0, 150.0, 1.0, 1, null, TrackedFlightSituation.Flying));
-            tracker.RefreshPlayerMilestones(
-                player,
-                programs,
-                PrototypeMilestones.StarterContracts,
-                Snapshot("control-a", 300.0, 315.0, 3000.0, 150.0, 1.0, 1, null, TrackedFlightSituation.Flying));
-            tracker.RefreshPlayerMilestones(
-                player,
-                programs,
-                PrototypeMilestones.StarterContracts,
-                Snapshot("control-a", 300.0, 330.0, 3000.0, 150.0, 1.0, 1, null, TrackedFlightSituation.Flying));
+            for (int elapsedSeconds = 0; elapsedSeconds <= 30; elapsedSeconds += 5)
+            {
+                tracker.RefreshPlayerMilestones(
+                    player,
+                    programs,
+                    PrototypeMilestones.StarterContracts,
+                    Snapshot(
+                        "control-a",
+                        300.0,
+                        300.0 + elapsedSeconds,
+                        3000.0,
+                        150.0,
+                        1.0,
+                        1,
+                        null,
+                        TrackedFlightSituation.Flying));
+            }
 
             Require(!player.HasAchievement(PrototypeMilestones.Control1Id),
                 "Completing the altitude hold alone must not award Control I before landing.");
@@ -147,6 +150,39 @@ namespace TheRaceForSpace.Tests.Tracking
                 Snapshot("control-a", 300.0, 331.0, 80.0, 0.0, 1.0, 1, null, TrackedFlightSituation.Landed));
             Require(player.HasAchievement(PrototypeMilestones.Control1Id),
                 "A qualified Control hold followed by a crewed Kerbin landing should complete the milestone.");
+        }
+
+        private static void UnobservedControlGapResetsHold()
+        {
+            SpaceProgramState player = new SpaceProgramState("player", "Player", true);
+            var programs = new List<SpaceProgramState> { player };
+            var tracker = new StarterFlightTracker();
+
+            tracker.RefreshPlayerMilestones(
+                player,
+                programs,
+                PrototypeMilestones.StarterContracts,
+                Snapshot("control-gap", 350.0, 350.0, 3000.0, 150.0, 1.0, 1, null, TrackedFlightSituation.Flying));
+            tracker.RefreshPlayerMilestones(
+                player,
+                programs,
+                PrototypeMilestones.StarterContracts,
+                Snapshot("control-gap", 350.0, 354.0, 3000.0, 150.0, 1.0, 1, null, TrackedFlightSituation.Flying));
+            RequireNear(4.0, tracker.ControlHoldSeconds,
+                "Closely spaced observed samples should accumulate Control hold time.");
+
+            tracker.RefreshPlayerMilestones(
+                player,
+                programs,
+                PrototypeMilestones.StarterContracts,
+                Snapshot("control-gap", 350.0, 370.0, 3000.0, 150.0, 1.0, 1, null, TrackedFlightSituation.Flying));
+
+            RequireNear(0.0, tracker.ControlHoldSeconds,
+                "A long unobserved gap must reset an unqualified continuous Control hold.");
+            Require(string.IsNullOrEmpty(tracker.QualifiedControlMilestoneId),
+                "A long unobserved gap must not qualify Control from missing flight time.");
+            Require(!player.HasAchievement(PrototypeMilestones.Control1Id),
+                "An unobserved gap must not complete Control I.");
         }
 
         private static void BiomeAllowsOnlyOneLineMilestonePerLaunch()
@@ -224,16 +260,23 @@ namespace TheRaceForSpace.Tests.Tracking
             var programs = new List<SpaceProgramState> { player };
             var sourceTracker = new StarterFlightTracker();
 
-            sourceTracker.RefreshPlayerMilestones(
-                player,
-                programs,
-                PrototypeMilestones.StarterContracts,
-                Snapshot("save-a", 700.0, 700.0, 3000.0, 120.0, 1.0, 1, null, TrackedFlightSituation.Flying));
-            sourceTracker.RefreshPlayerMilestones(
-                player,
-                programs,
-                PrototypeMilestones.StarterContracts,
-                Snapshot("save-a", 700.0, 715.0, 3000.0, 120.0, 1.0, 1, null, TrackedFlightSituation.Flying));
+            for (int elapsedSeconds = 0; elapsedSeconds <= 15; elapsedSeconds += 5)
+            {
+                sourceTracker.RefreshPlayerMilestones(
+                    player,
+                    programs,
+                    PrototypeMilestones.StarterContracts,
+                    Snapshot(
+                        "save-a",
+                        700.0,
+                        700.0 + elapsedSeconds,
+                        3000.0,
+                        120.0,
+                        1.0,
+                        1,
+                        null,
+                        TrackedFlightSituation.Flying));
+            }
 
             var saveState = new StarterFlightSaveState();
             saveState.Capture(sourceTracker);
@@ -245,11 +288,24 @@ namespace TheRaceForSpace.Tests.Tracking
             var restoredTracker = new StarterFlightTracker();
             loadedState.ApplyTo(restoredTracker);
 
-            restoredTracker.RefreshPlayerMilestones(
-                player,
-                programs,
-                PrototypeMilestones.StarterContracts,
-                Snapshot("save-a", 700.0, 730.0, 3000.0, 120.0, 1.0, 1, null, TrackedFlightSituation.Flying));
+            for (int elapsedSeconds = 20; elapsedSeconds <= 30; elapsedSeconds += 5)
+            {
+                restoredTracker.RefreshPlayerMilestones(
+                    player,
+                    programs,
+                    PrototypeMilestones.StarterContracts,
+                    Snapshot(
+                        "save-a",
+                        700.0,
+                        700.0 + elapsedSeconds,
+                        3000.0,
+                        120.0,
+                        1.0,
+                        1,
+                        null,
+                        TrackedFlightSituation.Flying));
+            }
+
             restoredTracker.RefreshPlayerMilestones(
                 player,
                 programs,

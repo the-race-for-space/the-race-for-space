@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using TheRaceForSpace.Core;
 using TheRaceForSpace.Funding;
 using TheRaceForSpace.Milestones;
 using TheRaceForSpace.Programs;
@@ -213,6 +214,7 @@ namespace TheRaceForSpace.Tests.Simulation
 
             TestAssert.Equal(80000.0, cost);
             TestAssert.Equal(20000.0, presentationOnlyCost);
+            TestAssert.Equal(10, RivalSimulation.CalculateLaunchProgressIncrementPercent(aster));
             TestAssert.Equal(PrototypeFundingCatalogue.DunaNetworkId, aster.NextMissionTargetId);
             TestAssert.Equal("Stored presentation text", aster.NextLaunchBodyName);
             TestAssert.Equal(null, presentationOnlyTarget.NextMissionTargetId);
@@ -225,6 +227,7 @@ namespace TheRaceForSpace.Tests.Simulation
                     aster,
                     achievementProgrammes,
                     fundingProgrammes));
+            TestAssert.Equal(10, RivalSimulation.CalculateLaunchProgressIncrementPercent(aster));
 
             aster.NextMissionTargetId = PrototypeMilestones.DunaProbeOrbitId;
             TestAssert.Equal(
@@ -241,6 +244,88 @@ namespace TheRaceForSpace.Tests.Simulation
                     aster,
                     achievementProgrammes,
                     fundingProgrammes));
+
+            aster.NextMissionTargetId = PrototypeMilestones.DirectedPower1Id;
+            TestAssert.Equal(
+                4000.0,
+                RivalSimulation.CalculateLaunchProgressCost(
+                    aster,
+                    achievementProgrammes,
+                    fundingProgrammes));
+            TestAssert.Equal(20, RivalSimulation.CalculateLaunchProgressIncrementPercent(aster));
+
+            aster.NextMissionTargetId = PrototypeMilestones.Biome5Id;
+            TestAssert.Equal(
+                12000.0,
+                RivalSimulation.CalculateLaunchProgressCost(
+                    aster,
+                    achievementProgrammes,
+                    fundingProgrammes));
+            TestAssert.Equal(20, RivalSimulation.CalculateLaunchProgressIncrementPercent(aster));
+
+            double originalProgressChance = RaceSettings.RivalProgressChance;
+            try
+            {
+                RaceSettings.RivalProgressChance = 1.0;
+                MilestoneDefinition starterMilestone = PrototypeMilestones.FindById(
+                    PrototypeMilestones.DirectedPower1Id);
+                var starterProgramme = new AchievementFundingProgramme(
+                    starterMilestone.Id,
+                    starterMilestone.Name,
+                    starterMilestone.ObjectiveDescription,
+                    starterMilestone.BaseRewardFunds);
+                starterProgramme.Offer();
+
+                var player = new SpaceProgramState("Player", true);
+                var starterRival = new SpaceProgramState("StarterRival", false)
+                {
+                    NextMissionTargetId = PrototypeMilestones.DirectedPower1Id,
+                    Funds = 100000.0,
+                    NextLaunchProgressCheckUniversalTime = 5.0 * 21600.0
+                };
+                RivalSimulation.Refresh(
+                    new List<SpaceProgramState> { player, starterRival },
+                    5.0 * 21600.0,
+                    new List<AchievementFundingProgramme> { starterProgramme },
+                    new List<FundingProgramme>());
+
+                TestAssert.Equal(20, starterRival.LaunchProgressPercent);
+                TestAssert.Equal(96000.0, starterRival.Funds);
+
+                var starterEtaRival = new SpaceProgramState("StarterEta", false)
+                {
+                    NextMissionTargetId = PrototypeMilestones.DirectedPower1Id,
+                    Funds = 1000000.0
+                };
+                var orbitEtaRival = new SpaceProgramState("OrbitEta", false)
+                {
+                    NextMissionTargetId = PrototypeMilestones.ProbeOrbitId,
+                    Funds = 1000000.0
+                };
+
+                TestAssert.Equal(
+                    25,
+                    RivalSimulation.CalculateEstimatedLaunchDays(
+                        starterEtaRival,
+                        0.0,
+                        90.0 * 21600.0,
+                        90.0 * 21600.0,
+                        achievementProgrammes,
+                        fundingProgrammes));
+                TestAssert.Equal(
+                    50,
+                    RivalSimulation.CalculateEstimatedLaunchDays(
+                        orbitEtaRival,
+                        0.0,
+                        90.0 * 21600.0,
+                        90.0 * 21600.0,
+                        achievementProgrammes,
+                        fundingProgrammes));
+            }
+            finally
+            {
+                RaceSettings.RivalProgressChance = originalProgressChance;
+            }
         }
 
         public static void AchievementCompletionUsesMilestoneDefinition()

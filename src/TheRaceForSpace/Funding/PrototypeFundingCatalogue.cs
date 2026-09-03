@@ -64,12 +64,12 @@ namespace TheRaceForSpace.Funding
                     MunNetworkId,
                     "Mun Survey Network",
                     "Mun",
-                    CreateKerbinMoonNetworkUnlockRule()),
+                    CreateKerbinMoonNetworkUnlockRule(PrototypeMilestones.MunProbeOrbitId)),
                 CreateSatelliteProgramme(
                     MinmusNetworkId,
                     "Minmus Relay Initiative",
                     "Minmus",
-                    CreateKerbinMoonNetworkUnlockRule()),
+                    CreateKerbinMoonNetworkUnlockRule(PrototypeMilestones.MinmusProbeOrbitId)),
                 CreateSatelliteProgramme(
                     DunaNetworkId,
                     "Duna Orbital Network",
@@ -210,12 +210,13 @@ namespace TheRaceForSpace.Funding
                 unlockRule);
         }
 
-        private static UnlockRuleDefinition CreateKerbinMoonNetworkUnlockRule()
+        private static UnlockRuleDefinition CreateKerbinMoonNetworkUnlockRule(
+            string probeMilestoneId)
         {
             return new UnlockRuleDefinition(
                 new UnlockPathDefinition(
                     UnlockConditionDefinition.Achievement(
-                        PrototypeMilestones.ProbeOrbitId,
+                        probeMilestoneId,
                         UnlockProgramScope.AnyAgency),
                     CreateNetworkProgressCondition("Kerbin")));
         }

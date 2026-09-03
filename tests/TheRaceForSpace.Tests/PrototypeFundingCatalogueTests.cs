@@ -244,7 +244,7 @@ namespace TheRaceForSpace.Tests
                 "Mun",
                 5,
                 100000.0,
-                PrototypeMilestones.ProbeOrbitId,
+                PrototypeMilestones.MunProbeOrbitId,
                 new[] { "Kerbin" },
                 new[] { 6 });
             AssertSatellite(
@@ -253,7 +253,7 @@ namespace TheRaceForSpace.Tests
                 "Minmus",
                 5,
                 100000.0,
-                PrototypeMilestones.ProbeOrbitId,
+                PrototypeMilestones.MinmusProbeOrbitId,
                 new[] { "Kerbin" },
                 new[] { 6 });
             AssertSatellite(
@@ -267,8 +267,11 @@ namespace TheRaceForSpace.Tests
                 interplanetaryNetworkPrerequisiteCounts);
 
             Equal(
-                "Any agency must achieve Probe Orbit and the Kerbin satellite network must reach 6 qualifying satellites.",
+                "Any agency must achieve Mun Probe Orbit and the Kerbin satellite network must reach 6 qualifying satellites.",
                 FindSatellite(satelliteProgrammes, PrototypeFundingCatalogue.MunNetworkId).UnlockRequirement);
+            Equal(
+                "Any agency must achieve Minmus Probe Orbit and the Kerbin satellite network must reach 6 qualifying satellites.",
+                FindSatellite(satelliteProgrammes, PrototypeFundingCatalogue.MinmusNetworkId).UnlockRequirement);
             Equal(
                 "Any agency must achieve Duna Probe Orbit and the Mun satellite network must reach 3 qualifying satellites and the Minmus satellite network must reach 3 qualifying satellites.",
                 FindSatellite(satelliteProgrammes, PrototypeFundingCatalogue.DunaNetworkId).UnlockRequirement);

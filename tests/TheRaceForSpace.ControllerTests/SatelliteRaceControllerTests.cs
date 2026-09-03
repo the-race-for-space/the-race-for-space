@@ -130,7 +130,7 @@ namespace TheRaceForSpace.ControllerTests
                 "An unlocked one-off achievement should wait for a funding-day sponsor review.");
             Require(
                 !munNetwork.IsAvailable,
-                "Mun satellite funding should remain locked before the Kerbin network reaches 60% completion.");
+                "Mun satellite funding should remain locked until Mun Probe Orbit and Kerbin network progress are complete.");
             Equal(75000.0, controller.PlayerProgram.NextPayoutFunds);
             Equal(1, RacePersistenceScenario.RivalCaptureCalls);
             Equal(1, RacePersistenceScenario.RaceProgressCaptureCalls);
@@ -169,19 +169,40 @@ namespace TheRaceForSpace.ControllerTests
             Equal(6, controller.PlayerProgram.GetSatelliteCount("Kerbin"));
             Require(
                 controller.PlayerProgram.HasAchievement(PrototypeMilestones.ProbeOrbitId),
-                "The Kerbin network progression rule should still require Probe Orbit.");
+                "Six Kerbin probe satellites should also record the normal Kerbin Probe Orbit achievement.");
             Require(
                 !controller.PlayerProgram.HasAchievement(PrototypeMilestones.MunProbeOrbitId),
-                "Mun satellite funding should not depend on already completing Mun Probe Orbit.");
+                "Mun Probe Orbit should still be incomplete before a Mun probe achievement is recorded.");
             Require(
                 !controller.PlayerProgram.HasAchievement(PrototypeMilestones.MinmusProbeOrbitId),
-                "Minmus satellite funding should not depend on already completing Minmus Probe Orbit.");
+                "Minmus Probe Orbit should still be incomplete before a Minmus probe achievement is recorded.");
+            Require(
+                !munNetwork.IsAvailable,
+                "Six collective Kerbin satellites alone must not unlock Mun satellite funding without Mun Probe Orbit.");
+            Require(
+                !minmusNetwork.IsAvailable,
+                "Six collective Kerbin satellites alone must not unlock Minmus satellite funding without Minmus Probe Orbit.");
+
+            controller.PlayerProgram.RecordAchievement(
+                PrototypeMilestones.MunProbeOrbitId,
+                observationUniversalTime);
+            controller.Refresh(false);
+
             Require(
                 munNetwork.IsAvailable,
-                "Six collective Kerbin satellites plus Probe Orbit should unlock Mun satellite funding.");
+                "Mun Probe Orbit plus six collective Kerbin satellites should unlock Mun satellite funding.");
+            Require(
+                !minmusNetwork.IsAvailable,
+                "Mun Probe Orbit must not satisfy Minmus satellite funding's Minmus Probe Orbit requirement.");
+
+            controller.PlayerProgram.RecordAchievement(
+                PrototypeMilestones.MinmusProbeOrbitId,
+                observationUniversalTime);
+            controller.Refresh(false);
+
             Require(
                 minmusNetwork.IsAvailable,
-                "Six collective Kerbin satellites plus Probe Orbit should unlock Minmus satellite funding.");
+                "Minmus Probe Orbit plus six collective Kerbin satellites should unlock Minmus satellite funding.");
             Require(
                 !munNetwork.IsOffered && !minmusNetwork.IsOffered,
                 "Unlocked moon networks should remain unoffered until the next funding review.");

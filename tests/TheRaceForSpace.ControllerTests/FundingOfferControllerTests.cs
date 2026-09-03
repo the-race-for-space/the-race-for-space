@@ -125,7 +125,31 @@ namespace TheRaceForSpace.ControllerTests
                 }
             }
 
-            Equal(2, offeredSecondLevelCount);
+            Equal(4, offeredSecondLevelCount);
+            Equal(8, CountOfferedStarterAchievements(controller));
+        }
+
+        public static void StarterOffersDoNotConsumeNormalAchievementLimit()
+        {
+            ResetEnvironment();
+            RaceSettings.RivalProgressChance = 0.0;
+            Planetarium.CurrentUniversalTime = 0.0;
+            KspVesselDiscovery.SetUnavailable();
+
+            var controller = new SatelliteRaceController();
+            controller.Refresh();
+
+            // Keep all four opening starter contracts offered and uncompleted, then create normal
+            // post-Probe availability. Starter offers must not consume the normal two offer slots.
+            controller.PlayerProgram.RecordAchievement(PrototypeMilestones.ProbeOrbitId, 1.0);
+            Planetarium.CurrentUniversalTime = 1000.0;
+            controller.Refresh(false);
+
+            Planetarium.CurrentUniversalTime = FundingIntervalSeconds;
+            controller.Refresh(false);
+
+            Equal(4, CountOfferedStarterAchievements(controller));
+            Equal(2, CountOfferedNormalAchievements(controller));
         }
 
         public static void AnyStarterLevelFiveOffersProbeOrbit()

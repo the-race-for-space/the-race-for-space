@@ -1650,7 +1650,12 @@ namespace TheRaceForSpace.UI
                 "Next Mission Planned: "
                 + (string.IsNullOrEmpty(program.NextLaunchBodyName) ? "Planning" : program.NextLaunchBodyName));
             GUILayout.Label("Mission Progress: " + program.LaunchProgressPercent + "%");
-            GUILayout.Label("Mission Progress Cost: " + launchProgressCostFunds.ToString("N0") + " (10% +)");
+            GUILayout.Label(
+                "Mission Progress Cost: "
+                + launchProgressCostFunds.ToString("N0")
+                + " ("
+                + TheRaceForSpace.Simulation.RivalSimulation.CalculateLaunchProgressIncrementPercent(program)
+                + "% +)");
 
             string launchEtaText = "Awaiting Funding";
             if (launchEtaDays.HasValue)

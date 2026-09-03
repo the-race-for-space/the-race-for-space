@@ -342,9 +342,14 @@ namespace TheRaceForSpace.Competition
 
         public void Refresh()
         {
+            Refresh(true);
+        }
+
+        internal bool Refresh(bool refreshPlayerVessels)
+        {
             if (Planetarium.fetch == null)
             {
-                return;
+                return false;
             }
 
             double currentUniversalTime = Planetarium.GetUniversalTime();
@@ -363,7 +368,7 @@ namespace TheRaceForSpace.Competition
 
                 if (!restoredRivals || !restoredRaceProgress)
                 {
-                    return;
+                    return false;
                 }
 
                 // Older saves do not contain the funding timestamp and return -1. The existing
@@ -399,21 +404,26 @@ namespace TheRaceForSpace.Competition
             }
 
             double stateEvaluationUniversalTime = currentUniversalTime;
-            IList<VesselTrackingSnapshot> vesselSnapshots;
-            double vesselObservationUniversalTime;
-            if (KspVesselDiscovery.TryCaptureOrbitingVessels(
-                out vesselSnapshots,
-                out vesselObservationUniversalTime))
+            bool didRefreshPlayerVessels = false;
+            if (refreshPlayerVessels)
             {
-                stateEvaluationUniversalTime = Math.Max(
-                    stateEvaluationUniversalTime,
-                    vesselObservationUniversalTime);
-                SatelliteTracker.RefreshPlayerSatelliteCounts(
-                    PlayerProgram,
-                    _programs,
-                    PrototypeMilestones.All,
-                    vesselSnapshots,
-                    vesselObservationUniversalTime);
+                IList<VesselTrackingSnapshot> vesselSnapshots;
+                double vesselObservationUniversalTime;
+                if (KspVesselDiscovery.TryCaptureOrbitingVessels(
+                    out vesselSnapshots,
+                    out vesselObservationUniversalTime))
+                {
+                    didRefreshPlayerVessels = true;
+                    stateEvaluationUniversalTime = Math.Max(
+                        stateEvaluationUniversalTime,
+                        vesselObservationUniversalTime);
+                    SatelliteTracker.RefreshPlayerSatelliteCounts(
+                        PlayerProgram,
+                        _programs,
+                        PrototypeMilestones.All,
+                        vesselSnapshots,
+                        vesselObservationUniversalTime);
+                }
             }
 
             UpdateFundingAvailability(stateEvaluationUniversalTime);
@@ -435,6 +445,8 @@ namespace TheRaceForSpace.Competition
                 _fundingProgrammes,
                 _achievementFundingProgrammes,
                 _nextFundingUniversalTime);
+
+            return didRefreshPlayerVessels;
         }
 
         private void RefreshRivals(double currentUniversalTime)

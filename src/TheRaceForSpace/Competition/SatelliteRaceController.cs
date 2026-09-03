@@ -22,7 +22,7 @@ namespace TheRaceForSpace.Competition
         private const double KerbinDaySeconds = 21600.0;
         private const int KerbinDaysPerYear = 426;
         private const double RivalBaseIncomeFunds = 20000.0;
-        private const int MaximumUncompletedAchievementOffers = 2;
+        private const int MaximumUncompletedNormalAchievementOffers = 2;
         private const int MaximumUnfulfilledSatelliteOffers = 2;
 
         private static readonly Random OfferRandomGenerator = new Random();
@@ -429,8 +429,8 @@ namespace TheRaceForSpace.Competition
             }
 
             // Probe Orbit remains an immediate shared-race unlock once any starter line reaches
-            // Level V. Other starter levels now use the same unlocked/offered sponsor lifecycle
-            // as normal one-off achievements instead of being auto-offered on every refresh.
+            // Level V. Starter Levels II-V wait for the funding-day review, where every unlocked
+            // starter contract is offered without consuming normal one-off achievement slots.
             UpdateSpecialAchievementOffers(stateEvaluationUniversalTime);
             UpdateSatelliteTargetReachedState();
             StartAchievementContracts(stateEvaluationUniversalTime);
@@ -477,7 +477,8 @@ namespace TheRaceForSpace.Competition
 
         /// <summary>
         /// Offers Probe Orbit immediately when any agency completes a Level V starter contract.
-        /// Starter Levels II-V otherwise wait in Unlocked until the normal sponsor review offers them.
+        /// Starter Levels II-V otherwise wait in Unlocked until the funding-day sponsor review,
+        /// where every unlocked starter contract is offered independently of the normal offer cap.
         /// </summary>
         private void UpdateSpecialAchievementOffers(double evaluationUniversalTime)
         {
@@ -609,8 +610,8 @@ namespace TheRaceForSpace.Competition
         {
             UpdateSpecialAchievementOffers(evaluationUniversalTime);
 
-            var achievementCandidates = new List<AchievementFundingProgramme>();
-            int uncompletedAchievementOfferCount = 0;
+            var normalAchievementCandidates = new List<AchievementFundingProgramme>();
+            int uncompletedNormalAchievementOfferCount = 0;
 
             for (int programmeIndex = 0;
                 programmeIndex < _achievementFundingProgrammes.Count;
@@ -622,31 +623,45 @@ namespace TheRaceForSpace.Competition
                     continue;
                 }
 
+                MilestoneDefinition milestone = PrototypeMilestones.FindById(programme.Id);
+                bool isStarterContract = milestone != null && milestone.IsStarterContract;
+
                 if (programme.IsOffered)
                 {
-                    if (!programme.HasStarted)
+                    if (!programme.HasStarted && !isStarterContract)
                     {
-                        uncompletedAchievementOfferCount++;
+                        uncompletedNormalAchievementOfferCount++;
                     }
                     continue;
                 }
 
-                if (IsAchievementProgrammeAvailableAtTime(programme, evaluationUniversalTime))
+                if (!IsAchievementProgrammeAvailableAtTime(programme, evaluationUniversalTime))
                 {
-                    achievementCandidates.Add(programme);
+                    continue;
                 }
+
+                // Starter contracts are the four parallel pre-orbit development lines. Every
+                // unlocked starter target is offered at the funding review, and starter offers do
+                // not consume the two unfinished slots reserved for Probe Orbit and later targets.
+                if (isStarterContract)
+                {
+                    programme.Offer();
+                    continue;
+                }
+
+                normalAchievementCandidates.Add(programme);
             }
 
             int achievementVacancies = Math.Max(
                 0,
-                MaximumUncompletedAchievementOffers - uncompletedAchievementOfferCount);
+                MaximumUncompletedNormalAchievementOffers - uncompletedNormalAchievementOfferCount);
             for (int offerIndex = 0;
-                offerIndex < achievementVacancies && achievementCandidates.Count > 0;
+                offerIndex < achievementVacancies && normalAchievementCandidates.Count > 0;
                 offerIndex++)
             {
-                int candidateIndex = OfferRandomGenerator.Next(achievementCandidates.Count);
-                achievementCandidates[candidateIndex].Offer();
-                achievementCandidates.RemoveAt(candidateIndex);
+                int candidateIndex = OfferRandomGenerator.Next(normalAchievementCandidates.Count);
+                normalAchievementCandidates[candidateIndex].Offer();
+                normalAchievementCandidates.RemoveAt(candidateIndex);
             }
 
             var satelliteCandidates = new List<FundingProgramme>();

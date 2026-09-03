@@ -93,7 +93,7 @@ All prototype logic tests passed.
 All controller and unlock rule regression tests passed.
 ```
 
-The automated suites cover the KSP-independent starter-contract rules, persistence, four independent starter offers, immediate next-level offers, rival participation, and the four-way Level V to Probe Orbit unlock rule.
+The automated suites cover the KSP-independent starter-contract rules, persistence, four Level I starter offers plus sixteen initially locked successors, Any Agency rival/player line unlocking, unlocked starter contracts joining the normal sponsor review, rival participation, and the four-way Level V to Probe Orbit unlock rule.
 
 The live KSP API paths still require the in-game checks below. In particular, automated tests cannot prove the active-vessel destruction callback, stock biome reporting, actual Command Center layout, or loaded/unloaded vessel discovery inside KSP.
 
@@ -136,30 +136,33 @@ The test helper performs these checks automatically and stops if either deployed
 2. Load a disposable Career test save. A fresh save is preferred when verifying opening offers.
 3. Confirm the Race for Space Command Center opens from the stock launcher button and with `F8`.
 4. Confirm `F8` hides and reopens the same window without resetting race state.
-5. Open **Space Race** and confirm the `STARTER PROGRAMMES` section appears above the normal funding catalogue.
-6. Confirm the four cards are **Directed Power**, **Mass**, **Control**, and **Biome**.
-7. On a fresh campaign, confirm each card shows `0 / 5`, its Level I objective, and a 10,000 100% payout.
-8. Confirm the twenty starter milestones are not duplicated in the normal Space Race Offered/Unlocked/Locked/Expired catalogue.
-9. Confirm **Funding Targets** still contains the offered starter contracts.
-10. Confirm **Overview** shows only the current starter objective from each line rather than every completed starter contract that is still paying.
-11. Save and reload once before ending the smoke test and confirm the race state and Command Center visibility remain consistent.
+5. Open **Space Race** and confirm there is no separate `STARTER PROGRAMMES` four-card panel above the normal catalogue.
+6. Expand **Offered** and confirm **Directed Power I**, **Mass I**, **Control I**, and **Biome I** are present.
+7. Expand **Locked** and confirm Levels II-V of all four starter lines are present: sixteen locked starter contracts in total.
+8. Open several starter contracts and confirm their objective, payout, state, and unlock requirements use the same contract details view as the existing achievement targets.
+9. Complete one Level I starter contract and confirm its Level II successor moves to **Unlocked**, not immediately to **Offered**.
+10. Cross a sponsor-review funding boundary and confirm unlocked starter contracts can be selected into **Offered** through the ordinary achievement review.
+11. Open **Funding Targets** during an active starter flight and confirm the relevant offered/current starter funding card shows live flight values approximately once per second.
+12. Confirm **Overview** treats offered starter contracts like the other offered one-off achievements.
+13. Save and reload once before ending the smoke test and confirm the race state and Command Center visibility remain consistent.
 
 For a release candidate, continue with the full checklist in [`KERBAL_CONTRACTS_V0_5_TESTING.md`](KERBAL_CONTRACTS_V0_5_TESTING.md).
 
 ### 0.5 starter-flight runtime verification
 
-Use these checks after changes to `Core/RaceRuntime`, `Tracking/StarterFlightTracker`, `KspIntegration/KspVesselDiscovery`, starter persistence, or the Space Race UI.
+Use these checks after changes to `Core/RaceRuntime`, `Tracking/StarterFlightTracker`, `KspIntegration/KspVesselDiscovery`, starter persistence, or the Funding Targets UI.
 
-1. Launch a vessel on Kerbin and keep the Space Race starter cards visible.
+1. Launch a vessel on Kerbin with one of the currently offered starter contracts and keep **Funding Targets** open on its funding card.
 2. Confirm live values update approximately once per second rather than every frame:
    - Directed Power: maximum surface speed and maximum altitude;
    - Mass: current remaining mass and distance from launch;
    - Control: current altitude, continuous hold time, and crew count;
    - Biome: current stock Kerbin biome.
-3. Stage once during flight and confirm the continuing controlled stage retains the same launch history rather than starting a fresh attempt.
-4. Enter orbit during a starter attempt and confirm the attempt is treated as invalid for starter completion.
-5. Switch to an unrelated vessel or launch a new vehicle and confirm old maxima, distance, and Control hold state are not inherited.
-6. Hide the Command Center with `F8`, continue flying for several seconds, reopen it, and confirm gameplay tracking continued while the UI was hidden.
+3. Confirm the Space Race catalogue does not show a second live-flight panel; it should remain focused on Offered/Unlocked/Locked/Expired state.
+4. Stage once during flight and confirm the continuing controlled stage retains the same launch history rather than starting a fresh attempt.
+5. Enter orbit during a starter attempt and confirm the attempt is treated as invalid for starter completion.
+6. Switch to an unrelated vessel or launch a new vehicle and confirm old maxima, distance, and Control hold state are not inherited.
+7. Hide the Command Center with `F8`, continue flying for several seconds, reopen it, and confirm gameplay tracking continued while the UI was hidden.
 
 These checks verify that `RaceRuntime` owns the one-second starter observation cadence and that `RaceWindow` only reads tracker state for presentation.
 
@@ -176,7 +179,7 @@ These are short smoke tests. The full thresholds and edge cases are in the dedic
 
 #### Mass
 
-1. Confirm both current remaining mass and distance from the tracked launch origin are shown.
+1. Confirm the offered Mass card in Funding Targets shows both current remaining mass and distance from the tracked launch origin.
 2. Meet only one requirement and confirm no completion.
 3. Meet both requirements simultaneously and confirm the current level completes.
 4. Continue the same launch far enough for the next level and confirm the same line cannot advance twice during one launch.
@@ -184,14 +187,14 @@ These are short smoke tests. The full thresholds and edge cases are in the dedic
 #### Control
 
 1. Fly a crewed vessel into the current required altitude band.
-2. Confirm hold time increases only while continuously inside the band with crew aboard.
+2. Confirm the offered Control card in Funding Targets shows hold time increasing only while continuously inside the band with crew aboard.
 3. Leave the band before qualification and confirm the timer resets.
 4. After qualification, land safely on Kerbin with crew aboard and confirm completion.
 5. If there is a long unobserved gap before qualification, such as leaving Flight and later returning, confirm the missing interval is not credited as continuous hold time.
 
 #### Biome
 
-1. Confirm the card displays the active vessel's stock Kerbin biome and the current target biome.
+1. Confirm the offered Biome card in Funding Targets displays the active vessel's stock Kerbin biome and the current target biome.
 2. Enter the target biome without orbiting and confirm the level completes immediately.
 3. Continue to another target biome in the same launch and confirm the Biome line does not advance twice during that launch.
 
@@ -212,15 +215,16 @@ At least one end-to-end route should be completed before treating the build as a
 
 1. Complete Level V in one starter line.
 2. Confirm **Probe Orbit** is offered immediately without waiting for the next funding review.
-3. Confirm the starter panel reports that Probe Orbit is unlocked.
+3. Confirm Probe Orbit appears under the normal **Offered** section in Space Race.
 4. Launch a qualifying uncrewed Probe or Relay into stable Kerbin orbit and confirm the existing orbital tracker completes Probe Orbit.
 5. If practical, repeat in disposable saves using the other starter Level V routes to confirm Directed Power V, Mass V, Control V, and Biome V each independently satisfy the OR gate.
+6. If practical, let a rival complete a Level V starter contract first and confirm that also offers Probe Orbit to the whole race.
 
 ### 0.5 core runtime verification
 
 Use these checks after changes to race lifecycle or runtime ownership:
 
-1. Open the Command Center and note the current rival funds, mission progress, starter progress, and next funding date.
+1. Open the Command Center and note the current rival funds, mission progress, starter contract states, and next funding date.
 2. Hide the Command Center with `F8` and continue playing or time-warping for more than one five-second runtime refresh.
 3. Reopen the Command Center and confirm the race state is still current.
 4. Move between normal KSP game scenes, for example Space Center and Flight or Tracking Station, and confirm rival funds/progress do not reset to new-game values.

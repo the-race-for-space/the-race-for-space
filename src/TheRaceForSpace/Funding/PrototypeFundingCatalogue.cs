@@ -32,6 +32,7 @@ namespace TheRaceForSpace.Funding
 
         /// <summary>
         /// Creates fresh achievement funding state for a new race controller from the milestone catalogue.
+        /// Probe Orbit and Crewed Orbit are the two opening sponsor offers for a new campaign.
         /// </summary>
         public static IList<AchievementFundingProgramme> CreateAchievementProgrammes()
         {
@@ -160,23 +161,35 @@ namespace TheRaceForSpace.Funding
                 ? bodySettings.CrewedRewardFunds
                 : bodySettings.ProbeRewardFunds;
 
+            AchievementFundingProgramme programme;
             if (milestone.UnlockRule == null)
             {
-                programmes.Add(new AchievementFundingProgramme(
+                programme = new AchievementFundingProgramme(
                     milestone.Id,
                     milestone.Name,
                     milestone.ObjectiveDescription,
-                    baseRewardFunds));
-                return;
+                    baseRewardFunds);
+            }
+            else
+            {
+                programme = new AchievementFundingProgramme(
+                    milestone.Id,
+                    milestone.Name,
+                    milestone.ObjectiveDescription,
+                    baseRewardFunds,
+                    CreateCurrentPrototypeUnlockRequirement(milestone.UnlockRule),
+                    milestone.UnlockRule);
             }
 
-            programmes.Add(new AchievementFundingProgramme(
-                milestone.Id,
-                milestone.Name,
-                milestone.ObjectiveDescription,
-                baseRewardFunds,
-                CreateCurrentPrototypeUnlockRequirement(milestone.UnlockRule),
-                milestone.UnlockRule));
+            // These are the deliberate campaign bootstrap offers. Later offers will be selected
+            // only on funding boundaries once the Step 2 sponsor-review behaviour is introduced.
+            if (string.Equals(milestone.Id, PrototypeMilestones.ProbeOrbitId, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(milestone.Id, PrototypeMilestones.CrewedOrbitId, StringComparison.OrdinalIgnoreCase))
+            {
+                programme.Offer();
+            }
+
+            programmes.Add(programme);
         }
 
         private static FundingProgramme CreateSatelliteProgramme(

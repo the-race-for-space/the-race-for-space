@@ -69,6 +69,8 @@ namespace TheRaceForSpace.Funding
         public string UnlockRequirement { get; private set; }
         public UnlockRuleDefinition UnlockRule { get; private set; }
         public bool IsAvailable { get; private set; }
+        public bool IsOffered { get; private set; }
+        public bool HasReachedSatelliteTarget { get; private set; }
 
         /// <summary>
         /// Permanently unlocks this satellite contract for the current campaign.
@@ -79,11 +81,37 @@ namespace TheRaceForSpace.Funding
             IsAvailable = true;
         }
 
+        /// <summary>
+        /// Marks this network as one of the sponsor offers visible to all race agencies.
+        /// Step 1 stores this state only; offer limits and funding-day selection are applied later.
+        /// </summary>
+        public void Offer()
+        {
+            IsOffered = true;
+        }
+
+        /// <summary>
+        /// Permanently records that the shared race network has reached this programme's full
+        /// satellite target at least once. Live satellite counts still determine funding shares.
+        /// </summary>
+        public void MarkSatelliteTargetReached()
+        {
+            HasReachedSatelliteTarget = true;
+        }
+
         // Persistence replaces campaign state when another save is loaded. Gameplay still uses
         // Unlock() as the only normal transition and never relocks a programme during a campaign.
         internal void RestoreAvailability(bool isAvailable)
         {
             IsAvailable = isAvailable;
+        }
+
+        // Offer and fulfilled state are one-way during normal gameplay, but loading another save
+        // must replace both values explicitly rather than leaking state between saves.
+        internal void RestoreOfferState(bool isOffered, bool hasReachedSatelliteTarget)
+        {
+            IsOffered = isOffered;
+            HasReachedSatelliteTarget = hasReachedSatelliteTarget;
         }
 
         /// <summary>

@@ -21,16 +21,24 @@ namespace TheRaceForSpace.Persistence
         private const string UniversalTimeValueName = "universalTime";
         private const string StartedValueName = "started";
         private const string PaymentsProcessedValueName = "paymentsProcessed";
+        private const string OfferedValueName = "offered";
+        private const string SatelliteTargetReachedValueName = "targetReached";
         private const string NextFundingUniversalTimeValueName = "nextFundingUniversalTime";
 
         private readonly Dictionary<string, double> _achievementTimesById =
             new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
         private readonly HashSet<string> _unlockedFundingProgrammeIds =
             new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, bool> _fundingProgrammeOfferedById =
+            new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, bool> _fundingProgrammeTargetReachedById =
+            new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, bool> _contractStartedById =
             new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, int> _contractPaymentsProcessedById =
             new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, bool> _contractOfferedById =
+            new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
 
         public bool HasData { get; private set; }
         public double NextFundingUniversalTime { get; private set; }
@@ -80,6 +88,9 @@ namespace TheRaceForSpace.Persistence
                 if (programme != null && programme.IsAvailable && !string.IsNullOrEmpty(programme.Id))
                 {
                     _unlockedFundingProgrammeIds.Add(programme.Id);
+                    _fundingProgrammeOfferedById[programme.Id] = programme.IsOffered;
+                    _fundingProgrammeTargetReachedById[programme.Id] =
+                        programme.HasReachedSatelliteTarget;
                 }
             }
 
@@ -95,6 +106,7 @@ namespace TheRaceForSpace.Persistence
                 _contractPaymentsProcessedById[programme.Id] = Math.Max(
                     0,
                     Math.Min(10, programme.PaymentsProcessed));
+                _contractOfferedById[programme.Id] = programme.IsOffered;
             }
         }
 
@@ -153,6 +165,14 @@ namespace TheRaceForSpace.Persistence
                 }
 
                 programme.RestoreAvailability(_unlockedFundingProgrammeIds.Contains(programme.Id));
+
+                bool isOffered;
+                bool hasReachedSatelliteTarget;
+                _fundingProgrammeOfferedById.TryGetValue(programme.Id, out isOffered);
+                _fundingProgrammeTargetReachedById.TryGetValue(
+                    programme.Id,
+                    out hasReachedSatelliteTarget);
+                programme.RestoreOfferState(isOffered, hasReachedSatelliteTarget);
             }
 
             for (int programmeIndex = 0; programmeIndex < achievementProgrammes.Count; programmeIndex++)
@@ -165,14 +185,29 @@ namespace TheRaceForSpace.Persistence
 
                 bool started;
                 int paymentsProcessed;
-                if (_contractStartedById.TryGetValue(programme.Id, out started)
-                    && _contractPaymentsProcessedById.TryGetValue(programme.Id, out paymentsProcessed))
-                {
-                    programme.RestoreState(started, paymentsProcessed);
-                }
-                else
+                bool hasSavedContractState = _contractStartedById.TryGetValue(programme.Id, out started)
+                    && _contractPaymentsProcessedById.TryGetValue(programme.Id, out paymentsProcessed);
+                if (!hasSavedContractState)
                 {
                     programme.RestoreState(false, 0);
+                    programme.RestoreOfferState(false);
+                    continue;
+                }
+
+                programme.RestoreState(started, paymentsProcessed);
+
+                bool isOffered;
+                if (_contractOfferedById.TryGetValue(programme.Id, out isOffered))
+                {
+                    // A started contract was globally active before offer-state enforcement. Keep
+                    // that invariant even if a Step 1 save captured it before Step 2 used IsOffered.
+                    programme.RestoreOfferState(isOffered || programme.HasStarted);
+                }
+                else if (programme.HasStarted)
+                {
+                    // Saves from before offer-state persistence already treated started contracts
+                    // as globally active, so preserve that status when the new field is absent.
+                    programme.RestoreOfferState(true);
                 }
             }
         }
@@ -242,11 +277,21 @@ namespace TheRaceForSpace.Persistence
             ConfigNode[] fundingNodes = node.GetNodes(FundingProgrammeNodeName);
             for (int nodeIndex = 0; nodeIndex < fundingNodes.Length; nodeIndex++)
             {
-                string id = fundingNodes[nodeIndex].GetValue(IdValueName);
-                if (!string.IsNullOrEmpty(id))
+                ConfigNode fundingNode = fundingNodes[nodeIndex];
+                string id = fundingNode.GetValue(IdValueName);
+                if (string.IsNullOrEmpty(id))
                 {
-                    _unlockedFundingProgrammeIds.Add(id);
+                    continue;
                 }
+
+                _unlockedFundingProgrammeIds.Add(id);
+
+                string offeredValue = fundingNode.GetValue(OfferedValueName);
+                _fundingProgrammeOfferedById[id] = string.IsNullOrEmpty(offeredValue)
+                    ? true
+                    : ParseBool(offeredValue);
+                _fundingProgrammeTargetReachedById[id] = ParseBool(
+                    fundingNode.GetValue(SatelliteTargetReachedValueName));
             }
 
             ConfigNode[] contractNodes = node.GetNodes(ContractNodeName);
@@ -262,6 +307,12 @@ namespace TheRaceForSpace.Persistence
                 _contractStartedById[id] = ParseBool(contractNode.GetValue(StartedValueName));
                 _contractPaymentsProcessedById[id] = ParsePaymentCount(
                     contractNode.GetValue(PaymentsProcessedValueName));
+
+                string offeredValue = contractNode.GetValue(OfferedValueName);
+                if (!string.IsNullOrEmpty(offeredValue))
+                {
+                    _contractOfferedById[id] = ParseBool(offeredValue);
+                }
             }
 
             // Read-only migration from the fixed 0.3 schema. New saves write only the collection format.
@@ -338,8 +389,18 @@ namespace TheRaceForSpace.Persistence
             fundingProgrammeIds.Sort(StringComparer.OrdinalIgnoreCase);
             for (int idIndex = 0; idIndex < fundingProgrammeIds.Count; idIndex++)
             {
+                string id = fundingProgrammeIds[idIndex];
                 ConfigNode fundingNode = node.AddNode(FundingProgrammeNodeName);
-                fundingNode.AddValue(IdValueName, fundingProgrammeIds[idIndex]);
+                fundingNode.AddValue(IdValueName, id);
+
+                bool isOffered;
+                bool hasReachedSatelliteTarget;
+                _fundingProgrammeOfferedById.TryGetValue(id, out isOffered);
+                _fundingProgrammeTargetReachedById.TryGetValue(
+                    id,
+                    out hasReachedSatelliteTarget);
+                fundingNode.AddValue(OfferedValueName, isOffered);
+                fundingNode.AddValue(SatelliteTargetReachedValueName, hasReachedSatelliteTarget);
             }
 
             var contractIds = new List<string>(_contractStartedById.Keys);
@@ -353,6 +414,12 @@ namespace TheRaceForSpace.Persistence
                 contractNode.AddValue(
                     PaymentsProcessedValueName,
                     _contractPaymentsProcessedById[id].ToString(CultureInfo.InvariantCulture));
+
+                bool isOffered;
+                if (_contractOfferedById.TryGetValue(id, out isOffered))
+                {
+                    contractNode.AddValue(OfferedValueName, isOffered);
+                }
             }
         }
 
@@ -362,8 +429,11 @@ namespace TheRaceForSpace.Persistence
             NextFundingUniversalTime = -1.0;
             _achievementTimesById.Clear();
             _unlockedFundingProgrammeIds.Clear();
+            _fundingProgrammeOfferedById.Clear();
+            _fundingProgrammeTargetReachedById.Clear();
             _contractStartedById.Clear();
             _contractPaymentsProcessedById.Clear();
+            _contractOfferedById.Clear();
         }
 
         private void StoreAchievement(string id, double universalTime)
@@ -401,6 +471,8 @@ namespace TheRaceForSpace.Persistence
             if (ParseBool(node.GetValue(valueName)))
             {
                 _unlockedFundingProgrammeIds.Add(programmeId);
+                _fundingProgrammeOfferedById[programmeId] = true;
+                _fundingProgrammeTargetReachedById[programmeId] = false;
             }
         }
 

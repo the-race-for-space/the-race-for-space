@@ -69,6 +69,7 @@ namespace TheRaceForSpace.Funding
         public string UnlockRequirement { get; private set; }
         public UnlockRuleDefinition UnlockRule { get; private set; }
         public double BaseRewardFunds { get; private set; }
+        public bool IsOffered { get; private set; }
         public bool HasStarted { get; private set; }
         public int PaymentsProcessed { get; private set; }
 
@@ -95,6 +96,20 @@ namespace TheRaceForSpace.Funding
         public double CurrentTotalPayoutFunds
         {
             get { return BaseRewardFunds * (CurrentInterestPercent / 100.0); }
+        }
+
+        /// <summary>
+        /// Marks this contract as one of the sponsor offers visible to all race agencies.
+        /// Step 1 stores this state only; offer limits and funding-day selection are applied later.
+        /// </summary>
+        public void Offer()
+        {
+            if (IsExpired)
+            {
+                return;
+            }
+
+            IsOffered = true;
         }
 
         /// <summary>
@@ -148,6 +163,13 @@ namespace TheRaceForSpace.Funding
         {
             PaymentsProcessed = Math.Max(0, Math.Min(TotalPayments, paymentsProcessed));
             HasStarted = hasStarted || PaymentsProcessed > 0;
+        }
+
+        // Persistence may replace offer state when loading another save. Normal gameplay only
+        // moves contracts into the offered state and never withdraws an existing offer.
+        internal void RestoreOfferState(bool isOffered)
+        {
+            IsOffered = isOffered;
         }
     }
 }

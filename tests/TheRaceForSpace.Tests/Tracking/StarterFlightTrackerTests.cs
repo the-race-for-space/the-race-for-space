@@ -17,6 +17,10 @@ namespace TheRaceForSpace.Tests.Tracking
             BiomeAllowsOnlyOneLineMilestonePerLaunch();
             StagingPreservesDirectedPowerAttempt();
             PartialControlHoldSurvivesSaveLoad();
+            DirectedPowerDisqualificationSurvivesSaveLoad();
+            LiveProgressReflectsLatestSample();
+            CurrentMilestoneUsesGlobalLineUnlocks();
+            MalformedActiveSaveIsDiscarded();
         }
 
         private static void DirectedPowerRequiresImpactBelowCeiling()
@@ -256,6 +260,123 @@ namespace TheRaceForSpace.Tests.Tracking
                 "A saved 15-second Control hold should resume and complete after another 15 seconds and landing.");
         }
 
+        private static void DirectedPowerDisqualificationSurvivesSaveLoad()
+        {
+            SpaceProgramState player = new SpaceProgramState("player", "Player", true);
+            var programs = new List<SpaceProgramState> { player };
+            var sourceTracker = new StarterFlightTracker();
+
+            sourceTracker.RefreshPlayerMilestones(
+                player,
+                programs,
+                PrototypeMilestones.StarterContracts,
+                Snapshot("save-power", 800.0, 800.0, 70010.0, 700.0, 1.0, 0, null, TrackedFlightSituation.SubOrbital));
+
+            var saveState = new StarterFlightSaveState();
+            saveState.Capture(sourceTracker);
+            var node = new ConfigNode();
+            saveState.Save(node);
+            var loadedState = new StarterFlightSaveState();
+            loadedState.Load(node);
+            var restoredTracker = new StarterFlightTracker();
+            loadedState.ApplyTo(restoredTracker);
+
+            Require(
+                !restoredTracker.RecordSurfaceImpact(
+                    player,
+                    programs,
+                    PrototypeMilestones.StarterContracts,
+                    "save-power",
+                    "Kerbin",
+                    801.0),
+                "Saving and loading must not erase an earlier Directed Power altitude violation.");
+        }
+
+        private static void LiveProgressReflectsLatestSample()
+        {
+            SpaceProgramState player = new SpaceProgramState("player", "Player", true);
+            var programs = new List<SpaceProgramState> { player };
+            var tracker = new StarterFlightTracker();
+
+            tracker.RefreshPlayerMilestones(
+                player,
+                programs,
+                PrototypeMilestones.StarterContracts,
+                Snapshot("progress", 900.0, 900.0, 100.0, 0.0, 4.0, 0, "Shores", TrackedFlightSituation.Prelaunch, 0.0));
+            tracker.RefreshPlayerMilestones(
+                player,
+                programs,
+                PrototypeMilestones.StarterContracts,
+                Snapshot("progress", 900.0, 910.0, 3500.0, 525.0, 3.2, 1, "Grasslands", TrackedFlightSituation.Flying, 2.0));
+
+            RequireNear(3500.0, tracker.CurrentAltitudeMeters, "Current altitude should follow the latest sample.");
+            RequireNear(525.0, tracker.CurrentSurfaceSpeedMetersPerSecond, "Current surface speed should follow the latest sample.");
+            RequireNear(3.2, tracker.CurrentMassTonnes, "Current mass should follow the latest sample.");
+            Require(tracker.CurrentDistanceMeters > 20000.0, "Current distance should be derived from the launch position.");
+            Require(tracker.CurrentBiomeName == "Grasslands", "Current biome should follow the latest sample.");
+            Require(tracker.CurrentCrewCount == 1, "Current crew count should follow the latest sample.");
+            Require(tracker.CurrentSituation == TrackedFlightSituation.Flying, "Current situation should follow the latest sample.");
+        }
+
+        private static void CurrentMilestoneUsesGlobalLineUnlocks()
+        {
+            SpaceProgramState player = new SpaceProgramState("player", "Player", true);
+            SpaceProgramState rival = new SpaceProgramState("rival", "Rival", false);
+            rival.RecordAchievement(PrototypeMilestones.Mass1Id, 50.0);
+            var programs = new List<SpaceProgramState> { player, rival };
+
+            MilestoneDefinition milestone = StarterFlightTracker.GetCurrentMilestone(
+                StarterContractLine.Mass,
+                player,
+                programs,
+                PrototypeMilestones.StarterContracts,
+                60.0);
+
+            Require(milestone != null && milestone.Id == PrototypeMilestones.Mass2Id,
+                "A rival completing Mass I should globally unlock Mass II as the player's current line target.");
+        }
+
+        private static void MalformedActiveSaveIsDiscarded()
+        {
+            var node = new ConfigNode();
+            node.AddValue("active", true);
+            node.AddValue("vesselId", "broken-vessel");
+            node.AddValue("body", "Kerbin");
+            node.AddValue("launchUniversalTime", "1000");
+            node.AddValue("startLatitude", "0");
+            node.AddValue("startLongitude", "0");
+            node.AddValue("lastSampleUniversalTime", "1010");
+            node.AddValue("maximumAltitudeMeters", "not-a-number");
+            node.AddValue("maximumSurfaceSpeedMetersPerSecond", "650");
+            node.AddValue("controlHoldSeconds", "10");
+
+            var loadedState = new StarterFlightSaveState();
+            loadedState.Load(node);
+            var tracker = new StarterFlightTracker();
+            tracker.RestoreState(
+                "old",
+                "Kerbin",
+                1.0,
+                0.0,
+                0.0,
+                2.0,
+                10.0,
+                10.0,
+                null,
+                null,
+                0.0,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false);
+
+            loadedState.ApplyTo(tracker);
+            Require(!tracker.HasActiveAttempt,
+                "Malformed active starter-flight nodes should clear the attempt rather than restore invented zero values.");
+        }
+
         private static ActiveVesselTrackingSnapshot Snapshot(
             string vesselId,
             double launchUniversalTime,
@@ -289,6 +410,15 @@ namespace TheRaceForSpace.Tests.Tracking
             if (!condition)
             {
                 throw new InvalidOperationException(message);
+            }
+        }
+
+        private static void RequireNear(double expected, double actual, string message)
+        {
+            if (Math.Abs(expected - actual) > 0.000001)
+            {
+                throw new InvalidOperationException(
+                    message + " Expected " + expected + ", got " + actual + ".");
             }
         }
     }

@@ -58,8 +58,9 @@ Required bands/times are 2-5 km / 30 s, 8-12 km / 45 s, 15-25 km / 60 s, 30-40 k
 5. Remove/lose all crew before the hold completes and confirm no qualification.
 6. Complete the hold but splash down instead of entering `LANDED` and confirm the contract does not complete.
 7. Complete the hold but enter orbit before landing and confirm the starter attempt is invalid.
-8. Save halfway through a valid hold, reload, continue the remaining hold time and land; confirm accumulated hold time survives correctly.
+8. Save halfway through a valid hold, reload, continue the remaining hold time and land; confirm accumulated hold time survives correctly when observations resume normally.
 9. Save after the hold has qualified but before landing, reload, land safely, and confirm completion still works.
+10. While an unqualified hold is in progress, create a long interval in which the active vessel is not observed (for example by leaving the flight scene and advancing time), then return to the same vessel. Confirm the missing interval is not credited and the unqualified continuous hold restarts rather than jumping forward.
 
 ## Biome line
 

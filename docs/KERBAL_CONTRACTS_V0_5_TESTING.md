@@ -18,11 +18,12 @@ This checklist covers behavior that the standalone logic/controller suites canno
 5. Open each starter contract from the normal Space Race catalogue and confirm its objective, payout, state, and unlock requirements use the same presentation as other achievement contracts.
 6. Complete one Level I contract with the player and confirm its Level II successor moves from `Locked` to `Unlocked` rather than immediately becoming `Offered`.
 7. In a disposable save, allow a rival to complete one Level I starter contract first and confirm the same Level II successor also moves from `Locked` to `Unlocked`; starter prerequisites are `Any Agency`.
-8. Cross a funding-review boundary with unlocked starter contracts available and confirm they participate in the ordinary achievement sponsor review and move to `Offered` only when selected.
-9. Confirm Funding Targets shows live starter telemetry inside **every offered, unfinished starter contract card** during an active flight, so multiple offered starter thresholds can be compared against the same craft at once.
-10. Confirm Space Race itself does not duplicate that live-flight panel; it remains focused on `Offered`, `Unlocked`, `Locked`, and `Expired` catalogue state. Confirm its `Current Funding Info` area is visibly 25% taller than the previous 220 px layout (275 px).
-11. Confirm Overview treats offered starter contracts the same way as other offered one-off achievements.
-12. Confirm the Help guide explains the four opening starter offers, same-line progression, Any Agency unlocks, and the Level V to Probe Orbit convergence.
+8. Unlock more than two starter successors before the same funding boundary and confirm **every unlocked starter contract becomes `Offered` at that funding review**. In particular, if all four Level II contracts are unlocked, all four must be offered together; starter contracts do not consume the normal two unfinished-achievement slots.
+9. Confirm the normal two-offer limit still applies to Probe Orbit and later one-off achievement contracts, and that satellite programmes still have their own independent two-unfulfilled-offer limit.
+10. Confirm Funding Targets shows live starter telemetry inside **every offered, unfinished starter contract card** during an active flight, so multiple offered starter thresholds can be compared against the same craft at once.
+11. Confirm Space Race itself does not duplicate that live-flight panel; it remains focused on `Offered`, `Unlocked`, `Locked`, and `Expired` catalogue state. Confirm its `Current Funding Info` area is visibly 25% taller than the previous 220 px layout (275 px).
+12. Confirm Overview treats offered starter contracts the same way as other offered one-off achievements.
+13. Confirm the Help guide explains the four opening starter offers, same-line progression, Any Agency unlocks, and the Level V to Probe Orbit convergence.
 
 ## Directed Power line
 
@@ -109,7 +110,8 @@ Test each Level V route independently in a disposable save or by restoring a bac
 5. Confirm the corresponding Level I-V starter progress-step costs are 4,000 / 6,000 / 8,000 / 10,000 / 12,000. Five successful steps should therefore preserve the previous full-development costs of 20,000 / 30,000 / 40,000 / 50,000 / 60,000.
 6. Confirm normal orbital and satellite rival missions still advance by 10% per successful progress check and retain their existing costs.
 7. Confirm the Rival Agencies ETA reflects five successful development steps from 0% for a starter mission rather than ten, while normal orbit/satellite ETA calculation still uses ten 10% steps.
-8. Confirm Levels II-V of the starter lines do not bypass the normal achievement sponsor review: once a predecessor is completed by any agency, the successor is `Unlocked` and waits to be selected as an `Offered` contract.
+8. Confirm Levels II-V of the starter lines wait in `Unlocked` after their predecessor is completed by any agency, then **all currently unlocked starter contracts become `Offered` at the next funding review** with no starter offer limit.
+9. With several starter contracts still unfinished and offered, unlock at least three normal Probe-or-later achievement candidates and confirm only two normal achievement contracts are offered; starter offers must not consume those two normal slots. Confirm satellite offers remain governed by their separate two-unfulfilled-offer limit.
 
 ## Persistence and scene changes
 
@@ -128,7 +130,8 @@ The v0.5 candidate is ready for merge/release only when:
 - the production assembly builds against the target KSP 1.12.x installation;
 - a fresh campaign shows exactly the four Level I starter offers and the other sixteen starter contracts locked in the normal Space Race catalogue;
 - player and rival starter completions both unlock the correct next same-line contract;
-- unlocked starter contracts participate in the normal sponsor-review flow;
+- every unlocked starter contract is offered at the next funding review without consuming the normal two unfinished-achievement slots;
+- the normal Probe-and-later achievement pool still caps unfinished offers at two, independently of the satellite pool's own two-offer cap;
 - every offered unfinished starter contract shows its own live criteria values in Funding Targets without a separate Space Race starter panel blocking the catalogue;
 - Space Race keeps a usable 275 px Current Funding Info area above the catalogue;
 - Biome only completes on a landed craft in the target biome;

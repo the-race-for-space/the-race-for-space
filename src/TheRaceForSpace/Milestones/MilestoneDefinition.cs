@@ -114,7 +114,6 @@ namespace TheRaceForSpace.Milestones
             CelestialBodyName = celestialBodyName;
             Situation = situation;
             CrewRequirement = crewRequirement;
-            ObjectiveDescription = objectiveDescription;
             UnlockRule = unlockRule;
             ObjectiveType = objectiveType;
             StarterLine = starterLine;
@@ -129,6 +128,11 @@ namespace TheRaceForSpace.Milestones
             MaximumAltitudeMeters = GetMaximumAltitudeMeters(starterLine, StarterLevel);
             RequiredDurationSeconds = GetRequiredDurationSeconds(starterLine, StarterLevel);
             RequiredBiomeName = GetRequiredBiomeName(starterLine, StarterLevel);
+
+            // The measurable starter criteria are authoritative. Generate wording for objectives
+            // whose completion rule changed from in-flight observation to a final landed state so
+            // Space Race and Funding Targets cannot drift away from the tracker implementation.
+            ObjectiveDescription = CreateObjectiveDescription(objectiveDescription);
         }
 
         public string Id { get; private set; }
@@ -180,6 +184,30 @@ namespace TheRaceForSpace.Milestones
                     StringComparison.OrdinalIgnoreCase)
                 && Situation == observation.Situation
                 && CrewRequirement == observation.CrewQualification.Value;
+        }
+
+        private string CreateObjectiveDescription(string configuredDescription)
+        {
+            if (ObjectiveType == MilestoneObjectiveType.DeliveredMass
+                && RequiredMassTonnes > 0.0
+                && RequiredDistanceMeters > 0.0)
+            {
+                return "Land on Kerbin at least "
+                    + (RequiredDistanceMeters / 1000.0).ToString("0.#")
+                    + " km from the launch point with at least "
+                    + RequiredMassTonnes.ToString("0.#")
+                    + " t of remaining vessel mass.";
+            }
+
+            if (ObjectiveType == MilestoneObjectiveType.BiomeVisit
+                && !string.IsNullOrEmpty(RequiredBiomeName))
+            {
+                return "Land in Kerbin's "
+                    + RequiredBiomeName
+                    + " biome without entering orbit.";
+            }
+
+            return configuredDescription;
         }
 
         private static double GetRequiredSpeedMetersPerSecond(

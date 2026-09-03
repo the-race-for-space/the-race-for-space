@@ -72,7 +72,7 @@ namespace TheRaceForSpace.Tests
             Equal(75000.0, probeOrbit.BaseRewardFunds);
             AssertProbeOrbitUnlockRule(probeOrbit.UnlockRule);
             Equal(
-                "Any agency must achieve Directed Power V or Mass V or Control V or Biome V.",
+                "Any agency must achieve Directed Power V or Mass V or Control V or Biome V - Ice Caps.",
                 probeOrbit.UnlockRequirement);
 
             AssertAchievement(

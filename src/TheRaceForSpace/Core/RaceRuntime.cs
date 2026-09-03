@@ -1,5 +1,7 @@
 using TheRaceForSpace.Competition;
 using TheRaceForSpace.KspIntegration;
+using TheRaceForSpace.Milestones;
+using TheRaceForSpace.Tracking;
 using UnityEngine;
 
 namespace TheRaceForSpace.Core
@@ -11,14 +13,18 @@ namespace TheRaceForSpace.Core
     public sealed class RaceRuntime : MonoBehaviour
     {
         private const float RefreshIntervalSeconds = 5.0f;
+        private const float ActiveVesselRefreshIntervalSeconds = 1.0f;
         private const float PlayerVesselRefreshIntervalSeconds = 20.0f;
 
         private static RaceRuntime _activeInstance;
         private static SatelliteRaceController _raceController;
+        private static StarterFlightTracker _starterFlightTracker;
         private static Game _controllerGame;
 
         private bool _isDuplicateInstance;
+        private bool _hasRestoredStarterFlightState;
         private float _nextRefreshTime;
+        private float _nextActiveVesselRefreshTime;
         private float _nextPlayerVesselRefreshTime;
 
         /// <summary>
@@ -86,24 +92,85 @@ namespace TheRaceForSpace.Core
                 EnsureControllerForCurrentGame();
             }
 
-            float currentRealtime = Time.realtimeSinceStartup;
-            if (_raceController == null || currentRealtime < _nextRefreshTime)
+            if (_raceController == null || _starterFlightTracker == null)
             {
                 return;
             }
 
-            bool shouldRefreshPlayerVessels = currentRealtime >= _nextPlayerVesselRefreshTime;
-            bool didRefreshPlayerVessels = _raceController.Refresh(shouldRefreshPlayerVessels);
+            float currentRealtime = Time.realtimeSinceStartup;
 
-            // Full KSP vessel discovery is the most expensive recurring operation and does not
-            // need five-second responsiveness. Only start the 20-second interval after a successful
-            // observation so transient scene/startup readiness still retries on the normal cadence.
-            if (didRefreshPlayerVessels)
+            if (currentRealtime >= _nextRefreshTime)
             {
-                _nextPlayerVesselRefreshTime = currentRealtime + PlayerVesselRefreshIntervalSeconds;
+                bool shouldRefreshPlayerVessels = currentRealtime >= _nextPlayerVesselRefreshTime;
+                bool didRefreshPlayerVessels = _raceController.Refresh(shouldRefreshPlayerVessels);
+
+                // Full KSP vessel discovery is the most expensive recurring operation and does not
+                // need five-second responsiveness. Only start the 20-second interval after a successful
+                // observation so transient scene/startup readiness still retries on the normal cadence.
+                if (didRefreshPlayerVessels)
+                {
+                    _nextPlayerVesselRefreshTime = currentRealtime + PlayerVesselRefreshIntervalSeconds;
+                }
+
+                _nextRefreshTime = currentRealtime + RefreshIntervalSeconds;
             }
 
-            _nextRefreshTime = currentRealtime + RefreshIntervalSeconds;
+            if (!_hasRestoredStarterFlightState)
+            {
+                _hasRestoredStarterFlightState = RacePersistenceScenario.TryRestoreStarterFlightState(
+                    _starterFlightTracker);
+            }
+
+            if (_hasRestoredStarterFlightState && currentRealtime >= _nextActiveVesselRefreshTime)
+            {
+                RefreshStarterFlightState();
+                _nextActiveVesselRefreshTime = currentRealtime + ActiveVesselRefreshIntervalSeconds;
+            }
+        }
+
+        private void RefreshStarterFlightState()
+        {
+            bool recordedAchievement = false;
+
+            // Consume destruction before observing a replacement active vessel. KSP can switch
+            // control immediately after a crash, and beginning the next attempt first would discard
+            // the just-finished Directed Power flight history.
+            string impactVesselId;
+            string impactBodyName;
+            double impactUniversalTime;
+            if (KspVesselDiscovery.TryConsumeActiveVesselSurfaceImpact(
+                out impactVesselId,
+                out impactBodyName,
+                out impactUniversalTime))
+            {
+                recordedAchievement = _starterFlightTracker.RecordSurfaceImpact(
+                    _raceController.PlayerProgram,
+                    _raceController.Programs,
+                    PrototypeMilestones.StarterContracts,
+                    impactVesselId,
+                    impactBodyName,
+                    impactUniversalTime);
+            }
+
+            ActiveVesselTrackingSnapshot activeVesselSnapshot;
+            if (KspVesselDiscovery.TryCaptureActiveVessel(out activeVesselSnapshot))
+            {
+                recordedAchievement |= _starterFlightTracker.RefreshPlayerMilestones(
+                    _raceController.PlayerProgram,
+                    _raceController.Programs,
+                    PrototypeMilestones.StarterContracts,
+                    activeVesselSnapshot);
+            }
+
+            if (recordedAchievement)
+            {
+                // Starter achievements can immediately unlock the next line level or Probe Orbit.
+                // Reuse the controller's normal non-vessel refresh rather than duplicating funding,
+                // rival, offer, and payout-cache updates in the frequent flight path.
+                _raceController.Refresh(false);
+            }
+
+            RacePersistenceScenario.CaptureStarterFlightState(_starterFlightTracker);
         }
 
         private void EnsureControllerForCurrentGame()
@@ -122,11 +189,15 @@ namespace TheRaceForSpace.Core
             // is read once here before any controller-owned funding or rival state is constructed.
             RaceSettingsLoader.EnsureLoaded();
 
-            // Keep one controller across scene changes inside a save, but never carry race or
-            // rival state into a different save loaded during the same KSP process.
+            // Keep one controller and one active-flight tracker across scene changes inside a save,
+            // but never carry race, vessel-callback, or contract-attempt state into another save.
             _raceController = new SatelliteRaceController();
+            _starterFlightTracker = new StarterFlightTracker();
             _controllerGame = HighLogic.CurrentGame;
+            KspVesselDiscovery.ResetActiveVesselTracking();
+            _hasRestoredStarterFlightState = false;
             _nextRefreshTime = 0.0f;
+            _nextActiveVesselRefreshTime = 0.0f;
             _nextPlayerVesselRefreshTime = 0.0f;
         }
     }

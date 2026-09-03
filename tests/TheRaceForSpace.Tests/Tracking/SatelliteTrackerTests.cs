@@ -10,6 +10,8 @@ namespace TheRaceForSpace.Tests.Tracking
     {
         public static void NormalizedSnapshotsUpdateCountsAndMilestones()
         {
+            StarterFlightTrackerTests.RunAll();
+
             var playerProgram = new SpaceProgramState("player", "Player", true);
             playerProgram.RecordAchievement(PrototypeMilestones.DirectedPower5Id, 1200.0);
             var programs = new List<SpaceProgramState> { playerProgram };

@@ -40,6 +40,11 @@ namespace TheRaceForSpace.Tests.Tracking
                 programs,
                 PrototypeMilestones.StarterContracts,
                 Snapshot("power-a", 0.0, 10.0, 50000.0, 650.0, 0.1, 0, null, TrackedFlightSituation.Flying));
+            tracker.RefreshPlayerMilestones(
+                player,
+                programs,
+                PrototypeMilestones.StarterContracts,
+                Snapshot("power-a", 0.0, 10.5, 0.0, 0.0, 0.1, 0, null, TrackedFlightSituation.Landed));
 
             Require(
                 !player.HasAchievement(PrototypeMilestones.DirectedPower1Id),
@@ -52,7 +57,7 @@ namespace TheRaceForSpace.Tests.Tracking
                     "power-a",
                     "Kerbin",
                     11.0),
-                "600 m/s below 70 km followed by a surface impact should complete Directed Power I.");
+                "A qualifying flight history should still complete when KSP reports the crash after the vessel briefly enters a landed state.");
 
             SpaceProgramState overCeilingPlayer = new SpaceProgramState("over", "Over", true);
             var overCeilingPrograms = new List<SpaceProgramState> { overCeilingPlayer };
@@ -91,8 +96,16 @@ namespace TheRaceForSpace.Tests.Tracking
                 PrototypeMilestones.StarterContracts,
                 Snapshot("mass-a", 100.0, 110.0, 1000.0, 300.0, 1.1, 0, null, TrackedFlightSituation.Flying, 3.0));
 
+            Require(!player.HasAchievement(PrototypeMilestones.Mass1Id),
+                "Flying more than 25 km with enough mass must not complete Mass I before landing.");
+
+            tracker.RefreshPlayerMilestones(
+                player,
+                programs,
+                PrototypeMilestones.StarterContracts,
+                Snapshot("mass-a", 100.0, 111.0, 0.0, 0.0, 1.1, 0, null, TrackedFlightSituation.Landed, 3.0));
             Require(player.HasAchievement(PrototypeMilestones.Mass1Id),
-                "At least 1 t more than 25 km from the launch point should complete Mass I.");
+                "A finished landed craft retaining at least 1 t more than 25 km from launch should complete Mass I.");
 
             tracker.RefreshPlayerMilestones(
                 player,
@@ -112,8 +125,16 @@ namespace TheRaceForSpace.Tests.Tracking
                 programs,
                 PrototypeMilestones.StarterContracts,
                 Snapshot("mass-b", 200.0, 210.0, 1000.0, 400.0, 2.6, 0, null, TrackedFlightSituation.Flying, 8.0));
+            Require(!player.HasAchievement(PrototypeMilestones.Mass2Id),
+                "Mass II must wait for the qualifying 2.5 t craft to land beyond 75 km.");
+
+            tracker.RefreshPlayerMilestones(
+                player,
+                programs,
+                PrototypeMilestones.StarterContracts,
+                Snapshot("mass-b", 200.0, 211.0, 0.0, 0.0, 2.6, 0, null, TrackedFlightSituation.Landed, 8.0));
             Require(player.HasAchievement(PrototypeMilestones.Mass2Id),
-                "A fresh launch carrying at least 2.5 t beyond 75 km should complete Mass II.");
+                "A fresh landed craft retaining at least 2.5 t beyond 75 km should complete Mass II.");
         }
 
         private static void ControlRequiresContinuousCrewedHoldAndLanding()
@@ -201,16 +222,25 @@ namespace TheRaceForSpace.Tests.Tracking
                 programs,
                 PrototypeMilestones.StarterContracts,
                 Snapshot("biome-a", 400.0, 410.0, 500.0, 50.0, 1.0, 0, "Grasslands", TrackedFlightSituation.Flying));
+
+            Require(!player.HasAchievement(PrototypeMilestones.Biome1Id),
+                "Flying over Grasslands must not complete Biome I.");
+
+            tracker.RefreshPlayerMilestones(
+                player,
+                programs,
+                PrototypeMilestones.StarterContracts,
+                Snapshot("biome-a", 400.0, 411.0, 0.0, 0.0, 1.0, 0, "Grasslands", TrackedFlightSituation.Landed));
+            Require(player.HasAchievement(PrototypeMilestones.Biome1Id),
+                "Landing in Grasslands should complete Biome I.");
+
             tracker.RefreshPlayerMilestones(
                 player,
                 programs,
                 PrototypeMilestones.StarterContracts,
                 Snapshot("biome-a", 400.0, 420.0, 500.0, 50.0, 1.0, 0, "Highlands", TrackedFlightSituation.Flying));
-
-            Require(player.HasAchievement(PrototypeMilestones.Biome1Id),
-                "Visiting Grasslands should complete Biome I.");
             Require(!player.HasAchievement(PrototypeMilestones.Biome2Id),
-                "A single exploration flight must not complete two Biome line levels.");
+                "A single exploration launch must not complete two Biome line levels.");
 
             tracker.RefreshPlayerMilestones(
                 player,
@@ -222,8 +252,16 @@ namespace TheRaceForSpace.Tests.Tracking
                 programs,
                 PrototypeMilestones.StarterContracts,
                 Snapshot("biome-b", 500.0, 510.0, 1000.0, 100.0, 1.0, 0, "Highlands", TrackedFlightSituation.Flying));
+            Require(!player.HasAchievement(PrototypeMilestones.Biome2Id),
+                "Flying over Highlands must not complete Biome II.");
+
+            tracker.RefreshPlayerMilestones(
+                player,
+                programs,
+                PrototypeMilestones.StarterContracts,
+                Snapshot("biome-b", 500.0, 511.0, 0.0, 0.0, 1.0, 0, "Highlands", TrackedFlightSituation.Landed));
             Require(player.HasAchievement(PrototypeMilestones.Biome2Id),
-                "A later launch may complete the next unlocked Biome milestone.");
+                "A later launch landed in Highlands may complete the next unlocked Biome milestone.");
         }
 
         private static void StagingPreservesDirectedPowerAttempt()

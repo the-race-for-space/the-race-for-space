@@ -13,6 +13,7 @@ namespace TheRaceForSpace.KspIntegration
         private const double SurfaceImpactProximityMeters = 100.0;
         private const double MinimumSurfaceImpactSpeedMetersPerSecond = 5.0;
         private const double SurfaceImpactSampleTravelAllowanceSeconds = 2.0;
+        private const double SurfaceImpactFlightSampleMaximumAgeSeconds = 3.0;
 
         private static Game _activeTrackingGame;
         private static Vessel _destructionTrackedVessel;
@@ -22,6 +23,7 @@ namespace TheRaceForSpace.KspIntegration
         private static double _lastTrackedSurfaceClearanceMeters = double.PositiveInfinity;
         private static double _lastTrackedSurfaceSpeedMetersPerSecond;
         private static TrackedFlightSituation _lastTrackedSituation = TrackedFlightSituation.Other;
+        private static double _lastTrackedInFlightUniversalTime = -1.0;
         private static bool _isVesselWillDestroySubscribed;
         private static string _pendingImpactVesselId;
         private static string _pendingImpactBodyName;
@@ -222,6 +224,7 @@ namespace TheRaceForSpace.KspIntegration
             _lastTrackedSurfaceClearanceMeters = double.PositiveInfinity;
             _lastTrackedSurfaceSpeedMetersPerSecond = 0.0;
             _lastTrackedSituation = TrackedFlightSituation.Other;
+            _lastTrackedInFlightUniversalTime = -1.0;
             _pendingImpactVesselId = null;
             _pendingImpactBodyName = null;
             _pendingImpactUniversalTime = -1.0;
@@ -287,11 +290,39 @@ namespace TheRaceForSpace.KspIntegration
                 return;
             }
 
-            _destructionTrackedVesselId = vessel.id.ToString("D");
+            string vesselId = vessel.id.ToString("D");
+            if (!string.Equals(
+                _destructionTrackedVesselId,
+                vesselId,
+                StringComparison.OrdinalIgnoreCase))
+            {
+                // A replacement active vessel must never inherit the previous craft's pre-impact
+                // telemetry, especially when the new vessel is still PRELAUNCH or already landed.
+                _lastTrackedSurfaceClearanceMeters = double.PositiveInfinity;
+                _lastTrackedSurfaceSpeedMetersPerSecond = 0.0;
+                _lastTrackedSituation = TrackedFlightSituation.Other;
+                _lastTrackedInFlightUniversalTime = -1.0;
+            }
+
+            _destructionTrackedVesselId = vesselId;
             _lastTrackedBodyName = vessel.mainBody.bodyName;
+
+            TrackedFlightSituation currentSituation = ConvertSituation(vessel.situation);
+            if (currentSituation != TrackedFlightSituation.Flying
+                && currentSituation != TrackedFlightSituation.SubOrbital)
+            {
+                // KSP can report SPLASHED or LANDED for a fraction of a second before a violent
+                // impact finishes destroying the vessel. Preserve the immediately preceding genuine
+                // in-flight sample so that transition cannot erase an otherwise valid crash.
+                return;
+            }
+
             _lastTrackedSurfaceClearanceMeters = GetSurfaceClearanceMeters(vessel);
             _lastTrackedSurfaceSpeedMetersPerSecond = Math.Max(0.0, vessel.srfSpeed);
-            _lastTrackedSituation = ConvertSituation(vessel.situation);
+            _lastTrackedSituation = currentSituation;
+            _lastTrackedInFlightUniversalTime = Planetarium.fetch == null
+                ? -1.0
+                : Planetarium.GetUniversalTime();
         }
 
         private static void OnVesselWillDestroy(Vessel vessel)
@@ -313,13 +344,20 @@ namespace TheRaceForSpace.KspIntegration
             }
 
             // Destruction-time vessel values are not stable during a violent breakup: KSP may
-            // already report LANDED and zero surface speed by the time the vessel death callback runs.
-            // Use the last one-second active-vessel sample to prove the craft was still in flight and
-            // moving, while using current or projected clearance to distinguish a surface crash from
-            // unrelated vessel deletion/recovery.
+            // already report LANDED/SPLASHED and zero surface speed by the time the death callback
+            // runs. Use the most recent genuine in-flight sample, but only for a short window so a
+            // later recovery, termination, or unrelated deletion cannot reuse stale crash telemetry.
+            double currentUniversalTime = Planetarium.fetch == null
+                ? -1.0
+                : Planetarium.GetUniversalTime();
+            bool hasRecentInFlightSample = _lastTrackedInFlightUniversalTime >= 0.0
+                && currentUniversalTime >= _lastTrackedInFlightUniversalTime
+                && currentUniversalTime - _lastTrackedInFlightUniversalTime
+                    <= SurfaceImpactFlightSampleMaximumAgeSeconds;
             bool wasInFlight = _lastTrackedSituation == TrackedFlightSituation.Flying
                 || _lastTrackedSituation == TrackedFlightSituation.SubOrbital;
-            if (!wasInFlight
+            if (!hasRecentInFlightSample
+                || !wasInFlight
                 || _lastTrackedSurfaceSpeedMetersPerSecond < MinimumSurfaceImpactSpeedMetersPerSecond)
             {
                 return;
@@ -342,9 +380,7 @@ namespace TheRaceForSpace.KspIntegration
             _pendingImpactBodyName = string.IsNullOrEmpty(_lastTrackedBodyName)
                 ? vessel.mainBody.bodyName
                 : _lastTrackedBodyName;
-            _pendingImpactUniversalTime = Planetarium.fetch == null
-                ? 0.0
-                : Planetarium.GetUniversalTime();
+            _pendingImpactUniversalTime = currentUniversalTime;
         }
 
         private static double GetSurfaceClearanceMeters(Vessel vessel)
@@ -423,9 +459,9 @@ namespace TheRaceForSpace.KspIntegration
                     continue;
                 }
 
-                for (int crewIndex = 0; crewIndex < partSnapshot.protoModuleCrew.Count; crewIndex++)
+                for (int crewIndex = 0; crewIndex < protoPartSnapshots[partIndex].protoModuleCrew.Count; crewIndex++)
                 {
-                    if (partSnapshot.protoModuleCrew[crewIndex] != null)
+                    if (protoPartSnapshots[partIndex].protoModuleCrew[crewIndex] != null)
                     {
                         crewCount++;
                     }

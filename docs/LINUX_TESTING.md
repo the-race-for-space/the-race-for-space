@@ -93,7 +93,7 @@ All prototype logic tests passed.
 All controller and unlock rule regression tests passed.
 ```
 
-The automated suites cover the KSP-independent starter-contract rules, including landed-only Mass and Biome completion, persistence, four Level I starter offers plus sixteen initially locked successors, Any Agency rival/player line unlocking, unlocked starter contracts joining the normal sponsor review, rival participation, and the four-way Level V to Probe Orbit unlock rule.
+The automated suites cover the KSP-independent starter-contract rules, including landed-only Mass and Biome completion, persistence, four Level I starter offers plus sixteen initially locked successors, Any Agency rival/player line unlocking, all unlocked starter contracts being offered together at the next funding review without consuming the normal two achievement slots, rival participation, the separate two-offer satellite cap, and the four-way Level V to Probe Orbit unlock rule.
 
 The live KSP API paths still require the in-game checks below. In particular, automated tests cannot prove the active-vessel destruction callbacks/global vessel-will-destroy fallback, stock biome reporting, actual Command Center layout, or loaded/unloaded vessel discovery inside KSP.
 
@@ -143,10 +143,11 @@ Because Directed Power now uses KSP destruction events in addition to the vessel
 7. Expand **Locked** and confirm Levels II-V of all four starter lines are present: sixteen locked starter contracts in total.
 8. Open several starter contracts and confirm their objective, payout, state, and unlock requirements use the same contract details view as the existing achievement targets.
 9. Complete one Level I starter contract and confirm its Level II successor moves to **Unlocked**, not immediately to **Offered**.
-10. Cross a sponsor-review funding boundary and confirm unlocked starter contracts can be selected into **Offered** through the ordinary achievement review.
-11. Open **Funding Targets** during an active starter flight and confirm the relevant offered/current starter funding card shows live flight values approximately once per second.
-12. Confirm **Overview** treats offered starter contracts like the other offered one-off achievements.
-13. Save and reload once before ending the smoke test and confirm the race state and Command Center visibility remain consistent.
+10. Before one funding boundary, unlock starter successors in several lines. Cross the funding boundary and confirm **every unlocked starter contract becomes Offered**, even when more than two are unlocked. Starter offers must not consume the normal two unfinished achievement slots.
+11. When Probe-or-later normal achievement candidates are available, confirm no more than two unfinished normal achievement offers are active from that pool, independently of the starter offers. Confirm satellite programmes still have their own separate two-unfulfilled-offer limit.
+12. Open **Funding Targets** during an active starter flight and confirm every offered unfinished starter funding card shows its own live flight values approximately once per second.
+13. Confirm **Overview** treats offered starter contracts like the other offered one-off achievements.
+14. Save and reload once before ending the smoke test and confirm the race state and Command Center visibility remain consistent.
 
 For a release candidate, continue with the full checklist in [`KERBAL_CONTRACTS_V0_5_TESTING.md`](KERBAL_CONTRACTS_V0_5_TESTING.md).
 

@@ -14,13 +14,67 @@ namespace TheRaceForSpace.Tests
             IList<FundingProgramme> satelliteProgrammes =
                 PrototypeFundingCatalogue.CreateSatelliteProgrammes();
 
-            Equal(PrototypeMilestones.All.Count, achievements.Count);
+            Equal(
+                PrototypeMilestones.All.Count + PrototypeMilestones.StarterContracts.Count,
+                achievements.Count);
+            Equal(20, PrototypeMilestones.StarterContracts.Count);
             Equal(16, satelliteProgrammes.Count);
 
-            AssertAchievement(
+            AssertStarterLine(
                 achievements,
-                PrototypeMilestones.ProbeOrbitId,
-                75000.0);
+                StarterContractLine.DirectedPower,
+                new[]
+                {
+                    PrototypeMilestones.DirectedPower1Id,
+                    PrototypeMilestones.DirectedPower2Id,
+                    PrototypeMilestones.DirectedPower3Id,
+                    PrototypeMilestones.DirectedPower4Id,
+                    PrototypeMilestones.DirectedPower5Id
+                });
+            AssertStarterLine(
+                achievements,
+                StarterContractLine.Mass,
+                new[]
+                {
+                    PrototypeMilestones.Mass1Id,
+                    PrototypeMilestones.Mass2Id,
+                    PrototypeMilestones.Mass3Id,
+                    PrototypeMilestones.Mass4Id,
+                    PrototypeMilestones.Mass5Id
+                });
+            AssertStarterLine(
+                achievements,
+                StarterContractLine.Control,
+                new[]
+                {
+                    PrototypeMilestones.Control1Id,
+                    PrototypeMilestones.Control2Id,
+                    PrototypeMilestones.Control3Id,
+                    PrototypeMilestones.Control4Id,
+                    PrototypeMilestones.Control5Id
+                });
+            AssertStarterLine(
+                achievements,
+                StarterContractLine.Biome,
+                new[]
+                {
+                    PrototypeMilestones.Biome1Id,
+                    PrototypeMilestones.Biome2Id,
+                    PrototypeMilestones.Biome3Id,
+                    PrototypeMilestones.Biome4Id,
+                    PrototypeMilestones.Biome5Id
+                });
+
+            AchievementFundingProgramme probeOrbit = FindAchievement(
+                achievements,
+                PrototypeMilestones.ProbeOrbitId);
+            Require(probeOrbit != null, "Missing Probe Orbit achievement funding programme.");
+            Equal(75000.0, probeOrbit.BaseRewardFunds);
+            AssertProbeOrbitUnlockRule(probeOrbit.UnlockRule);
+            Equal(
+                "Any agency must achieve Directed Power V or Mass V or Control V or Biome V.",
+                probeOrbit.UnlockRequirement);
+
             AssertAchievement(
                 achievements,
                 PrototypeMilestones.CrewedOrbitId,
@@ -291,8 +345,11 @@ namespace TheRaceForSpace.Tests
             IList<FundingProgramme> firstSatellites =
                 PrototypeFundingCatalogue.CreateSatelliteProgrammes();
 
-            firstAchievements[0].Start();
-            firstAchievements[0].AdvancePayout();
+            AchievementFundingProgramme directedPower1 = FindAchievement(
+                firstAchievements,
+                PrototypeMilestones.DirectedPower1Id);
+            directedPower1.Start();
+            directedPower1.AdvancePayout();
             firstSatellites[0].Unlock();
 
             IList<AchievementFundingProgramme> secondAchievements =
@@ -300,11 +357,83 @@ namespace TheRaceForSpace.Tests
             IList<FundingProgramme> secondSatellites =
                 PrototypeFundingCatalogue.CreateSatelliteProgrammes();
 
-            Require(!secondAchievements[0].HasStarted, "A new catalogue build must not reuse achievement campaign state.");
-            Equal(0, secondAchievements[0].PaymentsProcessed);
-            Require(secondAchievements[0].IsOffered, "Probe Orbit should be the opening achievement offer.");
-            Require(!secondAchievements[1].IsOffered, "Crewed Orbit should wait for Probe Orbit and a later funding review.");
+            AchievementFundingProgramme freshDirectedPower1 = FindAchievement(
+                secondAchievements,
+                PrototypeMilestones.DirectedPower1Id);
+            Require(!freshDirectedPower1.HasStarted, "A new catalogue build must not reuse achievement campaign state.");
+            Equal(0, freshDirectedPower1.PaymentsProcessed);
+
+            Require(FindAchievement(secondAchievements, PrototypeMilestones.DirectedPower1Id).IsOffered,
+                "Directed Power I should be an opening starter offer.");
+            Require(FindAchievement(secondAchievements, PrototypeMilestones.Mass1Id).IsOffered,
+                "Mass I should be an opening starter offer.");
+            Require(FindAchievement(secondAchievements, PrototypeMilestones.Control1Id).IsOffered,
+                "Control I should be an opening starter offer.");
+            Require(FindAchievement(secondAchievements, PrototypeMilestones.Biome1Id).IsOffered,
+                "Biome I should be an opening starter offer.");
+            Require(!FindAchievement(secondAchievements, PrototypeMilestones.DirectedPower2Id).IsOffered,
+                "Directed Power II should wait for Directed Power I.");
+            Require(!FindAchievement(secondAchievements, PrototypeMilestones.ProbeOrbitId).IsOffered,
+                "Probe Orbit should remain locked until a starter line reaches level five.");
             Require(!secondSatellites[0].IsAvailable, "A new catalogue build must not reuse satellite unlock state.");
+        }
+
+        private static void AssertStarterLine(
+            IList<AchievementFundingProgramme> achievements,
+            StarterContractLine starterLine,
+            string[] milestoneIds)
+        {
+            Equal(5, milestoneIds.Length);
+
+            for (int milestoneIndex = 0; milestoneIndex < milestoneIds.Length; milestoneIndex++)
+            {
+                int level = milestoneIndex + 1;
+                string milestoneId = milestoneIds[milestoneIndex];
+                MilestoneDefinition milestone = PrototypeMilestones.FindById(milestoneId);
+                AchievementFundingProgramme programme = FindAchievement(achievements, milestoneId);
+
+                Require(milestone != null, "Missing starter milestone '" + milestoneId + "'.");
+                Require(programme != null, "Missing starter funding programme '" + milestoneId + "'.");
+                Require(milestone.IsStarterContract, "Starter milestone should be marked special.");
+                Equal(starterLine, milestone.StarterLine);
+                Equal(level, milestone.StarterLevel);
+                Equal(level * 10000.0, milestone.BaseRewardFunds);
+                Equal((level + 1) * 1000.0, milestone.RivalProgressCostFunds);
+                Equal(level * 10000.0, programme.BaseRewardFunds);
+                Equal(level == 1, programme.IsOffered);
+
+                if (level == 1)
+                {
+                    Equal(null, milestone.UnlockRule);
+                }
+                else
+                {
+                    AssertAnyAgencyRule(milestone.UnlockRule, milestoneIds[milestoneIndex - 1]);
+                }
+            }
+        }
+
+        private static void AssertProbeOrbitUnlockRule(UnlockRuleDefinition rule)
+        {
+            Require(rule != null, "Probe Orbit should have a starter-line unlock rule.");
+            Equal(4, rule.Paths.Count);
+
+            string[] expectedMilestoneIds =
+            {
+                PrototypeMilestones.DirectedPower5Id,
+                PrototypeMilestones.Mass5Id,
+                PrototypeMilestones.Control5Id,
+                PrototypeMilestones.Biome5Id
+            };
+
+            for (int pathIndex = 0; pathIndex < expectedMilestoneIds.Length; pathIndex++)
+            {
+                Require(rule.Paths[pathIndex] != null, "Probe Orbit unlock path should not be null.");
+                Equal(1, rule.Paths[pathIndex].Conditions.Count);
+                AssertAnyAgencyAchievementCondition(
+                    rule.Paths[pathIndex].Conditions[0],
+                    expectedMilestoneIds[pathIndex]);
+            }
         }
 
         private static void AssertBodyFundingSet(

@@ -78,7 +78,7 @@ namespace TheRaceForSpace.UI
         private const float WindowBackgroundOpacity = 0.82f;
         private const float WindowWidth = 900.0f;
         private const float WindowHeight = 720.0f;
-        private const float SpaceRaceFundingInfoHeight = 240.0f;
+        private const float SpaceRaceFundingInfoHeight = 300.0f;
         private const int HighlightedCardTitleFontSize = 16;
         private const int SpaceRaceFundingButtonsPerRow = 4;
         private const string LauncherIconTexturePath =

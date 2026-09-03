@@ -19,8 +19,8 @@ This checklist covers behavior that the standalone logic/controller suites canno
 6. Complete one Level I contract with the player and confirm its Level II successor moves from `Locked` to `Unlocked` rather than immediately becoming `Offered`.
 7. In a disposable save, allow a rival to complete one Level I starter contract first and confirm the same Level II successor also moves from `Locked` to `Unlocked`; starter prerequisites are `Any Agency`.
 8. Cross a funding-review boundary with unlocked starter contracts available and confirm they participate in the ordinary achievement sponsor review and move to `Offered` only when selected.
-9. Confirm Funding Targets shows offered starter contracts and, for the player's current offered starter objective during an active flight, shows the live starter telemetry inside that funding card.
-10. Confirm Space Race itself does not duplicate that live-flight panel; it remains focused on `Offered`, `Unlocked`, `Locked`, and `Expired` catalogue state.
+9. Confirm Funding Targets shows live starter telemetry inside **every offered, unfinished starter contract card** during an active flight, so multiple offered starter thresholds can be compared against the same craft at once.
+10. Confirm Space Race itself does not duplicate that live-flight panel; it remains focused on `Offered`, `Unlocked`, `Locked`, and `Expired` catalogue state. Confirm its `Current Funding Info` area is visibly 25% taller than the previous 220 px layout (275 px).
 11. Confirm Overview treats offered starter contracts the same way as other offered one-off achievements.
 12. Confirm the Help guide explains the four opening starter offers, same-line progression, Any Agency unlocks, and the Level V to Probe Orbit convergence.
 
@@ -44,7 +44,7 @@ Repeat the relevant threshold for each level: 600, 1,100, 1,400, 1,700, and 2,00
 
 Required pairs are 1 t / 25 km, 2.5 t / 75 km, 5 t / 150 km, 10 t / 300 km, and 20 t / 600 km.
 
-1. Confirm the offered Mass contract card in Funding Targets displays current remaining vessel mass and distance from the launch origin during flight.
+1. Confirm every offered unfinished Mass contract card in Funding Targets displays current remaining vessel mass, distance from the launch origin, and live `Landed: YES/NO` state during flight.
 2. Fly beyond the required distance while retaining enough mass and confirm the contract does **not** complete while the craft is still flying.
 3. Reach the required distance but land with less than the required final vessel mass and confirm no completion.
 4. Keep sufficient mass but land short of the required distance and confirm no completion.
@@ -59,7 +59,7 @@ Required pairs are 1 t / 25 km, 2.5 t / 75 km, 5 t / 150 km, 10 t / 300 km, and 
 
 Required bands/times are 2-5 km / 30 s, 8-12 km / 45 s, 15-25 km / 60 s, 30-40 km / 75 s, and 50-65 km / 90 s.
 
-1. Launch with at least one Kerbal and enter the required band. Confirm altitude, hold time, and crew count update in the offered Control contract card in Funding Targets.
+1. Launch with at least one Kerbal and enter the required band. Confirm altitude, hold time, and crew count update in each offered unfinished Control contract card in Funding Targets against that contract's own thresholds.
 2. Remain continuously inside the band for the required time and confirm the Funding Targets live status changes to the qualified state instructing the player to land safely.
 3. Land on Kerbin with crew aboard and confirm completion.
 4. Leave the altitude band before qualification and confirm the continuous timer resets.
@@ -74,7 +74,7 @@ Required bands/times are 2-5 km / 30 s, 8-12 km / 45 s, 15-25 km / 60 s, 30-40 k
 
 Targets are Grasslands, Highlands, Mountains, Deserts, and Ice Caps.
 
-1. Confirm the offered Biome contract card in Funding Targets reports the stock Kerbin biome of the active vessel and the current target biome.
+1. Confirm every offered unfinished Biome contract card in Funding Targets reports the active vessel's stock Kerbin biome, that contract's target biome, and live `Landed: YES/NO` state.
 2. Fly over or through the required biome without landing and confirm the Biome contract does **not** complete.
 3. Land the craft in the required Kerbin biome and confirm the current Biome level completes only once the vessel situation is `LANDED`.
 4. Splash down in or beside the target biome and confirm `SPLASHED` does not count as the required landing.
@@ -129,7 +129,8 @@ The v0.5 candidate is ready for merge/release only when:
 - a fresh campaign shows exactly the four Level I starter offers and the other sixteen starter contracts locked in the normal Space Race catalogue;
 - player and rival starter completions both unlock the correct next same-line contract;
 - unlocked starter contracts participate in the normal sponsor-review flow;
-- live starter telemetry is usable inside Funding Targets without a separate Space Race starter panel blocking the catalogue;
+- every offered unfinished starter contract shows its own live criteria values in Funding Targets without a separate Space Race starter panel blocking the catalogue;
+- Space Race keeps a usable 275 px Current Funding Info area above the catalogue;
 - Biome only completes on a landed craft in the target biome;
 - Mass only completes on a landed finished craft that still meets both final mass and distance requirements;
 - a real qualifying Directed Power surface crash reliably produces completion without turning normal recovery into a false crash;

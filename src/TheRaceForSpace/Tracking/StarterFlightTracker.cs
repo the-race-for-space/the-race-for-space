@@ -21,6 +21,13 @@ namespace TheRaceForSpace.Tracking
         private double _lastSampleUniversalTime = -1.0;
         private double _maximumAltitudeMeters;
         private double _maximumSurfaceSpeedMetersPerSecond;
+        private double _currentAltitudeMeters;
+        private double _currentSurfaceSpeedMetersPerSecond;
+        private double _currentMassTonnes;
+        private double _currentDistanceMeters;
+        private string _currentBiomeName;
+        private int _currentCrewCount;
+        private TrackedFlightSituation _currentSituation = TrackedFlightSituation.Other;
         private string _controlHoldMilestoneId;
         private string _qualifiedControlMilestoneId;
         private double _controlHoldSeconds;
@@ -40,6 +47,13 @@ namespace TheRaceForSpace.Tracking
         public double LastSampleUniversalTime { get { return _lastSampleUniversalTime; } }
         public double MaximumAltitudeMeters { get { return _maximumAltitudeMeters; } }
         public double MaximumSurfaceSpeedMetersPerSecond { get { return _maximumSurfaceSpeedMetersPerSecond; } }
+        public double CurrentAltitudeMeters { get { return _currentAltitudeMeters; } }
+        public double CurrentSurfaceSpeedMetersPerSecond { get { return _currentSurfaceSpeedMetersPerSecond; } }
+        public double CurrentMassTonnes { get { return _currentMassTonnes; } }
+        public double CurrentDistanceMeters { get { return _currentDistanceMeters; } }
+        public string CurrentBiomeName { get { return _currentBiomeName; } }
+        public int CurrentCrewCount { get { return _currentCrewCount; } }
+        public TrackedFlightSituation CurrentSituation { get { return _currentSituation; } }
         public string ControlHoldMilestoneId { get { return _controlHoldMilestoneId; } }
         public string QualifiedControlMilestoneId { get { return _qualifiedControlMilestoneId; } }
         public double ControlHoldSeconds { get { return _controlHoldSeconds; } }
@@ -88,6 +102,14 @@ namespace TheRaceForSpace.Tracking
                 sampleDeltaSeconds = snapshot.ObservationUniversalTime - _lastSampleUniversalTime;
             }
 
+            _currentAltitudeMeters = snapshot.AltitudeMeters;
+            _currentSurfaceSpeedMetersPerSecond = Math.Max(0.0, snapshot.SurfaceSpeedMetersPerSecond);
+            _currentMassTonnes = Math.Max(0.0, snapshot.MassTonnes);
+            _currentDistanceMeters = CalculateSurfaceDistanceMeters(snapshot);
+            _currentBiomeName = snapshot.BiomeName;
+            _currentCrewCount = Math.Max(0, snapshot.CrewCount);
+            _currentSituation = snapshot.Situation;
+
             _maximumAltitudeMeters = Math.Max(_maximumAltitudeMeters, snapshot.AltitudeMeters);
             _maximumSurfaceSpeedMetersPerSecond = Math.Max(
                 _maximumSurfaceSpeedMetersPerSecond,
@@ -108,7 +130,7 @@ namespace TheRaceForSpace.Tracking
             {
                 if (!_completedMassThisAttempt)
                 {
-                    MilestoneDefinition massMilestone = FindCurrentMilestone(
+                    MilestoneDefinition massMilestone = GetCurrentMilestone(
                         StarterContractLine.Mass,
                         playerProgram,
                         programs,
@@ -116,7 +138,7 @@ namespace TheRaceForSpace.Tracking
                         snapshot.ObservationUniversalTime);
                     if (massMilestone != null
                         && snapshot.MassTonnes >= massMilestone.RequiredMassTonnes
-                        && CalculateSurfaceDistanceMeters(snapshot) >= massMilestone.RequiredDistanceMeters)
+                        && _currentDistanceMeters >= massMilestone.RequiredDistanceMeters)
                     {
                         _completedMassThisAttempt = playerProgram.RecordAchievement(
                             massMilestone.Id,
@@ -127,7 +149,7 @@ namespace TheRaceForSpace.Tracking
 
                 if (!_completedBiomeThisAttempt)
                 {
-                    MilestoneDefinition biomeMilestone = FindCurrentMilestone(
+                    MilestoneDefinition biomeMilestone = GetCurrentMilestone(
                         StarterContractLine.Biome,
                         playerProgram,
                         programs,
@@ -195,7 +217,7 @@ namespace TheRaceForSpace.Tracking
                 && !_enteredOrbit
                 && string.Equals(celestialBodyName, "Kerbin", StringComparison.OrdinalIgnoreCase))
             {
-                MilestoneDefinition directedPowerMilestone = FindCurrentMilestone(
+                MilestoneDefinition directedPowerMilestone = GetCurrentMilestone(
                     StarterContractLine.DirectedPower,
                     playerProgram,
                     programs,
@@ -219,7 +241,8 @@ namespace TheRaceForSpace.Tracking
 
         /// <summary>
         /// Restores an in-progress flight attempt from persistence. Invalid or incomplete state
-        /// is discarded so older saves safely begin with no active starter-flight history.
+        /// is discarded so older or malformed saves safely begin with no active starter-flight history.
+        /// Live current-sample fields are deliberately rebuilt from the next KSP observation.
         /// </summary>
         public void RestoreState(
             string vesselId,
@@ -242,10 +265,20 @@ namespace TheRaceForSpace.Tracking
         {
             if (string.IsNullOrEmpty(vesselId)
                 || string.IsNullOrEmpty(celestialBodyName)
-                || double.IsNaN(launchUniversalTime)
-                || double.IsInfinity(launchUniversalTime)
-                || double.IsNaN(lastSampleUniversalTime)
-                || double.IsInfinity(lastSampleUniversalTime))
+                || !IsFinite(launchUniversalTime)
+                || launchUniversalTime < 0.0
+                || !IsFinite(startLatitudeDegrees)
+                || startLatitudeDegrees < -90.0
+                || startLatitudeDegrees > 90.0
+                || !IsFinite(startLongitudeDegrees)
+                || !IsFinite(lastSampleUniversalTime)
+                || lastSampleUniversalTime < 0.0
+                || !IsFinite(maximumAltitudeMeters)
+                || maximumAltitudeMeters < 0.0
+                || !IsFinite(maximumSurfaceSpeedMetersPerSecond)
+                || maximumSurfaceSpeedMetersPerSecond < 0.0
+                || !IsFinite(controlHoldSeconds)
+                || controlHoldSeconds < 0.0)
             {
                 ClearAttempt();
                 return;
@@ -257,11 +290,11 @@ namespace TheRaceForSpace.Tracking
             _startLatitudeDegrees = startLatitudeDegrees;
             _startLongitudeDegrees = startLongitudeDegrees;
             _lastSampleUniversalTime = lastSampleUniversalTime;
-            _maximumAltitudeMeters = Math.Max(0.0, maximumAltitudeMeters);
-            _maximumSurfaceSpeedMetersPerSecond = Math.Max(0.0, maximumSurfaceSpeedMetersPerSecond);
+            _maximumAltitudeMeters = maximumAltitudeMeters;
+            _maximumSurfaceSpeedMetersPerSecond = maximumSurfaceSpeedMetersPerSecond;
             _controlHoldMilestoneId = controlHoldMilestoneId;
             _qualifiedControlMilestoneId = qualifiedControlMilestoneId;
-            _controlHoldSeconds = Math.Max(0.0, controlHoldSeconds);
+            _controlHoldSeconds = controlHoldSeconds;
             _wasControlSampleInBand = wasControlSampleInBand;
             _enteredOrbit = enteredOrbit;
             _completedDirectedPowerThisAttempt = completedDirectedPowerThisAttempt;
@@ -280,6 +313,13 @@ namespace TheRaceForSpace.Tracking
             _lastSampleUniversalTime = -1.0;
             _maximumAltitudeMeters = 0.0;
             _maximumSurfaceSpeedMetersPerSecond = 0.0;
+            _currentAltitudeMeters = 0.0;
+            _currentSurfaceSpeedMetersPerSecond = 0.0;
+            _currentMassTonnes = 0.0;
+            _currentDistanceMeters = 0.0;
+            _currentBiomeName = null;
+            _currentCrewCount = 0;
+            _currentSituation = TrackedFlightSituation.Other;
             _controlHoldMilestoneId = null;
             _qualifiedControlMilestoneId = null;
             _controlHoldSeconds = 0.0;
@@ -291,6 +331,51 @@ namespace TheRaceForSpace.Tracking
             _completedBiomeThisAttempt = false;
         }
 
+        /// <summary>
+        /// Returns the highest unlocked, not-yet-achieved milestone in one starter line for the player.
+        /// Unlock scope remains global, so a rival can make a later level become the player's current target.
+        /// </summary>
+        public static MilestoneDefinition GetCurrentMilestone(
+            StarterContractLine starterLine,
+            SpaceProgramState playerProgram,
+            IList<SpaceProgramState> programs,
+            IList<MilestoneDefinition> starterMilestones,
+            double evaluationUniversalTime)
+        {
+            if (starterLine == StarterContractLine.None
+                || playerProgram == null
+                || programs == null
+                || starterMilestones == null)
+            {
+                return null;
+            }
+
+            MilestoneDefinition currentMilestone = null;
+
+            for (int milestoneIndex = 0; milestoneIndex < starterMilestones.Count; milestoneIndex++)
+            {
+                MilestoneDefinition milestone = starterMilestones[milestoneIndex];
+                if (milestone == null
+                    || milestone.StarterLine != starterLine
+                    || playerProgram.HasAchievement(milestone.Id)
+                    || !UnlockRuleEvaluator.IsSatisfied(
+                        milestone.UnlockRule,
+                        programs,
+                        evaluationUniversalTime))
+                {
+                    continue;
+                }
+
+                if (currentMilestone == null
+                    || milestone.StarterLevel > currentMilestone.StarterLevel)
+                {
+                    currentMilestone = milestone;
+                }
+            }
+
+            return currentMilestone;
+        }
+
         private bool EvaluateControlMilestone(
             SpaceProgramState playerProgram,
             IList<SpaceProgramState> programs,
@@ -298,7 +383,7 @@ namespace TheRaceForSpace.Tracking
             ActiveVesselTrackingSnapshot snapshot,
             double sampleDeltaSeconds)
         {
-            MilestoneDefinition controlMilestone = FindCurrentMilestone(
+            MilestoneDefinition controlMilestone = GetCurrentMilestone(
                 StarterContractLine.Control,
                 playerProgram,
                 programs,
@@ -435,37 +520,9 @@ namespace TheRaceForSpace.Tracking
             return snapshot.BodyRadiusMeters * centralAngle;
         }
 
-        private static MilestoneDefinition FindCurrentMilestone(
-            StarterContractLine starterLine,
-            SpaceProgramState playerProgram,
-            IList<SpaceProgramState> programs,
-            IList<MilestoneDefinition> starterMilestones,
-            double evaluationUniversalTime)
+        private static bool IsFinite(double value)
         {
-            MilestoneDefinition currentMilestone = null;
-
-            for (int milestoneIndex = 0; milestoneIndex < starterMilestones.Count; milestoneIndex++)
-            {
-                MilestoneDefinition milestone = starterMilestones[milestoneIndex];
-                if (milestone == null
-                    || milestone.StarterLine != starterLine
-                    || playerProgram.HasAchievement(milestone.Id)
-                    || !UnlockRuleEvaluator.IsSatisfied(
-                        milestone.UnlockRule,
-                        programs,
-                        evaluationUniversalTime))
-                {
-                    continue;
-                }
-
-                if (currentMilestone == null
-                    || milestone.StarterLevel > currentMilestone.StarterLevel)
-                {
-                    currentMilestone = milestone;
-                }
-            }
-
-            return currentMilestone;
+            return !double.IsNaN(value) && !double.IsInfinity(value);
         }
     }
 }

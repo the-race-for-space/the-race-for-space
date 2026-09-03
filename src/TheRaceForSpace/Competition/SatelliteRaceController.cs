@@ -210,7 +210,7 @@ namespace TheRaceForSpace.Competition
         }
 
         /// <summary>
-        /// Returns the funds required for the rival's next successful 10% mission-progress step.
+        /// Returns the funds required for the rival's next successful mission-progress step.
         /// </summary>
         public double GetRivalLaunchProgressCost(SpaceProgramState program)
         {
@@ -428,9 +428,9 @@ namespace TheRaceForSpace.Competition
                 UpdateFundingAvailability(stateEvaluationUniversalTime);
             }
 
-            // Starter lines are reviewed continuously rather than waiting for the shared funding day.
-            // This keeps exactly the next unlocked level available in each line while leaving the
-            // existing two-offer random sponsor pool unchanged for normal achievements.
+            // Probe Orbit remains an immediate shared-race unlock once any starter line reaches
+            // Level V. Other starter levels now use the same unlocked/offered sponsor lifecycle
+            // as normal one-off achievements instead of being auto-offered on every refresh.
             UpdateSpecialAchievementOffers(stateEvaluationUniversalTime);
             UpdateSatelliteTargetReachedState();
             StartAchievementContracts(stateEvaluationUniversalTime);
@@ -476,8 +476,8 @@ namespace TheRaceForSpace.Competition
         }
 
         /// <summary>
-        /// Offers unlocked starter-line milestones immediately. Probe Orbit is also offered as soon
-        /// as any level-five starter achievement satisfies its four-way OR unlock rule.
+        /// Offers Probe Orbit immediately when any agency completes a Level V starter contract.
+        /// Starter Levels II-V otherwise wait in Unlocked until the normal sponsor review offers them.
         /// </summary>
         private void UpdateSpecialAchievementOffers(double evaluationUniversalTime)
         {
@@ -491,12 +491,10 @@ namespace TheRaceForSpace.Competition
                     continue;
                 }
 
-                MilestoneDefinition milestone = PrototypeMilestones.FindById(programme.Id);
-                bool isProbeOrbit = string.Equals(
+                if (!string.Equals(
                     programme.Id,
                     PrototypeMilestones.ProbeOrbitId,
-                    StringComparison.OrdinalIgnoreCase);
-                if ((milestone == null || !milestone.IsStarterContract) && !isProbeOrbit)
+                    StringComparison.OrdinalIgnoreCase))
                 {
                     continue;
                 }
@@ -619,7 +617,7 @@ namespace TheRaceForSpace.Competition
                 programmeIndex++)
             {
                 AchievementFundingProgramme programme = _achievementFundingProgrammes[programmeIndex];
-                if (programme == null || programme.IsExpired || IsStarterAchievementProgramme(programme))
+                if (programme == null || programme.IsExpired)
                 {
                     continue;
                 }
@@ -688,17 +686,6 @@ namespace TheRaceForSpace.Competition
                 satelliteCandidates[candidateIndex].Offer();
                 satelliteCandidates.RemoveAt(candidateIndex);
             }
-        }
-
-        private static bool IsStarterAchievementProgramme(AchievementFundingProgramme programme)
-        {
-            if (programme == null)
-            {
-                return false;
-            }
-
-            MilestoneDefinition milestone = PrototypeMilestones.FindById(programme.Id);
-            return milestone != null && milestone.IsStarterContract;
         }
 
         private void AwardProgramFunds(SpaceProgramState program, double payout)

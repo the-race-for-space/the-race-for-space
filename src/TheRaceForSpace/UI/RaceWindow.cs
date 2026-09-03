@@ -434,9 +434,6 @@ namespace TheRaceForSpace.UI
         private void DrawOverview()
         {
             SpaceProgramState player = _raceController.PlayerProgram;
-            double evaluationUniversalTime = Planetarium.fetch == null
-                ? 0.0
-                : Planetarium.GetUniversalTime();
 
             GUILayout.BeginHorizontal();
             GUILayout.BeginVertical(OverviewObjectivesOptions);
@@ -451,25 +448,6 @@ namespace TheRaceForSpace.UI
                 if (programme.IsExpired || !programme.IsOffered)
                 {
                     continue;
-                }
-
-                MilestoneDefinition milestone = PrototypeMilestones.FindById(programme.Id);
-                if (milestone != null && milestone.IsStarterContract)
-                {
-                    MilestoneDefinition currentStarterMilestone = StarterFlightTracker.GetCurrentMilestone(
-                        milestone.StarterLine,
-                        player,
-                        _raceController.Programs,
-                        PrototypeMilestones.StarterContracts,
-                        evaluationUniversalTime);
-                    if (currentStarterMilestone == null
-                        || !string.Equals(
-                            currentStarterMilestone.Id,
-                            programme.Id,
-                            StringComparison.OrdinalIgnoreCase))
-                    {
-                        continue;
-                    }
                 }
 
                 GUILayout.Label(
@@ -586,7 +564,7 @@ namespace TheRaceForSpace.UI
                     continue;
                 }
 
-                DrawAchievementFundingCard(programme);
+                DrawAchievementFundingCard(programme, showStarterLiveProgress: true);
                 GUILayout.Space(8.0f);
             }
 
@@ -609,7 +587,8 @@ namespace TheRaceForSpace.UI
             AchievementFundingProgramme programme,
             string stateLabel = null,
             double? unlockEvaluationUniversalTime = null,
-            string stateMessage = null)
+            string stateMessage = null,
+            bool showStarterLiveProgress = false)
         {
             _listTextBuilder.Length = 0;
             _listTextBuilder.Append("Completed by: ");
@@ -679,7 +658,49 @@ namespace TheRaceForSpace.UI
                 DrawUnlockRuleProgress(programme.UnlockRule, unlockEvaluationUniversalTime.Value);
             }
 
+            if (showStarterLiveProgress)
+            {
+                DrawStarterFundingLiveProgress(programme);
+            }
+
             GUILayout.EndVertical();
+        }
+
+        private void DrawStarterFundingLiveProgress(AchievementFundingProgramme programme)
+        {
+            MilestoneDefinition milestone = programme == null
+                ? null
+                : PrototypeMilestones.FindById(programme.Id);
+            if (milestone == null
+                || !milestone.IsStarterContract
+                || _raceController.HasProgramAchieved(_raceController.PlayerProgram, programme))
+            {
+                return;
+            }
+
+            double evaluationUniversalTime = Planetarium.fetch == null
+                ? 0.0
+                : Planetarium.GetUniversalTime();
+            MilestoneDefinition currentMilestone = StarterFlightTracker.GetCurrentMilestone(
+                milestone.StarterLine,
+                _raceController.PlayerProgram,
+                _raceController.Programs,
+                PrototypeMilestones.StarterContracts,
+                evaluationUniversalTime);
+            if (currentMilestone == null
+                || !string.Equals(currentMilestone.Id, milestone.Id, StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            StarterFlightTracker tracker = RaceRuntime.StarterFlightState;
+            if (tracker == null || !tracker.HasActiveAttempt)
+            {
+                return;
+            }
+
+            GUILayout.Space(6.0f);
+            DrawStarterLiveProgress(milestone.StarterLine, milestone, tracker);
         }
 
         private void DrawSatelliteFundingCard(
@@ -851,9 +872,9 @@ namespace TheRaceForSpace.UI
                 "Funding is given for the number of satellite in orbit of the body. This is a fixed contract and will always pay out. Once the maximum number of satellites is meet which ever agencies has the biggest share of satellites will get the bigger share of the payout.");
 
             GUILayout.Space(8.0f);
-            GUILayout.Label("Starter Programmes", _boldLabelStyle);
+            GUILayout.Label("Starter Contracts", _boldLabelStyle);
             GUILayout.Label(
-                "Before Probe Orbit is available, four special Kerbin contract lines are always offered independently of the normal two-milestone sponsor limit: Directed Power, Mass, Control and Biome. Each line has five levels and only its current level is treated as your active objective. Completing level five in any one line, by any agency, unlocks Probe Orbit for the race.");
+                "The campaign begins with Directed Power I, Mass I, Control I and Biome I offered. The remaining sixteen starter contracts use the normal Offered, Unlocked, Locked and Expired states. Any agency, including a rival, completing a level unlocks the next level in that same line. Completing level five in any one line unlocks Probe Orbit for the race.");
 
             GUILayout.Space(8.0f);
             GUILayout.Label("Unlocking New Funding Target", _boldLabelStyle);
@@ -873,9 +894,6 @@ namespace TheRaceForSpace.UI
 
             EnsurePayoutScratchBuffers();
             EnsureSpaceRaceFundingEntries();
-
-            DrawStarterProgrammes(player, currentUniversalTime);
-            GUILayout.Space(10.0f);
 
             GUILayout.Label("Current Funding Info", _boldLabelStyle);
             SpaceRaceFundingEntry selectedEntry = EnsureSelectedSpaceRaceFundingEntry(player);
@@ -1300,13 +1318,6 @@ namespace TheRaceForSpace.UI
                 AchievementFundingProgramme programme =
                     _raceController.AchievementFundingProgrammes[programmeIndex];
                 MilestoneDefinition milestone = PrototypeMilestones.FindById(programme.Id);
-                if (milestone != null && milestone.IsStarterContract)
-                {
-                    // The twenty starter contracts have a dedicated progression panel above.
-                    // Funding Targets remains the financial view for completed starter payouts.
-                    continue;
-                }
-
                 string celestialBodyName = milestone == null ? null : milestone.CelestialBodyName;
                 _spaceRaceFundingEntries.Add(new SpaceRaceFundingEntry(
                     programme,

@@ -93,9 +93,9 @@ All prototype logic tests passed.
 All controller and unlock rule regression tests passed.
 ```
 
-The automated suites cover the KSP-independent starter-contract rules, persistence, four Level I starter offers plus sixteen initially locked successors, Any Agency rival/player line unlocking, unlocked starter contracts joining the normal sponsor review, rival participation, and the four-way Level V to Probe Orbit unlock rule.
+The automated suites cover the KSP-independent starter-contract rules, including landed-only Mass and Biome completion, persistence, four Level I starter offers plus sixteen initially locked successors, Any Agency rival/player line unlocking, unlocked starter contracts joining the normal sponsor review, rival participation, and the four-way Level V to Probe Orbit unlock rule.
 
-The live KSP API paths still require the in-game checks below. In particular, automated tests cannot prove the active-vessel destruction callback, stock biome reporting, actual Command Center layout, or loaded/unloaded vessel discovery inside KSP.
+The live KSP API paths still require the in-game checks below. In particular, automated tests cannot prove the active-vessel destruction callbacks/global vessel-will-destroy fallback, stock biome reporting, actual Command Center layout, or loaded/unloaded vessel discovery inside KSP.
 
 Do not deploy a build if the automated tests fail.
 
@@ -129,6 +129,8 @@ ls -l "$KSP_ROOT/GameData/TheRaceForSpace/Config/RaceSettings.cfg"
 ```
 
 The test helper performs these checks automatically and stops if either deployed file is missing.
+
+Because Directed Power now uses KSP destruction events in addition to the vessel-local callback, this local build is an important compile gate: do not proceed to gameplay testing if `GameEvents.onVesselWillDestroy` or its callback signature fails against the installed KSP 1.12.x assemblies.
 
 ## 5. Start KSP and perform the 0.5 smoke test
 
@@ -174,15 +176,20 @@ These are short smoke tests. The full thresholds and edge cases are in the dedic
 
 1. Reach the current required speed while staying at or below 70 km.
 2. Confirm landing or recovering normally does **not** complete the contract.
-3. Complete it only with a qualifying Kerbin surface impact.
-4. Exceed 70 km first, then descend and impact, and confirm the attempt stays invalid.
+3. Crash the qualifying craft into Kerbin and confirm the contract completes even if KSP momentarily changes the dying vessel to `LANDED` or zero surface speed during breakup.
+4. Repeat against ordinary terrain, not just sea level, to confirm the surface-impact fallback works with terrain clearance.
+5. Exceed 70 km first, then descend and impact, and confirm the attempt stays invalid.
+6. Destroy a moving vessel well above the surface and confirm that does not falsely complete Directed Power.
 
 #### Mass
 
 1. Confirm the offered Mass card in Funding Targets shows both current remaining mass and distance from the tracked launch origin.
-2. Meet only one requirement and confirm no completion.
-3. Meet both requirements simultaneously and confirm the current level completes.
-4. Continue the same launch far enough for the next level and confirm the same line cannot advance twice during one launch.
+2. Fly beyond the required distance with enough mass and confirm the contract does **not** complete while still flying.
+3. Land beyond the required distance with too little final vessel mass and confirm no completion.
+4. Land short of the required distance with enough mass and confirm no completion.
+5. Land beyond the required distance with the finished craft still at or above the required mass and confirm completion.
+6. Confirm a splashdown does not count as the required landing.
+7. Continue the same launch and confirm the same line cannot advance twice during one launch attempt.
 
 #### Control
 
@@ -195,8 +202,10 @@ These are short smoke tests. The full thresholds and edge cases are in the dedic
 #### Biome
 
 1. Confirm the offered Biome card in Funding Targets displays the active vessel's stock Kerbin biome and the current target biome.
-2. Enter the target biome without orbiting and confirm the level completes immediately.
-3. Continue to another target biome in the same launch and confirm the Biome line does not advance twice during that launch.
+2. Fly over the target biome and confirm the contract does **not** complete.
+3. Land in the target biome and confirm the level completes only after KSP reports `LANDED`.
+4. Confirm splashdown does not count as a Biome landing.
+5. Continue to another target biome in the same launch attempt and confirm the Biome line does not advance twice.
 
 ### 0.5 persistence verification
 

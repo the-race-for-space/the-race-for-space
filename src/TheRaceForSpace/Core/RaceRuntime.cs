@@ -11,6 +11,7 @@ namespace TheRaceForSpace.Core
     public sealed class RaceRuntime : MonoBehaviour
     {
         private const float RefreshIntervalSeconds = 5.0f;
+        private const float PlayerVesselRefreshIntervalSeconds = 20.0f;
 
         private static RaceRuntime _activeInstance;
         private static SatelliteRaceController _raceController;
@@ -18,6 +19,7 @@ namespace TheRaceForSpace.Core
 
         private bool _isDuplicateInstance;
         private float _nextRefreshTime;
+        private float _nextPlayerVesselRefreshTime;
 
         /// <summary>
         /// Returns the controller owned by the runtime for the current game, or null while the
@@ -84,13 +86,24 @@ namespace TheRaceForSpace.Core
                 EnsureControllerForCurrentGame();
             }
 
-            if (_raceController == null || Time.realtimeSinceStartup < _nextRefreshTime)
+            float currentRealtime = Time.realtimeSinceStartup;
+            if (_raceController == null || currentRealtime < _nextRefreshTime)
             {
                 return;
             }
 
-            _raceController.Refresh();
-            _nextRefreshTime = Time.realtimeSinceStartup + RefreshIntervalSeconds;
+            bool shouldRefreshPlayerVessels = currentRealtime >= _nextPlayerVesselRefreshTime;
+            bool didRefreshPlayerVessels = _raceController.Refresh(shouldRefreshPlayerVessels);
+
+            // Full KSP vessel discovery is the most expensive recurring operation and does not
+            // need five-second responsiveness. Only start the 20-second interval after a successful
+            // observation so transient scene/startup readiness still retries on the normal cadence.
+            if (didRefreshPlayerVessels)
+            {
+                _nextPlayerVesselRefreshTime = currentRealtime + PlayerVesselRefreshIntervalSeconds;
+            }
+
+            _nextRefreshTime = currentRealtime + RefreshIntervalSeconds;
         }
 
         private void EnsureControllerForCurrentGame()
@@ -114,6 +127,7 @@ namespace TheRaceForSpace.Core
             _raceController = new SatelliteRaceController();
             _controllerGame = HighLogic.CurrentGame;
             _nextRefreshTime = 0.0f;
+            _nextPlayerVesselRefreshTime = 0.0f;
         }
     }
 }

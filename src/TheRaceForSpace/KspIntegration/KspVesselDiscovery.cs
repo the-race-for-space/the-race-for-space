@@ -12,10 +12,17 @@ namespace TheRaceForSpace.KspIntegration
     {
         private const double SurfaceImpactProximityMeters = 100.0;
         private const double MinimumSurfaceImpactSpeedMetersPerSecond = 5.0;
+        private const double SurfaceImpactSampleTravelAllowanceSeconds = 2.0;
 
         private static Game _activeTrackingGame;
         private static Vessel _destructionTrackedVessel;
         private static Callback _destructionCallback;
+        private static string _destructionTrackedVesselId;
+        private static string _lastTrackedBodyName;
+        private static double _lastTrackedSurfaceClearanceMeters = double.PositiveInfinity;
+        private static double _lastTrackedSurfaceSpeedMetersPerSecond;
+        private static TrackedFlightSituation _lastTrackedSituation = TrackedFlightSituation.Other;
+        private static bool _isVesselWillDestroySubscribed;
         private static string _pendingImpactVesselId;
         private static string _pendingImpactBodyName;
         private static double _pendingImpactUniversalTime = -1.0;
@@ -143,6 +150,7 @@ namespace TheRaceForSpace.KspIntegration
             }
 
             TrackActiveVesselDestruction(vessel);
+            CaptureDestructionTelemetry(vessel);
 
             string biomeName = null;
             if (string.Equals(vessel.mainBody.bodyName, "Kerbin", StringComparison.OrdinalIgnoreCase))
@@ -171,8 +179,9 @@ namespace TheRaceForSpace.KspIntegration
         }
 
         /// <summary>
-        /// Returns one pending destruction event only when the actively tracked vessel was moving
-        /// and close enough to terrain or sea level to represent a Kerbin surface impact.
+        /// Returns one pending destruction event only when the actively tracked vessel was close
+        /// enough to the surface, or its last reliable one-second sample shows that it could have
+        /// reached the surface before KSP destroyed the vessel object.
         /// </summary>
         public static bool TryConsumeActiveVesselSurfaceImpact(
             out string vesselId,
@@ -201,7 +210,18 @@ namespace TheRaceForSpace.KspIntegration
         public static void ResetActiveVesselTracking()
         {
             DetachDestructionCallback();
+            if (_isVesselWillDestroySubscribed)
+            {
+                GameEvents.onVesselWillDestroy.Remove(OnVesselWillDestroy);
+                _isVesselWillDestroySubscribed = false;
+            }
+
             _activeTrackingGame = null;
+            _destructionTrackedVesselId = null;
+            _lastTrackedBodyName = null;
+            _lastTrackedSurfaceClearanceMeters = double.PositiveInfinity;
+            _lastTrackedSurfaceSpeedMetersPerSecond = 0.0;
+            _lastTrackedSituation = TrackedFlightSituation.Other;
             _pendingImpactVesselId = null;
             _pendingImpactBodyName = null;
             _pendingImpactUniversalTime = -1.0;
@@ -216,6 +236,13 @@ namespace TheRaceForSpace.KspIntegration
 
             ResetActiveVesselTracking();
             _activeTrackingGame = HighLogic.CurrentGame;
+            if (_activeTrackingGame != null)
+            {
+                // Vessel.OnJustAboutToBeDestroyed can be missed during some breakup sequences.
+                // KSP's global event is an additional last-chance notification for the same vessel.
+                GameEvents.onVesselWillDestroy.Add(OnVesselWillDestroy);
+                _isVesselWillDestroySubscribed = true;
+            }
         }
 
         private static void TrackActiveVesselDestruction(Vessel vessel)
@@ -253,29 +280,94 @@ namespace TheRaceForSpace.KspIntegration
             _destructionCallback = null;
         }
 
+        private static void CaptureDestructionTelemetry(Vessel vessel)
+        {
+            if (vessel == null || vessel.mainBody == null)
+            {
+                return;
+            }
+
+            _destructionTrackedVesselId = vessel.id.ToString("D");
+            _lastTrackedBodyName = vessel.mainBody.bodyName;
+            _lastTrackedSurfaceClearanceMeters = GetSurfaceClearanceMeters(vessel);
+            _lastTrackedSurfaceSpeedMetersPerSecond = Math.Max(0.0, vessel.srfSpeed);
+            _lastTrackedSituation = ConvertSituation(vessel.situation);
+        }
+
+        private static void OnVesselWillDestroy(Vessel vessel)
+        {
+            RecordPotentialSurfaceImpact(vessel);
+        }
+
         private static void RecordPotentialSurfaceImpact(Vessel vessel)
         {
             if (vessel == null
                 || vessel.mainBody == null
-                || vessel.LandedOrSplashed
-                || vessel.srfSpeed < MinimumSurfaceImpactSpeedMetersPerSecond)
+                || string.IsNullOrEmpty(_destructionTrackedVesselId)
+                || !string.Equals(
+                    _destructionTrackedVesselId,
+                    vessel.id.ToString("D"),
+                    StringComparison.OrdinalIgnoreCase))
             {
                 return;
             }
 
-            bool isNearTerrain = vessel.heightFromTerrain >= 0.0f
-                && vessel.heightFromTerrain <= SurfaceImpactProximityMeters;
-            bool isNearSeaLevel = vessel.altitude <= SurfaceImpactProximityMeters;
-            if (!isNearTerrain && !isNearSeaLevel)
+            // Destruction-time vessel values are not stable during a violent breakup: KSP may
+            // already report LANDED and zero surface speed by the time the vessel death callback runs.
+            // Use the last one-second active-vessel sample to prove the craft was still in flight and
+            // moving, while using current or projected clearance to distinguish a surface crash from
+            // unrelated vessel deletion/recovery.
+            bool wasInFlight = _lastTrackedSituation == TrackedFlightSituation.Flying
+                || _lastTrackedSituation == TrackedFlightSituation.SubOrbital;
+            if (!wasInFlight
+                || _lastTrackedSurfaceSpeedMetersPerSecond < MinimumSurfaceImpactSpeedMetersPerSecond)
             {
                 return;
             }
 
-            _pendingImpactVesselId = vessel.id.ToString("D");
-            _pendingImpactBodyName = vessel.mainBody.bodyName;
+            double currentSurfaceClearanceMeters = GetSurfaceClearanceMeters(vessel);
+            bool isNearSurfaceNow = currentSurfaceClearanceMeters <= SurfaceImpactProximityMeters;
+            double sampleTravelAllowanceMeters = Math.Max(
+                SurfaceImpactProximityMeters,
+                _lastTrackedSurfaceSpeedMetersPerSecond * SurfaceImpactSampleTravelAllowanceSeconds);
+            bool couldReachSurfaceSinceLastSample =
+                _lastTrackedSurfaceClearanceMeters <= sampleTravelAllowanceMeters;
+
+            if (!isNearSurfaceNow && !couldReachSurfaceSinceLastSample)
+            {
+                return;
+            }
+
+            _pendingImpactVesselId = _destructionTrackedVesselId;
+            _pendingImpactBodyName = string.IsNullOrEmpty(_lastTrackedBodyName)
+                ? vessel.mainBody.bodyName
+                : _lastTrackedBodyName;
             _pendingImpactUniversalTime = Planetarium.fetch == null
                 ? 0.0
                 : Planetarium.GetUniversalTime();
+        }
+
+        private static double GetSurfaceClearanceMeters(Vessel vessel)
+        {
+            if (vessel == null)
+            {
+                return double.PositiveInfinity;
+            }
+
+            double clearanceMeters = double.PositiveInfinity;
+            if (vessel.heightFromTerrain >= 0.0f)
+            {
+                clearanceMeters = vessel.heightFromTerrain;
+            }
+
+            if (!double.IsNaN(vessel.altitude)
+                && !double.IsInfinity(vessel.altitude)
+                && vessel.altitude >= 0.0)
+            {
+                clearanceMeters = Math.Min(clearanceMeters, vessel.altitude);
+            }
+
+            return clearanceMeters;
         }
 
         private static TrackedFlightSituation ConvertSituation(Vessel.Situations situation)

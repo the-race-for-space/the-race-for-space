@@ -11,6 +11,7 @@ namespace TheRaceForSpace.Tests.Tracking
         public static void NormalizedSnapshotsUpdateCountsAndMilestones()
         {
             var playerProgram = new SpaceProgramState("player", "Player", true);
+            playerProgram.RecordAchievement(PrototypeMilestones.DirectedPower5Id, 1200.0);
             var programs = new List<SpaceProgramState> { playerProgram };
             var vesselSnapshots = new List<VesselTrackingSnapshot>
             {
@@ -30,7 +31,7 @@ namespace TheRaceForSpace.Tests.Tracking
             RequireEqual(1, playerProgram.GetSatelliteCount("Kerbin"), "Probe should count as one Kerbin satellite.");
             RequireEqual(1, playerProgram.GetSatelliteCount("Mun"), "Relay should count as one Mun satellite.");
             RequireEqual(1, playerProgram.GetSatelliteCount("Eve"), "A body outside the milestone catalogue should still receive a satellite count.");
-            Require(playerProgram.HasAchievement(PrototypeMilestones.ProbeOrbitId), "Uncrewed probe should satisfy Probe Orbit.");
+            Require(playerProgram.HasAchievement(PrototypeMilestones.ProbeOrbitId), "Qualified uncrewed probe should satisfy Probe Orbit.");
             Require(playerProgram.HasAchievement(PrototypeMilestones.CrewedOrbitId), "Crewed vessel should satisfy Crewed Orbit after Probe Orbit unlocks it in the same stable refresh.");
             Require(playerProgram.HasAchievement(PrototypeMilestones.MunProbeOrbitId), "Mun relay should satisfy Mun Probe Orbit after its unlock rule becomes satisfied.");
             RequireEqual(

@@ -145,7 +145,7 @@ namespace TheRaceForSpace.KspIntegration
             TrackActiveVesselDestruction(vessel);
 
             string biomeName = null;
-            if (vessel.mainBody.BiomeMap != null)
+            if (string.Equals(vessel.mainBody.bodyName, "Kerbin", StringComparison.OrdinalIgnoreCase))
             {
                 biomeName = ScienceUtil.GetExperimentBiome(
                     vessel.mainBody,
@@ -274,7 +274,7 @@ namespace TheRaceForSpace.KspIntegration
             _pendingImpactVesselId = vessel.id.ToString("D");
             _pendingImpactBodyName = vessel.mainBody.bodyName;
             _pendingImpactUniversalTime = Planetarium.fetch == null
-                ? Math.Max(0.0, vessel.lastUT)
+                ? 0.0
                 : Planetarium.GetUniversalTime();
         }
 

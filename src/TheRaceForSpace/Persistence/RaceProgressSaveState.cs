@@ -183,8 +183,8 @@ namespace TheRaceForSpace.Persistence
                     continue;
                 }
 
-                bool started;
-                int paymentsProcessed;
+                bool started = false;
+                int paymentsProcessed = 0;
                 bool hasSavedContractState = _contractStartedById.TryGetValue(programme.Id, out started)
                     && _contractPaymentsProcessedById.TryGetValue(programme.Id, out paymentsProcessed);
                 if (!hasSavedContractState)

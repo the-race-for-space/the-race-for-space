@@ -115,10 +115,15 @@ namespace TheRaceForSpace.Core
                 _nextRefreshTime = currentRealtime + RefreshIntervalSeconds;
             }
 
-            if (!_hasRestoredStarterFlightState)
+            if (!_hasRestoredStarterFlightState
+                && RacePersistenceScenario.TryRestoreStarterFlightState(_starterFlightTracker))
             {
-                _hasRestoredStarterFlightState = RacePersistenceScenario.TryRestoreStarterFlightState(
-                    _starterFlightTracker);
+                _hasRestoredStarterFlightState = true;
+
+                // Scenario state may become ready between scheduled five-second controller ticks.
+                // Force the controller's normal non-vessel path once before active-flight evaluation
+                // so persisted achievements are restored before a new starter result can be recorded.
+                _raceController.Refresh(false);
             }
 
             if (_hasRestoredStarterFlightState && currentRealtime >= _nextActiveVesselRefreshTime)

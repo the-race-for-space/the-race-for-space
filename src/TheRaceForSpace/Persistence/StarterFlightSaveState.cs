@@ -134,17 +134,35 @@ namespace TheRaceForSpace.Persistence
 
             _vesselId = node.GetValue(VesselIdValueName);
             _celestialBodyName = node.GetValue(BodyValueName);
-            TryParseFiniteDouble(node.GetValue(LaunchUniversalTimeValueName), out _launchUniversalTime);
-            TryParseFiniteDouble(node.GetValue(StartLatitudeValueName), out _startLatitudeDegrees);
-            TryParseFiniteDouble(node.GetValue(StartLongitudeValueName), out _startLongitudeDegrees);
-            TryParseFiniteDouble(node.GetValue(LastSampleUniversalTimeValueName), out _lastSampleUniversalTime);
-            TryParseFiniteDouble(node.GetValue(MaximumAltitudeValueName), out _maximumAltitudeMeters);
-            TryParseFiniteDouble(
-                node.GetValue(MaximumSurfaceSpeedValueName),
-                out _maximumSurfaceSpeedMetersPerSecond);
+
+            // An active node must contain every numeric field needed to reconstruct the attempt.
+            // Treat partial or malformed nodes as no active attempt rather than inventing zeroes
+            // that could erase a ceiling violation or grant free Control hold time after loading.
+            if (string.IsNullOrEmpty(_vesselId)
+                || string.IsNullOrEmpty(_celestialBodyName)
+                || !TryParseFiniteDouble(node.GetValue(LaunchUniversalTimeValueName), out _launchUniversalTime)
+                || _launchUniversalTime < 0.0
+                || !TryParseFiniteDouble(node.GetValue(StartLatitudeValueName), out _startLatitudeDegrees)
+                || _startLatitudeDegrees < -90.0
+                || _startLatitudeDegrees > 90.0
+                || !TryParseFiniteDouble(node.GetValue(StartLongitudeValueName), out _startLongitudeDegrees)
+                || !TryParseFiniteDouble(node.GetValue(LastSampleUniversalTimeValueName), out _lastSampleUniversalTime)
+                || _lastSampleUniversalTime < 0.0
+                || !TryParseFiniteDouble(node.GetValue(MaximumAltitudeValueName), out _maximumAltitudeMeters)
+                || _maximumAltitudeMeters < 0.0
+                || !TryParseFiniteDouble(
+                    node.GetValue(MaximumSurfaceSpeedValueName),
+                    out _maximumSurfaceSpeedMetersPerSecond)
+                || _maximumSurfaceSpeedMetersPerSecond < 0.0
+                || !TryParseFiniteDouble(node.GetValue(ControlHoldSecondsValueName), out _controlHoldSeconds)
+                || _controlHoldSeconds < 0.0)
+            {
+                _hasActiveAttempt = false;
+                return;
+            }
+
             _controlHoldMilestoneId = node.GetValue(ControlHoldMilestoneIdValueName);
             _qualifiedControlMilestoneId = node.GetValue(QualifiedControlMilestoneIdValueName);
-            TryParseFiniteDouble(node.GetValue(ControlHoldSecondsValueName), out _controlHoldSeconds);
             _wasControlSampleInBand = ParseBool(node.GetValue(WasControlSampleInBandValueName));
             _enteredOrbit = ParseBool(node.GetValue(EnteredOrbitValueName));
             _completedDirectedPowerThisAttempt = ParseBool(node.GetValue(CompletedDirectedPowerValueName));

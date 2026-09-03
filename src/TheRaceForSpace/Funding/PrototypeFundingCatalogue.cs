@@ -32,14 +32,12 @@ namespace TheRaceForSpace.Funding
 
         /// <summary>
         /// Creates fresh achievement funding state for a new race controller from the milestone catalogue.
-        /// Probe Orbit is the single opening sponsor offer for a new campaign.
+        /// Level-one starter milestones are the four opening sponsor offers for a new campaign.
         /// </summary>
         public static IList<AchievementFundingProgramme> CreateAchievementProgrammes()
         {
             var programmes = new List<AchievementFundingProgramme>();
 
-            // Achievement rewards are derived from the milestone body and crew requirement so a
-            // newly added milestone automatically uses the configured balance tier for its body.
             for (int milestoneIndex = 0; milestoneIndex < PrototypeMilestones.All.Count; milestoneIndex++)
             {
                 AddAchievementProgramme(programmes, PrototypeMilestones.All[milestoneIndex]);
@@ -157,9 +155,11 @@ namespace TheRaceForSpace.Funding
             MilestoneDefinition milestone)
         {
             RaceBodySettings bodySettings = RaceSettings.GetBodySettings(milestone.CelestialBodyName);
-            double baseRewardFunds = milestone.CrewRequirement == MilestoneCrewRequirement.Crewed
-                ? bodySettings.CrewedRewardFunds
-                : bodySettings.ProbeRewardFunds;
+            double baseRewardFunds = milestone.IsStarterContract
+                ? milestone.BaseRewardFunds
+                : milestone.CrewRequirement == MilestoneCrewRequirement.Crewed
+                    ? bodySettings.CrewedRewardFunds
+                    : bodySettings.ProbeRewardFunds;
 
             AchievementFundingProgramme programme;
             if (milestone.UnlockRule == null)
@@ -181,9 +181,9 @@ namespace TheRaceForSpace.Funding
                     milestone.UnlockRule);
             }
 
-            // Probe Orbit is the deliberate campaign bootstrap offer. Every later achievement,
-            // including Crewed Orbit, must first unlock and then wait for a funding-day review.
-            if (string.Equals(milestone.Id, PrototypeMilestones.ProbeOrbitId, StringComparison.OrdinalIgnoreCase))
+            // The four starter lines remain outside the normal two-offer sponsor pool. Their first
+            // milestones are bootstrap offers; later levels are offered deterministically by the controller.
+            if (milestone.IsStarterContract && milestone.StarterLevel == 1)
             {
                 programme.Offer();
             }
@@ -265,23 +265,50 @@ namespace TheRaceForSpace.Funding
                 return "Available from the start of the campaign";
             }
 
-            // Availability is always decided by UnlockRuleEvaluator. This text is only a concise
-            // description for funding-programme presentation paths that still expose UnlockRequirement.
+            // Probe Orbit is the first rule with several one-condition OR paths. Keep the existing
+            // presentation formatter deliberately narrow: multi-path text supports only the simple
+            // AnyAgency achievement alternatives used by that gate.
+            if (unlockRule.Paths.Count > 1)
+            {
+                string alternatives = null;
+                for (int pathIndex = 0; pathIndex < unlockRule.Paths.Count; pathIndex++)
+                {
+                    UnlockPathDefinition alternativePath = unlockRule.Paths[pathIndex];
+                    if (alternativePath == null || alternativePath.Conditions.Count != 1)
+                    {
+                        throw new InvalidOperationException(
+                            "Current prototype OR funding text requires one condition per unlock path.");
+                    }
+
+                    UnlockConditionDefinition condition = alternativePath.Conditions[0];
+                    if (!IsSingleAgencyAchievementCondition(condition))
+                    {
+                        throw new InvalidOperationException(
+                            "Current prototype OR funding text supports AnyAgency achievements only.");
+                    }
+
+                    if (!string.IsNullOrEmpty(alternatives))
+                    {
+                        alternatives += " or ";
+                    }
+
+                    alternatives += FindRequiredMilestone(condition.MilestoneId).Name;
+                }
+
+                return "Any agency must achieve " + alternatives + ".";
+            }
+
             if (unlockRule.Paths.Count != 1
                 || unlockRule.Paths[0] == null
                 || unlockRule.Paths[0].Conditions.Count == 0)
             {
                 throw new InvalidOperationException(
-                    "Current prototype funding text requires one unlock path.");
+                    "Current prototype funding text requires at least one unlock path.");
             }
 
             UnlockPathDefinition path = unlockRule.Paths[0];
             UnlockConditionDefinition firstCondition = path.Conditions[0];
-            if (firstCondition == null
-                || firstCondition.ConditionType != UnlockConditionType.Achievement
-                || firstCondition.ProgramScope != UnlockProgramScope.AnyAgency
-                || firstCondition.RequiredProgramCount != 1
-                || string.IsNullOrEmpty(firstCondition.MilestoneId))
+            if (!IsSingleAgencyAchievementCondition(firstCondition))
             {
                 throw new InvalidOperationException(
                     "Current prototype funding text requires an AnyAgency achievement as its first condition.");
@@ -293,11 +320,7 @@ namespace TheRaceForSpace.Funding
             for (int conditionIndex = 1; conditionIndex < path.Conditions.Count; conditionIndex++)
             {
                 UnlockConditionDefinition condition = path.Conditions[conditionIndex];
-                if (condition != null
-                    && condition.ConditionType == UnlockConditionType.Achievement
-                    && condition.ProgramScope == UnlockProgramScope.AnyAgency
-                    && condition.RequiredProgramCount == 1
-                    && !string.IsNullOrEmpty(condition.MilestoneId))
+                if (IsSingleAgencyAchievementCondition(condition))
                 {
                     unlockRequirement += " and " + FindRequiredMilestone(condition.MilestoneId).Name;
                     continue;
@@ -322,6 +345,15 @@ namespace TheRaceForSpace.Funding
             }
 
             return unlockRequirement + ".";
+        }
+
+        private static bool IsSingleAgencyAchievementCondition(UnlockConditionDefinition condition)
+        {
+            return condition != null
+                && condition.ConditionType == UnlockConditionType.Achievement
+                && condition.ProgramScope == UnlockProgramScope.AnyAgency
+                && condition.RequiredProgramCount == 1
+                && !string.IsNullOrEmpty(condition.MilestoneId);
         }
 
         private static MilestoneDefinition FindRequiredMilestone(string milestoneId)

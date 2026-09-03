@@ -52,6 +52,9 @@ namespace TheRaceForSpace.ControllerTests
                 "Controller uses configured funding interval",
                 SatelliteRaceControllerTests.ConfiguredFundingIntervalSetsNextBoundary);
             Run(
+                "Controller scheduled refresh can skip player vessel observation",
+                SatelliteRaceControllerTests.ScheduledRefreshCanSkipPlayerVesselObservation);
+            Run(
                 "Controller probe observation unlocks funding flow",
                 SatelliteRaceControllerTests.ProbeObservationUnlocksFundingFlow);
             Run(

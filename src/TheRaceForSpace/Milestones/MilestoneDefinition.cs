@@ -12,8 +12,8 @@ namespace TheRaceForSpace.Milestones
     }
 
     /// <summary>
-    /// Vessel situation required by one milestone objective.
-    /// Orbit is the only situation used by the 0.3 prototype; later milestone types can extend this enum.
+    /// Vessel situation required by the orbital milestone objectives.
+    /// Starter contracts are evaluated from flight-attempt state rather than this value.
     /// </summary>
     public enum MilestoneSituation
     {
@@ -21,7 +21,31 @@ namespace TheRaceForSpace.Milestones
     }
 
     /// <summary>
-    /// KSP-independent facts about one observed vessel that are relevant to milestone evaluation.
+    /// Broad objective family used to distinguish orbital achievements from the four starter lines.
+    /// </summary>
+    public enum MilestoneObjectiveType
+    {
+        Orbit,
+        DirectedPower,
+        DeliveredMass,
+        AltitudeHold,
+        BiomeVisit
+    }
+
+    /// <summary>
+    /// Special pre-orbit contract line. None identifies the normal space-race milestone catalogue.
+    /// </summary>
+    public enum StarterContractLine
+    {
+        None,
+        DirectedPower,
+        Mass,
+        Control,
+        Biome
+    }
+
+    /// <summary>
+    /// KSP-independent facts about one observed vessel that are relevant to orbital milestone evaluation.
     /// A null crew qualification means the vessel does not fit a milestone crew category.
     /// </summary>
     public sealed class MilestoneVesselObservation
@@ -43,7 +67,7 @@ namespace TheRaceForSpace.Milestones
 
     /// <summary>
     /// Immutable definition of one race milestone. Gameplay state remains owned by space programs;
-    /// this type describes the objective and the campaign rule that makes it available.
+    /// this type describes the objective, starter-contract balance metadata, and campaign unlock rule.
     /// </summary>
     public sealed class MilestoneDefinition
     {
@@ -55,6 +79,35 @@ namespace TheRaceForSpace.Milestones
             MilestoneCrewRequirement crewRequirement,
             string objectiveDescription,
             UnlockRuleDefinition unlockRule)
+            : this(
+                id,
+                name,
+                celestialBodyName,
+                situation,
+                crewRequirement,
+                objectiveDescription,
+                unlockRule,
+                MilestoneObjectiveType.Orbit,
+                StarterContractLine.None,
+                0,
+                0.0,
+                0.0)
+        {
+        }
+
+        public MilestoneDefinition(
+            string id,
+            string name,
+            string celestialBodyName,
+            MilestoneSituation situation,
+            MilestoneCrewRequirement crewRequirement,
+            string objectiveDescription,
+            UnlockRuleDefinition unlockRule,
+            MilestoneObjectiveType objectiveType,
+            StarterContractLine starterLine,
+            int starterLevel,
+            double baseRewardFunds,
+            double rivalProgressCostFunds)
         {
             Id = id;
             Name = name;
@@ -63,6 +116,11 @@ namespace TheRaceForSpace.Milestones
             CrewRequirement = crewRequirement;
             ObjectiveDescription = objectiveDescription;
             UnlockRule = unlockRule;
+            ObjectiveType = objectiveType;
+            StarterLine = starterLine;
+            StarterLevel = Math.Max(0, starterLevel);
+            BaseRewardFunds = Math.Max(0.0, baseRewardFunds);
+            RivalProgressCostFunds = Math.Max(0.0, rivalProgressCostFunds);
         }
 
         public string Id { get; private set; }
@@ -72,13 +130,25 @@ namespace TheRaceForSpace.Milestones
         public MilestoneCrewRequirement CrewRequirement { get; private set; }
         public string ObjectiveDescription { get; private set; }
         public UnlockRuleDefinition UnlockRule { get; private set; }
+        public MilestoneObjectiveType ObjectiveType { get; private set; }
+        public StarterContractLine StarterLine { get; private set; }
+        public int StarterLevel { get; private set; }
+        public double BaseRewardFunds { get; private set; }
+        public double RivalProgressCostFunds { get; private set; }
+
+        public bool IsStarterContract
+        {
+            get { return StarterLine != StarterContractLine.None && StarterLevel > 0; }
+        }
 
         /// <summary>
         /// Returns whether one KSP-independent vessel observation satisfies this milestone.
+        /// Starter milestones are evaluated by the flight-attempt tracker added in the gameplay batch.
         /// </summary>
         public bool IsSatisfiedBy(MilestoneVesselObservation observation)
         {
-            if (observation == null
+            if (ObjectiveType != MilestoneObjectiveType.Orbit
+                || observation == null
                 || string.IsNullOrEmpty(observation.CelestialBodyName)
                 || !observation.CrewQualification.HasValue)
             {

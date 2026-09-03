@@ -60,6 +60,7 @@ namespace TheRaceForSpace.ControllerTests
             var controller = new SatelliteRaceController();
             controller.AsterProgram.Funds = 0.0;
             controller.CobaltProgram.Funds = 0.0;
+            QualifyForProbeOrbit(controller, observationUniversalTime - 1.0);
 
             bool skippedObservation = controller.Refresh(false);
 
@@ -67,7 +68,7 @@ namespace TheRaceForSpace.ControllerTests
             Equal(0, KspVesselDiscovery.CaptureCalls);
             Require(
                 !controller.PlayerProgram.HasAchievement(PrototypeMilestones.ProbeOrbitId),
-                "Skipping the vessel observation must leave player milestone state unchanged.");
+                "Skipping the vessel observation must leave player Probe Orbit state unchanged.");
             Equal(1, RacePersistenceScenario.RivalCaptureCalls);
             Equal(1, RacePersistenceScenario.RaceProgressCaptureCalls);
 
@@ -77,7 +78,7 @@ namespace TheRaceForSpace.ControllerTests
             Equal(1, KspVesselDiscovery.CaptureCalls);
             Require(
                 controller.PlayerProgram.HasAchievement(PrototypeMilestones.ProbeOrbitId),
-                "The next scheduled vessel observation should record the pending Probe Orbit.");
+                "The next scheduled vessel observation should record the qualified Probe Orbit.");
         }
 
         public static void ProbeObservationUnlocksFundingFlow()
@@ -95,6 +96,7 @@ namespace TheRaceForSpace.ControllerTests
             var controller = new SatelliteRaceController();
             controller.AsterProgram.Funds = 0.0;
             controller.CobaltProgram.Funds = 0.0;
+            QualifyForProbeOrbit(controller, observationUniversalTime - 1.0);
 
             controller.Refresh();
 
@@ -113,7 +115,7 @@ namespace TheRaceForSpace.ControllerTests
 
             Require(
                 controller.PlayerProgram.HasAchievement(PrototypeMilestones.ProbeOrbitId),
-                "A player Probe snapshot should flow through controller tracking into Probe Orbit.");
+                "A qualified player Probe snapshot should flow through controller tracking into Probe Orbit.");
             Equal(
                 observationUniversalTime,
                 controller.PlayerProgram.GetAchievementUniversalTime(PrototypeMilestones.ProbeOrbitId));
@@ -121,7 +123,7 @@ namespace TheRaceForSpace.ControllerTests
             Require(
                 !kerbinNetwork.IsOffered,
                 "An unlocked satellite programme should wait for a funding-day sponsor review.");
-            Require(probeOrbit.HasStarted, "The achieved opening Probe Orbit offer should start immediately.");
+            Require(probeOrbit.HasStarted, "The achieved Probe Orbit offer should start immediately.");
             Require(
                 controller.IsAchievementProgrammeAvailable(munProbeOrbit),
                 "Probe Orbit should make the downstream Mun Probe Orbit contract available.");
@@ -156,6 +158,7 @@ namespace TheRaceForSpace.ControllerTests
             var controller = new SatelliteRaceController();
             controller.AsterProgram.Funds = 0.0;
             controller.CobaltProgram.Funds = 0.0;
+            QualifyForProbeOrbit(controller, observationUniversalTime - 1.0);
 
             controller.Refresh();
 
@@ -169,7 +172,7 @@ namespace TheRaceForSpace.ControllerTests
             Equal(6, controller.PlayerProgram.GetSatelliteCount("Kerbin"));
             Require(
                 controller.PlayerProgram.HasAchievement(PrototypeMilestones.ProbeOrbitId),
-                "Six Kerbin probe satellites should also record the normal Kerbin Probe Orbit achievement.");
+                "Six Kerbin probe satellites should record Probe Orbit once a starter line qualifies the programme.");
             Require(
                 !controller.PlayerProgram.HasAchievement(PrototypeMilestones.MunProbeOrbitId),
                 "Mun Probe Orbit should still be incomplete before a Mun probe achievement is recorded.");
@@ -217,6 +220,7 @@ namespace TheRaceForSpace.ControllerTests
             var controller = new SatelliteRaceController();
             controller.AsterProgram.Funds = 0.0;
             controller.CobaltProgram.Funds = 0.0;
+            QualifyForProbeOrbit(controller, 0.0);
             controller.Refresh();
 
             controller.PlayerProgram.RecordAchievement(PrototypeMilestones.ProbeOrbitId, 1.0);
@@ -232,8 +236,6 @@ namespace TheRaceForSpace.ControllerTests
                 controller,
                 PrototypeFundingCatalogue.KerbinNetworkId);
 
-            // Probe Orbit was already offered and pays 75k. Kerbin unlocks at this boundary but
-            // is only offered after the payout, so its existing satellite cannot be paid retroactively.
             Equal(75000.0, CareerFundingAdapter.TotalAddedFunds);
             Equal(1, CareerFundingAdapter.AddFundsCalls);
             Require(kerbinNetwork.IsOffered, "The funding review should offer the unlocked Kerbin network.");
@@ -256,8 +258,6 @@ namespace TheRaceForSpace.ControllerTests
 
             controller.Refresh();
 
-            // Restoring the overdue boundary must replay it instead of recomputing the next date
-            // from the current UT and silently skipping the rival base payment.
             Equal(20000.0, controller.AsterProgram.Funds);
             Equal(20000.0, controller.CobaltProgram.Funds);
             Equal(FundingIntervalSeconds * 2.0, controller.NextFundingUniversalTime);
@@ -277,6 +277,9 @@ namespace TheRaceForSpace.ControllerTests
             controller.CobaltProgram.Funds = 0.0;
             controller.Refresh();
 
+            // Qualifying after the campaign starts makes Probe Orbit available at the crossed
+            // funding boundary, but the actual orbital observation still occurs after that payout.
+            QualifyForProbeOrbit(controller, 1.0);
             Planetarium.CurrentUniversalTime = FundingIntervalSeconds;
             KspVesselDiscovery.SetSnapshots(
                 new List<VesselTrackingSnapshot>
@@ -294,8 +297,6 @@ namespace TheRaceForSpace.ControllerTests
                 controller,
                 PrototypeFundingCatalogue.KerbinNetworkId);
 
-            // Due funding and its sponsor review are replayed before current KSP vessel discovery.
-            // The newly unlocked Kerbin network therefore waits for the following funding review.
             Equal(0.0, CareerFundingAdapter.TotalAddedFunds);
             Equal(0, probeOrbit.PaymentsProcessed);
             Require(
@@ -322,6 +323,7 @@ namespace TheRaceForSpace.ControllerTests
             var controller = new SatelliteRaceController();
             controller.AsterProgram.Funds = 0.0;
             controller.CobaltProgram.Funds = 0.0;
+            QualifyForProbeOrbit(controller, 999.0);
             controller.Refresh();
 
             AchievementFundingProgramme probeOrbit = FindAchievementProgramme(
@@ -331,8 +333,6 @@ namespace TheRaceForSpace.ControllerTests
                 controller,
                 PrototypeFundingCatalogue.KerbinNetworkId);
 
-            // This cache regression is about refresh-scoped recalculation rather than sponsor
-            // timing, so explicitly offer the already-unlocked network before rebuilding the cache.
             kerbinNetwork.Offer();
             controller.Refresh(false);
 
@@ -354,6 +354,15 @@ namespace TheRaceForSpace.ControllerTests
                 75000.0,
                 controller.GetAchievementCurrentPayout(controller.PlayerProgram, probeOrbit));
             Equal(75000.0, controller.PlayerProgram.NextPayoutFunds);
+        }
+
+        private static void QualifyForProbeOrbit(
+            SatelliteRaceController controller,
+            double achievementUniversalTime)
+        {
+            controller.PlayerProgram.RecordAchievement(
+                PrototypeMilestones.DirectedPower5Id,
+                achievementUniversalTime);
         }
 
         private static AchievementFundingProgramme FindAchievementProgramme(

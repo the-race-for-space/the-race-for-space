@@ -63,7 +63,7 @@ namespace TheRaceForSpace.Milestones
         public const string EelooCrewedOrbitId = "eeloo-crewed-orbit";
 
         private const double StarterRewardFundsPerLevel = 10000.0;
-        private const double StarterRivalProgressCostFundsPerLevel = 1000.0;
+        private const double StarterRivalProgressCostFundsPerLevel = 2000.0;
 
         private static readonly IList<MilestoneDefinition> StarterDefinitions =
             new List<MilestoneDefinition>

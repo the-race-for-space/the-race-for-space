@@ -65,178 +65,37 @@ namespace TheRaceForSpace.Milestones
         private const double StarterRewardFundsPerLevel = 10000.0;
         private const double StarterRivalProgressCostFundsPerLevel = 1000.0;
 
+        private static readonly IList<MilestoneDefinition> StarterDefinitions =
+            new List<MilestoneDefinition>
+            {
+                CreateStarterMilestone(DirectedPower1Id, "Directed Power I", MilestoneObjectiveType.DirectedPower, StarterContractLine.DirectedPower, 1, "Reach 600 m/s without exceeding 70 km altitude, then impact Kerbin.", null),
+                CreateStarterMilestone(DirectedPower2Id, "Directed Power II", MilestoneObjectiveType.DirectedPower, StarterContractLine.DirectedPower, 2, "Reach 1,100 m/s without exceeding 70 km altitude, then impact Kerbin.", DirectedPower1Id),
+                CreateStarterMilestone(DirectedPower3Id, "Directed Power III", MilestoneObjectiveType.DirectedPower, StarterContractLine.DirectedPower, 3, "Reach 1,400 m/s without exceeding 70 km altitude, then impact Kerbin.", DirectedPower2Id),
+                CreateStarterMilestone(DirectedPower4Id, "Directed Power IV", MilestoneObjectiveType.DirectedPower, StarterContractLine.DirectedPower, 4, "Reach 1,700 m/s without exceeding 70 km altitude, then impact Kerbin.", DirectedPower3Id),
+                CreateStarterMilestone(DirectedPower5Id, "Directed Power V", MilestoneObjectiveType.DirectedPower, StarterContractLine.DirectedPower, 5, "Reach 2,000 m/s without exceeding 70 km altitude, then impact Kerbin.", DirectedPower4Id),
+
+                CreateStarterMilestone(Mass1Id, "Mass I", MilestoneObjectiveType.DeliveredMass, StarterContractLine.Mass, 1, "Carry at least 1 t of remaining vessel mass 25 km from the Space Centre.", null),
+                CreateStarterMilestone(Mass2Id, "Mass II", MilestoneObjectiveType.DeliveredMass, StarterContractLine.Mass, 2, "Carry at least 2.5 t of remaining vessel mass 75 km from the Space Centre.", Mass1Id),
+                CreateStarterMilestone(Mass3Id, "Mass III", MilestoneObjectiveType.DeliveredMass, StarterContractLine.Mass, 3, "Carry at least 5 t of remaining vessel mass 150 km from the Space Centre.", Mass2Id),
+                CreateStarterMilestone(Mass4Id, "Mass IV", MilestoneObjectiveType.DeliveredMass, StarterContractLine.Mass, 4, "Carry at least 10 t of remaining vessel mass 300 km from the Space Centre.", Mass3Id),
+                CreateStarterMilestone(Mass5Id, "Mass V", MilestoneObjectiveType.DeliveredMass, StarterContractLine.Mass, 5, "Carry at least 20 t of remaining vessel mass 600 km from the Space Centre.", Mass4Id),
+
+                CreateStarterMilestone(Control1Id, "Control I", MilestoneObjectiveType.AltitudeHold, StarterContractLine.Control, 1, "With crew aboard, remain between 2-5 km for 30 seconds, then land safely on Kerbin.", null, MilestoneCrewRequirement.Crewed),
+                CreateStarterMilestone(Control2Id, "Control II", MilestoneObjectiveType.AltitudeHold, StarterContractLine.Control, 2, "With crew aboard, remain between 8-12 km for 45 seconds, then land safely on Kerbin.", Control1Id, MilestoneCrewRequirement.Crewed),
+                CreateStarterMilestone(Control3Id, "Control III", MilestoneObjectiveType.AltitudeHold, StarterContractLine.Control, 3, "With crew aboard, remain between 15-25 km for 60 seconds, then land safely on Kerbin.", Control2Id, MilestoneCrewRequirement.Crewed),
+                CreateStarterMilestone(Control4Id, "Control IV", MilestoneObjectiveType.AltitudeHold, StarterContractLine.Control, 4, "With crew aboard, remain between 30-40 km for 75 seconds, then land safely on Kerbin.", Control3Id, MilestoneCrewRequirement.Crewed),
+                CreateStarterMilestone(Control5Id, "Control V", MilestoneObjectiveType.AltitudeHold, StarterContractLine.Control, 5, "With crew aboard, remain between 50-65 km for 90 seconds, then land safely on Kerbin.", Control4Id, MilestoneCrewRequirement.Crewed),
+
+                CreateStarterMilestone(Biome1Id, "Biome I - Grasslands", MilestoneObjectiveType.BiomeVisit, StarterContractLine.Biome, 1, "Visit Kerbin's Grasslands biome without entering orbit.", null),
+                CreateStarterMilestone(Biome2Id, "Biome II - Highlands", MilestoneObjectiveType.BiomeVisit, StarterContractLine.Biome, 2, "Visit Kerbin's Highlands biome without entering orbit.", Biome1Id),
+                CreateStarterMilestone(Biome3Id, "Biome III - Mountains", MilestoneObjectiveType.BiomeVisit, StarterContractLine.Biome, 3, "Visit Kerbin's Mountains biome without entering orbit.", Biome2Id),
+                CreateStarterMilestone(Biome4Id, "Biome IV - Deserts", MilestoneObjectiveType.BiomeVisit, StarterContractLine.Biome, 4, "Visit Kerbin's Deserts biome without entering orbit.", Biome3Id),
+                CreateStarterMilestone(Biome5Id, "Biome V - Ice Caps", MilestoneObjectiveType.BiomeVisit, StarterContractLine.Biome, 5, "Visit Kerbin's Ice Caps biome without entering orbit.", Biome4Id)
+            }.AsReadOnly();
+
         private static readonly IList<MilestoneDefinition> Definitions =
             new List<MilestoneDefinition>
             {
-                CreateStarterMilestone(
-                    DirectedPower1Id,
-                    "Directed Power I",
-                    MilestoneObjectiveType.DirectedPower,
-                    StarterContractLine.DirectedPower,
-                    1,
-                    "Reach 600 m/s without exceeding 70 km altitude, then impact Kerbin.",
-                    null),
-                CreateStarterMilestone(
-                    DirectedPower2Id,
-                    "Directed Power II",
-                    MilestoneObjectiveType.DirectedPower,
-                    StarterContractLine.DirectedPower,
-                    2,
-                    "Reach 1,100 m/s without exceeding 70 km altitude, then impact Kerbin.",
-                    DirectedPower1Id),
-                CreateStarterMilestone(
-                    DirectedPower3Id,
-                    "Directed Power III",
-                    MilestoneObjectiveType.DirectedPower,
-                    StarterContractLine.DirectedPower,
-                    3,
-                    "Reach 1,400 m/s without exceeding 70 km altitude, then impact Kerbin.",
-                    DirectedPower2Id),
-                CreateStarterMilestone(
-                    DirectedPower4Id,
-                    "Directed Power IV",
-                    MilestoneObjectiveType.DirectedPower,
-                    StarterContractLine.DirectedPower,
-                    4,
-                    "Reach 1,700 m/s without exceeding 70 km altitude, then impact Kerbin.",
-                    DirectedPower3Id),
-                CreateStarterMilestone(
-                    DirectedPower5Id,
-                    "Directed Power V",
-                    MilestoneObjectiveType.DirectedPower,
-                    StarterContractLine.DirectedPower,
-                    5,
-                    "Reach 2,000 m/s without exceeding 70 km altitude, then impact Kerbin.",
-                    DirectedPower4Id),
-
-                CreateStarterMilestone(
-                    Mass1Id,
-                    "Mass I",
-                    MilestoneObjectiveType.DeliveredMass,
-                    StarterContractLine.Mass,
-                    1,
-                    "Carry at least 1 t of remaining vessel mass 25 km from the Space Centre.",
-                    null),
-                CreateStarterMilestone(
-                    Mass2Id,
-                    "Mass II",
-                    MilestoneObjectiveType.DeliveredMass,
-                    StarterContractLine.Mass,
-                    2,
-                    "Carry at least 2.5 t of remaining vessel mass 75 km from the Space Centre.",
-                    Mass1Id),
-                CreateStarterMilestone(
-                    Mass3Id,
-                    "Mass III",
-                    MilestoneObjectiveType.DeliveredMass,
-                    StarterContractLine.Mass,
-                    3,
-                    "Carry at least 5 t of remaining vessel mass 150 km from the Space Centre.",
-                    Mass2Id),
-                CreateStarterMilestone(
-                    Mass4Id,
-                    "Mass IV",
-                    MilestoneObjectiveType.DeliveredMass,
-                    StarterContractLine.Mass,
-                    4,
-                    "Carry at least 10 t of remaining vessel mass 300 km from the Space Centre.",
-                    Mass3Id),
-                CreateStarterMilestone(
-                    Mass5Id,
-                    "Mass V",
-                    MilestoneObjectiveType.DeliveredMass,
-                    StarterContractLine.Mass,
-                    5,
-                    "Carry at least 20 t of remaining vessel mass 600 km from the Space Centre.",
-                    Mass4Id),
-
-                CreateStarterMilestone(
-                    Control1Id,
-                    "Control I",
-                    MilestoneObjectiveType.AltitudeHold,
-                    StarterContractLine.Control,
-                    1,
-                    "With crew aboard, remain between 2-5 km for 30 seconds, then land safely on Kerbin.",
-                    null,
-                    MilestoneCrewRequirement.Crewed),
-                CreateStarterMilestone(
-                    Control2Id,
-                    "Control II",
-                    MilestoneObjectiveType.AltitudeHold,
-                    StarterContractLine.Control,
-                    2,
-                    "With crew aboard, remain between 8-12 km for 45 seconds, then land safely on Kerbin.",
-                    Control1Id,
-                    MilestoneCrewRequirement.Crewed),
-                CreateStarterMilestone(
-                    Control3Id,
-                    "Control III",
-                    MilestoneObjectiveType.AltitudeHold,
-                    StarterContractLine.Control,
-                    3,
-                    "With crew aboard, remain between 15-25 km for 60 seconds, then land safely on Kerbin.",
-                    Control2Id,
-                    MilestoneCrewRequirement.Crewed),
-                CreateStarterMilestone(
-                    Control4Id,
-                    "Control IV",
-                    MilestoneObjectiveType.AltitudeHold,
-                    StarterContractLine.Control,
-                    4,
-                    "With crew aboard, remain between 30-40 km for 75 seconds, then land safely on Kerbin.",
-                    Control3Id,
-                    MilestoneCrewRequirement.Crewed),
-                CreateStarterMilestone(
-                    Control5Id,
-                    "Control V",
-                    MilestoneObjectiveType.AltitudeHold,
-                    StarterContractLine.Control,
-                    5,
-                    "With crew aboard, remain between 50-65 km for 90 seconds, then land safely on Kerbin.",
-                    Control4Id,
-                    MilestoneCrewRequirement.Crewed),
-
-                CreateStarterMilestone(
-                    Biome1Id,
-                    "Biome I - Grasslands",
-                    MilestoneObjectiveType.BiomeVisit,
-                    StarterContractLine.Biome,
-                    1,
-                    "Visit Kerbin's Grasslands biome without entering orbit.",
-                    null),
-                CreateStarterMilestone(
-                    Biome2Id,
-                    "Biome II - Highlands",
-                    MilestoneObjectiveType.BiomeVisit,
-                    StarterContractLine.Biome,
-                    2,
-                    "Visit Kerbin's Highlands biome without entering orbit.",
-                    Biome1Id),
-                CreateStarterMilestone(
-                    Biome3Id,
-                    "Biome III - Mountains",
-                    MilestoneObjectiveType.BiomeVisit,
-                    StarterContractLine.Biome,
-                    3,
-                    "Visit Kerbin's Mountains biome without entering orbit.",
-                    Biome2Id),
-                CreateStarterMilestone(
-                    Biome4Id,
-                    "Biome IV - Deserts",
-                    MilestoneObjectiveType.BiomeVisit,
-                    StarterContractLine.Biome,
-                    4,
-                    "Visit Kerbin's Deserts biome without entering orbit.",
-                    Biome3Id),
-                CreateStarterMilestone(
-                    Biome5Id,
-                    "Biome V - Ice Caps",
-                    MilestoneObjectiveType.BiomeVisit,
-                    StarterContractLine.Biome,
-                    5,
-                    "Visit Kerbin's Ice Caps biome without entering orbit.",
-                    Biome4Id),
-
                 new MilestoneDefinition(
                     ProbeOrbitId,
                     "Probe Orbit",
@@ -495,9 +354,20 @@ namespace TheRaceForSpace.Milestones
                     CreateInterplanetaryCrewedUnlockRule())
             }.AsReadOnly();
 
+        /// <summary>
+        /// Orbital milestones consumed by the existing vessel-orbit tracker.
+        /// </summary>
         public static IList<MilestoneDefinition> All
         {
             get { return Definitions; }
+        }
+
+        /// <summary>
+        /// The twenty special pre-orbit milestones. Batch B supplies their flight-state evaluation.
+        /// </summary>
+        public static IList<MilestoneDefinition> StarterContracts
+        {
+            get { return StarterDefinitions; }
         }
 
         /// <summary>
@@ -510,9 +380,17 @@ namespace TheRaceForSpace.Milestones
                 return null;
             }
 
-            for (int milestoneIndex = 0; milestoneIndex < Definitions.Count; milestoneIndex++)
+            MilestoneDefinition milestone = FindById(StarterDefinitions, milestoneId);
+            return milestone ?? FindById(Definitions, milestoneId);
+        }
+
+        private static MilestoneDefinition FindById(
+            IList<MilestoneDefinition> definitions,
+            string milestoneId)
+        {
+            for (int milestoneIndex = 0; milestoneIndex < definitions.Count; milestoneIndex++)
             {
-                MilestoneDefinition milestone = Definitions[milestoneIndex];
+                MilestoneDefinition milestone = definitions[milestoneIndex];
                 if (string.Equals(milestone.Id, milestoneId, StringComparison.OrdinalIgnoreCase))
                 {
                     return milestone;

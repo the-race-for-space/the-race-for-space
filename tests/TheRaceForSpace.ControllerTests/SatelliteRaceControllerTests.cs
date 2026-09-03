@@ -45,6 +45,41 @@ namespace TheRaceForSpace.ControllerTests
             Equal(30.0 * KerbinDaySeconds, controller.NextFundingUniversalTime);
         }
 
+        public static void ScheduledRefreshCanSkipPlayerVesselObservation()
+        {
+            ResetEnvironment();
+            const double observationUniversalTime = 1000.0;
+            Planetarium.CurrentUniversalTime = observationUniversalTime;
+            KspVesselDiscovery.SetSnapshots(
+                new List<VesselTrackingSnapshot>
+                {
+                    new VesselTrackingSnapshot("Kerbin", TrackedVesselType.Probe, 0)
+                },
+                observationUniversalTime);
+
+            var controller = new SatelliteRaceController();
+            controller.AsterProgram.Funds = 0.0;
+            controller.CobaltProgram.Funds = 0.0;
+
+            bool skippedObservation = controller.Refresh(false);
+
+            Require(!skippedObservation, "A scheduled non-vessel refresh should report no player observation.");
+            Equal(0, KspVesselDiscovery.CaptureCalls);
+            Require(
+                !controller.PlayerProgram.HasAchievement(PrototypeMilestones.ProbeOrbitId),
+                "Skipping the vessel observation must leave player milestone state unchanged.");
+            Equal(1, RacePersistenceScenario.RivalCaptureCalls);
+            Equal(1, RacePersistenceScenario.RaceProgressCaptureCalls);
+
+            bool completedObservation = controller.Refresh(true);
+
+            Require(completedObservation, "An available scheduled vessel refresh should report success.");
+            Equal(1, KspVesselDiscovery.CaptureCalls);
+            Require(
+                controller.PlayerProgram.HasAchievement(PrototypeMilestones.ProbeOrbitId),
+                "The next scheduled vessel observation should record the pending Probe Orbit.");
+        }
+
         public static void ProbeObservationUnlocksFundingFlow()
         {
             ResetEnvironment();

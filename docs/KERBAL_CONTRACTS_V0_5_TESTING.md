@@ -40,6 +40,7 @@ Repeat the relevant threshold for each level: 600, 1,100, 1,400, 1,700, and 2,00
 9. Confirm ordinary vessel destruction well away from the surface does not falsely complete Directed Power.
 10. Confirm a low-speed vessel deletion/recovery near the ground does not incorrectly count as the required high-energy surface impact.
 11. Inspect `KSP.log` after the crash and confirm there are no repeated callback exceptions from either the vessel-local destruction callback or the global vessel-will-destroy fallback.
+12. Repeat a qualifying destructive impact while using physics warp (2x and 4x where practical) and confirm Directed Power still completes. The impact detector should use the actual universal-time gap since the last in-flight sample rather than assuming a fixed two-second travel interval.
 
 ## Mass line
 

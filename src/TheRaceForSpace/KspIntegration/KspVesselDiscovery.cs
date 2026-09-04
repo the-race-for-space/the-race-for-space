@@ -10,10 +10,6 @@ namespace TheRaceForSpace.KspIntegration
     /// </summary>
     public static class KspVesselDiscovery
     {
-        private const double SurfaceImpactProximityMeters = 100.0;
-        private const double MinimumSurfaceImpactSpeedMetersPerSecond = 5.0;
-        private const double SurfaceImpactFlightSampleMaximumAgeSeconds = 5.0;
-
         private static Game _activeTrackingGame;
         private static Vessel _destructionTrackedVessel;
         private static Callback _destructionCallback;
@@ -344,35 +340,19 @@ namespace TheRaceForSpace.KspIntegration
 
             // Destruction-time vessel values are not stable during a violent breakup: KSP may
             // already report LANDED/SPLASHED and zero surface speed by the time the death callback
-            // runs. Use the most recent genuine in-flight sample, but only for a short window so a
-            // later recovery, termination, or unrelated deletion cannot reuse stale crash telemetry.
-            // Universal time can advance by several seconds between one-real-second samples under
-            // physics warp, so use the actual elapsed game time for both freshness and travel range.
+            // runs. Keep KSP event and vessel handling here, but delegate the normalized impact
+            // decision to the KSP-independent evaluator used by the standalone regression suite.
             double currentUniversalTime = Planetarium.fetch == null
                 ? -1.0
                 : Planetarium.GetUniversalTime();
-            double flightSampleAgeSeconds = currentUniversalTime - _lastTrackedInFlightUniversalTime;
-            bool hasRecentInFlightSample = _lastTrackedInFlightUniversalTime >= 0.0
-                && flightSampleAgeSeconds >= 0.0
-                && flightSampleAgeSeconds <= SurfaceImpactFlightSampleMaximumAgeSeconds;
-            bool wasInFlight = _lastTrackedSituation == TrackedFlightSituation.Flying
-                || _lastTrackedSituation == TrackedFlightSituation.SubOrbital;
-            if (!hasRecentInFlightSample
-                || !wasInFlight
-                || _lastTrackedSurfaceSpeedMetersPerSecond < MinimumSurfaceImpactSpeedMetersPerSecond)
-            {
-                return;
-            }
-
             double currentSurfaceClearanceMeters = GetSurfaceClearanceMeters(vessel);
-            bool isNearSurfaceNow = currentSurfaceClearanceMeters <= SurfaceImpactProximityMeters;
-            double sampleTravelAllowanceMeters = Math.Max(
-                SurfaceImpactProximityMeters,
-                _lastTrackedSurfaceSpeedMetersPerSecond * flightSampleAgeSeconds);
-            bool couldReachSurfaceSinceLastSample =
-                _lastTrackedSurfaceClearanceMeters <= sampleTravelAllowanceMeters;
-
-            if (!isNearSurfaceNow && !couldReachSurfaceSinceLastSample)
+            if (!SurfaceImpactEvaluator.IsEligible(
+                _lastTrackedSituation,
+                _lastTrackedSurfaceClearanceMeters,
+                _lastTrackedSurfaceSpeedMetersPerSecond,
+                _lastTrackedInFlightUniversalTime,
+                currentSurfaceClearanceMeters,
+                currentUniversalTime))
             {
                 return;
             }

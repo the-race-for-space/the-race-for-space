@@ -1,12 +1,12 @@
-using System;
+using System.Collections.Generic;
 using System.Globalization;
 using TheRaceForSpace.Tracking;
 
 namespace TheRaceForSpace.Persistence
 {
     /// <summary>
-    /// Serializable state for the one active starter-contract flight attempt. Older saves without
-    /// this node safely restore with no attempt in progress.
+    /// Serializable state for the one active starter-contract flight attempt. Control progress is
+    /// stored per contract ID so several simultaneously Offered Control contracts can survive save/load.
     /// </summary>
     public sealed class StarterFlightSaveState
     {
@@ -19,15 +19,15 @@ namespace TheRaceForSpace.Persistence
         private const string LastSampleUniversalTimeValueName = "lastSampleUniversalTime";
         private const string MaximumAltitudeValueName = "maximumAltitudeMeters";
         private const string MaximumSurfaceSpeedValueName = "maximumSurfaceSpeedMetersPerSecond";
-        private const string ControlHoldMilestoneIdValueName = "controlHoldMilestoneId";
-        private const string QualifiedControlMilestoneIdValueName = "qualifiedControlMilestoneId";
-        private const string ControlHoldSecondsValueName = "controlHoldSeconds";
-        private const string WasControlSampleInBandValueName = "wasControlSampleInBand";
         private const string EnteredOrbitValueName = "enteredOrbit";
-        private const string CompletedDirectedPowerValueName = "completedDirectedPower";
-        private const string CompletedMassValueName = "completedMass";
-        private const string CompletedControlValueName = "completedControl";
-        private const string CompletedBiomeValueName = "completedBiome";
+
+        private const string ControlStateNodeName = "CONTROL_STATE";
+        private const string ControlMilestoneIdValueName = "milestoneId";
+        private const string ControlHoldSecondsValueName = "holdSeconds";
+        private const string ControlWasSampleInBandValueName = "wasSampleInBand";
+        private const string ControlQualifiedValueName = "qualified";
+
+        private readonly List<SavedControlState> _controlStates = new List<SavedControlState>();
 
         private bool _hasActiveAttempt;
         private string _vesselId;
@@ -38,15 +38,7 @@ namespace TheRaceForSpace.Persistence
         private double _lastSampleUniversalTime;
         private double _maximumAltitudeMeters;
         private double _maximumSurfaceSpeedMetersPerSecond;
-        private string _controlHoldMilestoneId;
-        private string _qualifiedControlMilestoneId;
-        private double _controlHoldSeconds;
-        private bool _wasControlSampleInBand;
         private bool _enteredOrbit;
-        private bool _completedDirectedPowerThisAttempt;
-        private bool _completedMassThisAttempt;
-        private bool _completedControlThisAttempt;
-        private bool _completedBiomeThisAttempt;
 
         public bool HasData { get; private set; }
 
@@ -73,15 +65,18 @@ namespace TheRaceForSpace.Persistence
             _lastSampleUniversalTime = tracker.LastSampleUniversalTime;
             _maximumAltitudeMeters = tracker.MaximumAltitudeMeters;
             _maximumSurfaceSpeedMetersPerSecond = tracker.MaximumSurfaceSpeedMetersPerSecond;
-            _controlHoldMilestoneId = tracker.ControlHoldMilestoneId;
-            _qualifiedControlMilestoneId = tracker.QualifiedControlMilestoneId;
-            _controlHoldSeconds = tracker.ControlHoldSeconds;
-            _wasControlSampleInBand = tracker.WasControlSampleInBand;
             _enteredOrbit = tracker.EnteredOrbit;
-            _completedDirectedPowerThisAttempt = tracker.CompletedDirectedPowerThisAttempt;
-            _completedMassThisAttempt = tracker.CompletedMassThisAttempt;
-            _completedControlThisAttempt = tracker.CompletedControlThisAttempt;
-            _completedBiomeThisAttempt = tracker.CompletedBiomeThisAttempt;
+
+            // The tracker owns the active Control dictionary. Iterate its live key collection
+            // directly so the once-per-second capture path does not allocate a temporary ID list.
+            foreach (string milestoneId in tracker.ControlStateMilestoneIds)
+            {
+                _controlStates.Add(new SavedControlState(
+                    milestoneId,
+                    tracker.GetControlHoldSeconds(milestoneId),
+                    tracker.IsControlSampleInBand(milestoneId),
+                    tracker.IsControlMilestoneQualified(milestoneId)));
+            }
         }
 
         public void ApplyTo(StarterFlightTracker tracker)
@@ -97,6 +92,8 @@ namespace TheRaceForSpace.Persistence
                 return;
             }
 
+            // Current v0.5 persistence no longer stores the obsolete single-Control projection or
+            // per-line completion flags. Restore the common attempt first, then every Control state.
             tracker.RestoreState(
                 _vesselId,
                 _celestialBodyName,
@@ -106,15 +103,25 @@ namespace TheRaceForSpace.Persistence
                 _lastSampleUniversalTime,
                 _maximumAltitudeMeters,
                 _maximumSurfaceSpeedMetersPerSecond,
-                _controlHoldMilestoneId,
-                _qualifiedControlMilestoneId,
-                _controlHoldSeconds,
-                _wasControlSampleInBand,
+                null,
+                null,
+                0.0,
+                false,
                 _enteredOrbit,
-                _completedDirectedPowerThisAttempt,
-                _completedMassThisAttempt,
-                _completedControlThisAttempt,
-                _completedBiomeThisAttempt);
+                false,
+                false,
+                false,
+                false);
+
+            for (int stateIndex = 0; stateIndex < _controlStates.Count; stateIndex++)
+            {
+                SavedControlState state = _controlStates[stateIndex];
+                tracker.RestoreControlState(
+                    state.MilestoneId,
+                    state.HoldSeconds,
+                    state.WasSampleInBand,
+                    state.IsQualified);
+            }
         }
 
         public void Load(ConfigNode node)
@@ -137,7 +144,7 @@ namespace TheRaceForSpace.Persistence
 
             // An active node must contain every numeric field needed to reconstruct the attempt.
             // Treat partial or malformed nodes as no active attempt rather than inventing zeroes
-            // that could erase a ceiling violation or grant free Control hold time after loading.
+            // that could erase a ceiling violation or create continuity that was never observed.
             if (string.IsNullOrEmpty(_vesselId)
                 || string.IsNullOrEmpty(_celestialBodyName)
                 || !TryParseFiniteDouble(node.GetValue(LaunchUniversalTimeValueName), out _launchUniversalTime)
@@ -153,22 +160,53 @@ namespace TheRaceForSpace.Persistence
                 || !TryParseFiniteDouble(
                     node.GetValue(MaximumSurfaceSpeedValueName),
                     out _maximumSurfaceSpeedMetersPerSecond)
-                || _maximumSurfaceSpeedMetersPerSecond < 0.0
-                || !TryParseFiniteDouble(node.GetValue(ControlHoldSecondsValueName), out _controlHoldSeconds)
-                || _controlHoldSeconds < 0.0)
+                || _maximumSurfaceSpeedMetersPerSecond < 0.0)
             {
                 _hasActiveAttempt = false;
                 return;
             }
 
-            _controlHoldMilestoneId = node.GetValue(ControlHoldMilestoneIdValueName);
-            _qualifiedControlMilestoneId = node.GetValue(QualifiedControlMilestoneIdValueName);
-            _wasControlSampleInBand = ParseBool(node.GetValue(WasControlSampleInBandValueName));
             _enteredOrbit = ParseBool(node.GetValue(EnteredOrbitValueName));
-            _completedDirectedPowerThisAttempt = ParseBool(node.GetValue(CompletedDirectedPowerValueName));
-            _completedMassThisAttempt = ParseBool(node.GetValue(CompletedMassValueName));
-            _completedControlThisAttempt = ParseBool(node.GetValue(CompletedControlValueName));
-            _completedBiomeThisAttempt = ParseBool(node.GetValue(CompletedBiomeValueName));
+
+            // The current format intentionally uses repeated per-contract nodes. Removed legacy
+            // single-Control values are ignored rather than migrated because v0.5 save compatibility
+            // with earlier development builds is not required.
+            var restoredMilestoneIds = new HashSet<string>(System.StringComparer.OrdinalIgnoreCase);
+            ConfigNode[] controlStateNodes = node.GetNodes(ControlStateNodeName);
+            for (int stateIndex = 0; stateIndex < controlStateNodes.Length; stateIndex++)
+            {
+                ConfigNode controlStateNode = controlStateNodes[stateIndex];
+                string milestoneId = controlStateNode == null
+                    ? null
+                    : controlStateNode.GetValue(ControlMilestoneIdValueName);
+                double holdSeconds;
+                bool wasSampleInBand;
+                bool isQualified;
+
+                if (string.IsNullOrEmpty(milestoneId)
+                    || !restoredMilestoneIds.Add(milestoneId)
+                    || !TryParseFiniteDouble(
+                        controlStateNode.GetValue(ControlHoldSecondsValueName),
+                        out holdSeconds)
+                    || holdSeconds < 0.0
+                    || !TryParseBool(
+                        controlStateNode.GetValue(ControlWasSampleInBandValueName),
+                        out wasSampleInBand)
+                    || !TryParseBool(
+                        controlStateNode.GetValue(ControlQualifiedValueName),
+                        out isQualified))
+                {
+                    _hasActiveAttempt = false;
+                    _controlStates.Clear();
+                    return;
+                }
+
+                _controlStates.Add(new SavedControlState(
+                    milestoneId,
+                    holdSeconds,
+                    wasSampleInBand,
+                    isQualified));
+            }
         }
 
         public void Save(ConfigNode node)
@@ -192,21 +230,17 @@ namespace TheRaceForSpace.Persistence
             AddDouble(node, LastSampleUniversalTimeValueName, _lastSampleUniversalTime);
             AddDouble(node, MaximumAltitudeValueName, _maximumAltitudeMeters);
             AddDouble(node, MaximumSurfaceSpeedValueName, _maximumSurfaceSpeedMetersPerSecond);
-            if (!string.IsNullOrEmpty(_controlHoldMilestoneId))
-            {
-                node.AddValue(ControlHoldMilestoneIdValueName, _controlHoldMilestoneId);
-            }
-            if (!string.IsNullOrEmpty(_qualifiedControlMilestoneId))
-            {
-                node.AddValue(QualifiedControlMilestoneIdValueName, _qualifiedControlMilestoneId);
-            }
-            AddDouble(node, ControlHoldSecondsValueName, _controlHoldSeconds);
-            node.AddValue(WasControlSampleInBandValueName, _wasControlSampleInBand);
             node.AddValue(EnteredOrbitValueName, _enteredOrbit);
-            node.AddValue(CompletedDirectedPowerValueName, _completedDirectedPowerThisAttempt);
-            node.AddValue(CompletedMassValueName, _completedMassThisAttempt);
-            node.AddValue(CompletedControlValueName, _completedControlThisAttempt);
-            node.AddValue(CompletedBiomeValueName, _completedBiomeThisAttempt);
+
+            for (int stateIndex = 0; stateIndex < _controlStates.Count; stateIndex++)
+            {
+                SavedControlState state = _controlStates[stateIndex];
+                ConfigNode controlStateNode = node.AddNode(ControlStateNodeName);
+                controlStateNode.AddValue(ControlMilestoneIdValueName, state.MilestoneId);
+                AddDouble(controlStateNode, ControlHoldSecondsValueName, state.HoldSeconds);
+                controlStateNode.AddValue(ControlWasSampleInBandValueName, state.WasSampleInBand);
+                controlStateNode.AddValue(ControlQualifiedValueName, state.IsQualified);
+            }
         }
 
         private void ClearState()
@@ -221,15 +255,8 @@ namespace TheRaceForSpace.Persistence
             _lastSampleUniversalTime = -1.0;
             _maximumAltitudeMeters = 0.0;
             _maximumSurfaceSpeedMetersPerSecond = 0.0;
-            _controlHoldMilestoneId = null;
-            _qualifiedControlMilestoneId = null;
-            _controlHoldSeconds = 0.0;
-            _wasControlSampleInBand = false;
             _enteredOrbit = false;
-            _completedDirectedPowerThisAttempt = false;
-            _completedMassThisAttempt = false;
-            _completedControlThisAttempt = false;
-            _completedBiomeThisAttempt = false;
+            _controlStates.Clear();
         }
 
         private static void AddDouble(ConfigNode node, string valueName, double value)
@@ -243,6 +270,12 @@ namespace TheRaceForSpace.Persistence
             return !string.IsNullOrEmpty(value) && bool.TryParse(value, out parsedValue) && parsedValue;
         }
 
+        private static bool TryParseBool(string value, out bool parsedValue)
+        {
+            parsedValue = false;
+            return !string.IsNullOrEmpty(value) && bool.TryParse(value, out parsedValue);
+        }
+
         private static bool TryParseFiniteDouble(string value, out double parsedValue)
         {
             parsedValue = 0.0;
@@ -250,6 +283,26 @@ namespace TheRaceForSpace.Persistence
                 && double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out parsedValue)
                 && !double.IsNaN(parsedValue)
                 && !double.IsInfinity(parsedValue);
+        }
+
+        private sealed class SavedControlState
+        {
+            public SavedControlState(
+                string milestoneId,
+                double holdSeconds,
+                bool wasSampleInBand,
+                bool isQualified)
+            {
+                MilestoneId = milestoneId;
+                HoldSeconds = holdSeconds;
+                WasSampleInBand = wasSampleInBand;
+                IsQualified = isQualified;
+            }
+
+            public string MilestoneId { get; private set; }
+            public double HoldSeconds { get; private set; }
+            public bool WasSampleInBand { get; private set; }
+            public bool IsQualified { get; private set; }
         }
     }
 }

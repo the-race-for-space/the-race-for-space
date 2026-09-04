@@ -36,12 +36,15 @@ namespace TheRaceForSpace.Competition
         private readonly IList<SpaceProgramState> _rivalProgramsView;
         private readonly IList<FundingProgramme> _fundingProgrammesView;
         private readonly IList<AchievementFundingProgramme> _achievementFundingProgrammesView;
+        private IList<MilestoneDefinition> _activeStarterContracts =
+            new List<MilestoneDefinition>().AsReadOnly();
         private readonly double[,] _satellitePayoutCache;
         private readonly double[,] _achievementPayoutCache;
         private readonly double _fundingIntervalSeconds;
         private double _nextFundingUniversalTime = -1.0;
         private bool _hasFundingPayoutCache;
         private bool _hasRestoredPersistentState;
+        private bool _isActiveStarterContractPlanDirty = true;
 
         public SatelliteRaceController()
         {
@@ -125,6 +128,25 @@ namespace TheRaceForSpace.Competition
         public IList<AchievementFundingProgramme> AchievementFundingProgrammes
         {
             get { return _achievementFundingProgrammesView; }
+        }
+
+        /// <summary>
+        /// Cached Offered, unexpired starter contracts the player has not personally completed.
+        /// The controller replaces this read-only collection only after relevant contract state changes.
+        /// </summary>
+        internal IList<MilestoneDefinition> ActiveStarterContracts
+        {
+            get { return _activeStarterContracts; }
+        }
+
+        /// <summary>
+        /// Marks the cached active starter set dirty after the flight tracker records a player
+        /// starter achievement. The following controller refresh rebuilds the set once after all
+        /// resulting unlock/offer/funding changes have been processed.
+        /// </summary>
+        internal void NotifyPlayerStarterAchievementRecorded()
+        {
+            _isActiveStarterContractPlanDirty = true;
         }
 
         /// <summary>
@@ -434,6 +456,7 @@ namespace TheRaceForSpace.Competition
             UpdateSpecialAchievementOffers(stateEvaluationUniversalTime);
             UpdateSatelliteTargetReachedState();
             StartAchievementContracts(stateEvaluationUniversalTime);
+            RebuildActiveStarterContractPlanIfNeeded();
             EvaluateFundingProgrammes();
 
             RacePersistenceScenario.CaptureRivalState(_rivalPrograms);
@@ -599,6 +622,14 @@ namespace TheRaceForSpace.Competition
                     }
 
                     programme.AdvancePayout();
+                    if (programme.IsExpired)
+                    {
+                        MilestoneDefinition expiredMilestone = PrototypeMilestones.FindById(programme.Id);
+                        if (expiredMilestone != null && expiredMilestone.IsStarterContract)
+                        {
+                            _isActiveStarterContractPlanDirty = true;
+                        }
+                    }
                 }
 
                 ReviewFundingOffers(payoutUniversalTime);
@@ -646,6 +677,7 @@ namespace TheRaceForSpace.Competition
                 if (isStarterContract)
                 {
                     programme.Offer();
+                    _isActiveStarterContractPlanDirty = true;
                     continue;
                 }
 
@@ -701,6 +733,40 @@ namespace TheRaceForSpace.Competition
                 satelliteCandidates[candidateIndex].Offer();
                 satelliteCandidates.RemoveAt(candidateIndex);
             }
+        }
+
+        private void RebuildActiveStarterContractPlanIfNeeded()
+        {
+            if (!_isActiveStarterContractPlanDirty)
+            {
+                return;
+            }
+
+            var activeStarterContracts = new List<MilestoneDefinition>();
+            for (int programmeIndex = 0;
+                programmeIndex < _achievementFundingProgrammes.Count;
+                programmeIndex++)
+            {
+                AchievementFundingProgramme programme = _achievementFundingProgrammes[programmeIndex];
+                if (programme == null
+                    || !programme.IsOffered
+                    || programme.IsExpired
+                    || PlayerProgram.HasAchievement(programme.Id))
+                {
+                    continue;
+                }
+
+                MilestoneDefinition milestone = PrototypeMilestones.FindById(programme.Id);
+                if (milestone != null && milestone.IsStarterContract)
+                {
+                    activeStarterContracts.Add(milestone);
+                }
+            }
+
+            // Replacing the read-only list rather than mutating it lets frequent readers keep a
+            // stable snapshot until a real offer/completion/expiry transition invalidates the plan.
+            _activeStarterContracts = activeStarterContracts.AsReadOnly();
+            _isActiveStarterContractPlanDirty = false;
         }
 
         private void AwardProgramFunds(SpaceProgramState program, double payout)

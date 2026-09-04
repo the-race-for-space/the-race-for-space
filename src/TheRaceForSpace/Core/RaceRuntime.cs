@@ -189,8 +189,9 @@ namespace TheRaceForSpace.Core
             if (recordedAchievement)
             {
                 // Starter achievements can immediately unlock the next line level or Probe Orbit.
-                // Reuse the controller's normal non-vessel refresh rather than duplicating funding,
-                // rival, offer, and payout-cache updates in the frequent flight path.
+                // Mark the active-contract cache dirty before reusing the controller's normal
+                // non-vessel refresh so completion and any resulting offer changes settle together.
+                _raceController.NotifyPlayerStarterAchievementRecorded();
                 _raceController.Refresh(false);
             }
 

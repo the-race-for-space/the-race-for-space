@@ -1,5 +1,7 @@
+using System.Collections.Generic;
 using TheRaceForSpace.Competition;
 using TheRaceForSpace.KspIntegration;
+using TheRaceForSpace.Milestones;
 using TheRaceForSpace.Tracking;
 using UnityEngine;
 
@@ -25,6 +27,9 @@ namespace TheRaceForSpace.Core
         private float _nextRefreshTime;
         private float _nextActiveVesselRefreshTime;
         private float _nextPlayerVesselRefreshTime;
+        private IList<MilestoneDefinition> _starterTelemetryPlanSource;
+        private StarterTelemetryRequirement _starterTelemetryRequirements =
+            StarterTelemetryRequirement.None;
 
         /// <summary>
         /// Returns the controller owned by the runtime for the current game, or null while the
@@ -153,35 +158,69 @@ namespace TheRaceForSpace.Core
 
         private void RefreshStarterFlightState()
         {
+            IList<MilestoneDefinition> activeStarterContracts = _raceController.ActiveStarterContracts;
+
+            // The controller replaces its read-only active list only after an offer/completion/expiry
+            // transition. Recompute telemetry needs only when that exact cached plan instance changes,
+            // then reuse the bit mask on every one-second observation in between.
+            if (!object.ReferenceEquals(_starterTelemetryPlanSource, activeStarterContracts))
+            {
+                _starterTelemetryPlanSource = activeStarterContracts;
+                _starterTelemetryRequirements = StarterTelemetryPlan.GetRequirements(
+                    activeStarterContracts);
+            }
+
+            if (activeStarterContracts == null || activeStarterContracts.Count == 0)
+            {
+                // With no offered unfinished starter contract there is nothing to inspect in KSP.
+                // Also remove any Directed Power event hooks so the dormant starter system has no
+                // vessel-destruction work until a later sponsor offer rebuilds the active plan.
+                KspVesselDiscovery.DisableActiveVesselSurfaceImpactTracking();
+                RacePersistenceScenario.CaptureStarterFlightState(_starterFlightTracker);
+                return;
+            }
+
             bool recordedAchievement = false;
+            bool needsSurfaceImpact = (_starterTelemetryRequirements
+                & StarterTelemetryRequirement.SurfaceImpact) != 0;
 
             // Consume destruction before observing a replacement active vessel. KSP can switch
             // control immediately after a crash, and beginning the next attempt first would discard
-            // the just-finished Directed Power flight history.
-            string impactVesselId;
-            string impactBodyName;
-            double impactUniversalTime;
-            if (KspVesselDiscovery.TryConsumeActiveVesselSurfaceImpact(
-                out impactVesselId,
-                out impactBodyName,
-                out impactUniversalTime))
+            // the just-finished Directed Power flight history. When no Directed Power contract is
+            // active the integration layer removes the callbacks and stale impact telemetry instead.
+            if (needsSurfaceImpact)
             {
-                recordedAchievement = _starterFlightTracker.RecordSurfaceImpact(
-                    _raceController.PlayerProgram,
-                    _raceController.Programs,
-                    _raceController.ActiveStarterContracts,
-                    impactVesselId,
-                    impactBodyName,
-                    impactUniversalTime);
+                string impactVesselId;
+                string impactBodyName;
+                double impactUniversalTime;
+                if (KspVesselDiscovery.TryConsumeActiveVesselSurfaceImpact(
+                    out impactVesselId,
+                    out impactBodyName,
+                    out impactUniversalTime))
+                {
+                    recordedAchievement = _starterFlightTracker.RecordSurfaceImpact(
+                        _raceController.PlayerProgram,
+                        _raceController.Programs,
+                        activeStarterContracts,
+                        impactVesselId,
+                        impactBodyName,
+                        impactUniversalTime);
+                }
+            }
+            else
+            {
+                KspVesselDiscovery.DisableActiveVesselSurfaceImpactTracking();
             }
 
             ActiveVesselTrackingSnapshot activeVesselSnapshot;
-            if (KspVesselDiscovery.TryCaptureActiveVessel(out activeVesselSnapshot))
+            if (KspVesselDiscovery.TryCaptureActiveVessel(
+                _starterTelemetryRequirements,
+                out activeVesselSnapshot))
             {
                 recordedAchievement |= _starterFlightTracker.RefreshPlayerMilestones(
                     _raceController.PlayerProgram,
                     _raceController.Programs,
-                    _raceController.ActiveStarterContracts,
+                    activeStarterContracts,
                     activeVesselSnapshot);
             }
 
@@ -223,6 +262,8 @@ namespace TheRaceForSpace.Core
             _nextRefreshTime = 0.0f;
             _nextActiveVesselRefreshTime = 0.0f;
             _nextPlayerVesselRefreshTime = 0.0f;
+            _starterTelemetryPlanSource = null;
+            _starterTelemetryRequirements = StarterTelemetryRequirement.None;
         }
     }
 }

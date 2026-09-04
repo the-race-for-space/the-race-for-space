@@ -203,7 +203,7 @@ namespace TheRaceForSpace.KspIntegration
                     && (!IsFinite(massTonnes)
                         || massTonnes < 0.0
                         || !IsFinite(bodyRadiusMeters)
-                        || bodyRadiusMeters <= 0.0))
+                        || bodyRadiusMeters <= 0.0)))
             {
                 DisableActiveVesselSurfaceImpactTracking();
                 return false;

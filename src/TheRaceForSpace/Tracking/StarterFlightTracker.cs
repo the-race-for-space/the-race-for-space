@@ -66,8 +66,9 @@ namespace TheRaceForSpace.Tracking
         public bool CompletedBiomeThisAttempt { get { return _completedBiomeThisAttempt; } }
 
         /// <summary>
-        /// Applies one active-vessel observation and records any newly completed starter milestones.
-        /// At most one milestone from each line can be completed during the same launch attempt.
+        /// Applies one active-vessel observation against the supplied active starter-contract set.
+        /// Mass and Biome contracts are evaluated independently so one qualifying flight may satisfy
+        /// multiple separately offered levels. Control temporarily retains its single-target hold state.
         /// </summary>
         public bool RefreshPlayerMilestones(
             SpaceProgramState playerProgram,
@@ -143,54 +144,51 @@ namespace TheRaceForSpace.Tracking
 
             if (isKerbin && !_enteredOrbit)
             {
-                if (!_completedMassThisAttempt)
+                // The controller already filtered this collection to Offered, unexpired contracts
+                // the player has not completed. Evaluate each supplied Mass/Biome definition on its
+                // own terms so earlier and later offered levels remain genuinely independent.
+                for (int milestoneIndex = 0; milestoneIndex < starterMilestones.Count; milestoneIndex++)
                 {
-                    MilestoneDefinition massMilestone = GetCurrentMilestone(
-                        StarterContractLine.Mass,
-                        playerProgram,
-                        programs,
-                        starterMilestones,
-                        snapshot.ObservationUniversalTime);
-                    if (massMilestone != null
+                    MilestoneDefinition milestone = starterMilestones[milestoneIndex];
+                    if (milestone == null || playerProgram.HasAchievement(milestone.Id))
+                    {
+                        continue;
+                    }
+
+                    if (milestone.StarterLine == StarterContractLine.Mass
                         && snapshot.Situation == TrackedFlightSituation.Landed
-                        && snapshot.MassTonnes >= massMilestone.RequiredMassTonnes
-                        && _currentDistanceMeters >= massMilestone.RequiredDistanceMeters)
+                        && snapshot.MassTonnes >= milestone.RequiredMassTonnes
+                        && _currentDistanceMeters >= milestone.RequiredDistanceMeters)
                     {
                         // Mass represents delivery of a finished craft, so the final landed vessel
-                        // must still meet both the mass and distance requirement.
-                        _completedMassThisAttempt = playerProgram.RecordAchievement(
-                            massMilestone.Id,
+                        // must still meet both the mass and distance requirement for this contract.
+                        recordedAchievement |= playerProgram.RecordAchievement(
+                            milestone.Id,
                             snapshot.ObservationUniversalTime);
-                        recordedAchievement |= _completedMassThisAttempt;
+                        continue;
                     }
-                }
 
-                if (!_completedBiomeThisAttempt)
-                {
-                    MilestoneDefinition biomeMilestone = GetCurrentMilestone(
-                        StarterContractLine.Biome,
-                        playerProgram,
-                        programs,
-                        starterMilestones,
-                        snapshot.ObservationUniversalTime);
-                    if (biomeMilestone != null
+                    if (milestone.StarterLine == StarterContractLine.Biome
                         && snapshot.Situation == TrackedFlightSituation.Landed
                         && !string.IsNullOrEmpty(snapshot.BiomeName)
                         && string.Equals(
                             snapshot.BiomeName,
-                            biomeMilestone.RequiredBiomeName,
+                            milestone.RequiredBiomeName,
                             StringComparison.OrdinalIgnoreCase))
                     {
-                        // Flying over a biome is not enough; the craft must finish landed there.
-                        _completedBiomeThisAttempt = playerProgram.RecordAchievement(
-                            biomeMilestone.Id,
+                        // Flying over a biome is not enough; this individual contract completes
+                        // only when the active craft finishes landed in its requested biome.
+                        recordedAchievement |= playerProgram.RecordAchievement(
+                            milestone.Id,
                             snapshot.ObservationUniversalTime);
-                        recordedAchievement |= _completedBiomeThisAttempt;
                     }
                 }
 
                 if (!_completedControlThisAttempt)
                 {
+                    // Control still has one persisted hold timer in v0.5. Passing only the active
+                    // contract set prevents unlocked-but-unoffered Control levels from being chosen;
+                    // the following step will replace this temporary single-target state per contract.
                     recordedAchievement |= EvaluateControlMilestone(
                         playerProgram,
                         programs,
@@ -211,8 +209,8 @@ namespace TheRaceForSpace.Tracking
 
         /// <summary>
         /// Consumes a KSP integration signal that the tracked active vessel was destroyed at the
-        /// Kerbin surface. Directed Power is only awarded here because surviving or manually
-        /// recovering the vehicle is not the required expendable impact outcome.
+        /// Kerbin surface. Every supplied active Directed Power contract is evaluated independently
+        /// against the same completed flight history before the destroyed attempt is cleared.
         /// </summary>
         public bool RecordSurfaceImpact(
             SpaceProgramState playerProgram,
@@ -233,25 +231,25 @@ namespace TheRaceForSpace.Tracking
             }
 
             bool recordedAchievement = false;
-            if (!_completedDirectedPowerThisAttempt
-                && !_enteredOrbit
+            if (!_enteredOrbit
                 && string.Equals(celestialBodyName, "Kerbin", StringComparison.OrdinalIgnoreCase))
             {
-                MilestoneDefinition directedPowerMilestone = GetCurrentMilestone(
-                    StarterContractLine.DirectedPower,
-                    playerProgram,
-                    programs,
-                    starterMilestones,
-                    impactUniversalTime);
-                if (directedPowerMilestone != null
-                    && _maximumAltitudeMeters <= directedPowerMilestone.MaximumAltitudeMeters
-                    && _maximumSurfaceSpeedMetersPerSecond
-                        >= directedPowerMilestone.RequiredSpeedMetersPerSecond)
+                for (int milestoneIndex = 0; milestoneIndex < starterMilestones.Count; milestoneIndex++)
                 {
-                    _completedDirectedPowerThisAttempt = playerProgram.RecordAchievement(
-                        directedPowerMilestone.Id,
+                    MilestoneDefinition milestone = starterMilestones[milestoneIndex];
+                    if (milestone == null
+                        || milestone.StarterLine != StarterContractLine.DirectedPower
+                        || playerProgram.HasAchievement(milestone.Id)
+                        || _maximumAltitudeMeters > milestone.MaximumAltitudeMeters
+                        || _maximumSurfaceSpeedMetersPerSecond
+                            < milestone.RequiredSpeedMetersPerSecond)
+                    {
+                        continue;
+                    }
+
+                    recordedAchievement |= playerProgram.RecordAchievement(
+                        milestone.Id,
                         impactUniversalTime);
-                    recordedAchievement = _completedDirectedPowerThisAttempt;
                 }
             }
 
@@ -327,10 +325,14 @@ namespace TheRaceForSpace.Tracking
             _controlHoldSeconds = controlHoldSeconds;
             _wasControlSampleInBand = wasControlSampleInBand;
             _enteredOrbit = enteredOrbit;
-            _completedDirectedPowerThisAttempt = completedDirectedPowerThisAttempt;
-            _completedMassThisAttempt = completedMassThisAttempt;
+
+            // Older saves may contain per-line completion flags that formerly prevented a second
+            // Mass/Biome/Directed Power level in the same launch. Those lines are now independent,
+            // so only Control's still-single timer/completion state remains authoritative here.
+            _completedDirectedPowerThisAttempt = false;
+            _completedMassThisAttempt = false;
             _completedControlThisAttempt = completedControlThisAttempt;
-            _completedBiomeThisAttempt = completedBiomeThisAttempt;
+            _completedBiomeThisAttempt = false;
         }
 
         public void ClearAttempt()
@@ -364,6 +366,7 @@ namespace TheRaceForSpace.Tracking
         /// <summary>
         /// Returns the highest unlocked, not-yet-achieved milestone in one starter line for the player.
         /// Unlock scope remains global, so a rival can make a later level become the player's current target.
+        /// Retained for compatibility while active flight gameplay now receives the controller-filtered set.
         /// </summary>
         public static MilestoneDefinition GetCurrentMilestone(
             StarterContractLine starterLine,

@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using TheRaceForSpace.Milestones;
 
 namespace TheRaceForSpace.Tracking
 {
@@ -32,6 +34,54 @@ namespace TheRaceForSpace.Tracking
         Crew = 1 << 4,
         SurfaceImpact = 1 << 5,
         All = Altitude | SurfaceSpeed | Mass | Biome | Crew | SurfaceImpact
+    }
+
+    /// <summary>
+    /// Converts the controller's cached active starter-contract set into the KSP telemetry fields
+    /// required by those contracts. Callers can cache the result for as long as the active set instance
+    /// remains unchanged.
+    /// </summary>
+    public static class StarterTelemetryPlan
+    {
+        public static StarterTelemetryRequirement GetRequirements(
+            IList<MilestoneDefinition> activeStarterContracts)
+        {
+            StarterTelemetryRequirement requirements = StarterTelemetryRequirement.None;
+            if (activeStarterContracts == null)
+            {
+                return requirements;
+            }
+
+            for (int milestoneIndex = 0; milestoneIndex < activeStarterContracts.Count; milestoneIndex++)
+            {
+                MilestoneDefinition milestone = activeStarterContracts[milestoneIndex];
+                if (milestone == null)
+                {
+                    continue;
+                }
+
+                switch (milestone.StarterLine)
+                {
+                    case StarterContractLine.DirectedPower:
+                        requirements |= StarterTelemetryRequirement.Altitude
+                            | StarterTelemetryRequirement.SurfaceSpeed
+                            | StarterTelemetryRequirement.SurfaceImpact;
+                        break;
+                    case StarterContractLine.Mass:
+                        requirements |= StarterTelemetryRequirement.Mass;
+                        break;
+                    case StarterContractLine.Control:
+                        requirements |= StarterTelemetryRequirement.Altitude
+                            | StarterTelemetryRequirement.Crew;
+                        break;
+                    case StarterContractLine.Biome:
+                        requirements |= StarterTelemetryRequirement.Biome;
+                        break;
+                }
+            }
+
+            return requirements;
+        }
     }
 
     /// <summary>

@@ -120,19 +120,37 @@ namespace TheRaceForSpace.KspIntegration
         }
 
         /// <summary>
-        /// Captures only the currently controlled loaded vessel for the frequent starter-contract
-        /// path. This avoids repeating the expensive all-vessel scan every second.
+        /// Captures the full active-vessel starter snapshot for compatibility with callers that do
+        /// not provide an active-contract telemetry plan.
         /// </summary>
         public static bool TryCaptureActiveVessel(out ActiveVesselTrackingSnapshot vesselSnapshot)
         {
+            return TryCaptureActiveVessel(StarterTelemetryRequirement.All, out vesselSnapshot);
+        }
+
+        /// <summary>
+        /// Captures only the currently controlled loaded vessel for the frequent starter-contract
+        /// path. Condition-specific KSP calls are made only when the cached active-contract plan
+        /// requests them; identity, situation, launch data, and coordinates remain cheap common context.
+        /// </summary>
+        public static bool TryCaptureActiveVessel(
+            StarterTelemetryRequirement telemetryRequirements,
+            out ActiveVesselTrackingSnapshot vesselSnapshot)
+        {
             vesselSnapshot = null;
             EnsureActiveTrackingGame();
+
+            if (telemetryRequirements == StarterTelemetryRequirement.None)
+            {
+                DisableActiveVesselSurfaceImpactTracking();
+                return false;
+            }
 
             if (!HighLogic.LoadedSceneIsFlight
                 || FlightGlobals.ActiveVessel == null
                 || Planetarium.fetch == null)
             {
-                DetachDestructionCallback();
+                DisableActiveVesselSurfaceImpactTracking();
                 return false;
             }
 
@@ -142,15 +160,33 @@ namespace TheRaceForSpace.KspIntegration
                 || vessel.mainBody == null
                 || string.IsNullOrEmpty(vessel.mainBody.bodyName))
             {
-                DetachDestructionCallback();
+                DisableActiveVesselSurfaceImpactTracking();
                 return false;
             }
 
-            TrackActiveVesselDestruction(vessel);
-            CaptureDestructionTelemetry(vessel);
+            bool needsSurfaceImpact = (telemetryRequirements & StarterTelemetryRequirement.SurfaceImpact) != 0;
+            if (needsSurfaceImpact)
+            {
+                EnsureVesselWillDestroySubscription();
+                TrackActiveVesselDestruction(vessel);
+                CaptureDestructionTelemetry(vessel);
+            }
+            else
+            {
+                DisableActiveVesselSurfaceImpactTracking();
+            }
+
+            bool needsAltitude = needsSurfaceImpact
+                || (telemetryRequirements & StarterTelemetryRequirement.Altitude) != 0;
+            bool needsSurfaceSpeed = needsSurfaceImpact
+                || (telemetryRequirements & StarterTelemetryRequirement.SurfaceSpeed) != 0;
+            bool needsMass = (telemetryRequirements & StarterTelemetryRequirement.Mass) != 0;
+            bool needsBiome = (telemetryRequirements & StarterTelemetryRequirement.Biome) != 0;
+            bool needsCrew = (telemetryRequirements & StarterTelemetryRequirement.Crew) != 0;
 
             string biomeName = null;
-            if (string.Equals(vessel.mainBody.bodyName, "Kerbin", StringComparison.OrdinalIgnoreCase))
+            if (needsBiome
+                && string.Equals(vessel.mainBody.bodyName, "Kerbin", StringComparison.OrdinalIgnoreCase))
             {
                 biomeName = ScienceUtil.GetExperimentBiome(
                     vessel.mainBody,
@@ -162,16 +198,17 @@ namespace TheRaceForSpace.KspIntegration
                 vessel.id.ToString("D"),
                 vessel.mainBody.bodyName,
                 ConvertSituation(vessel.situation),
-                vessel.altitude,
-                vessel.srfSpeed,
-                vessel.GetTotalMass(),
+                needsAltitude ? vessel.altitude : 0.0,
+                needsSurfaceSpeed ? vessel.srfSpeed : 0.0,
+                needsMass ? vessel.GetTotalMass() : 0.0,
                 vessel.latitude,
                 vessel.longitude,
-                vessel.mainBody.Radius,
+                needsMass ? vessel.mainBody.Radius : 0.0,
                 biomeName,
-                vessel.GetCrewCount(),
+                needsCrew ? vessel.GetCrewCount() : 0,
                 vessel.launchTime,
-                Planetarium.GetUniversalTime());
+                Planetarium.GetUniversalTime(),
+                telemetryRequirements);
             return true;
         }
 
@@ -202,9 +239,10 @@ namespace TheRaceForSpace.KspIntegration
         }
 
         /// <summary>
-        /// Clears active-vessel callback state when a different KSP save becomes current.
+        /// Removes Directed Power destruction callbacks and cached crash telemetry when no active
+        /// starter contract currently requires surface-impact observation.
         /// </summary>
-        public static void ResetActiveVesselTracking()
+        public static void DisableActiveVesselSurfaceImpactTracking()
         {
             DetachDestructionCallback();
             if (_isVesselWillDestroySubscribed)
@@ -213,7 +251,6 @@ namespace TheRaceForSpace.KspIntegration
                 _isVesselWillDestroySubscribed = false;
             }
 
-            _activeTrackingGame = null;
             _destructionTrackedVesselId = null;
             _lastTrackedBodyName = null;
             _lastTrackedSurfaceClearanceMeters = double.PositiveInfinity;
@@ -225,6 +262,15 @@ namespace TheRaceForSpace.KspIntegration
             _pendingImpactUniversalTime = -1.0;
         }
 
+        /// <summary>
+        /// Clears active-vessel callback state when a different KSP save becomes current.
+        /// </summary>
+        public static void ResetActiveVesselTracking()
+        {
+            DisableActiveVesselSurfaceImpactTracking();
+            _activeTrackingGame = null;
+        }
+
         private static void EnsureActiveTrackingGame()
         {
             if (_activeTrackingGame == HighLogic.CurrentGame)
@@ -234,13 +280,20 @@ namespace TheRaceForSpace.KspIntegration
 
             ResetActiveVesselTracking();
             _activeTrackingGame = HighLogic.CurrentGame;
-            if (_activeTrackingGame != null)
+        }
+
+        private static void EnsureVesselWillDestroySubscription()
+        {
+            if (_isVesselWillDestroySubscribed || _activeTrackingGame == null)
             {
-                // Vessel.OnJustAboutToBeDestroyed can be missed during some breakup sequences.
-                // KSP's global event is an additional last-chance notification for the same vessel.
-                GameEvents.onVesselWillDestroy.Add(OnVesselWillDestroy);
-                _isVesselWillDestroySubscribed = true;
+                return;
             }
+
+            // Vessel.OnJustAboutToBeDestroyed can be missed during some breakup sequences.
+            // KSP's global event is an additional last-chance notification for the same vessel,
+            // but it is subscribed only while a Directed Power contract actually needs impact data.
+            GameEvents.onVesselWillDestroy.Add(OnVesselWillDestroy);
+            _isVesselWillDestroySubscribed = true;
         }
 
         private static void TrackActiveVesselDestruction(Vessel vessel)

@@ -45,6 +45,103 @@ namespace TheRaceForSpace.Milestones
     }
 
     /// <summary>
+    /// Immutable measurable criteria supplied by each starter milestone definition.
+    /// Keeping these values as catalogue data prevents line/level metadata from secretly defining balance.
+    /// </summary>
+    internal sealed class StarterContractCriteria
+    {
+        public static readonly StarterContractCriteria None = new StarterContractCriteria(
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            null);
+
+        private StarterContractCriteria(
+            double requiredSpeedMetersPerSecond,
+            double requiredMassTonnes,
+            double requiredDistanceMeters,
+            double minimumAltitudeMeters,
+            double maximumAltitudeMeters,
+            double requiredDurationSeconds,
+            string requiredBiomeName)
+        {
+            RequiredSpeedMetersPerSecond = Math.Max(0.0, requiredSpeedMetersPerSecond);
+            RequiredMassTonnes = Math.Max(0.0, requiredMassTonnes);
+            RequiredDistanceMeters = Math.Max(0.0, requiredDistanceMeters);
+            MinimumAltitudeMeters = Math.Max(0.0, minimumAltitudeMeters);
+            MaximumAltitudeMeters = Math.Max(0.0, maximumAltitudeMeters);
+            RequiredDurationSeconds = Math.Max(0.0, requiredDurationSeconds);
+            RequiredBiomeName = requiredBiomeName;
+        }
+
+        public double RequiredSpeedMetersPerSecond { get; private set; }
+        public double RequiredMassTonnes { get; private set; }
+        public double RequiredDistanceMeters { get; private set; }
+        public double MinimumAltitudeMeters { get; private set; }
+        public double MaximumAltitudeMeters { get; private set; }
+        public double RequiredDurationSeconds { get; private set; }
+        public string RequiredBiomeName { get; private set; }
+
+        public static StarterContractCriteria DirectedPower(
+            double requiredSpeedMetersPerSecond,
+            double maximumAltitudeMeters)
+        {
+            return new StarterContractCriteria(
+                requiredSpeedMetersPerSecond,
+                0.0,
+                0.0,
+                0.0,
+                maximumAltitudeMeters,
+                0.0,
+                null);
+        }
+
+        public static StarterContractCriteria Mass(
+            double requiredMassTonnes,
+            double requiredDistanceMeters)
+        {
+            return new StarterContractCriteria(
+                0.0,
+                requiredMassTonnes,
+                requiredDistanceMeters,
+                0.0,
+                0.0,
+                0.0,
+                null);
+        }
+
+        public static StarterContractCriteria Control(
+            double minimumAltitudeMeters,
+            double maximumAltitudeMeters,
+            double requiredDurationSeconds)
+        {
+            return new StarterContractCriteria(
+                0.0,
+                0.0,
+                0.0,
+                minimumAltitudeMeters,
+                maximumAltitudeMeters,
+                requiredDurationSeconds,
+                null);
+        }
+
+        public static StarterContractCriteria Biome(string requiredBiomeName)
+        {
+            return new StarterContractCriteria(
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                requiredBiomeName);
+        }
+    }
+
+    /// <summary>
     /// KSP-independent facts about one observed vessel that are relevant to orbital milestone evaluation.
     /// A null crew qualification means the vessel does not fit a milestone crew category.
     /// </summary>
@@ -108,6 +205,37 @@ namespace TheRaceForSpace.Milestones
             int starterLevel,
             double baseRewardFunds,
             double rivalProgressCostFunds)
+            : this(
+                id,
+                name,
+                celestialBodyName,
+                situation,
+                crewRequirement,
+                objectiveDescription,
+                unlockRule,
+                objectiveType,
+                starterLine,
+                starterLevel,
+                baseRewardFunds,
+                rivalProgressCostFunds,
+                StarterContractCriteria.None)
+        {
+        }
+
+        internal MilestoneDefinition(
+            string id,
+            string name,
+            string celestialBodyName,
+            MilestoneSituation situation,
+            MilestoneCrewRequirement crewRequirement,
+            string objectiveDescription,
+            UnlockRuleDefinition unlockRule,
+            MilestoneObjectiveType objectiveType,
+            StarterContractLine starterLine,
+            int starterLevel,
+            double baseRewardFunds,
+            double rivalProgressCostFunds,
+            StarterContractCriteria starterCriteria)
         {
             Id = id;
             Name = name;
@@ -121,13 +249,14 @@ namespace TheRaceForSpace.Milestones
             BaseRewardFunds = Math.Max(0.0, baseRewardFunds);
             RivalProgressCostFunds = Math.Max(0.0, rivalProgressCostFunds);
 
-            RequiredSpeedMetersPerSecond = GetRequiredSpeedMetersPerSecond(starterLine, StarterLevel);
-            RequiredMassTonnes = GetRequiredMassTonnes(starterLine, StarterLevel);
-            RequiredDistanceMeters = GetRequiredDistanceMeters(starterLine, StarterLevel);
-            MinimumAltitudeMeters = GetMinimumAltitudeMeters(starterLine, StarterLevel);
-            MaximumAltitudeMeters = GetMaximumAltitudeMeters(starterLine, StarterLevel);
-            RequiredDurationSeconds = GetRequiredDurationSeconds(starterLine, StarterLevel);
-            RequiredBiomeName = GetRequiredBiomeName(starterLine, StarterLevel);
+            StarterContractCriteria criteria = starterCriteria ?? StarterContractCriteria.None;
+            RequiredSpeedMetersPerSecond = criteria.RequiredSpeedMetersPerSecond;
+            RequiredMassTonnes = criteria.RequiredMassTonnes;
+            RequiredDistanceMeters = criteria.RequiredDistanceMeters;
+            MinimumAltitudeMeters = criteria.MinimumAltitudeMeters;
+            MaximumAltitudeMeters = criteria.MaximumAltitudeMeters;
+            RequiredDurationSeconds = criteria.RequiredDurationSeconds;
+            RequiredBiomeName = criteria.RequiredBiomeName;
 
             // The measurable starter criteria are authoritative. Generate wording for objectives
             // whose completion rule changed from in-flight observation to a final landed state so
@@ -148,9 +277,8 @@ namespace TheRaceForSpace.Milestones
         public double BaseRewardFunds { get; private set; }
         public double RivalProgressCostFunds { get; private set; }
 
-        // The twenty starter contracts are deliberately fixed prototype content. Keeping their
-        // measurable criteria on the definition lets Tracking evaluate them without parsing text
-        // or knowing stable milestone IDs.
+        // Tracking and UI consume these values directly. PrototypeMilestones supplies them explicitly
+        // for each starter definition instead of MilestoneDefinition inferring balance from line/level.
         public double RequiredSpeedMetersPerSecond { get; private set; }
         public double RequiredMassTonnes { get; private set; }
         public double RequiredDistanceMeters { get; private set; }
@@ -208,151 +336,6 @@ namespace TheRaceForSpace.Milestones
             }
 
             return configuredDescription;
-        }
-
-        private static double GetRequiredSpeedMetersPerSecond(
-            StarterContractLine starterLine,
-            int starterLevel)
-        {
-            if (starterLine != StarterContractLine.DirectedPower)
-            {
-                return 0.0;
-            }
-
-            switch (starterLevel)
-            {
-                case 1: return 600.0;
-                case 2: return 1100.0;
-                case 3: return 1400.0;
-                case 4: return 1700.0;
-                case 5: return 2000.0;
-                default: return 0.0;
-            }
-        }
-
-        private static double GetRequiredMassTonnes(
-            StarterContractLine starterLine,
-            int starterLevel)
-        {
-            if (starterLine != StarterContractLine.Mass)
-            {
-                return 0.0;
-            }
-
-            switch (starterLevel)
-            {
-                case 1: return 1.0;
-                case 2: return 2.5;
-                case 3: return 5.0;
-                case 4: return 10.0;
-                case 5: return 20.0;
-                default: return 0.0;
-            }
-        }
-
-        private static double GetRequiredDistanceMeters(
-            StarterContractLine starterLine,
-            int starterLevel)
-        {
-            if (starterLine != StarterContractLine.Mass)
-            {
-                return 0.0;
-            }
-
-            switch (starterLevel)
-            {
-                case 1: return 25000.0;
-                case 2: return 75000.0;
-                case 3: return 150000.0;
-                case 4: return 300000.0;
-                case 5: return 600000.0;
-                default: return 0.0;
-            }
-        }
-
-        private static double GetMinimumAltitudeMeters(
-            StarterContractLine starterLine,
-            int starterLevel)
-        {
-            if (starterLine != StarterContractLine.Control)
-            {
-                return 0.0;
-            }
-
-            switch (starterLevel)
-            {
-                case 1: return 2000.0;
-                case 2: return 8000.0;
-                case 3: return 15000.0;
-                case 4: return 30000.0;
-                case 5: return 50000.0;
-                default: return 0.0;
-            }
-        }
-
-        private static double GetMaximumAltitudeMeters(
-            StarterContractLine starterLine,
-            int starterLevel)
-        {
-            if (starterLine == StarterContractLine.DirectedPower)
-            {
-                return starterLevel >= 1 && starterLevel <= 5 ? 70000.0 : 0.0;
-            }
-
-            if (starterLine != StarterContractLine.Control)
-            {
-                return 0.0;
-            }
-
-            switch (starterLevel)
-            {
-                case 1: return 5000.0;
-                case 2: return 12000.0;
-                case 3: return 25000.0;
-                case 4: return 40000.0;
-                case 5: return 65000.0;
-                default: return 0.0;
-            }
-        }
-
-        private static double GetRequiredDurationSeconds(
-            StarterContractLine starterLine,
-            int starterLevel)
-        {
-            if (starterLine != StarterContractLine.Control)
-            {
-                return 0.0;
-            }
-
-            switch (starterLevel)
-            {
-                case 1: return 30.0;
-                case 2: return 45.0;
-                case 3: return 60.0;
-                case 4: return 75.0;
-                case 5: return 90.0;
-                default: return 0.0;
-            }
-        }
-
-        private static string GetRequiredBiomeName(
-            StarterContractLine starterLine,
-            int starterLevel)
-        {
-            if (starterLine != StarterContractLine.Biome)
-            {
-                return null;
-            }
-
-            switch (starterLevel)
-            {
-                case 1: return "Grasslands";
-                case 2: return "Highlands";
-                case 3: return "Mountains";
-                case 4: return "Deserts";
-                case 5: return "Ice Caps";
-                default: return null;
-            }
         }
     }
 }

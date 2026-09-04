@@ -141,6 +141,95 @@ namespace TheRaceForSpace.ControllerTests
                 "Biome III must remain inactive until separately offered.");
         }
 
+        public static void OfferedControlLevelsTrackAndCompleteIndependently()
+        {
+            SatelliteRaceController controller = CreateControllerWithSecondLevelOffered(
+                PrototypeMilestones.Control1Id);
+            var tracker = new StarterFlightTracker();
+
+            Require(Contains(controller, PrototypeMilestones.Control1Id),
+                "Control I should remain active after a rival unlocks Control II.");
+            Require(Contains(controller, PrototypeMilestones.Control2Id),
+                "Control II should join the active set after sponsor review.");
+            Require(!Contains(controller, PrototypeMilestones.Control3Id),
+                "Control III must remain inactive until separately offered.");
+
+            for (int elapsedSeconds = 0; elapsedSeconds <= 30; elapsedSeconds += 5)
+            {
+                tracker.RefreshPlayerMilestones(
+                    controller.PlayerProgram,
+                    controller.Programs,
+                    controller.ActiveStarterContracts,
+                    Snapshot(
+                        "control-independent",
+                        400.0,
+                        400.0 + elapsedSeconds,
+                        3000.0,
+                        150.0,
+                        1.0,
+                        1,
+                        null,
+                        TrackedFlightSituation.Flying));
+            }
+
+            Require(tracker.IsControlMilestoneQualified(PrototypeMilestones.Control1Id),
+                "Control I should retain its own qualified hold state.");
+            Require(!tracker.IsControlMilestoneQualified(PrototypeMilestones.Control2Id),
+                "Control II should remain unqualified until its own altitude hold is completed.");
+
+            for (int observationUniversalTime = 435; observationUniversalTime <= 480;
+                observationUniversalTime += 5)
+            {
+                tracker.RefreshPlayerMilestones(
+                    controller.PlayerProgram,
+                    controller.Programs,
+                    controller.ActiveStarterContracts,
+                    Snapshot(
+                        "control-independent",
+                        400.0,
+                        observationUniversalTime,
+                        10000.0,
+                        150.0,
+                        1.0,
+                        1,
+                        null,
+                        TrackedFlightSituation.Flying));
+            }
+
+            Require(tracker.IsControlMilestoneQualified(PrototypeMilestones.Control1Id),
+                "Leaving Control I's band after qualification must not erase its completed hold.");
+            Require(tracker.IsControlMilestoneQualified(PrototypeMilestones.Control2Id),
+                "Control II should qualify independently after its own 45-second hold.");
+            Require(tracker.GetControlHoldSeconds(PrototypeMilestones.Control1Id) >= 30.0,
+                "Control I should retain its own accumulated hold duration.");
+            Require(tracker.GetControlHoldSeconds(PrototypeMilestones.Control2Id) >= 45.0,
+                "Control II should retain its own accumulated hold duration.");
+
+            bool recorded = tracker.RefreshPlayerMilestones(
+                controller.PlayerProgram,
+                controller.Programs,
+                controller.ActiveStarterContracts,
+                Snapshot(
+                    "control-independent",
+                    400.0,
+                    481.0,
+                    80.0,
+                    0.0,
+                    1.0,
+                    1,
+                    null,
+                    TrackedFlightSituation.Landed));
+
+            Require(recorded,
+                "One safe landing should complete every active Control contract whose own hold qualified.");
+            Require(controller.PlayerProgram.HasAchievement(PrototypeMilestones.Control1Id),
+                "Control I should complete from the shared safe landing.");
+            Require(controller.PlayerProgram.HasAchievement(PrototypeMilestones.Control2Id),
+                "Control II should complete independently from the same safe landing.");
+            Require(!controller.PlayerProgram.HasAchievement(PrototypeMilestones.Control3Id),
+                "Control III must remain untouched while it is not offered.");
+        }
+
         private static SatelliteRaceController CreateControllerWithSecondLevelOffered(
             string firstLevelMilestoneId)
         {

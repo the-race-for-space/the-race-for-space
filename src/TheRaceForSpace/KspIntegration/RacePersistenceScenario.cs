@@ -16,14 +16,16 @@ namespace TheRaceForSpace.KspIntegration
         new[] { GameScenes.SPACECENTER, GameScenes.TRACKSTATION, GameScenes.FLIGHT, GameScenes.EDITOR })]
     public sealed class RacePersistenceScenario : ScenarioModule
     {
+        private const string FundingContractsNodeName = "FUNDING_CONTRACTS";
         private const string RivalProgramsNodeName = "RIVALS";
-        private const string RaceProgressNodeName = "RACE_PROGRESS";
-        private const string StarterFlightNodeName = "STARTER_FLIGHT";
+        private const string ActiveContractProgressNodeName = "ACTIVE_CONTRACT_PROGRESS";
         private const string CommandCenterVisibleValueName = "commandCenterVisible";
 
+        private static readonly FundingContractsSaveState FundingContractsState =
+            new FundingContractsSaveState();
         private static readonly RivalProgramsSaveState RivalProgramsState = new RivalProgramsSaveState();
-        private static readonly RaceProgressSaveState RaceProgressState = new RaceProgressSaveState();
-        private static readonly StarterFlightSaveState StarterFlightState = new StarterFlightSaveState();
+        private static readonly ActiveContractProgressSaveState ActiveContractProgressState =
+            new ActiveContractProgressSaveState();
         private static Game _loadedGame;
         private static bool _commandCenterVisible;
         private static bool _stateReady;
@@ -34,9 +36,11 @@ namespace TheRaceForSpace.KspIntegration
             // newer in-memory state in that case; only deserialize when a different Game is loaded.
             if (_loadedGame != HighLogic.CurrentGame)
             {
+                FundingContractsState.Load(
+                    node == null ? null : node.GetNode(FundingContractsNodeName));
                 RivalProgramsState.Load(node == null ? null : node.GetNode(RivalProgramsNodeName));
-                RaceProgressState.Load(node == null ? null : node.GetNode(RaceProgressNodeName));
-                StarterFlightState.Load(node == null ? null : node.GetNode(StarterFlightNodeName));
+                ActiveContractProgressState.Load(
+                    node == null ? null : node.GetNode(ActiveContractProgressNodeName));
 
                 bool parsedCommandCenterVisible;
                 _commandCenterVisible = node != null
@@ -60,19 +64,19 @@ namespace TheRaceForSpace.KspIntegration
 
             node.AddValue(CommandCenterVisibleValueName, _commandCenterVisible);
 
+            if (FundingContractsState.HasData)
+            {
+                FundingContractsState.Save(node.AddNode(FundingContractsNodeName));
+            }
+
             if (RivalProgramsState.HasData)
             {
                 RivalProgramsState.Save(node.AddNode(RivalProgramsNodeName));
             }
 
-            if (RaceProgressState.HasData)
+            if (ActiveContractProgressState.HasData)
             {
-                RaceProgressState.Save(node.AddNode(RaceProgressNodeName));
-            }
-
-            if (StarterFlightState.HasData)
-            {
-                StarterFlightState.Save(node.AddNode(StarterFlightNodeName));
+                ActiveContractProgressState.Save(node.AddNode(ActiveContractProgressNodeName));
             }
         }
 
@@ -101,9 +105,9 @@ namespace TheRaceForSpace.KspIntegration
         /// <summary>
         /// Restores each saved rival by stable program ID once KSP has finished loading the current save.
         /// Rivals with no matching saved state keep their constructor defaults, allowing newly added
-        /// rivals to enter an existing save created with this collection format.
+        /// rivals to enter an existing save created with the current collection format.
         /// </summary>
-        public static bool TryRestoreRivalState(IList<SpaceProgramState> rivalPrograms)
+        public static bool TryRestoreRivalPrograms(IList<SpaceProgramState> rivalPrograms)
         {
             if (!_stateReady
                 || _loadedGame == null
@@ -118,13 +122,13 @@ namespace TheRaceForSpace.KspIntegration
         }
 
         /// <summary>
-        /// Restores player achievements, programme unlocks, achievement-contract lifecycle state,
-        /// and the next shared funding boundary by stable persisted values.
+        /// Restores player achievement history, all funding-contract lifecycle state, and the next
+        /// shared funding boundary by stable persisted IDs.
         /// </summary>
-        public static bool TryRestoreRaceProgress(
+        public static bool TryRestoreFundingContracts(
             SpaceProgramState playerProgram,
-            IList<FundingProgramme> fundingProgrammes,
-            IList<AchievementFundingProgramme> achievementProgrammes,
+            IList<FundingProgramme> satelliteContracts,
+            IList<AchievementFundingProgramme> achievementContracts,
             out double nextFundingUniversalTime)
         {
             nextFundingUniversalTime = -1.0;
@@ -136,16 +140,19 @@ namespace TheRaceForSpace.KspIntegration
                 return false;
             }
 
-            RaceProgressState.ApplyTo(playerProgram, fundingProgrammes, achievementProgrammes);
-            nextFundingUniversalTime = RaceProgressState.NextFundingUniversalTime;
+            FundingContractsState.ApplyTo(
+                playerProgram,
+                satelliteContracts,
+                achievementContracts);
+            nextFundingUniversalTime = FundingContractsState.NextFundingUniversalTime;
             return true;
         }
 
         /// <summary>
-        /// Restores the active pre-orbit flight attempt. Missing data in an older save simply clears
-        /// the tracker so the next controlled vessel starts a fresh attempt.
+        /// Restores temporary progress used to continue evaluating active contract conditions,
+        /// including the tracked flight history and independent Control contract hold state.
         /// </summary>
-        public static bool TryRestoreStarterFlightState(StarterFlightTracker starterFlightTracker)
+        public static bool TryRestoreActiveContractProgress(StarterFlightTracker starterFlightTracker)
         {
             if (!_stateReady
                 || _loadedGame == null
@@ -155,11 +162,11 @@ namespace TheRaceForSpace.KspIntegration
                 return false;
             }
 
-            StarterFlightState.ApplyTo(starterFlightTracker);
+            ActiveContractProgressState.ApplyTo(starterFlightTracker);
             return true;
         }
 
-        public static void CaptureRivalState(IList<SpaceProgramState> rivalPrograms)
+        public static void CaptureRivalPrograms(IList<SpaceProgramState> rivalPrograms)
         {
             if (!_stateReady
                 || _loadedGame == null
@@ -173,14 +180,13 @@ namespace TheRaceForSpace.KspIntegration
         }
 
         /// <summary>
-        /// Captures player achievement state, programme lifecycle state, and the next shared
-        /// funding boundary by stable values. Player satellite counts remain owned by live KSP
-        /// vessel tracking and are not persisted here.
+        /// Captures player achievement history, all funding-contract lifecycle state, and the next
+        /// shared funding boundary. Player satellite counts remain owned by live KSP vessel tracking.
         /// </summary>
-        public static void CaptureRaceProgress(
+        public static void CaptureFundingContracts(
             SpaceProgramState playerProgram,
-            IList<FundingProgramme> fundingProgrammes,
-            IList<AchievementFundingProgramme> achievementProgrammes,
+            IList<FundingProgramme> satelliteContracts,
+            IList<AchievementFundingProgramme> achievementContracts,
             double nextFundingUniversalTime)
         {
             if (!_stateReady || _loadedGame == null || _loadedGame != HighLogic.CurrentGame)
@@ -188,18 +194,18 @@ namespace TheRaceForSpace.KspIntegration
                 return;
             }
 
-            RaceProgressState.Capture(
+            FundingContractsState.Capture(
                 playerProgram,
-                fundingProgrammes,
-                achievementProgrammes,
+                satelliteContracts,
+                achievementContracts,
                 nextFundingUniversalTime);
         }
 
         /// <summary>
-        /// Captures the current in-memory starter flight attempt. This only updates ScenarioModule
-        /// state; KSP writes it to disk during the normal save path.
+        /// Captures temporary active-condition progress. This only updates ScenarioModule state;
+        /// KSP writes it to disk during the normal save path.
         /// </summary>
-        public static void CaptureStarterFlightState(StarterFlightTracker starterFlightTracker)
+        public static void CaptureActiveContractProgress(StarterFlightTracker starterFlightTracker)
         {
             if (!_stateReady
                 || _loadedGame == null
@@ -209,7 +215,7 @@ namespace TheRaceForSpace.KspIntegration
                 return;
             }
 
-            StarterFlightState.Capture(starterFlightTracker);
+            ActiveContractProgressState.Capture(starterFlightTracker);
         }
     }
 }

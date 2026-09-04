@@ -520,6 +520,9 @@ namespace TheRaceForSpace.Milestones
                     CreateInterplanetaryCrewedUnlockRule())
             }.AsReadOnly();
 
+        private static readonly Dictionary<string, MilestoneDefinition> MilestonesById =
+            CreateMilestoneIndex();
+
         /// <summary>
         /// Orbital milestones consumed by the existing vessel-orbit tracker.
         /// </summary>
@@ -546,24 +549,34 @@ namespace TheRaceForSpace.Milestones
                 return null;
             }
 
-            MilestoneDefinition milestone = FindById(StarterDefinitions, milestoneId);
-            return milestone ?? FindById(Definitions, milestoneId);
+            MilestoneDefinition milestone;
+            return MilestonesById.TryGetValue(milestoneId, out milestone)
+                ? milestone
+                : null;
         }
 
-        private static MilestoneDefinition FindById(
-            IList<MilestoneDefinition> definitions,
-            string milestoneId)
+        private static Dictionary<string, MilestoneDefinition> CreateMilestoneIndex()
         {
-            for (int milestoneIndex = 0; milestoneIndex < definitions.Count; milestoneIndex++)
+            var milestonesById = new Dictionary<string, MilestoneDefinition>(
+                StringComparer.OrdinalIgnoreCase);
+
+            for (int milestoneIndex = 0;
+                milestoneIndex < StarterDefinitions.Count;
+                milestoneIndex++)
             {
-                MilestoneDefinition milestone = definitions[milestoneIndex];
-                if (string.Equals(milestone.Id, milestoneId, StringComparison.OrdinalIgnoreCase))
-                {
-                    return milestone;
-                }
+                MilestoneDefinition milestone = StarterDefinitions[milestoneIndex];
+                milestonesById.Add(milestone.Id, milestone);
             }
 
-            return null;
+            for (int milestoneIndex = 0;
+                milestoneIndex < Definitions.Count;
+                milestoneIndex++)
+            {
+                MilestoneDefinition milestone = Definitions[milestoneIndex];
+                milestonesById.Add(milestone.Id, milestone);
+            }
+
+            return milestonesById;
         }
 
         private static MilestoneDefinition CreateStarterMilestone(

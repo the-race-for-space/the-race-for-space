@@ -73,7 +73,7 @@ Required bands/times are 2-5 km / 30 s, 8-12 km / 45 s, 15-25 km / 60 s, 30-40 k
 9. Save after the hold has qualified but before landing, reload, land safely, and confirm completion still works.
 10. While an unqualified hold is in progress, create a long interval in which the active vessel is not observed (for example by leaving the flight scene and advancing time), then return to the same vessel. Confirm the missing interval is not credited and the unqualified continuous hold restarts rather than jumping forward.
 11. Create a state where Control I and Control II are both `Offered`. Qualify Control I at 2-5 km, then begin Control II at 8-12 km and save before its 45-second hold is complete. Before saving, confirm Funding Targets shows Control I as qualified while Control II shows its own partial hold rather than hiding Control II or asking for a new launch. Reload and confirm Control I remains qualified while Control II resumes from its own saved partial hold; finish Control II and land safely, then confirm **both contracts complete on the same landing**.
-12. In that multi-Control save, inspect `STARTER_FLIGHT` and confirm each tracked Control contract has its own `CONTROL_STATE` child containing `milestoneId`, `holdSeconds`, `wasSampleInBand`, and `qualified`.
+12. In that multi-Control save, inspect `ACTIVE_CONTRACT_PROGRESS` and confirm each tracked Control contract has its own `CONTROL_STATE` child containing `milestoneId`, `holdSeconds`, `wasSampleInBand`, and `qualified`.
 
 ## Biome line
 
@@ -130,13 +130,16 @@ Test each Level V route independently in a disposable save or by restoring a bac
 
 ## Persistence and scene changes
 
-1. Save and reload with no active flight and confirm no starter attempt is invented.
-2. Save and reload during a valid active attempt and confirm the intended historical state persists: maxima, launch origin, every per-contract Control hold/qualification state, and orbit invalidation.
-3. Confirm current telemetry such as instantaneous mass/altitude/biome is repopulated by the next live vessel sample rather than stale saved values.
-4. Move Flight -> Space Center -> Tracking Station -> Flight and confirm the controller, offers, completed achievements, and saved starter state remain consistent.
-5. Load a different KSP save in the same process and confirm no active-flight state or destruction callback leaks from the previous save.
-6. Inspect the current v0.5 `STARTER_FLIGHT` node and confirm Control progress is represented by repeated `CONTROL_STATE` children. Confirm obsolete single-Control values such as `controlHoldMilestoneId` and per-line completion flags are no longer written.
-7. Corrupt one current-format `CONTROL_STATE` entry in a disposable save and confirm the malformed active attempt fails closed rather than creating invented hold progress.
+1. Inspect a current v0.5 Race for Space scenario node and confirm persistence is divided into exactly three gameplay sections: `FUNDING_CONTRACTS`, `RIVALS`, and `ACTIVE_CONTRACT_PROGRESS` (plus the separate command-center visibility value).
+2. Inspect `FUNDING_CONTRACTS` and confirm player completion timestamps use `PLAYER_ACHIEVEMENT`, achievement funding contracts use `ACHIEVEMENT_CONTRACT`, and satellite funding contracts use `SATELLITE_CONTRACT`, all identified by stable `id` values. Confirm locked/unoffered contracts are represented explicitly rather than disappearing from the saved contract set.
+3. Save and reload with no active flight and confirm no active contract attempt is invented.
+4. Save and reload during a valid active attempt and confirm `ACTIVE_CONTRACT_PROGRESS` preserves the intended temporary condition state: maxima, launch origin, every per-contract Control hold/qualification state, and orbit invalidation.
+5. Confirm current telemetry such as instantaneous mass/altitude/biome is repopulated by the next live vessel sample rather than stale saved values.
+6. Move Flight -> Space Center -> Tracking Station -> Flight and confirm the controller, offers, completed achievements, rival state, and saved active-contract progress remain consistent.
+7. Load a different KSP save in the same process and confirm no funding-contract, rival, active-flight, or destruction-callback state leaks from the previous save.
+8. Inspect `ACTIVE_CONTRACT_PROGRESS` and confirm Control progress is represented by repeated `CONTROL_STATE` children. Confirm obsolete single-Control values such as `controlHoldMilestoneId` and per-line completion flags are no longer written.
+9. Corrupt one current-format `CONTROL_STATE` entry in a disposable save and confirm the malformed active attempt fails closed rather than creating invented hold progress.
+10. Confirm earlier development-only persistence nodes such as `RACE_PROGRESS` and `STARTER_FLIGHT` are not written by the current v0.5 format; compatibility with those pre-cleanup development saves is intentionally not required.
 
 ## Regression and release acceptance
 
@@ -155,6 +158,7 @@ The v0.5 candidate is ready for merge/release only when:
 - Mass only completes on a landed finished craft that still meets both final mass and distance requirements;
 - simultaneously Offered Mass/Biome/Directed Power/Control levels are evaluated independently, while an unoffered higher level is not checked even when the same flight would satisfy it;
 - simultaneous Control hold/qualification states survive current-format save/load independently;
+- persistence writes the three current sections `FUNDING_CONTRACTS`, `RIVALS`, and `ACTIVE_CONTRACT_PROGRESS`, with all funding contracts stored explicitly by stable ID and temporary condition progress kept separate from contract lifecycle state;
 - the active starter telemetry plan requests only the condition families currently represented by Offered unfinished starter contracts, and a zero-active plan bypasses active-vessel starter discovery/evaluation;
 - a real qualifying Directed Power surface crash reliably produces completion without turning normal recovery into a false crash;
 - all four starter lines can be completed end-to-end in KSP;

@@ -36,7 +36,8 @@ namespace TheRaceForSpace.Funding
         /// </summary>
         public static IList<AchievementFundingProgramme> CreateAchievementProgrammes()
         {
-            var programmes = new List<AchievementFundingProgramme>();
+            var programmes = new List<AchievementFundingProgramme>(
+                PrototypeMilestones.StarterContracts.Count + PrototypeMilestones.All.Count);
 
             for (int milestoneIndex = 0;
                 milestoneIndex < PrototypeMilestones.StarterContracts.Count;
@@ -161,32 +162,22 @@ namespace TheRaceForSpace.Funding
             IList<AchievementFundingProgramme> programmes,
             MilestoneDefinition milestone)
         {
-            RaceBodySettings bodySettings = RaceSettings.GetBodySettings(milestone.CelestialBodyName);
-            double baseRewardFunds = milestone.IsStarterContract
-                ? milestone.BaseRewardFunds
-                : milestone.CrewRequirement == MilestoneCrewRequirement.Crewed
+            double baseRewardFunds = milestone.BaseRewardFunds;
+            if (!milestone.IsStarterContract)
+            {
+                RaceBodySettings bodySettings = RaceSettings.GetBodySettings(milestone.CelestialBodyName);
+                baseRewardFunds = milestone.CrewRequirement == MilestoneCrewRequirement.Crewed
                     ? bodySettings.CrewedRewardFunds
                     : bodySettings.ProbeRewardFunds;
+            }
 
-            AchievementFundingProgramme programme;
-            if (milestone.UnlockRule == null)
-            {
-                programme = new AchievementFundingProgramme(
-                    milestone.Id,
-                    milestone.Name,
-                    milestone.ObjectiveDescription,
-                    baseRewardFunds);
-            }
-            else
-            {
-                programme = new AchievementFundingProgramme(
-                    milestone.Id,
-                    milestone.Name,
-                    milestone.ObjectiveDescription,
-                    baseRewardFunds,
-                    CreateCurrentPrototypeUnlockRequirement(milestone.UnlockRule),
-                    milestone.UnlockRule);
-            }
+            var programme = new AchievementFundingProgramme(
+                milestone.Id,
+                milestone.Name,
+                milestone.ObjectiveDescription,
+                baseRewardFunds,
+                CreateUnlockRequirementText(milestone.UnlockRule),
+                milestone.UnlockRule);
 
             // The four starter lines remain outside the normal two-offer sponsor pool. Their first
             // milestones are bootstrap offers; later levels are offered deterministically by the controller.
@@ -212,7 +203,7 @@ namespace TheRaceForSpace.Funding
                 bodySettings.SatelliteNetworkSize,
                 bodySettings.SatelliteNetworkValueFunds,
                 false,
-                CreateCurrentPrototypeUnlockRequirement(unlockRule),
+                CreateUnlockRequirementText(unlockRule),
                 unlockRule);
         }
 
@@ -265,7 +256,7 @@ namespace TheRaceForSpace.Funding
                 requiredSatelliteCount);
         }
 
-        private static string CreateCurrentPrototypeUnlockRequirement(UnlockRuleDefinition unlockRule)
+        private static string CreateUnlockRequirementText(UnlockRuleDefinition unlockRule)
         {
             if (unlockRule == null)
             {
@@ -281,14 +272,14 @@ namespace TheRaceForSpace.Funding
                     if (alternativePath == null || alternativePath.Conditions.Count != 1)
                     {
                         throw new InvalidOperationException(
-                            "Current prototype OR funding text requires one condition per unlock path.");
+                            "Funding OR text requires one condition per unlock path.");
                     }
 
                     UnlockConditionDefinition condition = alternativePath.Conditions[0];
                     if (!IsSingleAgencyAchievementCondition(condition))
                     {
                         throw new InvalidOperationException(
-                            "Current prototype OR funding text supports AnyAgency achievements only.");
+                            "Funding OR text supports AnyAgency achievements only.");
                     }
 
                     if (!string.IsNullOrEmpty(alternatives))
@@ -307,7 +298,7 @@ namespace TheRaceForSpace.Funding
                 || unlockRule.Paths[0].Conditions.Count == 0)
             {
                 throw new InvalidOperationException(
-                    "Current prototype funding text requires at least one unlock path.");
+                    "Funding unlock text requires at least one unlock path.");
             }
 
             UnlockPathDefinition path = unlockRule.Paths[0];
@@ -315,7 +306,7 @@ namespace TheRaceForSpace.Funding
             if (!IsSingleAgencyAchievementCondition(firstCondition))
             {
                 throw new InvalidOperationException(
-                    "Current prototype funding text requires an AnyAgency achievement as its first condition.");
+                    "Funding unlock text requires an AnyAgency achievement as its first condition.");
             }
 
             string unlockRequirement =
@@ -345,7 +336,7 @@ namespace TheRaceForSpace.Funding
                 }
 
                 throw new InvalidOperationException(
-                    "Current prototype funding text supports AnyAgency achievements and satellite-count conditions.");
+                    "Funding unlock text supports AnyAgency achievements and satellite-count conditions.");
             }
 
             return unlockRequirement + ".";

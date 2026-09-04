@@ -585,14 +585,6 @@ namespace TheRaceForSpace.Tests.Tracking
                 2.0,
                 10.0,
                 10.0,
-                null,
-                null,
-                0.0,
-                false,
-                false,
-                false,
-                false,
-                false,
                 false);
 
             loadedState.ApplyTo(tracker);

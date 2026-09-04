@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 
 namespace TheRaceForSpace.Milestones
 {
@@ -258,9 +259,8 @@ namespace TheRaceForSpace.Milestones
             RequiredDurationSeconds = criteria.RequiredDurationSeconds;
             RequiredBiomeName = criteria.RequiredBiomeName;
 
-            // The measurable starter criteria are authoritative. Generate wording for objectives
-            // whose completion rule changed from in-flight observation to a final landed state so
-            // Space Race and Funding Targets cannot drift away from the tracker implementation.
+            // Starter criteria are the single source of truth for both evaluation and player-facing
+            // wording. This prevents catalogue text from drifting away from the tracker thresholds.
             ObjectiveDescription = CreateObjectiveDescription(objectiveDescription);
         }
 
@@ -316,15 +316,39 @@ namespace TheRaceForSpace.Milestones
 
         private string CreateObjectiveDescription(string configuredDescription)
         {
+            if (ObjectiveType == MilestoneObjectiveType.DirectedPower
+                && RequiredSpeedMetersPerSecond > 0.0
+                && MaximumAltitudeMeters > 0.0)
+            {
+                return "Reach "
+                    + RequiredSpeedMetersPerSecond.ToString("#,0", CultureInfo.InvariantCulture)
+                    + " m/s without exceeding "
+                    + (MaximumAltitudeMeters / 1000.0).ToString("0.#", CultureInfo.InvariantCulture)
+                    + " km altitude, then impact Kerbin.";
+            }
+
             if (ObjectiveType == MilestoneObjectiveType.DeliveredMass
                 && RequiredMassTonnes > 0.0
                 && RequiredDistanceMeters > 0.0)
             {
                 return "Land on Kerbin at least "
-                    + (RequiredDistanceMeters / 1000.0).ToString("0.#")
+                    + (RequiredDistanceMeters / 1000.0).ToString("0.#", CultureInfo.InvariantCulture)
                     + " km from the launch point with at least "
-                    + RequiredMassTonnes.ToString("0.#")
+                    + RequiredMassTonnes.ToString("0.#", CultureInfo.InvariantCulture)
                     + " t of remaining vessel mass.";
+            }
+
+            if (ObjectiveType == MilestoneObjectiveType.AltitudeHold
+                && MaximumAltitudeMeters > MinimumAltitudeMeters
+                && RequiredDurationSeconds > 0.0)
+            {
+                return "With crew aboard, remain between "
+                    + (MinimumAltitudeMeters / 1000.0).ToString("0.#", CultureInfo.InvariantCulture)
+                    + "-"
+                    + (MaximumAltitudeMeters / 1000.0).ToString("0.#", CultureInfo.InvariantCulture)
+                    + " km for "
+                    + RequiredDurationSeconds.ToString("0.#", CultureInfo.InvariantCulture)
+                    + " seconds, then land safely on Kerbin.";
             }
 
             if (ObjectiveType == MilestoneObjectiveType.BiomeVisit

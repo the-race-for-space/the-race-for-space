@@ -107,7 +107,7 @@ namespace TheRaceForSpace.KspIntegration
         /// Rivals with no matching saved state keep their constructor defaults, allowing newly added
         /// rivals to enter an existing save created with the current collection format.
         /// </summary>
-        public static bool TryRestoreRivalPrograms(IList<SpaceProgramState> rivalPrograms)
+        public static bool TryRestoreRivalState(IList<SpaceProgramState> rivalPrograms)
         {
             if (!_stateReady
                 || _loadedGame == null
@@ -125,7 +125,7 @@ namespace TheRaceForSpace.KspIntegration
         /// Restores player achievement history, all funding-contract lifecycle state, and the next
         /// shared funding boundary by stable persisted IDs.
         /// </summary>
-        public static bool TryRestoreFundingContracts(
+        public static bool TryRestoreRaceProgress(
             SpaceProgramState playerProgram,
             IList<FundingProgramme> satelliteContracts,
             IList<AchievementFundingProgramme> achievementContracts,
@@ -166,7 +166,7 @@ namespace TheRaceForSpace.KspIntegration
             return true;
         }
 
-        public static void CaptureRivalPrograms(IList<SpaceProgramState> rivalPrograms)
+        public static void CaptureRivalState(IList<SpaceProgramState> rivalPrograms)
         {
             if (!_stateReady
                 || _loadedGame == null
@@ -183,7 +183,7 @@ namespace TheRaceForSpace.KspIntegration
         /// Captures player achievement history, all funding-contract lifecycle state, and the next
         /// shared funding boundary. Player satellite counts remain owned by live KSP vessel tracking.
         /// </summary>
-        public static void CaptureFundingContracts(
+        public static void CaptureRaceProgress(
             SpaceProgramState playerProgram,
             IList<FundingProgramme> satelliteContracts,
             IList<AchievementFundingProgramme> achievementContracts,

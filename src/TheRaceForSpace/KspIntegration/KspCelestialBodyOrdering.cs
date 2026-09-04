@@ -30,6 +30,11 @@ namespace TheRaceForSpace.KspIntegration
             // repaint, so short path lists keep the orbital-tree comparison straightforward.
             IList<CelestialBody> homePath = CreatePathToRoot(homeBody);
             IList<CelestialBody> targetPath = CreatePathToRoot(targetBody);
+            if (homePath == null || targetPath == null)
+            {
+                return double.MaxValue;
+            }
+
             int homeBranchIndex = homePath.Count - 1;
             int targetBranchIndex = targetPath.Count - 1;
             bool foundCommonAncestor = false;
@@ -87,6 +92,16 @@ namespace TheRaceForSpace.KspIntegration
 
             while (currentBody != null)
             {
+                // A malformed modded body graph must not trap the UI in an infinite parent walk.
+                // Returning null lets the caller sort that entry at the end instead.
+                for (int pathIndex = 0; pathIndex < path.Count; pathIndex++)
+                {
+                    if (ReferenceEquals(path[pathIndex], currentBody))
+                    {
+                        return null;
+                    }
+                }
+
                 path.Add(currentBody);
                 currentBody = GetParent(currentBody);
             }

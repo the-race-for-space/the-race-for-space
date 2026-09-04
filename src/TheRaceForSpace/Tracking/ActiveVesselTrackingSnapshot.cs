@@ -17,6 +17,24 @@ namespace TheRaceForSpace.Tracking
     }
 
     /// <summary>
+    /// Condition-specific telemetry requested by the cached active starter-contract plan.
+    /// Vessel identity, body, situation, launch time, coordinates, and observation time remain
+    /// common attempt context because they are cheap direct values and preserve launch continuity.
+    /// </summary>
+    [Flags]
+    public enum StarterTelemetryRequirement
+    {
+        None = 0,
+        Altitude = 1 << 0,
+        SurfaceSpeed = 1 << 1,
+        Mass = 1 << 2,
+        Biome = 1 << 3,
+        Crew = 1 << 4,
+        SurfaceImpact = 1 << 5,
+        All = Altitude | SurfaceSpeed | Mass | Biome | Crew | SurfaceImpact
+    }
+
+    /// <summary>
     /// Lightweight snapshot of the currently controlled vessel. KSP-specific objects are converted
     /// by the integration layer before the starter-flight tracker consumes them.
     /// </summary>
@@ -35,7 +53,8 @@ namespace TheRaceForSpace.Tracking
             string biomeName,
             int crewCount,
             double launchUniversalTime,
-            double observationUniversalTime)
+            double observationUniversalTime,
+            StarterTelemetryRequirement telemetryRequirements = StarterTelemetryRequirement.All)
         {
             VesselId = vesselId;
             CelestialBodyName = celestialBodyName;
@@ -50,6 +69,7 @@ namespace TheRaceForSpace.Tracking
             CrewCount = Math.Max(0, crewCount);
             LaunchUniversalTime = launchUniversalTime;
             ObservationUniversalTime = observationUniversalTime;
+            TelemetryRequirements = telemetryRequirements;
         }
 
         public string VesselId { get; private set; }
@@ -65,5 +85,6 @@ namespace TheRaceForSpace.Tracking
         public int CrewCount { get; private set; }
         public double LaunchUniversalTime { get; private set; }
         public double ObservationUniversalTime { get; private set; }
+        public StarterTelemetryRequirement TelemetryRequirements { get; private set; }
     }
 }

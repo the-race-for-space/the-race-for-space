@@ -52,7 +52,8 @@ namespace TheRaceForSpace.ControllerTests
             controller.Refresh();
             IList<MilestoneDefinition> openingPlan = controller.ActiveStarterContracts;
 
-            controller.AsterProgram.RecordAchievement(PrototypeMilestones.Mass1Id, 10.0);
+            controller.FindProgramById(SatelliteRaceController.AsterProgramId)
+                .RecordAchievement(PrototypeMilestones.Mass1Id, 10.0);
             Planetarium.CurrentUniversalTime = 20.0;
             controller.Refresh(false);
 
@@ -120,7 +121,8 @@ namespace TheRaceForSpace.ControllerTests
             var controller = new SatelliteRaceController();
             controller.Refresh();
 
-            controller.AsterProgram.RecordAchievement(PrototypeMilestones.Mass1Id, 10.0);
+            controller.FindProgramById(SatelliteRaceController.AsterProgramId)
+                .RecordAchievement(PrototypeMilestones.Mass1Id, 10.0);
             Planetarium.CurrentUniversalTime = FundingIntervalSeconds;
             controller.Refresh(false);
 

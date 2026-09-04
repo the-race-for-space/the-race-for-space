@@ -88,6 +88,16 @@ Targets are Grasslands, Highlands, Mountains, Deserts, and Ice Caps.
 7. Confirm biome reporting remains stable during low flight and after touchdown so the landed sample reports the correct stock biome.
 8. Confirm no Biome completion occurs away from Kerbin.
 
+## Active telemetry gating and idle path
+
+1. With the four opening Level I contracts active, confirm Directed Power, Mass, Control, and Biome live telemetry all continue to update correctly; together those four lines require the full starter telemetry mask.
+2. In a disposable state, complete or expire Directed Power, Control, and Biome while leaving only a Mass contract Offered and unfinished. Confirm Mass telemetry and completion still work normally, and confirm no Directed Power destruction callback exceptions appear while no Directed Power contract is active.
+3. Repeat with only a Biome contract active and confirm biome/landing behavior still works without requiring a Mass or Control contract to remain active.
+4. Repeat with only a Control contract active and confirm altitude, crew, independent hold state, and landing completion still work normally.
+5. Reach a state with **zero Offered unfinished starter contracts** (for example after completing the currently Offered set before the next sponsor review), remain in flight for several one-second intervals, and confirm there are no starter-tracking exceptions, impact callback errors, or unexpected contract completions. The runtime should skip active-vessel starter discovery/evaluation until a later offer replaces the cached active set.
+6. While still in the same save, allow the next sponsor review to Offer a new starter contract and confirm its required live telemetry resumes on the next one-second observation without restarting the controller or reloading the save.
+7. If profiling the mod, compare a Mass-only, Biome-only, Control-only, and zero-active state. `GetTotalMass()` should only be present for Mass, `ScienceUtil.GetExperimentBiome()` only for Biome, crew collection only for Control, and Directed Power destruction tracking only while Directed Power is active.
+
 ## Cross-line behavior
 
 1. Use one launch that legitimately satisfies conditions in two different lines, such as landing a sufficiently heavy craft in the required Biome at the required Mass distance, and confirm both active contracts may complete on that landing.
@@ -144,6 +154,7 @@ The v0.5 candidate is ready for merge/release only when:
 - Mass only completes on a landed finished craft that still meets both final mass and distance requirements;
 - simultaneously Offered Mass/Biome/Directed Power/Control levels are evaluated independently, while an unoffered higher level is not checked even when the same flight would satisfy it;
 - simultaneous Control hold/qualification states survive current-format save/load independently;
+- the active starter telemetry plan requests only the condition families currently represented by Offered unfinished starter contracts, and a zero-active plan bypasses active-vessel starter discovery/evaluation;
 - a real qualifying Directed Power surface crash reliably produces completion without turning normal recovery into a false crash;
 - all four starter lines can be completed end-to-end in KSP;
 - at least one Level V route has been followed through a real Probe Orbit completion;

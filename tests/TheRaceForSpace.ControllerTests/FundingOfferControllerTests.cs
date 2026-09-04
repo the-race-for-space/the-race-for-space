@@ -47,7 +47,8 @@ namespace TheRaceForSpace.ControllerTests
             var controller = new SatelliteRaceController();
             controller.Refresh();
 
-            controller.AsterProgram.RecordAchievement(PrototypeMilestones.DirectedPower1Id, 10.0);
+            controller.FindProgramById(SatelliteRaceController.AsterProgramId)
+                .RecordAchievement(PrototypeMilestones.DirectedPower1Id, 10.0);
             Planetarium.CurrentUniversalTime = 20.0;
             controller.Refresh(false);
 
@@ -98,7 +99,8 @@ namespace TheRaceForSpace.ControllerTests
 
             for (int milestoneIndex = 0; milestoneIndex < openingMilestoneIds.Length; milestoneIndex++)
             {
-                controller.AsterProgram.RecordAchievement(openingMilestoneIds[milestoneIndex], 10.0);
+                controller.FindProgramById(SatelliteRaceController.AsterProgramId)
+                    .RecordAchievement(openingMilestoneIds[milestoneIndex], 10.0);
             }
 
             Planetarium.CurrentUniversalTime = 20.0;
@@ -172,7 +174,8 @@ namespace TheRaceForSpace.ControllerTests
                 var controller = new SatelliteRaceController();
                 controller.Refresh();
 
-                controller.AsterProgram.RecordAchievement(levelFiveIds[testIndex], 10.0);
+                controller.FindProgramById(SatelliteRaceController.AsterProgramId)
+                    .RecordAchievement(levelFiveIds[testIndex], 10.0);
                 Planetarium.CurrentUniversalTime = 20.0;
                 controller.Refresh(false);
 
@@ -192,8 +195,8 @@ namespace TheRaceForSpace.ControllerTests
             KspVesselDiscovery.SetUnavailable();
 
             var controller = new SatelliteRaceController();
-            controller.AsterProgram.Funds = 0.0;
-            controller.CobaltProgram.Funds = 0.0;
+            controller.FindProgramById(SatelliteRaceController.AsterProgramId).Funds = 0.0;
+            controller.FindProgramById(SatelliteRaceController.CobaltProgramId).Funds = 0.0;
             controller.Refresh();
             OfferAndCompleteAllStarterAchievements(controller, 1.0);
 
@@ -255,8 +258,8 @@ namespace TheRaceForSpace.ControllerTests
             KspVesselDiscovery.SetUnavailable();
 
             var controller = new SatelliteRaceController();
-            controller.AsterProgram.Funds = 0.0;
-            controller.CobaltProgram.Funds = 0.0;
+            controller.FindProgramById(SatelliteRaceController.AsterProgramId).Funds = 0.0;
+            controller.FindProgramById(SatelliteRaceController.CobaltProgramId).Funds = 0.0;
             controller.Refresh();
             OfferAndCompleteAllStarterAchievements(controller, 1.0);
 
@@ -321,8 +324,8 @@ namespace TheRaceForSpace.ControllerTests
             KspVesselDiscovery.SetUnavailable();
 
             var controller = new SatelliteRaceController();
-            controller.AsterProgram.Funds = 0.0;
-            controller.CobaltProgram.Funds = 0.0;
+            controller.FindProgramById(SatelliteRaceController.AsterProgramId).Funds = 0.0;
+            controller.FindProgramById(SatelliteRaceController.CobaltProgramId).Funds = 0.0;
             controller.Refresh();
 
             FundingProgramme kerbin = FindFunding(controller, PrototypeFundingCatalogue.KerbinNetworkId);
@@ -389,8 +392,8 @@ namespace TheRaceForSpace.ControllerTests
             KspVesselDiscovery.SetUnavailable();
 
             var controller = new SatelliteRaceController();
-            controller.AsterProgram.Funds = 0.0;
-            controller.CobaltProgram.Funds = 0.0;
+            controller.FindProgramById(SatelliteRaceController.AsterProgramId).Funds = 0.0;
+            controller.FindProgramById(SatelliteRaceController.CobaltProgramId).Funds = 0.0;
             controller.Refresh();
             OfferAndCompleteAllStarterAchievements(controller, 1.0);
 
@@ -504,7 +507,8 @@ namespace TheRaceForSpace.ControllerTests
                 }
 
                 programme.Offer();
-                controller.AsterProgram.RecordAchievement(programme.Id, achievementUniversalTime);
+                controller.FindProgramById(SatelliteRaceController.AsterProgramId)
+                    .RecordAchievement(programme.Id, achievementUniversalTime);
             }
         }
 

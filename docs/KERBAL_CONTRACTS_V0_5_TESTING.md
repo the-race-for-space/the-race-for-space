@@ -23,7 +23,7 @@ This checklist covers behavior that the standalone logic/controller suites canno
 10. Confirm Funding Targets shows live starter telemetry inside **every offered, unfinished starter contract card** during an active flight, so multiple offered starter thresholds can be compared against the same craft at once.
 11. Confirm Space Race itself does not duplicate that live-flight panel; it remains focused on `Offered`, `Unlocked`, `Locked`, and `Expired` catalogue state. Confirm its `Current Funding Info` area is visibly 25% taller than the previous 220 px layout (275 px).
 12. Confirm Overview treats offered starter contracts the same way as other offered one-off achievements.
-13. Confirm the Help guide explains the four opening starter offers, same-line progression, Any Agency unlocks, and the Level V to Probe Orbit convergence.
+13. Confirm the Help guide explains the four opening starter offers, same-line progression, Any Agency unlocks, that every Offered unfinished starter contract is active independently, and the Level V to Probe Orbit convergence.
 
 ## Directed Power line
 
@@ -62,7 +62,7 @@ Required pairs are 1 t / 25 km, 2.5 t / 75 km, 5 t / 150 km, 10 t / 300 km, and 
 
 Required bands/times are 2-5 km / 30 s, 8-12 km / 45 s, 15-25 km / 60 s, 30-40 km / 75 s, and 50-65 km / 90 s.
 
-1. Launch with at least one Kerbal and enter the required band. Confirm altitude, hold time, and crew count update in each offered unfinished Control contract card in Funding Targets against that contract's own thresholds.
+1. Launch with at least one Kerbal and enter the required band. Confirm altitude, hold time, and crew count update in each offered unfinished Control contract card in Funding Targets against that contract's own thresholds. When more than one Control level is Offered, each card must show its own contract-specific hold/qualification state rather than a shared timer.
 2. Remain continuously inside the band for the required time and confirm the Funding Targets live status changes to the qualified state instructing the player to land safely.
 3. Land on Kerbin with crew aboard and confirm completion.
 4. Leave the altitude band before qualification and confirm the continuous timer resets.
@@ -72,7 +72,7 @@ Required bands/times are 2-5 km / 30 s, 8-12 km / 45 s, 15-25 km / 60 s, 30-40 k
 8. Save halfway through a valid hold, reload, continue the remaining hold time and land; confirm accumulated hold time survives correctly when observations resume normally.
 9. Save after the hold has qualified but before landing, reload, land safely, and confirm completion still works.
 10. While an unqualified hold is in progress, create a long interval in which the active vessel is not observed (for example by leaving the flight scene and advancing time), then return to the same vessel. Confirm the missing interval is not credited and the unqualified continuous hold restarts rather than jumping forward.
-11. Create a state where Control I and Control II are both `Offered`. Qualify Control I at 2-5 km, then begin Control II at 8-12 km and save before its 45-second hold is complete. Reload and confirm Control I remains qualified while Control II resumes from its own saved partial hold; finish Control II and land safely, then confirm **both contracts complete on the same landing**.
+11. Create a state where Control I and Control II are both `Offered`. Qualify Control I at 2-5 km, then begin Control II at 8-12 km and save before its 45-second hold is complete. Before saving, confirm Funding Targets shows Control I as qualified while Control II shows its own partial hold rather than hiding Control II or asking for a new launch. Reload and confirm Control I remains qualified while Control II resumes from its own saved partial hold; finish Control II and land safely, then confirm **both contracts complete on the same landing**.
 12. In that multi-Control save, inspect `STARTER_FLIGHT` and confirm each tracked Control contract has its own `CONTROL_STATE` child containing `milestoneId`, `holdSeconds`, `wasSampleInBand`, and `qualified`.
 
 ## Biome line
@@ -149,6 +149,7 @@ The v0.5 candidate is ready for merge/release only when:
 - every unlocked starter contract is offered at the next funding review without consuming the normal two unfinished-achievement slots;
 - the normal Probe-and-later achievement pool still caps unfinished offers at two, independently of the satellite pool's own two-offer cap;
 - every offered unfinished starter contract shows its own live criteria values in Funding Targets without a separate Space Race starter panel blocking the catalogue;
+- simultaneous Control cards show their own hold/qualification state, and completing one offered Control level does not suppress another offered level's live progress;
 - Space Race keeps a usable 275 px Current Funding Info area above the catalogue;
 - Biome only completes on a landed craft in the target biome;
 - Mass only completes on a landed finished craft that still meets both final mass and distance requirements;

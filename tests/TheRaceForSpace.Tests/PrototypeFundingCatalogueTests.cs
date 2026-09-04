@@ -64,6 +64,7 @@ namespace TheRaceForSpace.Tests
                     PrototypeMilestones.Biome4Id,
                     PrototypeMilestones.Biome5Id
                 });
+            AssertStarterCriteriaValues();
 
             AchievementFundingProgramme probeOrbit = FindAchievement(
                 achievements,
@@ -411,6 +412,54 @@ namespace TheRaceForSpace.Tests
                     AssertAnyAgencyRule(milestone.UnlockRule, milestoneIds[milestoneIndex - 1]);
                 }
             }
+        }
+
+        private static void AssertStarterCriteriaValues()
+        {
+            AssertStarterCriteria(PrototypeMilestones.DirectedPower1Id, 600.0, 0.0, 0.0, 0.0, 70000.0, 0.0, null);
+            AssertStarterCriteria(PrototypeMilestones.DirectedPower2Id, 1100.0, 0.0, 0.0, 0.0, 70000.0, 0.0, null);
+            AssertStarterCriteria(PrototypeMilestones.DirectedPower3Id, 1400.0, 0.0, 0.0, 0.0, 70000.0, 0.0, null);
+            AssertStarterCriteria(PrototypeMilestones.DirectedPower4Id, 1700.0, 0.0, 0.0, 0.0, 70000.0, 0.0, null);
+            AssertStarterCriteria(PrototypeMilestones.DirectedPower5Id, 2000.0, 0.0, 0.0, 0.0, 70000.0, 0.0, null);
+
+            AssertStarterCriteria(PrototypeMilestones.Mass1Id, 0.0, 1.0, 25000.0, 0.0, 0.0, 0.0, null);
+            AssertStarterCriteria(PrototypeMilestones.Mass2Id, 0.0, 2.5, 75000.0, 0.0, 0.0, 0.0, null);
+            AssertStarterCriteria(PrototypeMilestones.Mass3Id, 0.0, 5.0, 150000.0, 0.0, 0.0, 0.0, null);
+            AssertStarterCriteria(PrototypeMilestones.Mass4Id, 0.0, 10.0, 300000.0, 0.0, 0.0, 0.0, null);
+            AssertStarterCriteria(PrototypeMilestones.Mass5Id, 0.0, 20.0, 600000.0, 0.0, 0.0, 0.0, null);
+
+            AssertStarterCriteria(PrototypeMilestones.Control1Id, 0.0, 0.0, 0.0, 2000.0, 5000.0, 30.0, null);
+            AssertStarterCriteria(PrototypeMilestones.Control2Id, 0.0, 0.0, 0.0, 8000.0, 12000.0, 45.0, null);
+            AssertStarterCriteria(PrototypeMilestones.Control3Id, 0.0, 0.0, 0.0, 15000.0, 25000.0, 60.0, null);
+            AssertStarterCriteria(PrototypeMilestones.Control4Id, 0.0, 0.0, 0.0, 30000.0, 40000.0, 75.0, null);
+            AssertStarterCriteria(PrototypeMilestones.Control5Id, 0.0, 0.0, 0.0, 50000.0, 65000.0, 90.0, null);
+
+            AssertStarterCriteria(PrototypeMilestones.Biome1Id, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, "Grasslands");
+            AssertStarterCriteria(PrototypeMilestones.Biome2Id, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, "Highlands");
+            AssertStarterCriteria(PrototypeMilestones.Biome3Id, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, "Mountains");
+            AssertStarterCriteria(PrototypeMilestones.Biome4Id, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, "Deserts");
+            AssertStarterCriteria(PrototypeMilestones.Biome5Id, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, "Ice Caps");
+        }
+
+        private static void AssertStarterCriteria(
+            string milestoneId,
+            double requiredSpeedMetersPerSecond,
+            double requiredMassTonnes,
+            double requiredDistanceMeters,
+            double minimumAltitudeMeters,
+            double maximumAltitudeMeters,
+            double requiredDurationSeconds,
+            string requiredBiomeName)
+        {
+            MilestoneDefinition milestone = PrototypeMilestones.FindById(milestoneId);
+            Require(milestone != null, "Missing starter milestone '" + milestoneId + "'.");
+            Equal(requiredSpeedMetersPerSecond, milestone.RequiredSpeedMetersPerSecond);
+            Equal(requiredMassTonnes, milestone.RequiredMassTonnes);
+            Equal(requiredDistanceMeters, milestone.RequiredDistanceMeters);
+            Equal(minimumAltitudeMeters, milestone.MinimumAltitudeMeters);
+            Equal(maximumAltitudeMeters, milestone.MaximumAltitudeMeters);
+            Equal(requiredDurationSeconds, milestone.RequiredDurationSeconds);
+            Equal(requiredBiomeName, milestone.RequiredBiomeName);
         }
 
         private static void AssertProbeOrbitUnlockRule(UnlockRuleDefinition rule)

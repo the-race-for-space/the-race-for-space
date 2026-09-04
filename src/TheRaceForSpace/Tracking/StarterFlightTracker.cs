@@ -553,6 +553,10 @@ namespace TheRaceForSpace.Tracking
             IList<MilestoneDefinition> starterMilestones)
         {
             MilestoneDefinition projectedMilestone = null;
+            ControlContractState projectedState = null;
+            int projectedPriority = -1;
+            double projectedHoldSeconds = -1.0;
+
             for (int milestoneIndex = 0; milestoneIndex < starterMilestones.Count; milestoneIndex++)
             {
                 MilestoneDefinition milestone = starterMilestones[milestoneIndex];
@@ -563,10 +567,38 @@ namespace TheRaceForSpace.Tracking
                     continue;
                 }
 
+                ControlContractState state;
+                bool hasState = _controlStates.TryGetValue(milestone.Id, out state);
+                int priority = 0;
+                double holdSeconds = 0.0;
+                if (hasState)
+                {
+                    holdSeconds = state.HoldSeconds;
+                    if (state.WasSampleInBand && !state.IsQualified)
+                    {
+                        priority = 3;
+                    }
+                    else if (state.IsQualified)
+                    {
+                        priority = 2;
+                    }
+                    else if (state.HoldSeconds > 0.0)
+                    {
+                        priority = 1;
+                    }
+                }
+
                 if (projectedMilestone == null
-                    || milestone.StarterLevel > projectedMilestone.StarterLevel)
+                    || priority > projectedPriority
+                    || (priority == projectedPriority && holdSeconds > projectedHoldSeconds)
+                    || (priority == projectedPriority
+                        && Math.Abs(holdSeconds - projectedHoldSeconds) < 0.000001
+                        && milestone.StarterLevel > projectedMilestone.StarterLevel))
                 {
                     projectedMilestone = milestone;
+                    projectedState = hasState ? state : null;
+                    projectedPriority = priority;
+                    projectedHoldSeconds = holdSeconds;
                 }
             }
 
@@ -580,8 +612,7 @@ namespace TheRaceForSpace.Tracking
             }
 
             _controlHoldMilestoneId = projectedMilestone.Id;
-            ControlContractState projectedState;
-            if (!_controlStates.TryGetValue(projectedMilestone.Id, out projectedState))
+            if (projectedState == null)
             {
                 _qualifiedControlMilestoneId = null;
                 _controlHoldSeconds = 0.0;

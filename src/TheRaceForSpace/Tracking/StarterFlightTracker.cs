@@ -59,9 +59,8 @@ namespace TheRaceForSpace.Tracking
         public int CurrentCrewCount { get { return _currentCrewCount; } }
         public TrackedFlightSituation CurrentSituation { get { return _currentSituation; } }
 
-        // These single-Control properties remain as a compatibility projection until the UI
-        // is switched to the per-contract accessors below. Gameplay and persistence use the
-        // independent dictionary state rather than this projection.
+        // Retain the previous single-Control projection for compatibility with existing read-only
+        // callers. Current UI, gameplay, and persistence use the per-contract accessors/state below.
         public string ControlHoldMilestoneId { get { return _controlHoldMilestoneId; } }
         public string QualifiedControlMilestoneId { get { return _qualifiedControlMilestoneId; } }
         public double ControlHoldSeconds { get { return _controlHoldSeconds; } }
@@ -134,8 +133,8 @@ namespace TheRaceForSpace.Tracking
             state.WasSampleInBand = wasSampleInBand;
             state.IsQualified = isQualified;
 
-            // Keep the legacy UI projection useful immediately after load until the next live sample
-            // recalculates it from the currently offered Control contracts.
+            // Keep the legacy compatibility projection useful immediately after load until the
+            // next live sample recalculates it from the currently offered Control contracts.
             bool shouldProject = string.IsNullOrEmpty(_controlHoldMilestoneId)
                 || isQualified
                 || (wasSampleInBand && !_wasControlSampleInBand)

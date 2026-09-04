@@ -14,6 +14,9 @@ namespace TheRaceForSpace.Tracking
         private const double LaunchTimeMatchToleranceSeconds = 1.0;
         private const double MaximumContinuousSampleGapSeconds = 5.0;
 
+        private readonly Dictionary<string, ControlContractState> _controlStates =
+            new Dictionary<string, ControlContractState>(StringComparer.OrdinalIgnoreCase);
+
         private string _vesselId;
         private string _celestialBodyName;
         private double _launchUniversalTime = -1.0;
@@ -55,10 +58,15 @@ namespace TheRaceForSpace.Tracking
         public string CurrentBiomeName { get { return _currentBiomeName; } }
         public int CurrentCrewCount { get { return _currentCrewCount; } }
         public TrackedFlightSituation CurrentSituation { get { return _currentSituation; } }
+
+        // These single-Control properties remain as a compatibility projection until the following
+        // persistence migration stores every active Control state independently. Gameplay and new
+        // presentation code should use the contract-ID accessors below.
         public string ControlHoldMilestoneId { get { return _controlHoldMilestoneId; } }
         public string QualifiedControlMilestoneId { get { return _qualifiedControlMilestoneId; } }
         public double ControlHoldSeconds { get { return _controlHoldSeconds; } }
         public bool WasControlSampleInBand { get { return _wasControlSampleInBand; } }
+
         public bool EnteredOrbit { get { return _enteredOrbit; } }
         public bool CompletedDirectedPowerThisAttempt { get { return _completedDirectedPowerThisAttempt; } }
         public bool CompletedMassThisAttempt { get { return _completedMassThisAttempt; } }
@@ -66,9 +74,44 @@ namespace TheRaceForSpace.Tracking
         public bool CompletedBiomeThisAttempt { get { return _completedBiomeThisAttempt; } }
 
         /// <summary>
+        /// Returns the accumulated continuous hold time for one active Control contract.
+        /// </summary>
+        public double GetControlHoldSeconds(string milestoneId)
+        {
+            ControlContractState state;
+            return !string.IsNullOrEmpty(milestoneId)
+                && _controlStates.TryGetValue(milestoneId, out state)
+                ? state.HoldSeconds
+                : 0.0;
+        }
+
+        /// <summary>
+        /// Returns whether one Control contract has completed its altitude hold and is waiting
+        /// for the required crewed Kerbin landing.
+        /// </summary>
+        public bool IsControlMilestoneQualified(string milestoneId)
+        {
+            ControlContractState state;
+            return !string.IsNullOrEmpty(milestoneId)
+                && _controlStates.TryGetValue(milestoneId, out state)
+                && state.IsQualified;
+        }
+
+        /// <summary>
+        /// Returns whether the most recent observed sample was inside one Control contract's band.
+        /// </summary>
+        public bool IsControlSampleInBand(string milestoneId)
+        {
+            ControlContractState state;
+            return !string.IsNullOrEmpty(milestoneId)
+                && _controlStates.TryGetValue(milestoneId, out state)
+                && state.WasSampleInBand;
+        }
+
+        /// <summary>
         /// Applies one active-vessel observation against the supplied active starter-contract set.
-        /// Mass and Biome contracts are evaluated independently so one qualifying flight may satisfy
-        /// multiple separately offered levels. Control temporarily retains its single-target hold state.
+        /// Every supplied Mass, Biome, and Control contract is evaluated independently so one flight
+        /// may satisfy multiple separately offered levels.
         /// </summary>
         public bool RefreshPlayerMilestones(
             SpaceProgramState playerProgram,
@@ -104,18 +147,13 @@ namespace TheRaceForSpace.Tracking
                 sampleDeltaSeconds = snapshot.ObservationUniversalTime - _lastSampleUniversalTime;
             }
 
-            // Control is explicitly a continuous hold. A large gap means the active vessel was not
-            // observed closely enough to prove that it remained inside the band for the missing time.
-            // Five seconds allows normal one-second sampling jitter and 4x physics warp without
-            // awarding time skipped while the vessel was packed or another scene was active.
+            // Each Control contract is explicitly a continuous hold. A large gap means the vessel
+            // was not observed closely enough to prove any unqualified hold continued throughout
+            // the missing time. Qualified contracts keep their completed hold while awaiting landing.
             if (sampleDeltaSeconds > MaximumContinuousSampleGapSeconds)
             {
                 sampleDeltaSeconds = 0.0;
-                _wasControlSampleInBand = false;
-                if (string.IsNullOrEmpty(_qualifiedControlMilestoneId))
-                {
-                    _controlHoldSeconds = 0.0;
-                }
+                ResetUnqualifiedControlStates();
             }
 
             _currentAltitudeMeters = snapshot.AltitudeMeters;
@@ -145,8 +183,8 @@ namespace TheRaceForSpace.Tracking
             if (isKerbin && !_enteredOrbit)
             {
                 // The controller already filtered this collection to Offered, unexpired contracts
-                // the player has not completed. Evaluate each supplied Mass/Biome definition on its
-                // own terms so earlier and later offered levels remain genuinely independent.
+                // the player has not completed. Evaluate each supplied definition on its own terms
+                // so earlier and later offered levels remain genuinely independent.
                 for (int milestoneIndex = 0; milestoneIndex < starterMilestones.Count; milestoneIndex++)
                 {
                     MilestoneDefinition milestone = starterMilestones[milestoneIndex];
@@ -184,23 +222,16 @@ namespace TheRaceForSpace.Tracking
                     }
                 }
 
-                if (!_completedControlThisAttempt)
-                {
-                    // Control still has one persisted hold timer in v0.5. Passing only the active
-                    // contract set prevents unlocked-but-unoffered Control levels from being chosen;
-                    // the following step will replace this temporary single-target state per contract.
-                    recordedAchievement |= EvaluateControlMilestone(
-                        playerProgram,
-                        programs,
-                        starterMilestones,
-                        snapshot,
-                        sampleDeltaSeconds);
-                }
+                recordedAchievement |= EvaluateControlMilestones(
+                    playerProgram,
+                    starterMilestones,
+                    snapshot,
+                    sampleDeltaSeconds);
             }
             else
             {
-                _wasControlSampleInBand = false;
-                _controlHoldSeconds = 0.0;
+                ResetUnqualifiedControlStates();
+                UpdateLegacyControlProjection(playerProgram, starterMilestones);
             }
 
             _lastSampleUniversalTime = snapshot.ObservationUniversalTime;
@@ -320,15 +351,34 @@ namespace TheRaceForSpace.Tracking
             _lastSampleUniversalTime = lastSampleUniversalTime;
             _maximumAltitudeMeters = maximumAltitudeMeters;
             _maximumSurfaceSpeedMetersPerSecond = maximumSurfaceSpeedMetersPerSecond;
+            _enteredOrbit = enteredOrbit;
+
+            _controlStates.Clear();
+            string restoredControlMilestoneId = !string.IsNullOrEmpty(controlHoldMilestoneId)
+                ? controlHoldMilestoneId
+                : qualifiedControlMilestoneId;
+            if (!string.IsNullOrEmpty(restoredControlMilestoneId))
+            {
+                var restoredControlState = new ControlContractState();
+                restoredControlState.HoldSeconds = controlHoldSeconds;
+                restoredControlState.WasSampleInBand = wasControlSampleInBand;
+                restoredControlState.IsQualified = !string.IsNullOrEmpty(qualifiedControlMilestoneId)
+                    && string.Equals(
+                        restoredControlMilestoneId,
+                        qualifiedControlMilestoneId,
+                        StringComparison.OrdinalIgnoreCase);
+                _controlStates.Add(restoredControlMilestoneId, restoredControlState);
+            }
+
+            // Preserve the legacy single-Control projection so older saves and the existing save
+            // model remain readable until Step 4 migrates persistence to all per-contract states.
             _controlHoldMilestoneId = controlHoldMilestoneId;
             _qualifiedControlMilestoneId = qualifiedControlMilestoneId;
             _controlHoldSeconds = controlHoldSeconds;
             _wasControlSampleInBand = wasControlSampleInBand;
-            _enteredOrbit = enteredOrbit;
 
-            // Older saves may contain per-line completion flags that formerly prevented a second
-            // Mass/Biome/Directed Power level in the same launch. Those lines are now independent,
-            // so only Control's still-single timer/completion state remains authoritative here.
+            // Older saves may contain per-line completion flags that formerly prevented another
+            // contract in the same launch. Independent evaluation no longer uses those flags as gates.
             _completedDirectedPowerThisAttempt = false;
             _completedMassThisAttempt = false;
             _completedControlThisAttempt = completedControlThisAttempt;
@@ -352,6 +402,7 @@ namespace TheRaceForSpace.Tracking
             _currentBiomeName = null;
             _currentCrewCount = 0;
             _currentSituation = TrackedFlightSituation.Other;
+            _controlStates.Clear();
             _controlHoldMilestoneId = null;
             _qualifiedControlMilestoneId = null;
             _controlHoldSeconds = 0.0;
@@ -365,8 +416,8 @@ namespace TheRaceForSpace.Tracking
 
         /// <summary>
         /// Returns the highest unlocked, not-yet-achieved milestone in one starter line for the player.
-        /// Unlock scope remains global, so a rival can make a later level become the player's current target.
-        /// Retained for compatibility while active flight gameplay now receives the controller-filtered set.
+        /// Retained for compatibility with read-only callers; active flight gameplay now receives
+        /// the controller-filtered Offered contract set and does not use this lookup.
         /// </summary>
         public static MilestoneDefinition GetCurrentMilestone(
             StarterContractLine starterLine,
@@ -409,77 +460,140 @@ namespace TheRaceForSpace.Tracking
             return currentMilestone;
         }
 
-        private bool EvaluateControlMilestone(
+        private bool EvaluateControlMilestones(
             SpaceProgramState playerProgram,
-            IList<SpaceProgramState> programs,
             IList<MilestoneDefinition> starterMilestones,
             ActiveVesselTrackingSnapshot snapshot,
             double sampleDeltaSeconds)
         {
-            MilestoneDefinition controlMilestone = GetCurrentMilestone(
-                StarterContractLine.Control,
-                playerProgram,
-                programs,
-                starterMilestones,
-                snapshot.ObservationUniversalTime);
-            if (controlMilestone == null)
+            bool recordedAchievement = false;
+
+            for (int milestoneIndex = 0; milestoneIndex < starterMilestones.Count; milestoneIndex++)
+            {
+                MilestoneDefinition controlMilestone = starterMilestones[milestoneIndex];
+                if (controlMilestone == null
+                    || controlMilestone.StarterLine != StarterContractLine.Control
+                    || playerProgram.HasAchievement(controlMilestone.Id))
+                {
+                    continue;
+                }
+
+                ControlContractState state = GetOrCreateControlState(controlMilestone.Id);
+                if (state.IsQualified
+                    && snapshot.Situation == TrackedFlightSituation.Landed
+                    && snapshot.CrewCount > 0)
+                {
+                    bool didRecord = playerProgram.RecordAchievement(
+                        controlMilestone.Id,
+                        snapshot.ObservationUniversalTime);
+                    recordedAchievement |= didRecord;
+                    _completedControlThisAttempt |= didRecord;
+                    continue;
+                }
+
+                bool isInBand = snapshot.CrewCount > 0
+                    && snapshot.AltitudeMeters >= controlMilestone.MinimumAltitudeMeters
+                    && snapshot.AltitudeMeters <= controlMilestone.MaximumAltitudeMeters;
+                if (!isInBand)
+                {
+                    state.WasSampleInBand = false;
+                    if (!state.IsQualified)
+                    {
+                        state.HoldSeconds = 0.0;
+                    }
+                    continue;
+                }
+
+                if (state.WasSampleInBand && sampleDeltaSeconds > 0.0)
+                {
+                    state.HoldSeconds += sampleDeltaSeconds;
+                }
+
+                state.WasSampleInBand = true;
+                if (state.HoldSeconds >= controlMilestone.RequiredDurationSeconds)
+                {
+                    state.IsQualified = true;
+                }
+            }
+
+            UpdateLegacyControlProjection(playerProgram, starterMilestones);
+            return recordedAchievement;
+        }
+
+        private ControlContractState GetOrCreateControlState(string milestoneId)
+        {
+            ControlContractState state;
+            if (_controlStates.TryGetValue(milestoneId, out state))
+            {
+                return state;
+            }
+
+            state = new ControlContractState();
+            _controlStates.Add(milestoneId, state);
+            return state;
+        }
+
+        private void ResetUnqualifiedControlStates()
+        {
+            foreach (KeyValuePair<string, ControlContractState> entry in _controlStates)
+            {
+                ControlContractState state = entry.Value;
+                if (state == null || state.IsQualified)
+                {
+                    continue;
+                }
+
+                state.HoldSeconds = 0.0;
+                state.WasSampleInBand = false;
+            }
+        }
+
+        private void UpdateLegacyControlProjection(
+            SpaceProgramState playerProgram,
+            IList<MilestoneDefinition> starterMilestones)
+        {
+            MilestoneDefinition projectedMilestone = null;
+            for (int milestoneIndex = 0; milestoneIndex < starterMilestones.Count; milestoneIndex++)
+            {
+                MilestoneDefinition milestone = starterMilestones[milestoneIndex];
+                if (milestone == null
+                    || milestone.StarterLine != StarterContractLine.Control
+                    || playerProgram.HasAchievement(milestone.Id))
+                {
+                    continue;
+                }
+
+                if (projectedMilestone == null
+                    || milestone.StarterLevel > projectedMilestone.StarterLevel)
+                {
+                    projectedMilestone = milestone;
+                }
+            }
+
+            if (projectedMilestone == null)
             {
                 _controlHoldMilestoneId = null;
                 _qualifiedControlMilestoneId = null;
                 _controlHoldSeconds = 0.0;
                 _wasControlSampleInBand = false;
-                return false;
+                return;
             }
 
-            if (!string.Equals(
-                _controlHoldMilestoneId,
-                controlMilestone.Id,
-                StringComparison.OrdinalIgnoreCase))
+            _controlHoldMilestoneId = projectedMilestone.Id;
+            ControlContractState projectedState;
+            if (!_controlStates.TryGetValue(projectedMilestone.Id, out projectedState))
             {
-                _controlHoldMilestoneId = controlMilestone.Id;
                 _qualifiedControlMilestoneId = null;
                 _controlHoldSeconds = 0.0;
                 _wasControlSampleInBand = false;
+                return;
             }
 
-            if (string.Equals(
-                    _qualifiedControlMilestoneId,
-                    controlMilestone.Id,
-                    StringComparison.OrdinalIgnoreCase)
-                && snapshot.Situation == TrackedFlightSituation.Landed
-                && snapshot.CrewCount > 0)
-            {
-                _completedControlThisAttempt = playerProgram.RecordAchievement(
-                    controlMilestone.Id,
-                    snapshot.ObservationUniversalTime);
-                return _completedControlThisAttempt;
-            }
-
-            bool isInBand = snapshot.CrewCount > 0
-                && snapshot.AltitudeMeters >= controlMilestone.MinimumAltitudeMeters
-                && snapshot.AltitudeMeters <= controlMilestone.MaximumAltitudeMeters;
-            if (!isInBand)
-            {
-                _wasControlSampleInBand = false;
-                if (string.IsNullOrEmpty(_qualifiedControlMilestoneId))
-                {
-                    _controlHoldSeconds = 0.0;
-                }
-                return false;
-            }
-
-            if (_wasControlSampleInBand && sampleDeltaSeconds > 0.0)
-            {
-                _controlHoldSeconds += sampleDeltaSeconds;
-            }
-
-            _wasControlSampleInBand = true;
-            if (_controlHoldSeconds >= controlMilestone.RequiredDurationSeconds)
-            {
-                _qualifiedControlMilestoneId = controlMilestone.Id;
-            }
-
-            return false;
+            _qualifiedControlMilestoneId = projectedState.IsQualified
+                ? projectedMilestone.Id
+                : null;
+            _controlHoldSeconds = projectedState.HoldSeconds;
+            _wasControlSampleInBand = projectedState.WasSampleInBand;
         }
 
         private bool IsSameAttempt(ActiveVesselTrackingSnapshot snapshot)
@@ -556,6 +670,13 @@ namespace TheRaceForSpace.Tracking
         private static bool IsFinite(double value)
         {
             return !double.IsNaN(value) && !double.IsInfinity(value);
+        }
+
+        private sealed class ControlContractState
+        {
+            public double HoldSeconds;
+            public bool WasSampleInBand;
+            public bool IsQualified;
         }
     }
 }

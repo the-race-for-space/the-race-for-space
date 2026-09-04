@@ -45,10 +45,15 @@ namespace TheRaceForSpace.KspIntegration
 
             // Capture the observation time before walking vessel state, matching the previous
             // tracker behaviour so all milestones found in one refresh share one stable timestamp.
-            currentUniversalTime = Planetarium.GetUniversalTime();
+            double observationUniversalTime = Planetarium.GetUniversalTime();
+            if (!IsFinite(observationUniversalTime) || observationUniversalTime < 0.0)
+            {
+                return false;
+            }
 
-            var snapshots = new List<VesselTrackingSnapshot>();
+            currentUniversalTime = observationUniversalTime;
             List<ProtoVessel> protoVessels = HighLogic.CurrentGame.flightState.protoVessels;
+            var snapshots = new List<VesselTrackingSnapshot>(protoVessels.Count);
 
             for (int vesselIndex = 0; vesselIndex < protoVessels.Count; vesselIndex++)
             {
@@ -112,7 +117,7 @@ namespace TheRaceForSpace.KspIntegration
                 snapshots.Add(new VesselTrackingSnapshot(
                     bodyName,
                     ConvertVesselType(vesselType),
-                    crewCount));
+                    Math.Max(0, crewCount)));
             }
 
             vesselSnapshots = snapshots;
@@ -165,17 +170,6 @@ namespace TheRaceForSpace.KspIntegration
             }
 
             bool needsSurfaceImpact = (telemetryRequirements & StarterTelemetryRequirement.SurfaceImpact) != 0;
-            if (needsSurfaceImpact)
-            {
-                EnsureVesselWillDestroySubscription();
-                TrackActiveVesselDestruction(vessel);
-                CaptureDestructionTelemetry(vessel);
-            }
-            else
-            {
-                DisableActiveVesselSurfaceImpactTracking();
-            }
-
             bool needsAltitude = needsSurfaceImpact
                 || (telemetryRequirements & StarterTelemetryRequirement.Altitude) != 0;
             bool needsSurfaceSpeed = needsSurfaceImpact
@@ -184,30 +178,75 @@ namespace TheRaceForSpace.KspIntegration
             bool needsBiome = (telemetryRequirements & StarterTelemetryRequirement.Biome) != 0;
             bool needsCrew = (telemetryRequirements & StarterTelemetryRequirement.Crew) != 0;
 
+            double observationUniversalTime = Planetarium.GetUniversalTime();
+            double altitudeMeters = needsAltitude ? vessel.altitude : 0.0;
+            double surfaceSpeedMetersPerSecond = needsSurfaceSpeed ? vessel.srfSpeed : 0.0;
+            double massTonnes = needsMass ? vessel.GetTotalMass() : 0.0;
+            double bodyRadiusMeters = needsMass ? vessel.mainBody.Radius : 0.0;
+            double latitudeDegrees = vessel.latitude;
+            double longitudeDegrees = vessel.longitude;
+            double launchUniversalTime = vessel.launchTime;
+
+            // KSP normally supplies finite values, but scene transitions and damaged vessels can
+            // expose transient invalid telemetry. Reject the whole sample rather than letting NaN
+            // comparisons accidentally satisfy a contract or poison persisted attempt history.
+            if (!IsFinite(observationUniversalTime)
+                || observationUniversalTime < 0.0
+                || !IsFinite(latitudeDegrees)
+                || !IsFinite(longitudeDegrees)
+                || !IsFinite(launchUniversalTime)
+                || (needsAltitude && !IsFinite(altitudeMeters))
+                || (needsSurfaceSpeed
+                    && (!IsFinite(surfaceSpeedMetersPerSecond)
+                        || surfaceSpeedMetersPerSecond < 0.0))
+                || (needsMass
+                    && (!IsFinite(massTonnes)
+                        || massTonnes < 0.0
+                        || !IsFinite(bodyRadiusMeters)
+                        || bodyRadiusMeters <= 0.0))
+            {
+                DisableActiveVesselSurfaceImpactTracking();
+                return false;
+            }
+
+            if (needsSurfaceImpact)
+            {
+                EnsureVesselWillDestroySubscription();
+                TrackActiveVesselDestruction(vessel);
+                CaptureDestructionTelemetry(
+                    vessel,
+                    surfaceSpeedMetersPerSecond,
+                    observationUniversalTime);
+            }
+            else
+            {
+                DisableActiveVesselSurfaceImpactTracking();
+            }
+
             string biomeName = null;
             if (needsBiome
                 && string.Equals(vessel.mainBody.bodyName, "Kerbin", StringComparison.OrdinalIgnoreCase))
             {
                 biomeName = ScienceUtil.GetExperimentBiome(
                     vessel.mainBody,
-                    vessel.latitude,
-                    vessel.longitude);
+                    latitudeDegrees,
+                    longitudeDegrees);
             }
 
             vesselSnapshot = new ActiveVesselTrackingSnapshot(
                 vessel.id.ToString("D"),
                 vessel.mainBody.bodyName,
                 ConvertSituation(vessel.situation),
-                needsAltitude ? vessel.altitude : 0.0,
-                needsSurfaceSpeed ? vessel.srfSpeed : 0.0,
-                needsMass ? vessel.GetTotalMass() : 0.0,
-                vessel.latitude,
-                vessel.longitude,
-                needsMass ? vessel.mainBody.Radius : 0.0,
+                altitudeMeters,
+                surfaceSpeedMetersPerSecond,
+                massTonnes,
+                latitudeDegrees,
+                longitudeDegrees,
+                bodyRadiusMeters,
                 biomeName,
                 needsCrew ? vessel.GetCrewCount() : 0,
-                vessel.launchTime,
-                Planetarium.GetUniversalTime(),
+                launchUniversalTime,
+                observationUniversalTime,
                 telemetryRequirements);
             return true;
         }
@@ -230,6 +269,7 @@ namespace TheRaceForSpace.KspIntegration
 
             bool hasImpact = !string.IsNullOrEmpty(vesselId)
                 && !string.IsNullOrEmpty(celestialBodyName)
+                && IsFinite(impactUniversalTime)
                 && impactUniversalTime >= 0.0;
 
             _pendingImpactVesselId = null;
@@ -331,7 +371,10 @@ namespace TheRaceForSpace.KspIntegration
             _destructionCallback = null;
         }
 
-        private static void CaptureDestructionTelemetry(Vessel vessel)
+        private static void CaptureDestructionTelemetry(
+            Vessel vessel,
+            double surfaceSpeedMetersPerSecond,
+            double observationUniversalTime)
         {
             if (vessel == null || vessel.mainBody == null)
             {
@@ -366,11 +409,9 @@ namespace TheRaceForSpace.KspIntegration
             }
 
             _lastTrackedSurfaceClearanceMeters = GetSurfaceClearanceMeters(vessel);
-            _lastTrackedSurfaceSpeedMetersPerSecond = Math.Max(0.0, vessel.srfSpeed);
+            _lastTrackedSurfaceSpeedMetersPerSecond = surfaceSpeedMetersPerSecond;
             _lastTrackedSituation = currentSituation;
-            _lastTrackedInFlightUniversalTime = Planetarium.fetch == null
-                ? -1.0
-                : Planetarium.GetUniversalTime();
+            _lastTrackedInFlightUniversalTime = observationUniversalTime;
         }
 
         private static void OnVesselWillDestroy(Vessel vessel)
@@ -398,6 +439,11 @@ namespace TheRaceForSpace.KspIntegration
             double currentUniversalTime = Planetarium.fetch == null
                 ? -1.0
                 : Planetarium.GetUniversalTime();
+            if (!IsFinite(currentUniversalTime) || currentUniversalTime < 0.0)
+            {
+                return;
+            }
+
             double currentSurfaceClearanceMeters = GetSurfaceClearanceMeters(vessel);
             if (!SurfaceImpactEvaluator.IsEligible(
                 _lastTrackedSituation,
@@ -430,9 +476,7 @@ namespace TheRaceForSpace.KspIntegration
                 clearanceMeters = vessel.heightFromTerrain;
             }
 
-            if (!double.IsNaN(vessel.altitude)
-                && !double.IsInfinity(vessel.altitude)
-                && vessel.altitude >= 0.0)
+            if (IsFinite(vessel.altitude) && vessel.altitude >= 0.0)
             {
                 clearanceMeters = Math.Min(clearanceMeters, vessel.altitude);
             }
@@ -503,6 +547,11 @@ namespace TheRaceForSpace.KspIntegration
             }
 
             return crewCount;
+        }
+
+        private static bool IsFinite(double value)
+        {
+            return !double.IsNaN(value) && !double.IsInfinity(value);
         }
     }
 }

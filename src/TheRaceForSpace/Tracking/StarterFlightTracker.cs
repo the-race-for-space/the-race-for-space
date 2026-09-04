@@ -59,9 +59,9 @@ namespace TheRaceForSpace.Tracking
         public int CurrentCrewCount { get { return _currentCrewCount; } }
         public TrackedFlightSituation CurrentSituation { get { return _currentSituation; } }
 
-        // These single-Control properties remain as a compatibility projection until the following
-        // persistence migration stores every active Control state independently. Gameplay and new
-        // presentation code should use the contract-ID accessors below.
+        // These single-Control properties remain as a compatibility projection until the UI
+        // is switched to the per-contract accessors below. Gameplay and persistence use the
+        // independent dictionary state rather than this projection.
         public string ControlHoldMilestoneId { get { return _controlHoldMilestoneId; } }
         public string QualifiedControlMilestoneId { get { return _qualifiedControlMilestoneId; } }
         public double ControlHoldSeconds { get { return _controlHoldSeconds; } }
@@ -72,6 +72,10 @@ namespace TheRaceForSpace.Tracking
         public bool CompletedMassThisAttempt { get { return _completedMassThisAttempt; } }
         public bool CompletedControlThisAttempt { get { return _completedControlThisAttempt; } }
         public bool CompletedBiomeThisAttempt { get { return _completedBiomeThisAttempt; } }
+
+        // Persistence captures this live key collection directly, avoiding a temporary list allocation
+        // on the once-per-second starter-state capture path.
+        internal ICollection<string> ControlStateMilestoneIds { get { return _controlStates.Keys; } }
 
         /// <summary>
         /// Returns the accumulated continuous hold time for one active Control contract.
@@ -106,6 +110,43 @@ namespace TheRaceForSpace.Tracking
             return !string.IsNullOrEmpty(milestoneId)
                 && _controlStates.TryGetValue(milestoneId, out state)
                 && state.WasSampleInBand;
+        }
+
+        /// <summary>
+        /// Restores one persisted Control contract state after the common flight attempt has been
+        /// restored. Invalid values are ignored so malformed save data cannot invent hold progress.
+        /// </summary>
+        internal void RestoreControlState(
+            string milestoneId,
+            double holdSeconds,
+            bool wasSampleInBand,
+            bool isQualified)
+        {
+            if (string.IsNullOrEmpty(milestoneId)
+                || !IsFinite(holdSeconds)
+                || holdSeconds < 0.0)
+            {
+                return;
+            }
+
+            ControlContractState state = GetOrCreateControlState(milestoneId);
+            state.HoldSeconds = holdSeconds;
+            state.WasSampleInBand = wasSampleInBand;
+            state.IsQualified = isQualified;
+
+            // Keep the legacy UI projection useful immediately after load until the next live sample
+            // recalculates it from the currently offered Control contracts.
+            bool shouldProject = string.IsNullOrEmpty(_controlHoldMilestoneId)
+                || isQualified
+                || (wasSampleInBand && !_wasControlSampleInBand)
+                || holdSeconds > _controlHoldSeconds;
+            if (shouldProject)
+            {
+                _controlHoldMilestoneId = milestoneId;
+                _qualifiedControlMilestoneId = isQualified ? milestoneId : null;
+                _controlHoldSeconds = holdSeconds;
+                _wasControlSampleInBand = wasSampleInBand;
+            }
         }
 
         /// <summary>
@@ -290,7 +331,7 @@ namespace TheRaceForSpace.Tracking
 
         /// <summary>
         /// Restores an in-progress flight attempt from persistence. Invalid or incomplete state
-        /// is discarded so older or malformed saves safely begin with no active starter-flight history.
+        /// is discarded so malformed saves safely begin with no active starter-flight history.
         /// Live current-sample fields are deliberately rebuilt from the next KSP observation.
         /// </summary>
         public void RestoreState(
@@ -370,19 +411,19 @@ namespace TheRaceForSpace.Tracking
                 _controlStates.Add(restoredControlMilestoneId, restoredControlState);
             }
 
-            // Preserve the legacy single-Control projection so older saves and the existing save
-            // model remain readable until Step 4 migrates persistence to all per-contract states.
+            // Preserve the legacy single-Control projection so older callers and the current UI
+            // can still read one representative state. Current persistence restores every state
+            // separately through RestoreControlState after this common attempt restore.
             _controlHoldMilestoneId = controlHoldMilestoneId;
             _qualifiedControlMilestoneId = qualifiedControlMilestoneId;
             _controlHoldSeconds = controlHoldSeconds;
             _wasControlSampleInBand = wasControlSampleInBand;
 
-            // Older saves may contain per-line completion flags that formerly prevented another
-            // contract in the same launch. Independent evaluation no longer uses those flags as gates.
-            _completedDirectedPowerThisAttempt = false;
-            _completedMassThisAttempt = false;
+            // Per-line completion flags are no longer gameplay gates under independent evaluation.
+            _completedDirectedPowerThisAttempt = completedDirectedPowerThisAttempt;
+            _completedMassThisAttempt = completedMassThisAttempt;
             _completedControlThisAttempt = completedControlThisAttempt;
-            _completedBiomeThisAttempt = false;
+            _completedBiomeThisAttempt = completedBiomeThisAttempt;
         }
 
         public void ClearAttempt()
@@ -568,37 +609,30 @@ namespace TheRaceForSpace.Tracking
                 }
 
                 ControlContractState state;
-                bool hasState = _controlStates.TryGetValue(milestone.Id, out state);
-                int priority = 0;
-                double holdSeconds = 0.0;
-                if (hasState)
-                {
-                    holdSeconds = state.HoldSeconds;
-                    if (state.WasSampleInBand && !state.IsQualified)
-                    {
-                        priority = 3;
-                    }
-                    else if (state.IsQualified)
-                    {
-                        priority = 2;
-                    }
-                    else if (state.HoldSeconds > 0.0)
-                    {
-                        priority = 1;
-                    }
-                }
+                _controlStates.TryGetValue(milestone.Id, out state);
+                int statePriority = state == null
+                    ? 0
+                    : state.IsQualified
+                        ? 3
+                        : state.WasSampleInBand
+                            ? 2
+                            : state.HoldSeconds > 0.0
+                                ? 1
+                                : 0;
+                double stateHoldSeconds = state == null ? 0.0 : state.HoldSeconds;
 
                 if (projectedMilestone == null
-                    || priority > projectedPriority
-                    || (priority == projectedPriority && holdSeconds > projectedHoldSeconds)
-                    || (priority == projectedPriority
-                        && Math.Abs(holdSeconds - projectedHoldSeconds) < 0.000001
+                    || statePriority > projectedPriority
+                    || (statePriority == projectedPriority
+                        && stateHoldSeconds > projectedHoldSeconds)
+                    || (statePriority == projectedPriority
+                        && Math.Abs(stateHoldSeconds - projectedHoldSeconds) < 0.000001
                         && milestone.StarterLevel > projectedMilestone.StarterLevel))
                 {
                     projectedMilestone = milestone;
-                    projectedState = hasState ? state : null;
-                    projectedPriority = priority;
-                    projectedHoldSeconds = holdSeconds;
+                    projectedState = state;
+                    projectedPriority = statePriority;
+                    projectedHoldSeconds = stateHoldSeconds;
                 }
             }
 

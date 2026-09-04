@@ -863,7 +863,7 @@ namespace TheRaceForSpace.UI
             GUILayout.Space(8.0f);
             GUILayout.Label("Starter Contracts", _boldLabelStyle);
             GUILayout.Label(
-                "The campaign begins with Directed Power I, Mass I, Control I and Biome I offered. The remaining sixteen starter contracts use the normal Offered, Unlocked, Locked and Expired states. Any agency, including a rival, completing a level unlocks the next level in that same line. Completing level five in any one line unlocks Probe Orbit for the race.");
+                "The campaign begins with Directed Power I, Mass I, Control I and Biome I offered. The remaining sixteen starter contracts use the normal Offered, Unlocked, Locked and Expired states. Any agency, including a rival, completing a level unlocks the next level in that same line. Every starter contract that is Offered and unfinished for you is active independently, so one flight may satisfy more than one offered contract. Completing level five in any one line unlocks Probe Orbit for the race.");
 
             GUILayout.Space(8.0f);
             GUILayout.Label("Unlocking New Funding Target", _boldLabelStyle);
@@ -940,12 +940,6 @@ namespace TheRaceForSpace.UI
             GUILayout.Space(4.0f);
             GUILayout.Label("Live Flight", _boldLabelStyle);
 
-            if (DidCompleteStarterLineThisAttempt(starterLine, tracker))
-            {
-                GUILayout.Label("A level in this line is complete for this launch. Start a new launch for the next level.");
-                return;
-            }
-
             if (!string.Equals(
                 tracker.CelestialBodyName,
                 "Kerbin",
@@ -1004,10 +998,7 @@ namespace TheRaceForSpace.UI
 
             if (starterLine == StarterContractLine.Control)
             {
-                bool holdQualified = string.Equals(
-                    tracker.QualifiedControlMilestoneId,
-                    currentMilestone.Id,
-                    StringComparison.OrdinalIgnoreCase);
+                bool holdQualified = tracker.IsControlMilestoneQualified(currentMilestone.Id);
                 if (holdQualified)
                 {
                     GUILayout.Label("Altitude hold complete. Land safely on Kerbin with crew aboard.");
@@ -1024,7 +1015,7 @@ namespace TheRaceForSpace.UI
                     + " km)");
                 GUILayout.Label(
                     "Hold: "
-                    + tracker.ControlHoldSeconds.ToString("N0")
+                    + tracker.GetControlHoldSeconds(currentMilestone.Id).ToString("N0")
                     + " / "
                     + currentMilestone.RequiredDurationSeconds.ToString("N0")
                     + " s");
@@ -1043,25 +1034,6 @@ namespace TheRaceForSpace.UI
                 GUILayout.Label(
                     "Landed: "
                     + (tracker.CurrentSituation == TrackedFlightSituation.Landed ? "YES" : "NO"));
-            }
-        }
-
-        private static bool DidCompleteStarterLineThisAttempt(
-            StarterContractLine starterLine,
-            StarterFlightTracker tracker)
-        {
-            switch (starterLine)
-            {
-                case StarterContractLine.DirectedPower:
-                    return tracker.CompletedDirectedPowerThisAttempt;
-                case StarterContractLine.Mass:
-                    return tracker.CompletedMassThisAttempt;
-                case StarterContractLine.Control:
-                    return tracker.CompletedControlThisAttempt;
-                case StarterContractLine.Biome:
-                    return tracker.CompletedBiomeThisAttempt;
-                default:
-                    return false;
             }
         }
 

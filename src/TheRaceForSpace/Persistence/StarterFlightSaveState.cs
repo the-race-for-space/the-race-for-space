@@ -92,8 +92,6 @@ namespace TheRaceForSpace.Persistence
                 return;
             }
 
-            // Current v0.5 persistence no longer stores the obsolete single-Control projection or
-            // per-line completion flags. Restore the common attempt first, then every Control state.
             tracker.RestoreState(
                 _vesselId,
                 _celestialBodyName,
@@ -103,15 +101,7 @@ namespace TheRaceForSpace.Persistence
                 _lastSampleUniversalTime,
                 _maximumAltitudeMeters,
                 _maximumSurfaceSpeedMetersPerSecond,
-                null,
-                null,
-                0.0,
-                false,
-                _enteredOrbit,
-                false,
-                false,
-                false,
-                false);
+                _enteredOrbit);
 
             for (int stateIndex = 0; stateIndex < _controlStates.Count; stateIndex++)
             {

@@ -41,6 +41,7 @@ Repeat the relevant threshold for each level: 600, 1,100, 1,400, 1,700, and 2,00
 10. Confirm a low-speed vessel deletion/recovery near the ground does not incorrectly count as the required high-energy surface impact.
 11. Inspect `KSP.log` after the crash and confirm there are no repeated callback exceptions from either the vessel-local destruction callback or the global vessel-will-destroy fallback.
 12. Repeat a qualifying destructive impact while using physics warp (2x and 4x where practical) and confirm Directed Power still completes. The impact detector should use the actual universal-time gap since the last in-flight sample rather than assuming a fixed two-second travel interval.
+13. Create a state where Directed Power I and II are both `Offered` and unfinished for the player. Reach at least 1,100 m/s without exceeding 70 km and impact Kerbin; confirm **both** contracts complete from that one impact, while Directed Power III remains untouched if it has not separately become `Offered`.
 
 ## Mass line
 
@@ -50,9 +51,9 @@ Required pairs are 1 t / 25 km, 2.5 t / 75 km, 5 t / 150 km, 10 t / 300 km, and 
 2. Fly beyond the required distance while retaining enough mass and confirm the contract does **not** complete while the craft is still flying.
 3. Reach the required distance but land with less than the required final vessel mass and confirm no completion.
 4. Keep sufficient mass but land short of the required distance and confirm no completion.
-5. Land on Kerbin beyond the required distance with the finished landed craft still retaining at least the required mass and confirm the current Mass level completes.
-6. Continue or move the same landed craft so that it could satisfy the next level and confirm only one Mass level can complete per launch attempt.
-7. Start a new launch and confirm the newly unlocked/offered next Mass level can complete after another qualifying landing.
+5. Land on Kerbin beyond the required distance with the finished landed craft still retaining at least the required mass and confirm each active Mass contract whose own mass/distance requirements are met completes.
+6. Create a state where Mass I and Mass II are both `Offered` and unfinished. Land one craft with at least 2.5 t more than 75 km from launch and confirm **both Mass I and Mass II complete from the same landing**.
+7. In the same test, make the craft strong enough to satisfy Mass III as well but leave Mass III merely `Unlocked` or `Locked`; confirm Mass III does **not** complete until it is separately `Offered`.
 8. Confirm `SPLASHED` does not count as `LANDED` for the Mass delivery requirement.
 9. Confirm entering orbit invalidates the starter attempt.
 10. Note the current v0.5 rule: distance is measured from the tracked launch/start position. A normal KSC LaunchPad/Runway mission therefore behaves as distance from the Space Centre, while an alternate launch site uses that alternate origin. Record this explicitly if alternate launch sites are part of balance testing.
@@ -71,6 +72,7 @@ Required bands/times are 2-5 km / 30 s, 8-12 km / 45 s, 15-25 km / 60 s, 30-40 k
 8. Save halfway through a valid hold, reload, continue the remaining hold time and land; confirm accumulated hold time survives correctly when observations resume normally.
 9. Save after the hold has qualified but before landing, reload, land safely, and confirm completion still works.
 10. While an unqualified hold is in progress, create a long interval in which the active vessel is not observed (for example by leaving the flight scene and advancing time), then return to the same vessel. Confirm the missing interval is not credited and the unqualified continuous hold restarts rather than jumping forward.
+11. **Intermediate Step 2 limitation:** when more than one Control level is Offered, only one active Control hold is tracked because v0.5 still has one persisted Control timer. Do not treat multi-Control completion as release behavior until the planned per-contract Control state step is complete.
 
 ## Biome line
 
@@ -78,19 +80,20 @@ Targets are Grasslands, Highlands, Mountains, Deserts, and Ice Caps.
 
 1. Confirm every offered unfinished Biome contract card in Funding Targets reports the active vessel's stock Kerbin biome, that contract's target biome, and live `Landed: YES/NO` state.
 2. Fly over or through the required biome without landing and confirm the Biome contract does **not** complete.
-3. Land the craft in the required Kerbin biome and confirm the current Biome level completes only once the vessel situation is `LANDED`.
+3. Land the craft in the required Kerbin biome and confirm that offered Biome contract completes only once the vessel situation is `LANDED`.
 4. Splash down in or beside the target biome and confirm `SPLASHED` does not count as the required landing.
-5. Continue or move the same craft into the next target biome and confirm a second Biome level does not complete from that launch attempt.
-6. Start a fresh launch and confirm the next unlocked/offered Biome level can complete after landing in its target biome.
+5. Create a state where Biome I and Biome II are both `Offered`. Land in Grasslands to complete Biome I, then continue the **same launch attempt** and later land in Highlands; confirm Biome II can complete independently without requiring a new launch.
+6. Confirm a later Biome level that is not `Offered` does not complete even if the same mission eventually visits its target biome.
 7. Confirm biome reporting remains stable during low flight and after touchdown so the landed sample reports the correct stock biome.
 8. Confirm no Biome completion occurs away from Kerbin.
 
 ## Cross-line behavior
 
-1. Use one launch that legitimately satisfies conditions in two different lines, such as landing a sufficiently heavy craft in the required Biome at the required Mass distance, and confirm both lines may advance once on that landing.
-2. Confirm each individual line can advance no more than one level per launch.
-3. Confirm staging does not accidentally create a new attempt when launch time/body match the ongoing vehicle.
-4. Confirm switching to an unrelated vessel/launch begins a new tracked attempt rather than inheriting the previous vehicle's maxima or Control timer.
+1. Use one launch that legitimately satisfies conditions in two different lines, such as landing a sufficiently heavy craft in the required Biome at the required Mass distance, and confirm both active contracts may complete on that landing.
+2. Confirm Mass, Biome, and Directed Power evaluate each **Offered, unfinished contract independently** rather than choosing one highest unlocked level. A qualifying flight may complete multiple Offered levels in the same line, but must not complete a merely Locked/Unlocked level that is absent from the active set.
+3. Confirm Control still uses its temporary single active hold state until the planned per-contract Control migration is completed.
+4. Confirm staging does not accidentally create a new attempt when launch time/body match the ongoing vehicle.
+5. Confirm switching to an unrelated vessel/launch begins a new tracked attempt rather than inheriting the previous vehicle's maxima or Control timer.
 
 ## Probe Orbit convergence
 
@@ -117,7 +120,7 @@ Test each Level V route independently in a disposable save or by restoring a bac
 ## Persistence and scene changes
 
 1. Save and reload with no active flight and confirm no starter attempt is invented.
-2. Save and reload during a valid active attempt and confirm only the intended historical state persists: maxima, launch origin, Control state, orbit invalidation, and line-completion flags.
+2. Save and reload during a valid active attempt and confirm the intended historical state persists: maxima, launch origin, Control state, and orbit invalidation. Legacy Mass/Biome/Directed Power per-line completion flags may still exist in old saves but must no longer block another separately Offered contract after reload.
 3. Confirm current telemetry such as instantaneous mass/altitude/biome is repopulated by the next live vessel sample rather than stale saved values.
 4. Move Flight -> Space Center -> Tracking Station -> Flight and confirm the controller, offers, completed achievements, and saved starter state remain consistent.
 5. Load a different KSP save in the same process and confirm no active-flight state or destruction callback leaks from the previous save.
@@ -137,10 +140,10 @@ The v0.5 candidate is ready for merge/release only when:
 - Space Race keeps a usable 275 px Current Funding Info area above the catalogue;
 - Biome only completes on a landed craft in the target biome;
 - Mass only completes on a landed finished craft that still meets both final mass and distance requirements;
+- simultaneously Offered Mass/Biome/Directed Power levels are evaluated independently, while an unoffered higher level is not checked even when the same flight would satisfy it;
 - a real qualifying Directed Power surface crash reliably produces completion without turning normal recovery into a false crash;
 - all four starter lines can be completed end-to-end in KSP;
 - at least one Level V route has been followed through a real Probe Orbit completion;
-- no starter line can be advanced twice by one launch;
 - saving/loading cannot erase Directed Power invalidation or manufacture Control progress;
 - Space Race, Overview, Funding Targets, and Rival Agencies remain usable without layout-breaking overlap or exceptions;
 - no repeated exceptions or obvious performance/log-spam regressions appear during normal flight.

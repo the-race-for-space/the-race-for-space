@@ -317,12 +317,12 @@ namespace TheRaceForSpace.Tests.Tracking
                         TrackedFlightSituation.Flying));
             }
 
-            var saveState = new StarterFlightSaveState();
+            var saveState = new ActiveContractProgressSaveState();
             saveState.Capture(sourceTracker);
             var node = new ConfigNode();
             saveState.Save(node);
 
-            var loadedState = new StarterFlightSaveState();
+            var loadedState = new ActiveContractProgressSaveState();
             loadedState.Load(node);
             var restoredTracker = new StarterFlightTracker();
             loadedState.ApplyTo(restoredTracker);
@@ -409,7 +409,7 @@ namespace TheRaceForSpace.Tests.Tracking
             RequireNear(15.0, sourceTracker.GetControlHoldSeconds(PrototypeMilestones.Control2Id),
                 "Control II should have independent partial progress before save.");
 
-            var saveState = new StarterFlightSaveState();
+            var saveState = new ActiveContractProgressSaveState();
             saveState.Capture(sourceTracker);
             var node = new ConfigNode();
             saveState.Save(node);
@@ -421,7 +421,7 @@ namespace TheRaceForSpace.Tests.Tracking
             Require(node.GetValue("completedControl") == null,
                 "The current save format should not write obsolete per-line completion flags.");
 
-            var loadedState = new StarterFlightSaveState();
+            var loadedState = new ActiveContractProgressSaveState();
             loadedState.Load(node);
             var restoredTracker = new StarterFlightTracker();
             loadedState.ApplyTo(restoredTracker);
@@ -490,11 +490,11 @@ namespace TheRaceForSpace.Tests.Tracking
                 PrototypeMilestones.StarterContracts,
                 Snapshot("save-power", 800.0, 800.0, 70010.0, 700.0, 1.0, 0, null, TrackedFlightSituation.SubOrbital));
 
-            var saveState = new StarterFlightSaveState();
+            var saveState = new ActiveContractProgressSaveState();
             saveState.Capture(sourceTracker);
             var node = new ConfigNode();
             saveState.Save(node);
-            var loadedState = new StarterFlightSaveState();
+            var loadedState = new ActiveContractProgressSaveState();
             loadedState.Load(node);
             var restoredTracker = new StarterFlightTracker();
             loadedState.ApplyTo(restoredTracker);
@@ -573,7 +573,7 @@ namespace TheRaceForSpace.Tests.Tracking
             controlStateNode.AddValue("wasSampleInBand", true);
             controlStateNode.AddValue("qualified", false);
 
-            var loadedState = new StarterFlightSaveState();
+            var loadedState = new ActiveContractProgressSaveState();
             loadedState.Load(node);
             var tracker = new StarterFlightTracker();
             tracker.RestoreState(

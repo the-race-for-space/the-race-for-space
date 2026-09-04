@@ -240,7 +240,8 @@ namespace TheRaceForSpace.ControllerTests
 
             var controller = new SatelliteRaceController();
             controller.Refresh();
-            controller.AsterProgram.RecordAchievement(firstLevelMilestoneId, 10.0);
+            controller.FindProgramById(SatelliteRaceController.AsterProgramId)
+                .RecordAchievement(firstLevelMilestoneId, 10.0);
 
             Planetarium.CurrentUniversalTime = FundingIntervalSeconds;
             controller.Refresh(false);

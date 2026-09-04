@@ -12,8 +12,7 @@ namespace TheRaceForSpace.KspIntegration
     {
         private const double SurfaceImpactProximityMeters = 100.0;
         private const double MinimumSurfaceImpactSpeedMetersPerSecond = 5.0;
-        private const double SurfaceImpactSampleTravelAllowanceSeconds = 2.0;
-        private const double SurfaceImpactFlightSampleMaximumAgeSeconds = 3.0;
+        private const double SurfaceImpactFlightSampleMaximumAgeSeconds = 5.0;
 
         private static Game _activeTrackingGame;
         private static Vessel _destructionTrackedVessel;
@@ -347,13 +346,15 @@ namespace TheRaceForSpace.KspIntegration
             // already report LANDED/SPLASHED and zero surface speed by the time the death callback
             // runs. Use the most recent genuine in-flight sample, but only for a short window so a
             // later recovery, termination, or unrelated deletion cannot reuse stale crash telemetry.
+            // Universal time can advance by several seconds between one-real-second samples under
+            // physics warp, so use the actual elapsed game time for both freshness and travel range.
             double currentUniversalTime = Planetarium.fetch == null
                 ? -1.0
                 : Planetarium.GetUniversalTime();
+            double flightSampleAgeSeconds = currentUniversalTime - _lastTrackedInFlightUniversalTime;
             bool hasRecentInFlightSample = _lastTrackedInFlightUniversalTime >= 0.0
-                && currentUniversalTime >= _lastTrackedInFlightUniversalTime
-                && currentUniversalTime - _lastTrackedInFlightUniversalTime
-                    <= SurfaceImpactFlightSampleMaximumAgeSeconds;
+                && flightSampleAgeSeconds >= 0.0
+                && flightSampleAgeSeconds <= SurfaceImpactFlightSampleMaximumAgeSeconds;
             bool wasInFlight = _lastTrackedSituation == TrackedFlightSituation.Flying
                 || _lastTrackedSituation == TrackedFlightSituation.SubOrbital;
             if (!hasRecentInFlightSample
@@ -367,7 +368,7 @@ namespace TheRaceForSpace.KspIntegration
             bool isNearSurfaceNow = currentSurfaceClearanceMeters <= SurfaceImpactProximityMeters;
             double sampleTravelAllowanceMeters = Math.Max(
                 SurfaceImpactProximityMeters,
-                _lastTrackedSurfaceSpeedMetersPerSecond * SurfaceImpactSampleTravelAllowanceSeconds);
+                _lastTrackedSurfaceSpeedMetersPerSecond * flightSampleAgeSeconds);
             bool couldReachSurfaceSinceLastSample =
                 _lastTrackedSurfaceClearanceMeters <= sampleTravelAllowanceMeters;
 

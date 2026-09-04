@@ -90,6 +90,16 @@ namespace TheRaceForSpace.ControllerTests
                 ActiveStarterContractPlanTests.StarterExpiryInvalidatesPlanWithoutAnotherStarterOffer);
 
             Run(
+                "Active offered Mass levels complete independently",
+                ActiveStarterEvaluationTests.OfferedMassLevelsCompleteIndependently);
+            Run(
+                "Active offered Directed Power levels complete independently",
+                ActiveStarterEvaluationTests.OfferedDirectedPowerLevelsCompleteIndependently);
+            Run(
+                "Active offered Biome levels remain independent within one launch",
+                ActiveStarterEvaluationTests.OfferedBiomeLevelsRemainIndependentWithinOneLaunch);
+
+            Run(
                 "Starter contracts open four offers and lock the remaining sixteen",
                 FundingOfferControllerTests.StarterContractsOpenFourInitialOffersAndLockRemaining);
             Run(

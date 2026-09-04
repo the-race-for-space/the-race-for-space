@@ -30,6 +30,16 @@ namespace TheRaceForSpace.ControllerTests
             Equal(SatelliteRaceController.AsterProgramId, controller.RivalPrograms[0].Id);
             Equal(SatelliteRaceController.CobaltProgramId, controller.RivalPrograms[1].Id);
             Equal("rival-3", controller.RivalPrograms[2].Id);
+            Require(
+                object.ReferenceEquals(
+                    controller.RivalPrograms[0],
+                    controller.FindProgramById(SatelliteRaceController.AsterProgramId)),
+                "Stable Aster lookup should resolve the first configured rival.");
+            Require(
+                object.ReferenceEquals(
+                    controller.RivalPrograms[1],
+                    controller.FindProgramById(SatelliteRaceController.CobaltProgramId)),
+                "Stable Cobalt lookup should resolve the second configured rival.");
         }
 
         public static void ConfiguredFundingIntervalSetsNextBoundary()
@@ -58,8 +68,8 @@ namespace TheRaceForSpace.ControllerTests
                 observationUniversalTime);
 
             var controller = new SatelliteRaceController();
-            controller.AsterProgram.Funds = 0.0;
-            controller.CobaltProgram.Funds = 0.0;
+            controller.FindProgramById(SatelliteRaceController.AsterProgramId).Funds = 0.0;
+            controller.FindProgramById(SatelliteRaceController.CobaltProgramId).Funds = 0.0;
             QualifyForProbeOrbit(controller, observationUniversalTime - 1.0);
 
             bool skippedObservation = controller.Refresh(false);
@@ -94,8 +104,8 @@ namespace TheRaceForSpace.ControllerTests
                 observationUniversalTime);
 
             var controller = new SatelliteRaceController();
-            controller.AsterProgram.Funds = 0.0;
-            controller.CobaltProgram.Funds = 0.0;
+            controller.FindProgramById(SatelliteRaceController.AsterProgramId).Funds = 0.0;
+            controller.FindProgramById(SatelliteRaceController.CobaltProgramId).Funds = 0.0;
             QualifyForProbeOrbit(controller, observationUniversalTime - 1.0);
 
             controller.Refresh();
@@ -156,8 +166,8 @@ namespace TheRaceForSpace.ControllerTests
                 observationUniversalTime);
 
             var controller = new SatelliteRaceController();
-            controller.AsterProgram.Funds = 0.0;
-            controller.CobaltProgram.Funds = 0.0;
+            controller.FindProgramById(SatelliteRaceController.AsterProgramId).Funds = 0.0;
+            controller.FindProgramById(SatelliteRaceController.CobaltProgramId).Funds = 0.0;
             QualifyForProbeOrbit(controller, observationUniversalTime - 1.0);
 
             controller.Refresh();
@@ -218,8 +228,8 @@ namespace TheRaceForSpace.ControllerTests
             KspVesselDiscovery.SetUnavailable();
 
             var controller = new SatelliteRaceController();
-            controller.AsterProgram.Funds = 0.0;
-            controller.CobaltProgram.Funds = 0.0;
+            controller.FindProgramById(SatelliteRaceController.AsterProgramId).Funds = 0.0;
+            controller.FindProgramById(SatelliteRaceController.CobaltProgramId).Funds = 0.0;
             QualifyForProbeOrbit(controller, 0.0);
             controller.Refresh();
 
@@ -253,13 +263,17 @@ namespace TheRaceForSpace.ControllerTests
             KspVesselDiscovery.SetUnavailable();
 
             var controller = new SatelliteRaceController();
-            controller.AsterProgram.Funds = 0.0;
-            controller.CobaltProgram.Funds = 0.0;
+            controller.FindProgramById(SatelliteRaceController.AsterProgramId).Funds = 0.0;
+            controller.FindProgramById(SatelliteRaceController.CobaltProgramId).Funds = 0.0;
 
             controller.Refresh();
 
-            Equal(20000.0, controller.AsterProgram.Funds);
-            Equal(20000.0, controller.CobaltProgram.Funds);
+            Equal(
+                20000.0,
+                controller.FindProgramById(SatelliteRaceController.AsterProgramId).Funds);
+            Equal(
+                20000.0,
+                controller.FindProgramById(SatelliteRaceController.CobaltProgramId).Funds);
             Equal(FundingIntervalSeconds * 2.0, controller.NextFundingUniversalTime);
             Equal(
                 FundingIntervalSeconds * 2.0,
@@ -273,8 +287,8 @@ namespace TheRaceForSpace.ControllerTests
             KspVesselDiscovery.SetSnapshots(new List<VesselTrackingSnapshot>(), 0.0);
 
             var controller = new SatelliteRaceController();
-            controller.AsterProgram.Funds = 0.0;
-            controller.CobaltProgram.Funds = 0.0;
+            controller.FindProgramById(SatelliteRaceController.AsterProgramId).Funds = 0.0;
+            controller.FindProgramById(SatelliteRaceController.CobaltProgramId).Funds = 0.0;
             controller.Refresh();
 
             // Qualifying after the campaign starts makes Probe Orbit available at the crossed
@@ -321,8 +335,8 @@ namespace TheRaceForSpace.ControllerTests
                 1000.0);
 
             var controller = new SatelliteRaceController();
-            controller.AsterProgram.Funds = 0.0;
-            controller.CobaltProgram.Funds = 0.0;
+            controller.FindProgramById(SatelliteRaceController.AsterProgramId).Funds = 0.0;
+            controller.FindProgramById(SatelliteRaceController.CobaltProgramId).Funds = 0.0;
             QualifyForProbeOrbit(controller, 999.0);
             controller.Refresh();
 

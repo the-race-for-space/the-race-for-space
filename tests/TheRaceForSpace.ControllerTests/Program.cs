@@ -77,6 +77,19 @@ namespace TheRaceForSpace.ControllerTests
                 SatelliteRaceControllerTests.ProjectedPayoutCacheRebuildsOnRefresh);
 
             Run(
+                "Active starter plan opens with four cached contracts and reuses stable refresh",
+                ActiveStarterContractPlanTests.OpeningOffersBuildInitialPlanAndStableRefreshReusesIt);
+            Run(
+                "Active starter plan waits for sponsor offer after rival unlock",
+                ActiveStarterContractPlanTests.RivalUnlockDoesNotChangePlanUntilSponsorOffersContract);
+            Run(
+                "Active starter plan removes player-completed contract",
+                ActiveStarterContractPlanTests.PlayerCompletionInvalidatesAndRemovesOnlyCompletedContract);
+            Run(
+                "Active starter plan removes expired contract",
+                ActiveStarterContractPlanTests.StarterExpiryInvalidatesPlanWithoutAnotherStarterOffer);
+
+            Run(
                 "Starter contracts open four offers and lock the remaining sixteen",
                 FundingOfferControllerTests.StarterContractsOpenFourInitialOffersAndLockRemaining);
             Run(

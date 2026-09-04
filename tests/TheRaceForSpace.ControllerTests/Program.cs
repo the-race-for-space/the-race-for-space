@@ -98,6 +98,9 @@ namespace TheRaceForSpace.ControllerTests
             Run(
                 "Active offered Biome levels remain independent within one launch",
                 ActiveStarterEvaluationTests.OfferedBiomeLevelsRemainIndependentWithinOneLaunch);
+            Run(
+                "Active offered Control levels track and complete independently",
+                ActiveStarterEvaluationTests.OfferedControlLevelsTrackAndCompleteIndependently);
 
             Run(
                 "Starter contracts open four offers and lock the remaining sixteen",
@@ -122,7 +125,7 @@ namespace TheRaceForSpace.ControllerTests
                 FundingOfferControllerTests.FundingReviewDoesNotCascadeCompletedOffers);
             Run(
                 "Satellite fulfilment waits for sponsor review",
-                FundingOfferControllerTests.SatelliteFulfilmentWaitsForFundingReview);
+                FundingOfferControllerTests.SatelliteFulfilmentWaitsForSponsorReview);
             Run(
                 "Satellite sponsor review caps unfinished offers",
                 FundingOfferControllerTests.SatelliteReviewCapsUnfulfilledOffersAtTwo);

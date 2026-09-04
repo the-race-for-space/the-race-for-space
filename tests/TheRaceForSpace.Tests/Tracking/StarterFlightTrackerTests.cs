@@ -18,6 +18,7 @@ namespace TheRaceForSpace.Tests.Tracking
             BiomeAllowsOnlyOneLineMilestonePerLaunch();
             StagingPreservesDirectedPowerAttempt();
             PartialControlHoldSurvivesSaveLoad();
+            MultipleControlStatesSurviveSaveLoad();
             DirectedPowerDisqualificationSurvivesSaveLoad();
             LiveProgressReflectsLatestSample();
             CurrentMilestoneUsesGlobalLineUnlocks();
@@ -354,6 +355,129 @@ namespace TheRaceForSpace.Tests.Tracking
                 "A saved 15-second Control hold should resume and complete after another 15 seconds and landing.");
         }
 
+        private static void MultipleControlStatesSurviveSaveLoad()
+        {
+            SpaceProgramState player = new SpaceProgramState("player", "Player", true);
+            var programs = new List<SpaceProgramState> { player };
+            var activeControlContracts = new List<MilestoneDefinition>
+            {
+                PrototypeMilestones.FindById(PrototypeMilestones.Control1Id),
+                PrototypeMilestones.FindById(PrototypeMilestones.Control2Id)
+            };
+            var sourceTracker = new StarterFlightTracker();
+
+            for (int elapsedSeconds = 0; elapsedSeconds <= 30; elapsedSeconds += 5)
+            {
+                sourceTracker.RefreshPlayerMilestones(
+                    player,
+                    programs,
+                    activeControlContracts,
+                    Snapshot(
+                        "save-multi-control",
+                        1000.0,
+                        1000.0 + elapsedSeconds,
+                        3000.0,
+                        150.0,
+                        1.0,
+                        1,
+                        null,
+                        TrackedFlightSituation.Flying));
+            }
+
+            Require(sourceTracker.IsControlMilestoneQualified(PrototypeMilestones.Control1Id),
+                "Control I should be qualified before saving the multi-Control attempt.");
+
+            for (int observationUniversalTime = 1035; observationUniversalTime <= 1050;
+                observationUniversalTime += 5)
+            {
+                sourceTracker.RefreshPlayerMilestones(
+                    player,
+                    programs,
+                    activeControlContracts,
+                    Snapshot(
+                        "save-multi-control",
+                        1000.0,
+                        observationUniversalTime,
+                        10000.0,
+                        150.0,
+                        1.0,
+                        1,
+                        null,
+                        TrackedFlightSituation.Flying));
+            }
+
+            RequireNear(15.0, sourceTracker.GetControlHoldSeconds(PrototypeMilestones.Control2Id),
+                "Control II should have independent partial progress before save.");
+
+            var saveState = new StarterFlightSaveState();
+            saveState.Capture(sourceTracker);
+            var node = new ConfigNode();
+            saveState.Save(node);
+
+            Require(node.GetNodes("CONTROL_STATE").Length == 2,
+                "The current save format should write one CONTROL_STATE node per tracked Control contract.");
+            Require(node.GetValue("controlHoldMilestoneId") == null,
+                "The current save format should not write the removed single-Control milestone field.");
+            Require(node.GetValue("completedControl") == null,
+                "The current save format should not write obsolete per-line completion flags.");
+
+            var loadedState = new StarterFlightSaveState();
+            loadedState.Load(node);
+            var restoredTracker = new StarterFlightTracker();
+            loadedState.ApplyTo(restoredTracker);
+
+            Require(restoredTracker.IsControlMilestoneQualified(PrototypeMilestones.Control1Id),
+                "A qualified Control I state should survive save/load independently.");
+            RequireNear(15.0, restoredTracker.GetControlHoldSeconds(PrototypeMilestones.Control2Id),
+                "Partial Control II progress should survive save/load independently.");
+            Require(!restoredTracker.IsControlMilestoneQualified(PrototypeMilestones.Control2Id),
+                "Partial Control II progress must not be promoted to qualified by persistence.");
+
+            for (int observationUniversalTime = 1055; observationUniversalTime <= 1080;
+                observationUniversalTime += 5)
+            {
+                restoredTracker.RefreshPlayerMilestones(
+                    player,
+                    programs,
+                    activeControlContracts,
+                    Snapshot(
+                        "save-multi-control",
+                        1000.0,
+                        observationUniversalTime,
+                        10000.0,
+                        150.0,
+                        1.0,
+                        1,
+                        null,
+                        TrackedFlightSituation.Flying));
+            }
+
+            Require(restoredTracker.IsControlMilestoneQualified(PrototypeMilestones.Control2Id),
+                "Control II should continue from its saved partial hold and qualify normally.");
+
+            bool recorded = restoredTracker.RefreshPlayerMilestones(
+                player,
+                programs,
+                activeControlContracts,
+                Snapshot(
+                    "save-multi-control",
+                    1000.0,
+                    1081.0,
+                    80.0,
+                    0.0,
+                    1.0,
+                    1,
+                    null,
+                    TrackedFlightSituation.Landed));
+
+            Require(recorded,
+                "The restored landing should record the independently qualified Control contracts.");
+            Require(player.HasAchievement(PrototypeMilestones.Control1Id),
+                "Restored Control I qualification should complete on landing.");
+            Require(player.HasAchievement(PrototypeMilestones.Control2Id),
+                "Restored Control II qualification should complete on the same landing.");
+        }
+
         private static void DirectedPowerDisqualificationSurvivesSaveLoad()
         {
             SpaceProgramState player = new SpaceProgramState("player", "Player", true);
@@ -440,9 +564,14 @@ namespace TheRaceForSpace.Tests.Tracking
             node.AddValue("startLatitude", "0");
             node.AddValue("startLongitude", "0");
             node.AddValue("lastSampleUniversalTime", "1010");
-            node.AddValue("maximumAltitudeMeters", "not-a-number");
+            node.AddValue("maximumAltitudeMeters", "1000");
             node.AddValue("maximumSurfaceSpeedMetersPerSecond", "650");
-            node.AddValue("controlHoldSeconds", "10");
+            node.AddValue("enteredOrbit", false);
+            ConfigNode controlStateNode = node.AddNode("CONTROL_STATE");
+            controlStateNode.AddValue("milestoneId", PrototypeMilestones.Control1Id);
+            controlStateNode.AddValue("holdSeconds", "not-a-number");
+            controlStateNode.AddValue("wasSampleInBand", true);
+            controlStateNode.AddValue("qualified", false);
 
             var loadedState = new StarterFlightSaveState();
             loadedState.Load(node);
@@ -468,7 +597,7 @@ namespace TheRaceForSpace.Tests.Tracking
 
             loadedState.ApplyTo(tracker);
             Require(!tracker.HasActiveAttempt,
-                "Malformed active starter-flight nodes should clear the attempt rather than restore invented zero values.");
+                "Malformed per-contract Control save data should clear the active attempt rather than restore invented progress.");
         }
 
         private static ActiveVesselTrackingSnapshot Snapshot(

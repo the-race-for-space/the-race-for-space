@@ -97,7 +97,6 @@ namespace TheRaceForSpace.UI
         private static readonly GUILayoutOption[] RivalDetailsOptions = { GUILayout.Width(320.0f) };
         private static readonly GUILayoutOption[] RivalIncomeLabelOptions = { GUILayout.Width(245.0f) };
         private static readonly GUILayoutOption[] RivalIncomeAmountOptions = { GUILayout.Width(125.0f) };
-        private static readonly GUILayoutOption[] StarterProgrammeCardOptions = { GUILayout.Width(205.0f) };
         private static readonly GUILayoutOption[] SpaceRaceFundingButtonOptions =
             { GUILayout.Width(195.0f), GUILayout.Height(40.0f) };
         private static readonly GUILayoutOption[] SpaceRaceSectionToggleOptions =
@@ -933,93 +932,6 @@ namespace TheRaceForSpace.UI
             GUILayout.EndScrollView();
         }
 
-        private void DrawStarterProgrammes(
-            SpaceProgramState player,
-            double evaluationUniversalTime)
-        {
-            MilestoneDefinition probeOrbit = PrototypeMilestones.FindById(PrototypeMilestones.ProbeOrbitId);
-            bool probeOrbitUnlocked = probeOrbit != null
-                && UnlockRuleEvaluator.IsSatisfied(
-                    probeOrbit.UnlockRule,
-                    _raceController.Programs,
-                    evaluationUniversalTime);
-
-            GUILayout.Label("STARTER PROGRAMMES", _boldLabelStyle);
-            GUILayout.Label(
-                probeOrbitUnlocked
-                    ? "PROBE ORBIT UNLOCKED - starter programmes remain available for their funding and race progress."
-                    : "Complete Level 5 in any one programme to unlock Probe Orbit. One current contract from each line is offered separately from the normal two-milestone limit.");
-            GUILayout.Space(4.0f);
-
-            GUILayout.BeginHorizontal();
-            DrawStarterProgrammeCard(
-                "DIRECTED POWER",
-                StarterContractLine.DirectedPower,
-                player,
-                evaluationUniversalTime);
-            DrawStarterProgrammeCard(
-                "MASS",
-                StarterContractLine.Mass,
-                player,
-                evaluationUniversalTime);
-            DrawStarterProgrammeCard(
-                "CONTROL",
-                StarterContractLine.Control,
-                player,
-                evaluationUniversalTime);
-            DrawStarterProgrammeCard(
-                "BIOME",
-                StarterContractLine.Biome,
-                player,
-                evaluationUniversalTime);
-            GUILayout.EndHorizontal();
-        }
-
-        private void DrawStarterProgrammeCard(
-            string lineName,
-            StarterContractLine starterLine,
-            SpaceProgramState player,
-            double evaluationUniversalTime)
-        {
-            int completedLevels = GetPlayerStarterCompletionCount(starterLine, player);
-            MilestoneDefinition currentMilestone = StarterFlightTracker.GetCurrentMilestone(
-                starterLine,
-                player,
-                _raceController.Programs,
-                PrototypeMilestones.StarterContracts,
-                evaluationUniversalTime);
-
-            GUILayout.BeginVertical("box", StarterProgrammeCardOptions);
-            GUILayout.Label(lineName, _boldLabelStyle);
-            GUILayout.Label("Your Progress: " + completedLevels + " / 5");
-
-            if (completedLevels >= 5)
-            {
-                GUILayout.Label("COMPLETE", _boldLabelStyle);
-                GUILayout.EndVertical();
-                return;
-            }
-
-            if (currentMilestone == null)
-            {
-                GUILayout.Label("Waiting for the previous level to unlock.");
-                GUILayout.EndVertical();
-                return;
-            }
-
-            GUILayout.Label("Current: " + currentMilestone.Name, _boldLabelStyle);
-            GUILayout.Label(currentMilestone.ObjectiveDescription);
-            GUILayout.Label("100% Payout: " + currentMilestone.BaseRewardFunds.ToString("N0"));
-
-            StarterFlightTracker tracker = RaceRuntime.StarterFlightState;
-            if (tracker != null && tracker.HasActiveAttempt)
-            {
-                DrawStarterLiveProgress(starterLine, currentMilestone, tracker);
-            }
-
-            GUILayout.EndVertical();
-        }
-
         private void DrawStarterLiveProgress(
             StarterContractLine starterLine,
             MilestoneDefinition currentMilestone,
@@ -1132,27 +1044,6 @@ namespace TheRaceForSpace.UI
                     "Landed: "
                     + (tracker.CurrentSituation == TrackedFlightSituation.Landed ? "YES" : "NO"));
             }
-        }
-
-        private int GetPlayerStarterCompletionCount(
-            StarterContractLine starterLine,
-            SpaceProgramState player)
-        {
-            int completedLevels = 0;
-            for (int milestoneIndex = 0;
-                milestoneIndex < PrototypeMilestones.StarterContracts.Count;
-                milestoneIndex++)
-            {
-                MilestoneDefinition milestone = PrototypeMilestones.StarterContracts[milestoneIndex];
-                if (milestone != null
-                    && milestone.StarterLine == starterLine
-                    && player.HasAchievement(milestone.Id))
-                {
-                    completedLevels++;
-                }
-            }
-
-            return completedLevels;
         }
 
         private static bool DidCompleteStarterLineThisAttempt(

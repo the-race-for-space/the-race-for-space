@@ -73,8 +73,8 @@ namespace TheRaceForSpace.Funding
         public bool HasReachedSatelliteTarget { get; private set; }
 
         /// <summary>
-        /// Permanently unlocks this satellite contract for the current campaign.
-        /// Version 0.4 does not relock satellite contracts after they become available.
+        /// Permanently unlocks this satellite contract for the current campaign. Satellite contracts
+        /// do not relock after becoming available.
         /// </summary>
         public void Unlock()
         {

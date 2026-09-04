@@ -32,9 +32,8 @@
     <Compile Include="../../src/TheRaceForSpace/Tracking/SatelliteTracker.cs" Link="Production/Tracking/SatelliteTracker.cs" />
     <Compile Include="../../src/TheRaceForSpace/Tracking/StarterFlightTracker.cs" Link="Production/Tracking/StarterFlightTracker.cs" />
     <Compile Include="../../src/TheRaceForSpace/Tracking/SurfaceImpactEvaluator.cs" Link="Production/Tracking/SurfaceImpactEvaluator.cs" />
-    <Compile Include="../../src/TheRaceForSpace/Persistence/RaceProgressSaveState.cs" Link="Production/Persistence/RaceProgressSaveState.cs" />
-    <Compile Include="../../src/TheRaceForSpace/Persistence/StarterFlightSaveState.cs" Link="Production/Persistence/StarterFlightSaveState.cs" />
-    <Compile Include="../../src/TheRaceForSpace/Persistence/RivalProgramSaveState.cs" Link="Production/Persistence/RivalProgramSaveState.cs" />
+    <Compile Include="../../src/TheRaceForSpace/Persistence/FundingContractsSaveState.cs" Link="Production/Persistence/FundingContractsSaveState.cs" />
     <Compile Include="../../src/TheRaceForSpace/Persistence/RivalProgramsSaveState.cs" Link="Production/Persistence/RivalProgramsSaveState.cs" />
+    <Compile Include="../../src/TheRaceForSpace/Persistence/ActiveContractProgressSaveState.cs" Link="Production/Persistence/ActiveContractProgressSaveState.cs" />
   </ItemGroup>
 </Project>

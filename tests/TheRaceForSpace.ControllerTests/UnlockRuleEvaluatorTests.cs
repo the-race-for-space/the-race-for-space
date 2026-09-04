@@ -235,22 +235,35 @@ namespace TheRaceForSpace.ControllerTests
                 "unknown-milestone",
                 UnlockProgramScope.AnyAgency,
                 1);
+            UnlockRuleDefinition knownAchievementRule = RuleForAchievement(
+                "probe-orbit",
+                UnlockProgramScope.AnyAgency,
+                1);
+            var satelliteRule = new UnlockRuleDefinition(
+                new UnlockPathDefinition(
+                    UnlockConditionDefinition.SatelliteCount("Kerbin", 1)));
+            IList<SpaceProgramState> programs = CreatePrograms();
+            programs[0].RecordAchievement("probe-orbit", 100.0);
+            programs[0].SetSatelliteCount("Kerbin", 1);
 
             Require(
-                !UnlockRuleEvaluator.IsSatisfied(emptyRule, CreatePrograms(), 1000.0),
+                !UnlockRuleEvaluator.IsSatisfied(emptyRule, programs, 1000.0),
                 "An empty rule should not accidentally unlock a target.");
             Require(
-                !UnlockRuleEvaluator.IsSatisfied(emptyPathRule, CreatePrograms(), 1000.0),
+                !UnlockRuleEvaluator.IsSatisfied(emptyPathRule, programs, 1000.0),
                 "An empty path should not accidentally unlock a target.");
             Require(
-                !UnlockRuleEvaluator.IsSatisfied(unknownAchievementRule, CreatePrograms(), 1000.0),
+                !UnlockRuleEvaluator.IsSatisfied(unknownAchievementRule, programs, 1000.0),
                 "An achievement ID absent from campaign state should fail safely.");
             Require(
-                !UnlockRuleEvaluator.IsSatisfied(
-                    RuleForAchievement("probe-orbit", UnlockProgramScope.AnyAgency, 1),
-                    CreatePrograms(),
-                    double.NaN),
-                "An invalid evaluation time should fail closed.");
+                !UnlockRuleEvaluator.IsSatisfied(knownAchievementRule, programs, double.NaN),
+                "NaN evaluation time should fail closed.");
+            Require(
+                !UnlockRuleEvaluator.IsSatisfied(knownAchievementRule, programs, double.PositiveInfinity),
+                "Infinite evaluation time should fail closed.");
+            Require(
+                !UnlockRuleEvaluator.IsSatisfied(satelliteRule, programs, -1.0),
+                "A negative evaluation time must not let a current satellite count bypass time validation.");
         }
 
         public static void InvalidConditionDefinitionsFailFast()
@@ -268,6 +281,16 @@ namespace TheRaceForSpace.ControllerTests
             RequireThrows<ArgumentOutOfRangeException>(delegate
             {
                 UnlockConditionDefinition.AfterUniversalTime(double.NaN);
+            });
+
+            RequireThrows<ArgumentOutOfRangeException>(delegate
+            {
+                UnlockConditionDefinition.AfterUniversalTime(double.PositiveInfinity);
+            });
+
+            RequireThrows<ArgumentOutOfRangeException>(delegate
+            {
+                UnlockConditionDefinition.AfterUniversalTime(-1.0);
             });
 
             RequireThrows<ArgumentException>(delegate

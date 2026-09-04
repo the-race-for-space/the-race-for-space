@@ -79,15 +79,6 @@ namespace TheRaceForSpace.Competition
                 var rivalProgram = new SpaceProgramState(rivalId, rivalName, false);
                 rivalProgram.Funds = Math.Max(0.0, RaceSettings.RivalStartingFunds);
 
-                if (rivalIndex == 0)
-                {
-                    AsterProgram = rivalProgram;
-                }
-                else if (rivalIndex == 1)
-                {
-                    CobaltProgram = rivalProgram;
-                }
-
                 _programs.Add(rivalProgram);
                 _rivalPrograms.Add(rivalProgram);
             }
@@ -120,8 +111,6 @@ namespace TheRaceForSpace.Competition
         }
 
         public SpaceProgramState PlayerProgram { get; private set; }
-        public SpaceProgramState AsterProgram { get; private set; }
-        public SpaceProgramState CobaltProgram { get; private set; }
         public IList<SpaceProgramState> Programs { get { return _programsView; } }
         public IList<SpaceProgramState> RivalPrograms { get { return _rivalProgramsView; } }
         public IList<FundingProgramme> FundingProgrammes { get { return _fundingProgrammesView; } }
@@ -416,7 +405,6 @@ namespace TheRaceForSpace.Competition
             {
                 ProcessDueFunding(currentUniversalTime);
                 RefreshRivals(currentUniversalTime);
-                UpdateFundingAvailability(currentUniversalTime);
             }
 
             double stateEvaluationUniversalTime = currentUniversalTime;
@@ -639,8 +627,6 @@ namespace TheRaceForSpace.Competition
 
         private void ReviewFundingOffers(double evaluationUniversalTime)
         {
-            UpdateSpecialAchievementOffers(evaluationUniversalTime);
-
             var normalAchievementCandidates = new List<AchievementFundingProgramme>();
             int uncompletedNormalAchievementOfferCount = 0;
 

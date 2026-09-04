@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace TheRaceForSpace.Programs
 {
     /// <summary>
-    /// Minimal campaign state for one space program in the current prototype.
+    /// Campaign state for one player or rival space program.
     /// </summary>
     public sealed class SpaceProgramState
     {
@@ -138,7 +138,13 @@ namespace TheRaceForSpace.Programs
                 return;
             }
 
-            _satellitesByBody[celestialBodyName] = Math.Max(0, count);
+            if (count <= 0)
+            {
+                _satellitesByBody.Remove(celestialBodyName);
+                return;
+            }
+
+            _satellitesByBody[celestialBodyName] = count;
         }
     }
 }

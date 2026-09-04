@@ -169,15 +169,20 @@ namespace TheRaceForSpace.Core
                 _starterTelemetryPlanSource = activeStarterContracts;
                 _starterTelemetryRequirements = StarterTelemetryPlan.GetRequirements(
                     activeStarterContracts);
+
+                // Surface-impact callbacks are part of the telemetry plan, so remove them once when
+                // a new plan no longer contains Directed Power rather than repeating the same cleanup
+                // on every one-second observation.
+                if ((_starterTelemetryRequirements & StarterTelemetryRequirement.SurfaceImpact) == 0)
+                {
+                    KspVesselDiscovery.DisableActiveVesselSurfaceImpactTracking();
+                }
             }
 
             if (activeStarterContracts == null || activeStarterContracts.Count == 0)
             {
-                // With no offered unfinished starter contract there is nothing to inspect in KSP.
-                // Also remove any Directed Power event hooks so the dormant starter system has no
-                // vessel-destruction work until a later sponsor offer rebuilds the active plan.
-                KspVesselDiscovery.DisableActiveVesselSurfaceImpactTracking();
-                RacePersistenceScenario.CaptureActiveContractProgress(_starterFlightTracker);
+                // No active starter contract means the tracker cannot change on this tick. Its last
+                // captured state is already sufficient for a later save or sponsor offer.
                 return;
             }
 
@@ -187,8 +192,7 @@ namespace TheRaceForSpace.Core
 
             // Consume destruction before observing a replacement active vessel. KSP can switch
             // control immediately after a crash, and beginning the next attempt first would discard
-            // the just-finished Directed Power flight history. When no Directed Power contract is
-            // active the integration layer removes the callbacks and stale impact telemetry instead.
+            // the just-finished Directed Power flight history.
             if (needsSurfaceImpact)
             {
                 string impactVesselId;
@@ -207,10 +211,6 @@ namespace TheRaceForSpace.Core
                         impactBodyName,
                         impactUniversalTime);
                 }
-            }
-            else
-            {
-                KspVesselDiscovery.DisableActiveVesselSurfaceImpactTracking();
             }
 
             ActiveVesselTrackingSnapshot activeVesselSnapshot;

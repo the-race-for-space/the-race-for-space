@@ -1,6 +1,5 @@
 using TheRaceForSpace.Competition;
 using TheRaceForSpace.KspIntegration;
-using TheRaceForSpace.Milestones;
 using TheRaceForSpace.Tracking;
 using UnityEngine;
 
@@ -170,7 +169,7 @@ namespace TheRaceForSpace.Core
                 recordedAchievement = _starterFlightTracker.RecordSurfaceImpact(
                     _raceController.PlayerProgram,
                     _raceController.Programs,
-                    PrototypeMilestones.StarterContracts,
+                    _raceController.ActiveStarterContracts,
                     impactVesselId,
                     impactBodyName,
                     impactUniversalTime);
@@ -182,7 +181,7 @@ namespace TheRaceForSpace.Core
                 recordedAchievement |= _starterFlightTracker.RefreshPlayerMilestones(
                     _raceController.PlayerProgram,
                     _raceController.Programs,
-                    PrototypeMilestones.StarterContracts,
+                    _raceController.ActiveStarterContracts,
                     activeVesselSnapshot);
             }
 

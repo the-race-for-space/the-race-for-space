@@ -23,7 +23,7 @@ namespace TheRaceForSpace.Core
         private static Game _controllerGame;
 
         private bool _isDuplicateInstance;
-        private bool _hasRestoredStarterFlightState;
+        private bool _hasRestoredActiveContractProgress;
         private float _nextRefreshTime;
         private float _nextActiveVesselRefreshTime;
         private float _nextPlayerVesselRefreshTime;
@@ -138,10 +138,10 @@ namespace TheRaceForSpace.Core
                 _nextRefreshTime = currentRealtime + RefreshIntervalSeconds;
             }
 
-            if (!_hasRestoredStarterFlightState
-                && RacePersistenceScenario.TryRestoreStarterFlightState(_starterFlightTracker))
+            if (!_hasRestoredActiveContractProgress
+                && RacePersistenceScenario.TryRestoreActiveContractProgress(_starterFlightTracker))
             {
-                _hasRestoredStarterFlightState = true;
+                _hasRestoredActiveContractProgress = true;
 
                 // Scenario state may become ready between scheduled five-second controller ticks.
                 // Force the controller's normal non-vessel path once before active-flight evaluation
@@ -149,7 +149,8 @@ namespace TheRaceForSpace.Core
                 _raceController.Refresh(false);
             }
 
-            if (_hasRestoredStarterFlightState && currentRealtime >= _nextActiveVesselRefreshTime)
+            if (_hasRestoredActiveContractProgress
+                && currentRealtime >= _nextActiveVesselRefreshTime)
             {
                 RefreshStarterFlightState();
                 _nextActiveVesselRefreshTime = currentRealtime + ActiveVesselRefreshIntervalSeconds;
@@ -176,7 +177,7 @@ namespace TheRaceForSpace.Core
                 // Also remove any Directed Power event hooks so the dormant starter system has no
                 // vessel-destruction work until a later sponsor offer rebuilds the active plan.
                 KspVesselDiscovery.DisableActiveVesselSurfaceImpactTracking();
-                RacePersistenceScenario.CaptureStarterFlightState(_starterFlightTracker);
+                RacePersistenceScenario.CaptureActiveContractProgress(_starterFlightTracker);
                 return;
             }
 
@@ -233,7 +234,7 @@ namespace TheRaceForSpace.Core
                 _raceController.Refresh(false);
             }
 
-            RacePersistenceScenario.CaptureStarterFlightState(_starterFlightTracker);
+            RacePersistenceScenario.CaptureActiveContractProgress(_starterFlightTracker);
         }
 
         private void EnsureControllerForCurrentGame()
@@ -258,7 +259,7 @@ namespace TheRaceForSpace.Core
             _starterFlightTracker = new StarterFlightTracker();
             _controllerGame = HighLogic.CurrentGame;
             KspVesselDiscovery.ResetActiveVesselTracking();
-            _hasRestoredStarterFlightState = false;
+            _hasRestoredActiveContractProgress = false;
             _nextRefreshTime = 0.0f;
             _nextActiveVesselRefreshTime = 0.0f;
             _nextPlayerVesselRefreshTime = 0.0f;

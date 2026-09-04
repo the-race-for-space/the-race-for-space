@@ -72,7 +72,8 @@ Required bands/times are 2-5 km / 30 s, 8-12 km / 45 s, 15-25 km / 60 s, 30-40 k
 8. Save halfway through a valid hold, reload, continue the remaining hold time and land; confirm accumulated hold time survives correctly when observations resume normally.
 9. Save after the hold has qualified but before landing, reload, land safely, and confirm completion still works.
 10. While an unqualified hold is in progress, create a long interval in which the active vessel is not observed (for example by leaving the flight scene and advancing time), then return to the same vessel. Confirm the missing interval is not credited and the unqualified continuous hold restarts rather than jumping forward.
-11. **Intermediate Step 2 limitation:** when more than one Control level is Offered, only one active Control hold is tracked because v0.5 still has one persisted Control timer. Do not treat multi-Control completion as release behavior until the planned per-contract Control state step is complete.
+11. Create a state where Control I and Control II are both `Offered`. Qualify Control I at 2-5 km, then begin Control II at 8-12 km and save before its 45-second hold is complete. Reload and confirm Control I remains qualified while Control II resumes from its own saved partial hold; finish Control II and land safely, then confirm **both contracts complete on the same landing**.
+12. In that multi-Control save, inspect `STARTER_FLIGHT` and confirm each tracked Control contract has its own `CONTROL_STATE` child containing `milestoneId`, `holdSeconds`, `wasSampleInBand`, and `qualified`.
 
 ## Biome line
 
@@ -90,10 +91,10 @@ Targets are Grasslands, Highlands, Mountains, Deserts, and Ice Caps.
 ## Cross-line behavior
 
 1. Use one launch that legitimately satisfies conditions in two different lines, such as landing a sufficiently heavy craft in the required Biome at the required Mass distance, and confirm both active contracts may complete on that landing.
-2. Confirm Mass, Biome, and Directed Power evaluate each **Offered, unfinished contract independently** rather than choosing one highest unlocked level. A qualifying flight may complete multiple Offered levels in the same line, but must not complete a merely Locked/Unlocked level that is absent from the active set.
-3. Confirm Control still uses its temporary single active hold state until the planned per-contract Control migration is completed.
+2. Confirm Mass, Biome, Directed Power, and Control evaluate each **Offered, unfinished contract independently** rather than choosing one highest unlocked level. A qualifying flight may complete multiple Offered levels in the same line, but must not complete a merely Locked/Unlocked level that is absent from the active set.
+3. Confirm multiple Offered Control contracts retain separate hold/qualification state throughout the same launch and can complete together on one qualifying crewed landing.
 4. Confirm staging does not accidentally create a new attempt when launch time/body match the ongoing vehicle.
-5. Confirm switching to an unrelated vessel/launch begins a new tracked attempt rather than inheriting the previous vehicle's maxima or Control timer.
+5. Confirm switching to an unrelated vessel/launch begins a new tracked attempt rather than inheriting the previous vehicle's maxima or Control timers.
 
 ## Probe Orbit convergence
 
@@ -120,11 +121,12 @@ Test each Level V route independently in a disposable save or by restoring a bac
 ## Persistence and scene changes
 
 1. Save and reload with no active flight and confirm no starter attempt is invented.
-2. Save and reload during a valid active attempt and confirm the intended historical state persists: maxima, launch origin, Control state, and orbit invalidation. Legacy Mass/Biome/Directed Power per-line completion flags may still exist in old saves but must no longer block another separately Offered contract after reload.
+2. Save and reload during a valid active attempt and confirm the intended historical state persists: maxima, launch origin, every per-contract Control hold/qualification state, and orbit invalidation.
 3. Confirm current telemetry such as instantaneous mass/altitude/biome is repopulated by the next live vessel sample rather than stale saved values.
 4. Move Flight -> Space Center -> Tracking Station -> Flight and confirm the controller, offers, completed achievements, and saved starter state remain consistent.
 5. Load a different KSP save in the same process and confirm no active-flight state or destruction callback leaks from the previous save.
-6. Inspect the save file for a `STARTER_FLIGHT` node only when Race for Space has captured starter state and confirm older saves without it load normally.
+6. Inspect the current v0.5 `STARTER_FLIGHT` node and confirm Control progress is represented by repeated `CONTROL_STATE` children. Confirm obsolete single-Control values such as `controlHoldMilestoneId` and per-line completion flags are no longer written.
+7. Corrupt one current-format `CONTROL_STATE` entry in a disposable save and confirm the malformed active attempt fails closed rather than creating invented hold progress.
 
 ## Regression and release acceptance
 
@@ -140,7 +142,8 @@ The v0.5 candidate is ready for merge/release only when:
 - Space Race keeps a usable 275 px Current Funding Info area above the catalogue;
 - Biome only completes on a landed craft in the target biome;
 - Mass only completes on a landed finished craft that still meets both final mass and distance requirements;
-- simultaneously Offered Mass/Biome/Directed Power levels are evaluated independently, while an unoffered higher level is not checked even when the same flight would satisfy it;
+- simultaneously Offered Mass/Biome/Directed Power/Control levels are evaluated independently, while an unoffered higher level is not checked even when the same flight would satisfy it;
+- simultaneous Control hold/qualification states survive current-format save/load independently;
 - a real qualifying Directed Power surface crash reliably produces completion without turning normal recovery into a false crash;
 - all four starter lines can be completed end-to-end in KSP;
 - at least one Level V route has been followed through a real Probe Orbit completion;

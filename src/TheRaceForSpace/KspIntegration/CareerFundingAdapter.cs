@@ -7,7 +7,7 @@ namespace TheRaceForSpace.KspIntegration
     {
         public static bool TryAddFunds(double amount)
         {
-            if (amount <= 0.0)
+            if (double.IsNaN(amount) || double.IsInfinity(amount) || amount <= 0.0)
             {
                 return false;
             }

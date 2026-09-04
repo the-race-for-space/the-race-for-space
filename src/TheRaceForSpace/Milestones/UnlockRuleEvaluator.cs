@@ -25,7 +25,7 @@ namespace TheRaceForSpace.Milestones
                 return true;
             }
 
-            if (double.IsNaN(evaluationUniversalTime) || rule.Paths.Count == 0)
+            if (!IsValidEvaluationTime(evaluationUniversalTime) || rule.Paths.Count == 0)
             {
                 return false;
             }
@@ -51,7 +51,7 @@ namespace TheRaceForSpace.Milestones
             IList<SpaceProgramState> programs,
             double evaluationUniversalTime)
         {
-            if (condition == null || double.IsNaN(evaluationUniversalTime))
+            if (condition == null || !IsValidEvaluationTime(evaluationUniversalTime))
             {
                 return false;
             }
@@ -90,7 +90,7 @@ namespace TheRaceForSpace.Milestones
                 || condition.ConditionType != UnlockConditionType.Achievement
                 || programs == null
                 || string.IsNullOrEmpty(condition.MilestoneId)
-                || double.IsNaN(evaluationUniversalTime))
+                || !IsValidEvaluationTime(evaluationUniversalTime))
             {
                 return 0;
             }
@@ -155,7 +155,7 @@ namespace TheRaceForSpace.Milestones
                 || condition == null
                 || condition.ConditionType != UnlockConditionType.Achievement
                 || string.IsNullOrEmpty(condition.MilestoneId)
-                || double.IsNaN(evaluationUniversalTime)
+                || !IsValidEvaluationTime(evaluationUniversalTime)
                 || !ProgramMatchesScope(program, condition.ProgramScope))
             {
                 return false;
@@ -211,6 +211,13 @@ namespace TheRaceForSpace.Milestones
                 default:
                     return false;
             }
+        }
+
+        private static bool IsValidEvaluationTime(double evaluationUniversalTime)
+        {
+            return !double.IsNaN(evaluationUniversalTime)
+                && !double.IsInfinity(evaluationUniversalTime)
+                && evaluationUniversalTime >= 0.0;
         }
     }
 }

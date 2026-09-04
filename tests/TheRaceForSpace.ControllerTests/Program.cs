@@ -88,6 +88,9 @@ namespace TheRaceForSpace.ControllerTests
             Run(
                 "Active starter plan removes expired contract",
                 ActiveStarterContractPlanTests.StarterExpiryInvalidatesPlanWithoutAnotherStarterOffer);
+            Run(
+                "Active starter contract types request only needed telemetry",
+                StarterTelemetryPlanTests.ActiveContractTypesRequestOnlyNeededTelemetry);
 
             Run(
                 "Active offered Mass levels complete independently",

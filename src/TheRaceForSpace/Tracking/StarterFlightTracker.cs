@@ -330,9 +330,8 @@ namespace TheRaceForSpace.Tracking
         }
 
         /// <summary>
-        /// Restores an in-progress flight attempt from persistence. Invalid or incomplete state
-        /// is discarded so malformed saves safely begin with no active starter-flight history.
-        /// Live current-sample fields are deliberately rebuilt from the next KSP observation.
+        /// Restores the common historical fields for one persisted starter-flight attempt. Current
+        /// Control states are restored separately by stable contract ID through RestoreControlState.
         /// </summary>
         public void RestoreState(
             string vesselId,
@@ -343,15 +342,7 @@ namespace TheRaceForSpace.Tracking
             double lastSampleUniversalTime,
             double maximumAltitudeMeters,
             double maximumSurfaceSpeedMetersPerSecond,
-            string controlHoldMilestoneId,
-            string qualifiedControlMilestoneId,
-            double controlHoldSeconds,
-            bool wasControlSampleInBand,
-            bool enteredOrbit,
-            bool completedDirectedPowerThisAttempt,
-            bool completedMassThisAttempt,
-            bool completedControlThisAttempt,
-            bool completedBiomeThisAttempt)
+            bool enteredOrbit)
         {
             if (string.IsNullOrEmpty(vesselId)
                 || string.IsNullOrEmpty(celestialBodyName)
@@ -366,9 +357,7 @@ namespace TheRaceForSpace.Tracking
                 || !IsFinite(maximumAltitudeMeters)
                 || maximumAltitudeMeters < 0.0
                 || !IsFinite(maximumSurfaceSpeedMetersPerSecond)
-                || maximumSurfaceSpeedMetersPerSecond < 0.0
-                || !IsFinite(controlHoldSeconds)
-                || controlHoldSeconds < 0.0)
+                || maximumSurfaceSpeedMetersPerSecond < 0.0)
             {
                 ClearAttempt();
                 return;
@@ -395,35 +384,16 @@ namespace TheRaceForSpace.Tracking
             _enteredOrbit = enteredOrbit;
 
             _controlStates.Clear();
-            string restoredControlMilestoneId = !string.IsNullOrEmpty(controlHoldMilestoneId)
-                ? controlHoldMilestoneId
-                : qualifiedControlMilestoneId;
-            if (!string.IsNullOrEmpty(restoredControlMilestoneId))
-            {
-                var restoredControlState = new ControlContractState();
-                restoredControlState.HoldSeconds = controlHoldSeconds;
-                restoredControlState.WasSampleInBand = wasControlSampleInBand;
-                restoredControlState.IsQualified = !string.IsNullOrEmpty(qualifiedControlMilestoneId)
-                    && string.Equals(
-                        restoredControlMilestoneId,
-                        qualifiedControlMilestoneId,
-                        StringComparison.OrdinalIgnoreCase);
-                _controlStates.Add(restoredControlMilestoneId, restoredControlState);
-            }
+            _controlHoldMilestoneId = null;
+            _qualifiedControlMilestoneId = null;
+            _controlHoldSeconds = 0.0;
+            _wasControlSampleInBand = false;
 
-            // Preserve the legacy single-Control projection so older callers and the current UI
-            // can still read one representative state. Current persistence restores every state
-            // separately through RestoreControlState after this common attempt restore.
-            _controlHoldMilestoneId = controlHoldMilestoneId;
-            _qualifiedControlMilestoneId = qualifiedControlMilestoneId;
-            _controlHoldSeconds = controlHoldSeconds;
-            _wasControlSampleInBand = wasControlSampleInBand;
-
-            // Per-line completion flags are no longer gameplay gates under independent evaluation.
-            _completedDirectedPowerThisAttempt = completedDirectedPowerThisAttempt;
-            _completedMassThisAttempt = completedMassThisAttempt;
-            _completedControlThisAttempt = completedControlThisAttempt;
-            _completedBiomeThisAttempt = completedBiomeThisAttempt;
+            // Per-line completion markers are presentation-only attempt state and are not persisted.
+            _completedDirectedPowerThisAttempt = false;
+            _completedMassThisAttempt = false;
+            _completedControlThisAttempt = false;
+            _completedBiomeThisAttempt = false;
         }
 
         public void ClearAttempt()

@@ -22,7 +22,7 @@ namespace TheRaceForSpace.Objectives
     }
 
     /// <summary>
-    /// Broad objective family used to distinguish orbital achievements from the four starter lines.
+    /// Broad objective family used to distinguish orbital objectives from the four pre-orbit lines.
     /// </summary>
     public enum ObjectiveType
     {
@@ -165,7 +165,7 @@ namespace TheRaceForSpace.Objectives
 
     /// <summary>
     /// Immutable definition of one race objective. Gameplay state remains owned by space agencies;
-    /// this type describes the objective, starter-contract balance metadata, and campaign unlock rule.
+    /// this type describes the objective, pre-orbit contract balance metadata, and campaign unlock rule.
     /// </summary>
     public sealed class ObjectiveDefinition
     {
@@ -202,8 +202,8 @@ namespace TheRaceForSpace.Objectives
             string objectiveDescription,
             UnlockRuleDefinition unlockRule,
             ObjectiveType objectiveType,
-            PreOrbitContractLine starterLine,
-            int starterLevel,
+            PreOrbitContractLine preOrbitLine,
+            int preOrbitLevel,
             double baseRewardFunds,
             double rivalProgressCostFunds)
             : this(
@@ -215,8 +215,8 @@ namespace TheRaceForSpace.Objectives
                 objectiveDescription,
                 unlockRule,
                 objectiveType,
-                starterLine,
-                starterLevel,
+                preOrbitLine,
+                preOrbitLevel,
                 baseRewardFunds,
                 rivalProgressCostFunds,
                 PreOrbitContractCriteria.None)
@@ -232,11 +232,11 @@ namespace TheRaceForSpace.Objectives
             string objectiveDescription,
             UnlockRuleDefinition unlockRule,
             ObjectiveType objectiveType,
-            PreOrbitContractLine starterLine,
-            int starterLevel,
+            PreOrbitContractLine preOrbitLine,
+            int preOrbitLevel,
             double baseRewardFunds,
             double rivalProgressCostFunds,
-            PreOrbitContractCriteria starterCriteria)
+            PreOrbitContractCriteria preOrbitCriteria)
         {
             Id = id;
             Name = name;
@@ -245,12 +245,12 @@ namespace TheRaceForSpace.Objectives
             CrewRequirement = crewRequirement;
             UnlockRule = unlockRule;
             ObjectiveType = objectiveType;
-            PreOrbitLine = starterLine;
-            PreOrbitLevel = Math.Max(0, starterLevel);
+            PreOrbitLine = preOrbitLine;
+            PreOrbitLevel = Math.Max(0, preOrbitLevel);
             BaseRewardFunds = Math.Max(0.0, baseRewardFunds);
             RivalProgressCostFunds = Math.Max(0.0, rivalProgressCostFunds);
 
-            PreOrbitContractCriteria criteria = starterCriteria ?? PreOrbitContractCriteria.None;
+            PreOrbitContractCriteria criteria = preOrbitCriteria ?? PreOrbitContractCriteria.None;
             RequiredSpeedMetersPerSecond = criteria.RequiredSpeedMetersPerSecond;
             RequiredMassTonnes = criteria.RequiredMassTonnes;
             RequiredDistanceMeters = criteria.RequiredDistanceMeters;

@@ -125,7 +125,7 @@ namespace TheRaceForSpace.KspIntegration
         }
 
         /// <summary>
-        /// Captures only the currently controlled loaded vessel for the frequent starter-contract
+        /// Captures only the currently controlled loaded vessel for the frequent flight-contract
         /// path. Condition-specific KSP calls are made only when the cached active-contract plan
         /// requests them; identity, situation, launch data, and coordinates remain cheap common context.
         /// </summary>

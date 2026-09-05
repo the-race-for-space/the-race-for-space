@@ -19,7 +19,7 @@ namespace TheRaceForSpace.Tracking
         public static void RefreshOrbitalProgress(
             AgencyState playerAgency,
             IList<AgencyState> agencies,
-            IList<ObjectiveDefinition> milestoneDefinitions,
+            IList<ObjectiveDefinition> objectiveDefinitions,
             IList<OrbitingVesselSnapshot> vesselSnapshots,
             double currentUniversalTime)
         {
@@ -77,35 +77,35 @@ namespace TheRaceForSpace.Tracking
                 playerAgency.SetSatelliteCount(bodyCount.Key, bodyCount.Value);
             }
 
-            if (milestoneDefinitions != null)
+            if (objectiveDefinitions != null)
             {
-                EvaluateMilestones(
+                EvaluateObjectives(
                     playerAgency,
                     agencies,
-                    milestoneDefinitions,
+                    objectiveDefinitions,
                     observations,
                     currentUniversalTime);
             }
         }
 
-        private static void EvaluateMilestones(
+        private static void EvaluateObjectives(
             AgencyState playerAgency,
             IList<AgencyState> agencies,
-            IList<ObjectiveDefinition> milestoneDefinitions,
+            IList<ObjectiveDefinition> objectiveDefinitions,
             IList<OrbitalObjectiveObservation> observations,
             double currentUniversalTime)
         {
             // Repeat only when this refresh records a new objectiveCompletion. The player state in the
             // shared agency collection changes immediately, so a newly satisfied unlock rule can
             // enable another objective from the same vessel snapshot without depending on ordering.
-            bool recordedAchievement;
+            bool recordedObjective;
             do
             {
-                recordedAchievement = false;
+                recordedObjective = false;
 
-                for (int milestoneIndex = 0; milestoneIndex < milestoneDefinitions.Count; milestoneIndex++)
+                for (int objectiveIndex = 0; objectiveIndex < objectiveDefinitions.Count; objectiveIndex++)
                 {
-                    ObjectiveDefinition objective = milestoneDefinitions[milestoneIndex];
+                    ObjectiveDefinition objective = objectiveDefinitions[objectiveIndex];
                     if (objective == null
                         || playerAgency.HasCompletedObjective(objective.Id)
                         || !UnlockRuleEvaluator.IsSatisfied(
@@ -125,14 +125,14 @@ namespace TheRaceForSpace.Tracking
 
                         if (playerAgency.RecordObjectiveCompletion(objective.Id, currentUniversalTime))
                         {
-                            recordedAchievement = true;
+                            recordedObjective = true;
                         }
 
                         break;
                     }
                 }
             }
-            while (recordedAchievement);
+            while (recordedObjective);
         }
     }
 }

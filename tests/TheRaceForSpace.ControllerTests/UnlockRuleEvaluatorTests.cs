@@ -16,7 +16,7 @@ namespace TheRaceForSpace.ControllerTests
 
         public static void ConditionsInOnePathRequireAll()
         {
-            IList<AgencyState> agencies = CreatePrograms();
+            IList<AgencyState> agencies = CreateAgencies();
             agencies[0].RecordObjectiveCompletion("probe-orbit", 100.0);
 
             var rule = new UnlockRuleDefinition(
@@ -36,7 +36,7 @@ namespace TheRaceForSpace.ControllerTests
 
         public static void AlternativePathCanUnlock()
         {
-            IList<AgencyState> agencies = CreatePrograms();
+            IList<AgencyState> agencies = CreateAgencies();
             agencies[1].RecordObjectiveCompletion("rival-breakthrough", 150.0);
 
             var rule = new UnlockRuleDefinition(
@@ -57,12 +57,12 @@ namespace TheRaceForSpace.ControllerTests
 
         public static void AgencyScopesAreRespected()
         {
-            IList<AgencyState> agencies = CreatePrograms();
+            IList<AgencyState> agencies = CreateAgencies();
             agencies[1].RecordObjectiveCompletion("scoped-objectiveCompletion", 100.0);
 
-            var playerRule = RuleForAchievement("scoped-objectiveCompletion", UnlockAgencyScope.Player, 1);
-            var rivalRule = RuleForAchievement("scoped-objectiveCompletion", UnlockAgencyScope.AnyRival, 1);
-            var anyAgencyRule = RuleForAchievement("scoped-objectiveCompletion", UnlockAgencyScope.AnyAgency, 1);
+            var playerRule = RuleForObjectiveCompletion("scoped-objectiveCompletion", UnlockAgencyScope.Player, 1);
+            var rivalRule = RuleForObjectiveCompletion("scoped-objectiveCompletion", UnlockAgencyScope.AnyRival, 1);
+            var anyAgencyRule = RuleForObjectiveCompletion("scoped-objectiveCompletion", UnlockAgencyScope.AnyAgency, 1);
 
             Require(
                 !UnlockRuleEvaluator.IsSatisfied(playerRule, agencies, 100.0),
@@ -75,7 +75,7 @@ namespace TheRaceForSpace.ControllerTests
                 "Either player or rival agencies should satisfy an AnyAgency condition.");
 
             agencies[0].RecordObjectiveCompletion("player-only", 100.0);
-            var playerOnlyRivalRule = RuleForAchievement("player-only", UnlockAgencyScope.AnyRival, 1);
+            var playerOnlyRivalRule = RuleForObjectiveCompletion("player-only", UnlockAgencyScope.AnyRival, 1);
             Require(
                 !UnlockRuleEvaluator.IsSatisfied(playerOnlyRivalRule, agencies, 100.0),
                 "A player objectiveCompletion must not satisfy an AnyRival condition.");
@@ -83,10 +83,10 @@ namespace TheRaceForSpace.ControllerTests
 
         public static void RequiredAgencyCountMustBeMet()
         {
-            IList<AgencyState> agencies = CreatePrograms();
+            IList<AgencyState> agencies = CreateAgencies();
             agencies[0].RecordObjectiveCompletion("common-orbit", 100.0);
 
-            UnlockRuleDefinition rule = RuleForAchievement(
+            UnlockRuleDefinition rule = RuleForObjectiveCompletion(
                 "common-orbit",
                 UnlockAgencyScope.AnyAgency,
                 2);
@@ -101,11 +101,11 @@ namespace TheRaceForSpace.ControllerTests
                 "The rule should unlock once the required number of agencies has achieved the objective.");
         }
 
-        public static void AchievementTimestampUsesEvaluationTime()
+        public static void ObjectiveCompletionTimestampUsesEvaluationTime()
         {
-            IList<AgencyState> agencies = CreatePrograms();
+            IList<AgencyState> agencies = CreateAgencies();
             agencies[1].RecordObjectiveCompletion("future-objectiveCompletion", 250.0);
-            UnlockRuleDefinition rule = RuleForAchievement(
+            UnlockRuleDefinition rule = RuleForObjectiveCompletion(
                 "future-objectiveCompletion",
                 UnlockAgencyScope.AnyAgency,
                 1);
@@ -134,7 +134,7 @@ namespace TheRaceForSpace.ControllerTests
 
         public static void SatelliteCountConditionUsesCollectiveProgramState()
         {
-            IList<AgencyState> agencies = CreatePrograms();
+            IList<AgencyState> agencies = CreateAgencies();
             agencies[0].SetSatelliteCount("Kerbin", 2);
             agencies[1].SetSatelliteCount("Kerbin", 3);
 
@@ -167,7 +167,7 @@ namespace TheRaceForSpace.ControllerTests
 
         public static void ConditionProgressMatchesRuleEvaluation()
         {
-            IList<AgencyState> agencies = CreatePrograms();
+            IList<AgencyState> agencies = CreateAgencies();
             agencies[1].RecordObjectiveCompletion("shared-progress", 100.0);
             agencies[2].RecordObjectiveCompletion("shared-progress", 200.0);
 
@@ -179,7 +179,7 @@ namespace TheRaceForSpace.ControllerTests
 
             Require(
                 UnlockRuleEvaluator.GetSatisfiedProgramCount(condition, agencies, 199.0) == 1,
-                "Progress should count only rival achievements reached by the evaluation time.");
+                "Progress should count only rival objectives reached by the evaluation time.");
             Require(
                 !UnlockRuleEvaluator.IsConditionSatisfied(condition, agencies, 199.0),
                 "One of two rivals should leave the condition incomplete.");
@@ -200,7 +200,7 @@ namespace TheRaceForSpace.ControllerTests
 
         public static void ProgramConditionProgressUsesScopeAndTime()
         {
-            IList<AgencyState> agencies = CreatePrograms();
+            IList<AgencyState> agencies = CreateAgencies();
             agencies[0].RecordObjectiveCompletion("rival-only-progress", 50.0);
             agencies[1].RecordObjectiveCompletion("rival-only-progress", 100.0);
             UnlockConditionDefinition condition = UnlockConditionDefinition.ObjectiveCompletion(
@@ -208,19 +208,19 @@ namespace TheRaceForSpace.ControllerTests
                 UnlockAgencyScope.AnyRival);
 
             Require(
-                !UnlockRuleEvaluator.DoesProgramSatisfyAchievementCondition(
+                !UnlockRuleEvaluator.DoesAgencySatisfyObjectiveCompletionCondition(
                     agencies[0],
                     condition,
                     100.0),
                 "The player should not be attributed to an AnyRival condition.");
             Require(
-                !UnlockRuleEvaluator.DoesProgramSatisfyAchievementCondition(
+                !UnlockRuleEvaluator.DoesAgencySatisfyObjectiveCompletionCondition(
                     agencies[1],
                     condition,
                     99.0),
                 "A rival objectiveCompletion should not be attributed before its recorded time.");
             Require(
-                UnlockRuleEvaluator.DoesProgramSatisfyAchievementCondition(
+                UnlockRuleEvaluator.DoesAgencySatisfyObjectiveCompletionCondition(
                     agencies[1],
                     condition,
                     100.0),
@@ -231,18 +231,18 @@ namespace TheRaceForSpace.ControllerTests
         {
             var emptyRule = new UnlockRuleDefinition();
             var emptyPathRule = new UnlockRuleDefinition(new UnlockPathDefinition());
-            UnlockRuleDefinition unknownAchievementRule = RuleForAchievement(
+            UnlockRuleDefinition unknownObjectiveRule = RuleForObjectiveCompletion(
                 "unknown-objective",
                 UnlockAgencyScope.AnyAgency,
                 1);
-            UnlockRuleDefinition knownAchievementRule = RuleForAchievement(
+            UnlockRuleDefinition knownObjectiveRule = RuleForObjectiveCompletion(
                 "probe-orbit",
                 UnlockAgencyScope.AnyAgency,
                 1);
             var satelliteRule = new UnlockRuleDefinition(
                 new UnlockPathDefinition(
                     UnlockConditionDefinition.SatelliteCount("Kerbin", 1)));
-            IList<AgencyState> agencies = CreatePrograms();
+            IList<AgencyState> agencies = CreateAgencies();
             agencies[0].RecordObjectiveCompletion("probe-orbit", 100.0);
             agencies[0].SetSatelliteCount("Kerbin", 1);
 
@@ -253,13 +253,13 @@ namespace TheRaceForSpace.ControllerTests
                 !UnlockRuleEvaluator.IsSatisfied(emptyPathRule, agencies, 1000.0),
                 "An empty path should not accidentally unlock a target.");
             Require(
-                !UnlockRuleEvaluator.IsSatisfied(unknownAchievementRule, agencies, 1000.0),
+                !UnlockRuleEvaluator.IsSatisfied(unknownObjectiveRule, agencies, 1000.0),
                 "An objectiveCompletion ID absent from campaign state should fail safely.");
             Require(
-                !UnlockRuleEvaluator.IsSatisfied(knownAchievementRule, agencies, double.NaN),
+                !UnlockRuleEvaluator.IsSatisfied(knownObjectiveRule, agencies, double.NaN),
                 "NaN evaluation time should fail closed.");
             Require(
-                !UnlockRuleEvaluator.IsSatisfied(knownAchievementRule, agencies, double.PositiveInfinity),
+                !UnlockRuleEvaluator.IsSatisfied(knownObjectiveRule, agencies, double.PositiveInfinity),
                 "Infinite evaluation time should fail closed.");
             Require(
                 !UnlockRuleEvaluator.IsSatisfied(satelliteRule, agencies, -1.0),
@@ -304,7 +304,7 @@ namespace TheRaceForSpace.ControllerTests
             });
         }
 
-        private static UnlockRuleDefinition RuleForAchievement(
+        private static UnlockRuleDefinition RuleForObjectiveCompletion(
             string objectiveId,
             UnlockAgencyScope agencyScope,
             int requiredAgencyCount)
@@ -317,7 +317,7 @@ namespace TheRaceForSpace.ControllerTests
                         requiredAgencyCount)));
         }
 
-        private static IList<AgencyState> CreatePrograms()
+        private static IList<AgencyState> CreateAgencies()
         {
             return new List<AgencyState>
             {

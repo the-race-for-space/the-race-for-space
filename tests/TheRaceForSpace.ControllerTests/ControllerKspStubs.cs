@@ -119,14 +119,14 @@ namespace TheRaceForSpace.KspIntegration
         public static bool TryRestoreRaceProgress(
             AgencyState playerAgency,
             IList<SatelliteNetworkFundingContract> satelliteNetworkFundingContracts,
-            IList<ObjectiveFundingContract> achievementProgrammes,
+            IList<ObjectiveFundingContract> objectiveFundingContracts,
             out double nextFundingUniversalTime)
         {
             nextFundingUniversalTime = RestoredNextFundingUniversalTime;
             return IsReady
                 && playerAgency != null
                 && satelliteNetworkFundingContracts != null
-                && achievementProgrammes != null;
+                && objectiveFundingContracts != null;
         }
 
         public static void CaptureRivalAgencyState(IList<AgencyState> rivalAgencies)
@@ -140,13 +140,13 @@ namespace TheRaceForSpace.KspIntegration
         public static void CaptureRaceProgress(
             AgencyState playerAgency,
             IList<SatelliteNetworkFundingContract> satelliteNetworkFundingContracts,
-            IList<ObjectiveFundingContract> achievementProgrammes,
+            IList<ObjectiveFundingContract> objectiveFundingContracts,
             double nextFundingUniversalTime)
         {
             if (IsReady
                 && playerAgency != null
                 && satelliteNetworkFundingContracts != null
-                && achievementProgrammes != null)
+                && objectiveFundingContracts != null)
             {
                 RaceProgressCaptureCalls++;
                 LastCapturedNextFundingUniversalTime = nextFundingUniversalTime;

@@ -3,7 +3,7 @@ using TheRaceForSpace.Objectives;
 
 namespace TheRaceForSpace.Tests.Objectives
 {
-    internal static class MilestoneEvaluationTests
+    internal static class ObjectiveEvaluationTests
     {
         public static void ProbeObservationMatchesDefinition()
         {

@@ -520,8 +520,8 @@ namespace TheRaceForSpace.Objectives
                     CreateInterplanetaryCrewedUnlockRule())
             }.AsReadOnly();
 
-        private static readonly Dictionary<string, ObjectiveDefinition> MilestonesById =
-            CreateMilestoneIndex();
+        private static readonly Dictionary<string, ObjectiveDefinition> ObjectivesById =
+            CreateObjectiveIndex();
 
         /// <summary>
         /// Orbital objectives consumed by the existing vessel-orbit tracker.
@@ -550,42 +550,42 @@ namespace TheRaceForSpace.Objectives
             }
 
             ObjectiveDefinition objective;
-            return MilestonesById.TryGetValue(objectiveId, out objective)
+            return ObjectivesById.TryGetValue(objectiveId, out objective)
                 ? objective
                 : null;
         }
 
-        private static Dictionary<string, ObjectiveDefinition> CreateMilestoneIndex()
+        private static Dictionary<string, ObjectiveDefinition> CreateObjectiveIndex()
         {
-            var milestonesById = new Dictionary<string, ObjectiveDefinition>(
+            var objectivesById = new Dictionary<string, ObjectiveDefinition>(
                 StringComparer.OrdinalIgnoreCase);
 
-            for (int milestoneIndex = 0;
-                milestoneIndex < PreOrbitDefinitions.Count;
-                milestoneIndex++)
+            for (int objectiveIndex = 0;
+                objectiveIndex < PreOrbitDefinitions.Count;
+                objectiveIndex++)
             {
-                ObjectiveDefinition objective = PreOrbitDefinitions[milestoneIndex];
-                milestonesById.Add(objective.Id, objective);
+                ObjectiveDefinition objective = PreOrbitDefinitions[objectiveIndex];
+                objectivesById.Add(objective.Id, objective);
             }
 
-            for (int milestoneIndex = 0;
-                milestoneIndex < Definitions.Count;
-                milestoneIndex++)
+            for (int objectiveIndex = 0;
+                objectiveIndex < Definitions.Count;
+                objectiveIndex++)
             {
-                ObjectiveDefinition objective = Definitions[milestoneIndex];
-                milestonesById.Add(objective.Id, objective);
+                ObjectiveDefinition objective = Definitions[objectiveIndex];
+                objectivesById.Add(objective.Id, objective);
             }
 
-            return milestonesById;
+            return objectivesById;
         }
 
         private static ObjectiveDefinition CreatePreOrbitObjective(
             string id,
             string name,
             ObjectiveType objectiveType,
-            PreOrbitContractLine starterLine,
-            int starterLevel,
-            PreOrbitContractCriteria starterCriteria,
+            PreOrbitContractLine preOrbitLine,
+            int preOrbitLevel,
+            PreOrbitContractCriteria preOrbitCriteria,
             string objectiveDescription,
             string previousObjectiveId,
             ObjectiveCrewRequirement crewRequirement = ObjectiveCrewRequirement.UncrewedProbe)
@@ -603,11 +603,11 @@ namespace TheRaceForSpace.Objectives
                 objectiveDescription,
                 unlockRule,
                 objectiveType,
-                starterLine,
-                starterLevel,
-                starterLevel * PreOrbitRewardFundsPerLevel,
-                (starterLevel + 1) * PreOrbitRivalProgressCostFundsPerLevel,
-                starterCriteria);
+                preOrbitLine,
+                preOrbitLevel,
+                preOrbitLevel * PreOrbitRewardFundsPerLevel,
+                (preOrbitLevel + 1) * PreOrbitRivalProgressCostFundsPerLevel,
+                preOrbitCriteria);
         }
 
         private static UnlockRuleDefinition CreateProbeOrbitUnlockRule()

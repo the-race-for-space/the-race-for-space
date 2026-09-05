@@ -21,29 +21,29 @@ namespace TheRaceForSpace.Tests
             Run("Satellite funding before saturation", SatelliteFundingBeforeSaturation);
             Run("Satellite funding after saturation", SatelliteFundingAfterSaturation);
             Run("Satellite funding stores unlock rule", SatelliteFundingStoresStructuredPrerequisite);
-            Run("ObjectiveCompletion payout declines and expires", AchievementPayoutDeclinesAndExpires);
-            Run("ObjectiveCompletion restore normalizes lifecycle", AchievementRestoreNormalizesLifecycle);
-            Run("ObjectiveCompletion funding stores unlock rule", AchievementFundingStoresStructuredPrerequisite);
+            Run("ObjectiveCompletion payout declines and expires", ObjectiveFundingPayoutDeclinesAndExpires);
+            Run("ObjectiveCompletion restore normalizes lifecycle", ObjectiveFundingRestoreNormalizesLifecycle);
+            Run("ObjectiveCompletion funding stores unlock rule", ObjectiveFundingStoresStructuredPrerequisite);
             Run("Prototype funding catalogue matches current campaign", FundingContractCatalogueTests.CatalogueMatchesCurrentPrototype);
             Run("Prototype funding catalogue creates fresh state", FundingContractCatalogueTests.CatalogueCreatesFreshCampaignState);
             Run("Prototype objective definitions match current campaign", PrototypeObjectiveDefinitionsMatchCurrentCampaign);
             Run("Prototype objective ids are unique", PrototypeObjectiveIdsAreUnique);
-            Run("Prototype objective lookup uses stable ids", PrototypeMilestoneLookupUsesStableIds);
-            Run("Objective probe observation matches definition", MilestoneEvaluationTests.ProbeObservationMatchesDefinition);
-            Run("Objective crewed observation matches definition", MilestoneEvaluationTests.CrewedObservationMatchesDefinition);
-            Run("Objective rejects wrong body or situation", MilestoneEvaluationTests.WrongBodyOrSituationDoesNotMatch);
-            Run("Objective arbitrary body uses same rule", MilestoneEvaluationTests.ArbitraryBodyDefinitionUsesSameRule);
-            Run("Tracking snapshots update counts and objectives", OrbitalVesselTrackerTests.NormalizedSnapshotsUpdateCountsAndMilestones);
+            Run("Prototype objective lookup uses stable ids", ObjectiveLookupUsesStableIds);
+            Run("Objective probe observation matches definition", ObjectiveEvaluationTests.ProbeObservationMatchesDefinition);
+            Run("Objective crewed observation matches definition", ObjectiveEvaluationTests.CrewedObservationMatchesDefinition);
+            Run("Objective rejects wrong body or situation", ObjectiveEvaluationTests.WrongBodyOrSituationDoesNotMatch);
+            Run("Objective arbitrary body uses same rule", ObjectiveEvaluationTests.ArbitraryBodyDefinitionUsesSameRule);
+            Run("Tracking snapshots update counts and objectives", OrbitalVesselTrackerTests.NormalizedSnapshotsUpdateCountsAndObjectives);
             Run("Tracking empty snapshots reset body counts", OrbitalVesselTrackerTests.EmptySnapshotsResetTrackedBodyCounts);
-            Run("Tracking crewed probe keeps satellite classification", OrbitalVesselTrackerTests.CrewedProbeCountsAsSatelliteButNotProbeMilestone);
+            Run("Tracking crewed probe keeps satellite classification", OrbitalVesselTrackerTests.CrewedProbeCountsAsSatelliteButNotProbeObjective);
             Run("Tracking flexible unlock uses race state and time", OrbitalVesselTrackerTests.FlexibleUnlockRuleUsesRaceStateAndTime);
             Run("PreOrbit flight contracts and persistence", FlightContractTrackerTests.RunAll);
             Run("Surface impact eligibility", SurfaceImpactEvaluatorTests.RunAll);
-            Run("Generic objectiveCompletion state starts empty", GenericAchievementStateStartsEmpty);
-            Run("Generic objectiveCompletion state records first timestamp", GenericAchievementStateRecordsFirstTimestamp);
-            Run("Generic objectiveCompletion state preserves first timestamp", GenericAchievementStatePreservesFirstTimestamp);
-            Run("Generic objectiveCompletion state accepts arbitrary ids", GenericAchievementStateAcceptsArbitraryIds);
-            Run("Generic objectiveCompletion state validates timestamps", GenericAchievementStateValidatesTimestamps);
+            Run("Generic objectiveCompletion state starts empty", GenericObjectiveCompletionStateStartsEmpty);
+            Run("Generic objectiveCompletion state records first timestamp", GenericObjectiveCompletionStateRecordsFirstTimestamp);
+            Run("Generic objectiveCompletion state preserves first timestamp", GenericObjectiveCompletionStatePreservesFirstTimestamp);
+            Run("Generic objectiveCompletion state accepts arbitrary ids", GenericObjectiveCompletionStateAcceptsArbitraryIds);
+            Run("Generic objectiveCompletion state validates timestamps", GenericObjectiveCompletionStateValidatesTimestamps);
             Run("Rival mission target ids map to display names", RivalMissionTargetIdsMapToDisplayNames);
             Run("Rival launch costs match target type", RivalLaunchCostsMatchTargetType);
             Run("Rival starter completion does not create satellite", RivalPreOrbitCompletionDoesNotCreateSatellite);
@@ -52,12 +52,12 @@ namespace TheRaceForSpace.Tests
             Run("Invalid rival target id is abandoned", InvalidRivalTargetIdIsAbandoned);
             Run("Rival selects the only offered target", RivalSelectsOnlyAvailableTarget);
             Run("Rival completion uses replay timestamp", RivalCompletionUsesReplayTimestamp);
-            Run("Rival collection selects offered objectiveCompletion", RivalSimulationCollectionTests.SelectsOnlyAvailableAchievementFromCollection);
-            Run("Rival collection excludes locked objectiveCompletion", RivalSimulationCollectionTests.LockedAchievementIsExcludedFromCollection);
-            Run("Rival satellite programme remains repeatable", RivalSimulationCollectionTests.SatelliteProgrammeRemainsRepeatable);
-            Run("Rival completes arbitrary satellite programme", RivalSimulationCollectionTests.CompletesArbitrarySatelliteProgramme);
-            Run("Rival collection cost uses programme body", RivalSimulationCollectionTests.CollectionCostUsesProgrammeBody);
-            Run("Rival objectiveCompletion completion uses objective definition", RivalSimulationCollectionTests.AchievementCompletionUsesObjectiveDefinition);
+            Run("Rival collection selects offered objectiveCompletion", RivalSimulationCollectionTests.SelectsOnlyAvailableObjectiveFromCollection);
+            Run("Rival collection excludes locked objectiveCompletion", RivalSimulationCollectionTests.LockedObjectiveIsExcludedFromCollection);
+            Run("Rival satellite contract remains repeatable", RivalSimulationCollectionTests.SatelliteNetworkContractRemainsRepeatable);
+            Run("Rival completes arbitrary satellite contract", RivalSimulationCollectionTests.CompletesArbitrarySatelliteNetworkContract);
+            Run("Rival collection cost uses contract body", RivalSimulationCollectionTests.CollectionCostUsesContractBody);
+            Run("Rival objectiveCompletion completion uses objective definition", RivalSimulationCollectionTests.ObjectiveCompletionUsesObjectiveDefinition);
             Run("Funding contracts persist arbitrary ids", CollectionPersistenceTests.FundingContractsRoundTripArbitraryIds);
             Run("Rival persistence handles arbitrary body and target", CollectionPersistenceTests.RivalRoundTripsArbitraryBodyAndTargetId);
             Run("Malformed persistence nodes are safe", CollectionPersistenceTests.MalformedCollectionNodesAreHandledSafely);
@@ -87,19 +87,19 @@ namespace TheRaceForSpace.Tests
 
         private static void SatelliteFundingBeforeSaturation()
         {
-            var programme = new SatelliteNetworkFundingContract("network", "Network", "Kerbin", 10, 200000.0);
-            AssertEqual(60000.0, programme.CalculateCurrentPayout(3, 7));
+            var contract = new SatelliteNetworkFundingContract("network", "Network", "Kerbin", 10, 200000.0);
+            AssertEqual(60000.0, contract.CalculateCurrentPayout(3, 7));
         }
 
         private static void SatelliteFundingAfterSaturation()
         {
-            var programme = new SatelliteNetworkFundingContract("network", "Network", "Kerbin", 10, 200000.0);
-            AssertEqual(50000.0, programme.CalculateCurrentPayout(3, 12));
+            var contract = new SatelliteNetworkFundingContract("network", "Network", "Kerbin", 10, 200000.0);
+            AssertEqual(50000.0, contract.CalculateCurrentPayout(3, 12));
         }
 
         private static void SatelliteFundingStoresStructuredPrerequisite()
         {
-            var programme = new SatelliteNetworkFundingContract(
+            var contract = new SatelliteNetworkFundingContract(
                 "mun-network",
                 "Mun Network",
                 "Mun",
@@ -109,11 +109,11 @@ namespace TheRaceForSpace.Tests
                 "Display-only unlock text",
                 UnlockRuleDefinition.AnyAgencyObjectiveCompletion(ObjectiveCatalogue.MunProbeOrbitId));
 
-            AssertAnyAgencyRule(programme.UnlockRule, ObjectiveCatalogue.MunProbeOrbitId);
-            AssertEqual("Display-only unlock text", programme.UnlockRequirement);
-            AssertTrue(!programme.IsAvailable, "Structured unlock rules should not change initial availability.");
+            AssertAnyAgencyRule(contract.UnlockRule, ObjectiveCatalogue.MunProbeOrbitId);
+            AssertEqual("Display-only unlock text", contract.UnlockRequirement);
+            AssertTrue(!contract.IsAvailable, "Structured unlock rules should not change initial availability.");
 
-            var startAvailableProgramme = new SatelliteNetworkFundingContract(
+            var startAvailableContract = new SatelliteNetworkFundingContract(
                 "start-network",
                 "Start Network",
                 "Kerbin",
@@ -121,41 +121,41 @@ namespace TheRaceForSpace.Tests
                 100000.0,
                 false,
                 "Display-only unlock text");
-            AssertEqual(null, startAvailableProgramme.UnlockRule);
+            AssertEqual(null, startAvailableContract.UnlockRule);
         }
 
-        private static void AchievementPayoutDeclinesAndExpires()
+        private static void ObjectiveFundingPayoutDeclinesAndExpires()
         {
-            var programme = new ObjectiveFundingContract("probe", "Probe", "Orbit", 100000.0);
-            programme.Start();
+            var contract = new ObjectiveFundingContract("probe", "Probe", "Orbit", 100000.0);
+            contract.Start();
 
-            AssertEqual(50000.0, programme.CalculateCurrentPayout(true, 2));
-            programme.AdvancePayout();
-            AssertEqual(90, programme.CurrentInterestPercent);
-            AssertEqual(45000.0, programme.CalculateCurrentPayout(true, 2));
+            AssertEqual(50000.0, contract.CalculateCurrentPayout(true, 2));
+            contract.AdvancePayout();
+            AssertEqual(90, contract.CurrentInterestPercent);
+            AssertEqual(45000.0, contract.CalculateCurrentPayout(true, 2));
 
             for (int payment = 1; payment < 10; payment++)
             {
-                programme.AdvancePayout();
+                contract.AdvancePayout();
             }
 
-            AssertTrue(programme.IsExpired, "Contract should expire after ten payments.");
-            AssertEqual(0.0, programme.CalculateCurrentPayout(true, 1));
+            AssertTrue(contract.IsExpired, "Contract should expire after ten payments.");
+            AssertEqual(0.0, contract.CalculateCurrentPayout(true, 1));
         }
 
-        private static void AchievementRestoreNormalizesLifecycle()
+        private static void ObjectiveFundingRestoreNormalizesLifecycle()
         {
-            var programme = new ObjectiveFundingContract("probe", "Probe", "Orbit", 100000.0);
-            programme.RestoreState(false, 4);
+            var contract = new ObjectiveFundingContract("probe", "Probe", "Orbit", 100000.0);
+            contract.RestoreState(false, 4);
 
-            AssertTrue(programme.HasStarted, "Processed payments imply a started contract.");
-            AssertEqual(4, programme.PaymentsProcessed);
-            AssertEqual(60, programme.CurrentInterestPercent);
+            AssertTrue(contract.HasStarted, "Processed payments imply a started contract.");
+            AssertEqual(4, contract.PaymentsProcessed);
+            AssertEqual(60, contract.CurrentInterestPercent);
         }
 
-        private static void AchievementFundingStoresStructuredPrerequisite()
+        private static void ObjectiveFundingStoresStructuredPrerequisite()
         {
-            var programme = new ObjectiveFundingContract(
+            var contract = new ObjectiveFundingContract(
                 ObjectiveCatalogue.MunProbeOrbitId,
                 "Mun Probe Orbit",
                 "Orbit Mun",
@@ -163,16 +163,16 @@ namespace TheRaceForSpace.Tests
                 "Display-only unlock text",
                 UnlockRuleDefinition.AnyAgencyObjectiveCompletion(ObjectiveCatalogue.ProbeOrbitId));
 
-            AssertAnyAgencyRule(programme.UnlockRule, ObjectiveCatalogue.ProbeOrbitId);
-            AssertEqual("Display-only unlock text", programme.UnlockRequirement);
+            AssertAnyAgencyRule(contract.UnlockRule, ObjectiveCatalogue.ProbeOrbitId);
+            AssertEqual("Display-only unlock text", contract.UnlockRequirement);
 
-            var startAvailableProgramme = new ObjectiveFundingContract(
+            var startAvailableContract = new ObjectiveFundingContract(
                 "start-objectiveCompletion",
                 "Start ObjectiveCompletion",
                 "Objective",
                 100000.0,
                 "Display-only unlock text");
-            AssertEqual(null, startAvailableProgramme.UnlockRule);
+            AssertEqual(null, startAvailableContract.UnlockRule);
         }
 
         private static void PrototypeObjectiveDefinitionsMatchCurrentCampaign()
@@ -180,7 +180,7 @@ namespace TheRaceForSpace.Tests
             AssertEqual(32, ObjectiveCatalogue.All.Count);
             AssertEqual(20, ObjectiveCatalogue.PreOrbitContracts.Count);
 
-            AssertMilestone(
+            AssertObjective(
                 ObjectiveCatalogue.All[0],
                 ObjectiveCatalogue.ProbeOrbitId,
                 "Probe Orbit",
@@ -190,28 +190,28 @@ namespace TheRaceForSpace.Tests
                 ObjectiveCatalogue.Mass5Id,
                 ObjectiveCatalogue.Control5Id,
                 ObjectiveCatalogue.Biome5Id);
-            AssertMilestone(
+            AssertObjective(
                 ObjectiveCatalogue.All[1],
                 ObjectiveCatalogue.CrewedOrbitId,
                 "Crewed Orbit",
                 "Kerbin",
                 ObjectiveCrewRequirement.Crewed,
                 ObjectiveCatalogue.ProbeOrbitId);
-            AssertMilestone(
+            AssertObjective(
                 ObjectiveCatalogue.All[2],
                 ObjectiveCatalogue.MunProbeOrbitId,
                 "Mun Probe Orbit",
                 "Mun",
                 ObjectiveCrewRequirement.UncrewedProbe,
                 ObjectiveCatalogue.ProbeOrbitId);
-            AssertMilestone(
+            AssertObjective(
                 ObjectiveCatalogue.All[3],
                 ObjectiveCatalogue.MinmusProbeOrbitId,
                 "Minmus Probe Orbit",
                 "Minmus",
                 ObjectiveCrewRequirement.UncrewedProbe,
                 ObjectiveCatalogue.ProbeOrbitId);
-            AssertMilestone(
+            AssertObjective(
                 ObjectiveCatalogue.All[4],
                 ObjectiveCatalogue.DunaProbeOrbitId,
                 "Duna Probe Orbit",
@@ -219,21 +219,21 @@ namespace TheRaceForSpace.Tests
                 ObjectiveCrewRequirement.UncrewedProbe,
                 ObjectiveCatalogue.MunProbeOrbitId,
                 ObjectiveCatalogue.MinmusProbeOrbitId);
-            AssertMilestone(
+            AssertObjective(
                 ObjectiveCatalogue.All[5],
                 ObjectiveCatalogue.MunCrewedOrbitId,
                 "Mun Crewed Orbit",
                 "Mun",
                 ObjectiveCrewRequirement.Crewed,
                 ObjectiveCatalogue.CrewedOrbitId);
-            AssertMilestone(
+            AssertObjective(
                 ObjectiveCatalogue.All[6],
                 ObjectiveCatalogue.MinmusCrewedOrbitId,
                 "Minmus Crewed Orbit",
                 "Minmus",
                 ObjectiveCrewRequirement.Crewed,
                 ObjectiveCatalogue.CrewedOrbitId);
-            AssertMilestone(
+            AssertObjective(
                 ObjectiveCatalogue.All[7],
                 ObjectiveCatalogue.DunaCrewedOrbitId,
                 "Duna Crewed Orbit",
@@ -246,56 +246,56 @@ namespace TheRaceForSpace.Tests
         private static void PrototypeObjectiveIdsAreUnique()
         {
             var objectiveIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            for (int milestoneIndex = 0; milestoneIndex < ObjectiveCatalogue.All.Count; milestoneIndex++)
+            for (int objectiveIndex = 0; objectiveIndex < ObjectiveCatalogue.All.Count; objectiveIndex++)
             {
-                ObjectiveDefinition objective = ObjectiveCatalogue.All[milestoneIndex];
+                ObjectiveDefinition objective = ObjectiveCatalogue.All[objectiveIndex];
                 AssertTrue(
                     objectiveIds.Add(objective.Id),
                     "Duplicate objective id found: " + objective.Id);
             }
 
-            for (int milestoneIndex = 0; milestoneIndex < ObjectiveCatalogue.PreOrbitContracts.Count; milestoneIndex++)
+            for (int objectiveIndex = 0; objectiveIndex < ObjectiveCatalogue.PreOrbitContracts.Count; objectiveIndex++)
             {
-                ObjectiveDefinition objective = ObjectiveCatalogue.PreOrbitContracts[milestoneIndex];
+                ObjectiveDefinition objective = ObjectiveCatalogue.PreOrbitContracts[objectiveIndex];
                 AssertTrue(
                     objectiveIds.Add(objective.Id),
                     "Duplicate pre-orbit objective id found: " + objective.Id);
             }
         }
 
-        private static void PrototypeMilestoneLookupUsesStableIds()
+        private static void ObjectiveLookupUsesStableIds()
         {
             ObjectiveDefinition objective = ObjectiveCatalogue.FindById("MUN-PROBE-ORBIT");
-            ObjectiveDefinition dunaMilestone = ObjectiveCatalogue.FindById("DUNA-PROBE-ORBIT");
-            ObjectiveDefinition starterMilestone = ObjectiveCatalogue.FindById("DIRECTED-POWER-1");
+            ObjectiveDefinition dunaObjective = ObjectiveCatalogue.FindById("DUNA-PROBE-ORBIT");
+            ObjectiveDefinition preOrbitObjective = ObjectiveCatalogue.FindById("DIRECTED-POWER-1");
 
             AssertTrue(objective != null, "Known objective IDs should resolve case-insensitively.");
             AssertEqual(ObjectiveCatalogue.MunProbeOrbitId, objective.Id);
             AssertAnyAgencyRule(objective.UnlockRule, ObjectiveCatalogue.ProbeOrbitId);
-            AssertTrue(dunaMilestone != null, "Duna objective should resolve through the shared catalogue.");
-            AssertEqual("Duna", dunaMilestone.CelestialBodyName);
+            AssertTrue(dunaObjective != null, "Duna objective should resolve through the shared catalogue.");
+            AssertEqual("Duna", dunaObjective.CelestialBodyName);
             AssertAnyAgencyRule(
-                dunaMilestone.UnlockRule,
+                dunaObjective.UnlockRule,
                 ObjectiveCatalogue.MunProbeOrbitId,
                 ObjectiveCatalogue.MinmusProbeOrbitId);
-            AssertTrue(starterMilestone != null, "PreOrbit objective IDs should share the stable lookup path.");
-            AssertEqual(PreOrbitContractLine.DirectedPower, starterMilestone.PreOrbitLine);
+            AssertTrue(preOrbitObjective != null, "PreOrbit objective IDs should share the stable lookup path.");
+            AssertEqual(PreOrbitContractLine.DirectedPower, preOrbitObjective.PreOrbitLine);
             AssertEqual(null, ObjectiveCatalogue.FindById("not-a-objective"));
         }
 
-        private static void GenericAchievementStateStartsEmpty()
+        private static void GenericObjectiveCompletionStateStartsEmpty()
         {
             var agency = new AgencyState("Program", false);
 
             AssertTrue(
                 !agency.HasCompletedObjective(ObjectiveCatalogue.ProbeOrbitId),
-                "A new agency should not have recorded achievements.");
+                "A new agency should not have recorded objectives.");
             AssertEqual(-1.0, agency.GetObjectiveCompletionTime(ObjectiveCatalogue.ProbeOrbitId));
             AssertTrue(!agency.HasCompletedObjective("not-defined"), "Unknown objective IDs should not appear achieved.");
             AssertEqual(-1.0, agency.GetObjectiveCompletionTime("not-defined"));
         }
 
-        private static void GenericAchievementStateRecordsFirstTimestamp()
+        private static void GenericObjectiveCompletionStateRecordsFirstTimestamp()
         {
             var agency = new AgencyState("Program", false);
 
@@ -308,7 +308,7 @@ namespace TheRaceForSpace.Tests
             AssertEqual(1234.0, agency.GetObjectiveCompletionTime(ObjectiveCatalogue.ProbeOrbitId));
         }
 
-        private static void GenericAchievementStatePreservesFirstTimestamp()
+        private static void GenericObjectiveCompletionStatePreservesFirstTimestamp()
         {
             var agency = new AgencyState("Program", false);
             agency.RecordObjectiveCompletion(ObjectiveCatalogue.ProbeOrbitId, 1234.0);
@@ -319,7 +319,7 @@ namespace TheRaceForSpace.Tests
             AssertEqual(1234.0, agency.GetObjectiveCompletionTime(ObjectiveCatalogue.ProbeOrbitId));
         }
 
-        private static void GenericAchievementStateAcceptsArbitraryIds()
+        private static void GenericObjectiveCompletionStateAcceptsArbitraryIds()
         {
             var agency = new AgencyState("Program", false);
 
@@ -330,7 +330,7 @@ namespace TheRaceForSpace.Tests
             AssertEqual(4321.0, agency.GetObjectiveCompletionTime("future-duna-probe-orbit"));
         }
 
-        private static void GenericAchievementStateValidatesTimestamps()
+        private static void GenericObjectiveCompletionStateValidatesTimestamps()
         {
             var agency = new AgencyState("Program", false);
 
@@ -346,77 +346,77 @@ namespace TheRaceForSpace.Tests
 
         private static void RivalMissionTargetIdsMapToDisplayNames()
         {
-            IList<ObjectiveFundingContract> achievementProgrammes =
-                FundingContractCatalogue.CreateAchievementProgrammes();
+            IList<ObjectiveFundingContract> objectiveFundingContracts =
+                FundingContractCatalogue.CreateObjectiveFundingContracts();
             IList<SatelliteNetworkFundingContract> satelliteNetworkFundingContracts =
-                FundingContractCatalogue.CreateSatelliteProgrammes();
+                FundingContractCatalogue.CreateSatelliteNetworkFundingContracts();
 
             AssertEqual(
                 "Probe Orbit",
                 RivalSimulation.GetMissionTargetDisplayName(
                     ObjectiveCatalogue.ProbeOrbitId,
-                    achievementProgrammes,
+                    objectiveFundingContracts,
                     satelliteNetworkFundingContracts));
             AssertEqual(
                 "Mun",
                 RivalSimulation.GetMissionTargetDisplayName(
                     FundingContractCatalogue.MunNetworkId,
-                    achievementProgrammes,
+                    objectiveFundingContracts,
                     satelliteNetworkFundingContracts));
             AssertEqual(
                 null,
                 RivalSimulation.GetMissionTargetDisplayName(
                     "not-a-target",
-                    achievementProgrammes,
+                    objectiveFundingContracts,
                     satelliteNetworkFundingContracts));
         }
 
         private static void RivalLaunchCostsMatchTargetType()
         {
             var rival = new AgencyState("Rival", false);
-            IList<ObjectiveFundingContract> achievementProgrammes =
-                FundingContractCatalogue.CreateAchievementProgrammes();
+            IList<ObjectiveFundingContract> objectiveFundingContracts =
+                FundingContractCatalogue.CreateObjectiveFundingContracts();
             IList<SatelliteNetworkFundingContract> satelliteNetworkFundingContracts =
-                FundingContractCatalogue.CreateSatelliteProgrammes();
+                FundingContractCatalogue.CreateSatelliteNetworkFundingContracts();
 
             rival.NextMissionTargetId = ObjectiveCatalogue.DirectedPower1Id;
             AssertEqual(
                 4000.0,
-                RivalSimulation.CalculateLaunchProgressCost(
+                RivalSimulation.CalculateMissionProgressCost(
                     rival,
-                    achievementProgrammes,
+                    objectiveFundingContracts,
                     satelliteNetworkFundingContracts));
 
             rival.NextMissionTargetId = ObjectiveCatalogue.Biome5Id;
             AssertEqual(
                 12000.0,
-                RivalSimulation.CalculateLaunchProgressCost(
+                RivalSimulation.CalculateMissionProgressCost(
                     rival,
-                    achievementProgrammes,
+                    objectiveFundingContracts,
                     satelliteNetworkFundingContracts));
 
             rival.NextMissionTargetId = ObjectiveCatalogue.ProbeOrbitId;
             AssertEqual(
                 20000.0,
-                RivalSimulation.CalculateLaunchProgressCost(
+                RivalSimulation.CalculateMissionProgressCost(
                     rival,
-                    achievementProgrammes,
+                    objectiveFundingContracts,
                     satelliteNetworkFundingContracts));
 
             rival.NextMissionTargetId = ObjectiveCatalogue.CrewedOrbitId;
             AssertEqual(
                 40000.0,
-                RivalSimulation.CalculateLaunchProgressCost(
+                RivalSimulation.CalculateMissionProgressCost(
                     rival,
-                    achievementProgrammes,
+                    objectiveFundingContracts,
                     satelliteNetworkFundingContracts));
 
             rival.NextMissionTargetId = FundingContractCatalogue.MunNetworkId;
             AssertEqual(
                 40000.0,
-                RivalSimulation.CalculateLaunchProgressCost(
+                RivalSimulation.CalculateMissionProgressCost(
                     rival,
-                    achievementProgrammes,
+                    objectiveFundingContracts,
                     satelliteNetworkFundingContracts));
         }
 
@@ -430,7 +430,7 @@ namespace TheRaceForSpace.Tests
             };
             ObjectiveDefinition objective = ObjectiveCatalogue.FindById(
                 ObjectiveCatalogue.DirectedPower1Id);
-            var achievementProgrammes = new List<ObjectiveFundingContract>
+            var objectiveFundingContracts = new List<ObjectiveFundingContract>
             {
                 new ObjectiveFundingContract(
                     objective.Id,
@@ -438,12 +438,12 @@ namespace TheRaceForSpace.Tests
                     objective.ObjectiveDescription,
                     objective.BaseRewardFunds)
             };
-            achievementProgrammes[0].Offer();
+            objectiveFundingContracts[0].Offer();
 
             RivalSimulation.Refresh(
                 new List<AgencyState> { player, rival },
                 100.0,
-                achievementProgrammes,
+                objectiveFundingContracts,
                 new List<SatelliteNetworkFundingContract>());
 
             AssertTrue(
@@ -460,17 +460,17 @@ namespace TheRaceForSpace.Tests
                 Funds = 0.0,
                 NextPayoutFunds = 0.0
             };
-            IList<ObjectiveFundingContract> achievementProgrammes =
-                FundingContractCatalogue.CreateAchievementProgrammes();
+            IList<ObjectiveFundingContract> objectiveFundingContracts =
+                FundingContractCatalogue.CreateObjectiveFundingContracts();
             IList<SatelliteNetworkFundingContract> satelliteNetworkFundingContracts =
-                FundingContractCatalogue.CreateSatelliteProgrammes();
+                FundingContractCatalogue.CreateSatelliteNetworkFundingContracts();
 
             int? estimatedDays = RivalSimulation.CalculateEstimatedLaunchDays(
                 rival,
                 0.0,
                 90.0 * 21600.0,
                 90.0 * 21600.0,
-                achievementProgrammes,
+                objectiveFundingContracts,
                 satelliteNetworkFundingContracts);
             AssertTrue(!estimatedDays.HasValue, "A mission with no current or future funds should have no ETA.");
         }
@@ -486,7 +486,7 @@ namespace TheRaceForSpace.Tests
             AgencyState cobalt = new AgencyState("Cobalt", false);
             ObjectiveDefinition objective = ObjectiveCatalogue.FindById(
                 ObjectiveCatalogue.MunProbeOrbitId);
-            var achievementProgrammes = new List<ObjectiveFundingContract>
+            var objectiveFundingContracts = new List<ObjectiveFundingContract>
             {
                 new ObjectiveFundingContract(
                     objective.Id,
@@ -500,7 +500,7 @@ namespace TheRaceForSpace.Tests
             RivalSimulation.Refresh(
                 new List<AgencyState> { player, aster, cobalt },
                 0.0,
-                achievementProgrammes,
+                objectiveFundingContracts,
                 new List<SatelliteNetworkFundingContract>());
 
             AssertEqual(null, aster.NextMissionTargetId);
@@ -538,7 +538,7 @@ namespace TheRaceForSpace.Tests
             AgencyState cobalt = new AgencyState("Cobalt", false);
             ObjectiveDefinition objective = ObjectiveCatalogue.FindById(
                 ObjectiveCatalogue.MinmusCrewedOrbitId);
-            var achievementProgrammes = new List<ObjectiveFundingContract>
+            var objectiveFundingContracts = new List<ObjectiveFundingContract>
             {
                 new ObjectiveFundingContract(
                     objective.Id,
@@ -548,12 +548,12 @@ namespace TheRaceForSpace.Tests
                     "Display text",
                     objective.UnlockRule)
             };
-            achievementProgrammes[0].Offer();
+            objectiveFundingContracts[0].Offer();
 
             RivalSimulation.Refresh(
                 new List<AgencyState> { player, aster, cobalt },
                 1.0,
-                achievementProgrammes,
+                objectiveFundingContracts,
                 new List<SatelliteNetworkFundingContract>());
 
             AssertEqual(ObjectiveCatalogue.MinmusCrewedOrbitId, aster.NextMissionTargetId);
@@ -572,7 +572,7 @@ namespace TheRaceForSpace.Tests
             AgencyState cobalt = new AgencyState("Cobalt", false);
             ObjectiveDefinition objective = ObjectiveCatalogue.FindById(
                 ObjectiveCatalogue.ProbeOrbitId);
-            var achievementProgrammes = new List<ObjectiveFundingContract>
+            var objectiveFundingContracts = new List<ObjectiveFundingContract>
             {
                 new ObjectiveFundingContract(
                     objective.Id,
@@ -580,12 +580,12 @@ namespace TheRaceForSpace.Tests
                     objective.ObjectiveDescription,
                     100000.0)
             };
-            achievementProgrammes[0].Offer();
+            objectiveFundingContracts[0].Offer();
 
             RivalSimulation.Refresh(
                 new List<AgencyState> { player, aster, cobalt },
                 replayUniversalTime,
-                achievementProgrammes,
+                objectiveFundingContracts,
                 new List<SatelliteNetworkFundingContract>());
 
             AssertTrue(
@@ -597,7 +597,7 @@ namespace TheRaceForSpace.Tests
             AssertEqual(1, aster.GetSatelliteCount("Kerbin"));
         }
 
-        private static void AssertMilestone(
+        private static void AssertObjective(
             ObjectiveDefinition objective,
             string expectedId,
             string expectedName,
@@ -628,7 +628,7 @@ namespace TheRaceForSpace.Tests
 
             AssertTrue(rule != null, "Expected a objective unlock rule.");
 
-            // Probe Orbit uses four alternative AnyAgency achievements. Existing campaign rules use
+            // Probe Orbit uses four alternative AnyAgency objectives. Existing campaign rules use
             // one path whose multiple objectiveCompletion conditions are all required.
             if (expectedObjectiveIds.Length == 4)
             {

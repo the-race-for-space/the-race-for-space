@@ -57,10 +57,10 @@ namespace TheRaceForSpace.ControllerTests
             Planetarium.CurrentUniversalTime = 20.0;
             controller.Refresh(false);
 
-            ObjectiveFundingContract mass2 = FindAchievement(
+            ObjectiveFundingContract mass2 = FindObjectiveFundingContract(
                 controller,
                 ObjectiveCatalogue.Mass2Id);
-            Require(controller.IsAchievementProgrammeAvailable(mass2),
+            Require(controller.IsObjectiveFundingContractAvailable(mass2),
                 "A rival Mass I completion should unlock Mass II.");
             Require(!mass2.IsOffered,
                 "Mass II should remain merely unlocked before the sponsor review.");
@@ -96,7 +96,7 @@ namespace TheRaceForSpace.ControllerTests
 
             Require(controller.PlayerAgency.RecordObjectiveCompletion(ObjectiveCatalogue.Mass1Id, 10.0),
                 "Test setup should record the player's Mass I objectiveCompletion once.");
-            controller.NotifyPlayerPreOrbitAchievementRecorded();
+            controller.NotifyPlayerPreOrbitObjectiveCompleted();
             Planetarium.CurrentUniversalTime = 20.0;
             controller.Refresh(false);
 
@@ -126,10 +126,10 @@ namespace TheRaceForSpace.ControllerTests
             Planetarium.CurrentUniversalTime = FundingIntervalSeconds;
             controller.Refresh(false);
 
-            ObjectiveFundingContract mass1 = FindAchievement(
+            ObjectiveFundingContract mass1 = FindObjectiveFundingContract(
                 controller,
                 ObjectiveCatalogue.Mass1Id);
-            ObjectiveFundingContract mass2 = FindAchievement(
+            ObjectiveFundingContract mass2 = FindObjectiveFundingContract(
                 controller,
                 ObjectiveCatalogue.Mass2Id);
             Require(mass2.IsOffered,
@@ -157,9 +157,9 @@ namespace TheRaceForSpace.ControllerTests
 
         private static bool Contains(IList<ObjectiveDefinition> objectives, string objectiveId)
         {
-            for (int milestoneIndex = 0; milestoneIndex < objectives.Count; milestoneIndex++)
+            for (int objectiveIndex = 0; objectiveIndex < objectives.Count; objectiveIndex++)
             {
-                ObjectiveDefinition objective = objectives[milestoneIndex];
+                ObjectiveDefinition objective = objectives[objectiveIndex];
                 if (objective != null
                     && string.Equals(objective.Id, objectiveId, StringComparison.OrdinalIgnoreCase))
                 {
@@ -170,24 +170,24 @@ namespace TheRaceForSpace.ControllerTests
             return false;
         }
 
-        private static ObjectiveFundingContract FindAchievement(
+        private static ObjectiveFundingContract FindObjectiveFundingContract(
             CampaignController controller,
-            string programmeId)
+            string contractId)
         {
-            for (int programmeIndex = 0;
-                programmeIndex < controller.ObjectiveFundingContracts.Count;
-                programmeIndex++)
+            for (int contractIndex = 0;
+                contractIndex < controller.ObjectiveFundingContracts.Count;
+                contractIndex++)
             {
-                ObjectiveFundingContract programme =
-                    controller.ObjectiveFundingContracts[programmeIndex];
-                if (programme != null
-                    && string.Equals(programme.Id, programmeId, StringComparison.OrdinalIgnoreCase))
+                ObjectiveFundingContract contract =
+                    controller.ObjectiveFundingContracts[contractIndex];
+                if (contract != null
+                    && string.Equals(contract.Id, contractId, StringComparison.OrdinalIgnoreCase))
                 {
-                    return programme;
+                    return contract;
                 }
             }
 
-            throw new InvalidOperationException("Missing objectiveCompletion programme '" + programmeId + "'.");
+            throw new InvalidOperationException("Missing objectiveCompletion contract '" + contractId + "'.");
         }
 
         private static void ResetEnvironment()

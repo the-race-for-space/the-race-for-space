@@ -87,9 +87,9 @@ namespace TheRaceForSpace.Agencies
                 return -1.0;
             }
 
-            double achievementUniversalTime;
-            return _objectiveCompletionTimesById.TryGetValue(objectiveId, out achievementUniversalTime)
-                ? achievementUniversalTime
+            double completionUniversalTime;
+            return _objectiveCompletionTimesById.TryGetValue(objectiveId, out completionUniversalTime)
+                ? completionUniversalTime
                 : -1.0;
         }
 

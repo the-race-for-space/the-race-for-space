@@ -35,7 +35,7 @@ namespace TheRaceForSpace.Tests.Persistence
             satelliteContracts[0].Offer();
             satelliteContracts[0].MarkSatelliteTargetReached();
 
-            var achievementContracts = new List<ObjectiveFundingContract>
+            var objectiveFundingContracts = new List<ObjectiveFundingContract>
             {
                 new ObjectiveFundingContract(
                     "duna-probe-orbit",
@@ -48,17 +48,17 @@ namespace TheRaceForSpace.Tests.Persistence
                     "Orbit Eve",
                     180000.0)
             };
-            achievementContracts[0].Offer();
-            achievementContracts[0].Start();
-            achievementContracts[0].AdvancePayout();
-            achievementContracts[0].AdvancePayout();
-            achievementContracts[0].AdvancePayout();
+            objectiveFundingContracts[0].Offer();
+            objectiveFundingContracts[0].Start();
+            objectiveFundingContracts[0].AdvancePayout();
+            objectiveFundingContracts[0].AdvancePayout();
+            objectiveFundingContracts[0].AdvancePayout();
 
             var saved = new CampaignFundingSaveState();
             saved.Capture(
                 player,
                 satelliteContracts,
-                achievementContracts,
+                objectiveFundingContracts,
                 nextFundingUniversalTime);
             var node = new ConfigNode();
             saved.Save(node);
@@ -92,7 +92,7 @@ namespace TheRaceForSpace.Tests.Persistence
             restoredSatelliteContracts[1].Offer();
             restoredSatelliteContracts[1].MarkSatelliteTargetReached();
 
-            var restoredAchievementContracts = new List<ObjectiveFundingContract>
+            var restoredObjectiveFundingContracts = new List<ObjectiveFundingContract>
             {
                 new ObjectiveFundingContract(
                     "duna-probe-orbit",
@@ -105,13 +105,13 @@ namespace TheRaceForSpace.Tests.Persistence
                     "Orbit Eve",
                     180000.0)
             };
-            restoredAchievementContracts[1].Offer();
-            restoredAchievementContracts[1].Start();
+            restoredObjectiveFundingContracts[1].Offer();
+            restoredObjectiveFundingContracts[1].Start();
 
             loaded.ApplyTo(
                 restoredPlayer,
                 restoredSatelliteContracts,
-                restoredAchievementContracts);
+                restoredObjectiveFundingContracts);
 
             Equal(1234.0, restoredPlayer.GetObjectiveCompletionTime("duna-probe-orbit"));
             Require(restoredSatelliteContracts[0].IsAvailable,
@@ -127,16 +127,16 @@ namespace TheRaceForSpace.Tests.Persistence
             Require(!restoredSatelliteContracts[1].HasReachedSatelliteTarget,
                 "Unfulfilled satellite state should replace stale runtime values.");
 
-            Require(restoredAchievementContracts[0].IsOffered,
+            Require(restoredObjectiveFundingContracts[0].IsOffered,
                 "ObjectiveCompletion offer state should round trip.");
-            Require(restoredAchievementContracts[0].HasStarted,
+            Require(restoredObjectiveFundingContracts[0].HasStarted,
                 "Started objectiveCompletion contracts should remain started.");
-            Equal(3, restoredAchievementContracts[0].PaymentsProcessed);
-            Require(!restoredAchievementContracts[1].IsOffered,
+            Equal(3, restoredObjectiveFundingContracts[0].PaymentsProcessed);
+            Require(!restoredObjectiveFundingContracts[1].IsOffered,
                 "Unoffered objectiveCompletion contracts should be persisted explicitly.");
-            Require(!restoredAchievementContracts[1].HasStarted,
+            Require(!restoredObjectiveFundingContracts[1].HasStarted,
                 "Unstarted objectiveCompletion contracts should replace stale runtime values.");
-            Equal(0, restoredAchievementContracts[1].PaymentsProcessed);
+            Equal(0, restoredObjectiveFundingContracts[1].PaymentsProcessed);
             Equal(nextFundingUniversalTime, loaded.NextFundingUniversalTime);
         }
 
@@ -214,12 +214,12 @@ namespace TheRaceForSpace.Tests.Persistence
             var contractsNode = new ConfigNode();
             contractsNode.AddValue("nextFundingUniversalTime", "NaN");
 
-            ConfigNode badAchievement = contractsNode.AddNode("PLAYER_OBJECTIVE_COMPLETION");
-            badAchievement.AddValue("id", "bad-time");
-            badAchievement.AddValue("universalTime", "NaN");
-            ConfigNode earlyAchievement = contractsNode.AddNode("PLAYER_OBJECTIVE_COMPLETION");
-            earlyAchievement.AddValue("id", "early-objective");
-            earlyAchievement.AddValue("universalTime", "-12");
+            ConfigNode badCompletion = contractsNode.AddNode("PLAYER_OBJECTIVE_COMPLETION");
+            badCompletion.AddValue("id", "bad-time");
+            badCompletion.AddValue("universalTime", "NaN");
+            ConfigNode earlyCompletion = contractsNode.AddNode("PLAYER_OBJECTIVE_COMPLETION");
+            earlyCompletion.AddValue("id", "early-objective");
+            earlyCompletion.AddValue("universalTime", "-12");
 
             ConfigNode satelliteContract = contractsNode.AddNode("SATELLITE_NETWORK_FUNDING_CONTRACT");
             satelliteContract.AddValue("id", "future-network");
@@ -227,11 +227,11 @@ namespace TheRaceForSpace.Tests.Persistence
             satelliteContract.AddValue("offered", true);
             satelliteContract.AddValue("targetReached", false);
 
-            ConfigNode achievementContract = contractsNode.AddNode("OBJECTIVE_FUNDING_CONTRACT");
-            achievementContract.AddValue("id", "future-contract");
-            achievementContract.AddValue("offered", true);
-            achievementContract.AddValue("started", false);
-            achievementContract.AddValue("paymentsProcessed", "99");
+            ConfigNode objectiveFundingContract = contractsNode.AddNode("OBJECTIVE_FUNDING_CONTRACT");
+            objectiveFundingContract.AddValue("id", "future-contract");
+            objectiveFundingContract.AddValue("offered", true);
+            objectiveFundingContract.AddValue("started", false);
+            objectiveFundingContract.AddValue("paymentsProcessed", "99");
 
             ConfigNode malformedContract = contractsNode.AddNode("OBJECTIVE_FUNDING_CONTRACT");
             malformedContract.AddValue("id", "malformed-contract");
@@ -253,7 +253,7 @@ namespace TheRaceForSpace.Tests.Persistence
                     false,
                     null)
             };
-            var achievementContracts = new List<ObjectiveFundingContract>
+            var objectiveFundingContracts = new List<ObjectiveFundingContract>
             {
                 new ObjectiveFundingContract(
                     "future-contract",
@@ -266,10 +266,10 @@ namespace TheRaceForSpace.Tests.Persistence
                     "Objective",
                     100000.0)
             };
-            achievementContracts[1].Offer();
-            achievementContracts[1].Start();
+            objectiveFundingContracts[1].Offer();
+            objectiveFundingContracts[1].Start();
 
-            contractsState.ApplyTo(player, satelliteContracts, achievementContracts);
+            contractsState.ApplyTo(player, satelliteContracts, objectiveFundingContracts);
 
             Require(!player.HasCompletedObjective("bad-time"),
                 "Non-finite objectiveCompletion times should be ignored.");
@@ -280,14 +280,14 @@ namespace TheRaceForSpace.Tests.Persistence
                 "A valid satellite contract node should restore offer state.");
             Require(!satelliteContracts[0].HasReachedSatelliteTarget,
                 "A valid satellite contract node should not invent target completion.");
-            Equal(10, achievementContracts[0].PaymentsProcessed);
-            Require(achievementContracts[0].HasStarted,
+            Equal(10, objectiveFundingContracts[0].PaymentsProcessed);
+            Require(objectiveFundingContracts[0].HasStarted,
                 "Processed payments should normalize the restored contract to started.");
-            Require(achievementContracts[0].IsOffered,
+            Require(objectiveFundingContracts[0].IsOffered,
                 "A valid objectiveCompletion contract node should restore offer state.");
-            Require(!achievementContracts[1].HasStarted,
+            Require(!objectiveFundingContracts[1].HasStarted,
                 "Malformed contract state should fail closed instead of preserving stale runtime state.");
-            Require(!achievementContracts[1].IsOffered,
+            Require(!objectiveFundingContracts[1].IsOffered,
                 "Malformed contract state should fail closed instead of preserving a stale offer.");
             Equal(-1.0, contractsState.NextFundingUniversalTime);
 
@@ -326,29 +326,29 @@ namespace TheRaceForSpace.Tests.Persistence
             };
             satelliteContracts[0].Offer();
             satelliteContracts[0].MarkSatelliteTargetReached();
-            var achievementContracts = new List<ObjectiveFundingContract>
+            var objectiveFundingContracts = new List<ObjectiveFundingContract>
             {
                 new ObjectiveFundingContract("future-contract", "Future", "Objective", 100000.0)
             };
-            achievementContracts[0].Offer();
-            achievementContracts[0].Start();
-            achievementContracts[0].AdvancePayout();
+            objectiveFundingContracts[0].Offer();
+            objectiveFundingContracts[0].Start();
+            objectiveFundingContracts[0].AdvancePayout();
 
-            contractsState.ApplyTo(player, satelliteContracts, achievementContracts);
+            contractsState.ApplyTo(player, satelliteContracts, objectiveFundingContracts);
 
             Require(!player.HasCompletedObjective("stale-objective"),
-                "Empty funding-contract state should clear stale player achievements.");
+                "Empty funding-contract state should clear stale player objectives.");
             Require(!satelliteContracts[0].IsAvailable,
                 "Missing satellite contract state should restore the contract as locked.");
             Require(!satelliteContracts[0].IsOffered,
                 "Missing satellite contract state should clear stale offer state.");
             Require(!satelliteContracts[0].HasReachedSatelliteTarget,
                 "Missing satellite contract state should clear stale fulfilled state.");
-            Require(!achievementContracts[0].HasStarted,
+            Require(!objectiveFundingContracts[0].HasStarted,
                 "Missing objectiveCompletion contract state should reset lifecycle state.");
-            Require(!achievementContracts[0].IsOffered,
+            Require(!objectiveFundingContracts[0].IsOffered,
                 "Missing objectiveCompletion contract state should clear stale offer state.");
-            Equal(0, achievementContracts[0].PaymentsProcessed);
+            Equal(0, objectiveFundingContracts[0].PaymentsProcessed);
             Equal(-1.0, contractsState.NextFundingUniversalTime);
 
             var rivalState = new RivalAgenciesSaveState();

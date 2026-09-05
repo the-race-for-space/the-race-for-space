@@ -25,7 +25,7 @@ namespace TheRaceForSpace.ControllerTests
                 UnlockRuleEvaluatorTests.RequiredAgencyCountMustBeMet);
             Run(
                 "Unlock objectiveCompletion timestamps respect evaluation time",
-                UnlockRuleEvaluatorTests.AchievementTimestampUsesEvaluationTime);
+                UnlockRuleEvaluatorTests.ObjectiveCompletionTimestampUsesEvaluationTime);
             Run(
                 "Unlock time condition uses exact boundary",
                 UnlockRuleEvaluatorTests.UniversalTimeConditionUsesExactBoundary);
@@ -116,7 +116,7 @@ namespace TheRaceForSpace.ControllerTests
                 FundingOfferControllerTests.UnlockedPreOrbitLevelsJoinSponsorReview);
             Run(
                 "PreOrbit offers do not consume the normal objectiveCompletion limit",
-                FundingOfferControllerTests.PreOrbitOffersDoNotConsumeNormalAchievementLimit);
+                FundingOfferControllerTests.PreOrbitOffersDoNotConsumeNormalObjectiveLimit);
             Run(
                 "Any starter level five offers Probe Orbit",
                 FundingOfferControllerTests.AnyPreOrbitLevelFiveOffersProbeOrbit);

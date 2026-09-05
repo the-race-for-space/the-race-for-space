@@ -9,7 +9,7 @@ namespace TheRaceForSpace.Tests.Rivals
 {
     internal static class RivalSimulationCollectionTests
     {
-        public static void SelectsOnlyAvailableAchievementFromCollection()
+        public static void SelectsOnlyAvailableObjectiveFromCollection()
         {
             var player = new AgencyState("player", "Player", true);
             var aster = new AgencyState("aster", "Aster", false)
@@ -22,7 +22,7 @@ namespace TheRaceForSpace.Tests.Rivals
 
             ObjectiveDefinition objective = ObjectiveCatalogue.FindById(
                 ObjectiveCatalogue.MinmusCrewedOrbitId);
-            var achievementProgrammes = new List<ObjectiveFundingContract>
+            var objectiveFundingContracts = new List<ObjectiveFundingContract>
             {
                 new ObjectiveFundingContract(
                     objective.Id,
@@ -32,12 +32,12 @@ namespace TheRaceForSpace.Tests.Rivals
                     "Display text",
                     objective.UnlockRule)
             };
-            achievementProgrammes[0].Offer();
+            objectiveFundingContracts[0].Offer();
 
             RivalSimulation.Refresh(
                 new List<AgencyState> { player, aster, cobalt, delta },
                 1.0,
-                achievementProgrammes,
+                objectiveFundingContracts,
                 new List<SatelliteNetworkFundingContract>());
 
             TestAssert.Equal(ObjectiveCatalogue.MinmusCrewedOrbitId, aster.NextMissionTargetId);
@@ -46,7 +46,7 @@ namespace TheRaceForSpace.Tests.Rivals
             TestAssert.Equal(5.0 * 21600.0, aster.NextMissionProgressCheckUniversalTime);
         }
 
-        public static void LockedAchievementIsExcludedFromCollection()
+        public static void LockedObjectiveIsExcludedFromCollection()
         {
             var player = new AgencyState("Player", true);
             var aster = new AgencyState("Aster", false);
@@ -54,7 +54,7 @@ namespace TheRaceForSpace.Tests.Rivals
 
             ObjectiveDefinition objective = ObjectiveCatalogue.FindById(
                 ObjectiveCatalogue.MunProbeOrbitId);
-            var achievementProgrammes = new List<ObjectiveFundingContract>
+            var objectiveFundingContracts = new List<ObjectiveFundingContract>
             {
                 new ObjectiveFundingContract(
                     objective.Id,
@@ -68,7 +68,7 @@ namespace TheRaceForSpace.Tests.Rivals
             RivalSimulation.Refresh(
                 new List<AgencyState> { player, aster, cobalt },
                 0.0,
-                achievementProgrammes,
+                objectiveFundingContracts,
                 new List<SatelliteNetworkFundingContract>());
 
             TestAssert.Equal(null, aster.NextMissionTargetId);
@@ -78,17 +78,17 @@ namespace TheRaceForSpace.Tests.Rivals
                 NextMissionTargetId = "missing-objective",
                 MissionProgressPercent = 100
             };
-            var malformedProgramme = new ObjectiveFundingContract(
+            var malformedContract = new ObjectiveFundingContract(
                 "missing-objective",
                 "Missing Objective",
                 "This target has no objective definition.",
                 1000.0);
-            malformedProgramme.Offer();
+            malformedContract.Offer();
 
             RivalSimulation.Refresh(
                 new List<AgencyState> { player, malformedRival },
                 1.0,
-                new List<ObjectiveFundingContract> { malformedProgramme },
+                new List<ObjectiveFundingContract> { malformedContract },
                 new List<SatelliteNetworkFundingContract>());
 
             TestAssert.Equal(null, malformedRival.NextMissionTargetId);
@@ -106,7 +106,7 @@ namespace TheRaceForSpace.Tests.Rivals
 
             ObjectiveDefinition objective = ObjectiveCatalogue.FindById(
                 ObjectiveCatalogue.MinmusCrewedOrbitId);
-            var achievementProgrammes = new List<ObjectiveFundingContract>
+            var objectiveFundingContracts = new List<ObjectiveFundingContract>
             {
                 new ObjectiveFundingContract(
                     objective.Id,
@@ -126,7 +126,7 @@ namespace TheRaceForSpace.Tests.Rivals
             RivalSimulation.Refresh(
                 agencies,
                 199.0,
-                achievementProgrammes,
+                objectiveFundingContracts,
                 new List<SatelliteNetworkFundingContract>());
             TestAssert.Equal(
                 null,
@@ -134,18 +134,18 @@ namespace TheRaceForSpace.Tests.Rivals
 
             // Sponsor selection is now a controller responsibility. Once a contract is Offered,
             // rival simulation consumes that stable state rather than reevaluating its unlock rule.
-            achievementProgrammes[0].Offer();
+            objectiveFundingContracts[0].Offer();
             RivalSimulation.Refresh(
                 agencies,
                 200.0,
-                achievementProgrammes,
+                objectiveFundingContracts,
                 new List<SatelliteNetworkFundingContract>());
             TestAssert.Equal(
                 ObjectiveCatalogue.MinmusCrewedOrbitId,
                 cobalt.NextMissionTargetId);
         }
 
-        public static void SatelliteProgrammeRemainsRepeatable()
+        public static void SatelliteNetworkContractRemainsRepeatable()
         {
             var player = new AgencyState("Player", true);
             var aster = new AgencyState("Aster", false);
@@ -176,7 +176,7 @@ namespace TheRaceForSpace.Tests.Rivals
             TestAssert.Equal("Duna", aster.NextMissionDisplayName);
         }
 
-        public static void CompletesArbitrarySatelliteProgramme()
+        public static void CompletesArbitrarySatelliteNetworkContract()
         {
             var player = new AgencyState("player", "Player", true);
             var aster = new AgencyState("aster", "Aster", false);
@@ -237,7 +237,7 @@ namespace TheRaceForSpace.Tests.Rivals
             TestAssert.Equal(0, malformedRival.MissionProgressPercent);
         }
 
-        public static void CollectionCostUsesProgrammeBody()
+        public static void CollectionCostUsesContractBody()
         {
             var aster = new AgencyState("Aster", false)
             {
@@ -249,17 +249,17 @@ namespace TheRaceForSpace.Tests.Rivals
                 NextMissionDisplayName = "Duna Orbital Network"
             };
             IList<SatelliteNetworkFundingContract> satelliteNetworkFundingContracts =
-                FundingContractCatalogue.CreateSatelliteProgrammes();
-            IList<ObjectiveFundingContract> achievementProgrammes =
-                FundingContractCatalogue.CreateAchievementProgrammes();
+                FundingContractCatalogue.CreateSatelliteNetworkFundingContracts();
+            IList<ObjectiveFundingContract> objectiveFundingContracts =
+                FundingContractCatalogue.CreateObjectiveFundingContracts();
 
-            double cost = RivalSimulation.CalculateLaunchProgressCost(
+            double cost = RivalSimulation.CalculateMissionProgressCost(
                 aster,
-                achievementProgrammes,
+                objectiveFundingContracts,
                 satelliteNetworkFundingContracts);
-            double presentationOnlyCost = RivalSimulation.CalculateLaunchProgressCost(
+            double presentationOnlyCost = RivalSimulation.CalculateMissionProgressCost(
                 presentationOnlyTarget,
-                achievementProgrammes,
+                objectiveFundingContracts,
                 satelliteNetworkFundingContracts);
 
             TestAssert.Equal(80000.0, cost);
@@ -273,43 +273,43 @@ namespace TheRaceForSpace.Tests.Rivals
             aster.NextMissionTargetId = ObjectiveCatalogue.MunCrewedOrbitId;
             TestAssert.Equal(
                 60000.0,
-                RivalSimulation.CalculateLaunchProgressCost(
+                RivalSimulation.CalculateMissionProgressCost(
                     aster,
-                    achievementProgrammes,
+                    objectiveFundingContracts,
                     satelliteNetworkFundingContracts));
             TestAssert.Equal(10, RivalSimulation.CalculateLaunchProgressIncrementPercent(aster));
 
             aster.NextMissionTargetId = ObjectiveCatalogue.DunaProbeOrbitId;
             TestAssert.Equal(
                 60000.0,
-                RivalSimulation.CalculateLaunchProgressCost(
+                RivalSimulation.CalculateMissionProgressCost(
                     aster,
-                    achievementProgrammes,
+                    objectiveFundingContracts,
                     satelliteNetworkFundingContracts));
 
             aster.NextMissionTargetId = ObjectiveCatalogue.DunaCrewedOrbitId;
             TestAssert.Equal(
                 100000.0,
-                RivalSimulation.CalculateLaunchProgressCost(
+                RivalSimulation.CalculateMissionProgressCost(
                     aster,
-                    achievementProgrammes,
+                    objectiveFundingContracts,
                     satelliteNetworkFundingContracts));
 
             aster.NextMissionTargetId = ObjectiveCatalogue.DirectedPower1Id;
             TestAssert.Equal(
                 4000.0,
-                RivalSimulation.CalculateLaunchProgressCost(
+                RivalSimulation.CalculateMissionProgressCost(
                     aster,
-                    achievementProgrammes,
+                    objectiveFundingContracts,
                     satelliteNetworkFundingContracts));
             TestAssert.Equal(20, RivalSimulation.CalculateLaunchProgressIncrementPercent(aster));
 
             aster.NextMissionTargetId = ObjectiveCatalogue.Biome5Id;
             TestAssert.Equal(
                 12000.0,
-                RivalSimulation.CalculateLaunchProgressCost(
+                RivalSimulation.CalculateMissionProgressCost(
                     aster,
-                    achievementProgrammes,
+                    objectiveFundingContracts,
                     satelliteNetworkFundingContracts));
             TestAssert.Equal(20, RivalSimulation.CalculateLaunchProgressIncrementPercent(aster));
 
@@ -317,32 +317,32 @@ namespace TheRaceForSpace.Tests.Rivals
             try
             {
                 CampaignSettings.RivalProgressChance = 1.0;
-                ObjectiveDefinition starterMilestone = ObjectiveCatalogue.FindById(
+                ObjectiveDefinition preOrbitObjective = ObjectiveCatalogue.FindById(
                     ObjectiveCatalogue.DirectedPower1Id);
-                var starterProgramme = new ObjectiveFundingContract(
-                    starterMilestone.Id,
-                    starterMilestone.Name,
-                    starterMilestone.ObjectiveDescription,
-                    starterMilestone.BaseRewardFunds);
-                starterProgramme.Offer();
+                var preOrbitContract = new ObjectiveFundingContract(
+                    preOrbitObjective.Id,
+                    preOrbitObjective.Name,
+                    preOrbitObjective.ObjectiveDescription,
+                    preOrbitObjective.BaseRewardFunds);
+                preOrbitContract.Offer();
 
                 var player = new AgencyState("Player", true);
-                var starterRival = new AgencyState("PreOrbitRival", false)
+                var preOrbitRival = new AgencyState("PreOrbitRival", false)
                 {
                     NextMissionTargetId = ObjectiveCatalogue.DirectedPower1Id,
                     Funds = 100000.0,
                     NextMissionProgressCheckUniversalTime = 5.0 * 21600.0
                 };
                 RivalSimulation.Refresh(
-                    new List<AgencyState> { player, starterRival },
+                    new List<AgencyState> { player, preOrbitRival },
                     5.0 * 21600.0,
-                    new List<ObjectiveFundingContract> { starterProgramme },
+                    new List<ObjectiveFundingContract> { preOrbitContract },
                     new List<SatelliteNetworkFundingContract>());
 
-                TestAssert.Equal(20, starterRival.MissionProgressPercent);
-                TestAssert.Equal(96000.0, starterRival.Funds);
+                TestAssert.Equal(20, preOrbitRival.MissionProgressPercent);
+                TestAssert.Equal(96000.0, preOrbitRival.Funds);
 
-                var starterEtaRival = new AgencyState("PreOrbitEta", false)
+                var preOrbitEtaRival = new AgencyState("PreOrbitEta", false)
                 {
                     NextMissionTargetId = ObjectiveCatalogue.DirectedPower1Id,
                     Funds = 1000000.0
@@ -356,11 +356,11 @@ namespace TheRaceForSpace.Tests.Rivals
                 TestAssert.Equal(
                     25,
                     RivalSimulation.CalculateEstimatedLaunchDays(
-                        starterEtaRival,
+                        preOrbitEtaRival,
                         0.0,
                         90.0 * 21600.0,
                         90.0 * 21600.0,
-                        achievementProgrammes,
+                        objectiveFundingContracts,
                         satelliteNetworkFundingContracts));
                 TestAssert.Equal(
                     50,
@@ -369,36 +369,36 @@ namespace TheRaceForSpace.Tests.Rivals
                         0.0,
                         90.0 * 21600.0,
                         90.0 * 21600.0,
-                        achievementProgrammes,
+                        objectiveFundingContracts,
                         satelliteNetworkFundingContracts));
                 TestAssert.Equal(
                     null,
                     RivalSimulation.CalculateEstimatedLaunchDays(
-                        starterEtaRival,
+                        preOrbitEtaRival,
                         double.NaN,
                         90.0 * 21600.0,
                         90.0 * 21600.0,
-                        achievementProgrammes,
+                        objectiveFundingContracts,
                         satelliteNetworkFundingContracts));
                 TestAssert.Equal(
                     null,
                     RivalSimulation.CalculateEstimatedLaunchDays(
-                        starterEtaRival,
+                        preOrbitEtaRival,
                         0.0,
                         90.0 * 21600.0,
                         double.PositiveInfinity,
-                        achievementProgrammes,
+                        objectiveFundingContracts,
                         satelliteNetworkFundingContracts));
 
                 CampaignSettings.RivalProgressChance = double.Epsilon;
                 TestAssert.Equal(
                     null,
                     RivalSimulation.CalculateEstimatedLaunchDays(
-                        starterEtaRival,
+                        preOrbitEtaRival,
                         0.0,
                         90.0 * 21600.0,
                         90.0 * 21600.0,
-                        achievementProgrammes,
+                        objectiveFundingContracts,
                         satelliteNetworkFundingContracts));
             }
             finally
@@ -407,7 +407,7 @@ namespace TheRaceForSpace.Tests.Rivals
             }
         }
 
-        public static void AchievementCompletionUsesObjectiveDefinition()
+        public static void ObjectiveCompletionUsesObjectiveDefinition()
         {
             const double completionUniversalTime = 4321.0;
             var player = new AgencyState("Player", true);
@@ -422,7 +422,7 @@ namespace TheRaceForSpace.Tests.Rivals
 
             ObjectiveDefinition objective = ObjectiveCatalogue.FindById(
                 ObjectiveCatalogue.DunaProbeOrbitId);
-            var achievementProgrammes = new List<ObjectiveFundingContract>
+            var objectiveFundingContracts = new List<ObjectiveFundingContract>
             {
                 new ObjectiveFundingContract(
                     objective.Id,
@@ -432,12 +432,12 @@ namespace TheRaceForSpace.Tests.Rivals
                     "Display text",
                     objective.UnlockRule)
             };
-            achievementProgrammes[0].Offer();
+            objectiveFundingContracts[0].Offer();
 
             RivalSimulation.Refresh(
                 new List<AgencyState> { player, aster, cobalt },
                 double.NaN,
-                achievementProgrammes,
+                objectiveFundingContracts,
                 new List<SatelliteNetworkFundingContract>());
 
             TestAssert.True(
@@ -449,7 +449,7 @@ namespace TheRaceForSpace.Tests.Rivals
             RivalSimulation.Refresh(
                 new List<AgencyState> { player, aster, cobalt },
                 completionUniversalTime,
-                achievementProgrammes,
+                objectiveFundingContracts,
                 new List<SatelliteNetworkFundingContract>());
 
             TestAssert.True(

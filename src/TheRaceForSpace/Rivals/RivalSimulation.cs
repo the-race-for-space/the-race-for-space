@@ -24,16 +24,16 @@ namespace TheRaceForSpace.Rivals
         {
             public RivalSimulationContext(
                 double currentUniversalTime,
-                IList<ObjectiveFundingContract> achievementProgrammes,
+                IList<ObjectiveFundingContract> objectiveFundingContracts,
                 IList<SatelliteNetworkFundingContract> satelliteNetworkFundingContracts)
             {
                 CurrentUniversalTime = currentUniversalTime;
-                AchievementProgrammes = achievementProgrammes;
+                ObjectiveFundingContracts = objectiveFundingContracts;
                 SatelliteNetworkFundingContracts = satelliteNetworkFundingContracts;
             }
 
             public readonly double CurrentUniversalTime;
-            public readonly IList<ObjectiveFundingContract> AchievementProgrammes;
+            public readonly IList<ObjectiveFundingContract> ObjectiveFundingContracts;
             public readonly IList<SatelliteNetworkFundingContract> SatelliteNetworkFundingContracts;
         }
 
@@ -44,11 +44,11 @@ namespace TheRaceForSpace.Rivals
         public static void Refresh(
             IList<AgencyState> agencies,
             double currentUniversalTime,
-            IList<ObjectiveFundingContract> achievementProgrammes,
+            IList<ObjectiveFundingContract> objectiveFundingContracts,
             IList<SatelliteNetworkFundingContract> satelliteNetworkFundingContracts)
         {
             if (agencies == null
-                || achievementProgrammes == null
+                || objectiveFundingContracts == null
                 || satelliteNetworkFundingContracts == null
                 || !IsFinite(currentUniversalTime)
                 || currentUniversalTime < 0.0)
@@ -58,7 +58,7 @@ namespace TheRaceForSpace.Rivals
 
             var context = new RivalSimulationContext(
                 currentUniversalTime,
-                achievementProgrammes,
+                objectiveFundingContracts,
                 satelliteNetworkFundingContracts);
 
             for (int agencyIndex = 0; agencyIndex < agencies.Count; agencyIndex++)
@@ -74,24 +74,24 @@ namespace TheRaceForSpace.Rivals
         }
 
         /// <summary>
-        /// Returns presentation text for a stable mission target ID using the live programme
+        /// Returns presentation text for a stable mission target ID using the live contract
         /// collections. Mission identity is never inferred from this display text.
         /// </summary>
         public static string GetMissionTargetDisplayName(
             string targetId,
-            IList<ObjectiveFundingContract> achievementProgrammes,
+            IList<ObjectiveFundingContract> objectiveFundingContracts,
             IList<SatelliteNetworkFundingContract> satelliteNetworkFundingContracts)
         {
-            ObjectiveFundingContract achievementProgramme = FindAchievementProgramme(
+            ObjectiveFundingContract objectiveFundingContract = FindObjectiveFundingContract(
                 targetId,
-                achievementProgrammes);
-            if (achievementProgramme != null)
+                objectiveFundingContracts);
+            if (objectiveFundingContract != null)
             {
-                return achievementProgramme.Name;
+                return objectiveFundingContract.Name;
             }
 
-            SatelliteNetworkFundingContract fundingProgramme = FindSatelliteNetworkFundingContract(targetId, satelliteNetworkFundingContracts);
-            return fundingProgramme == null ? null : fundingProgramme.CelestialBodyName;
+            SatelliteNetworkFundingContract networkContract = FindSatelliteNetworkFundingContract(targetId, satelliteNetworkFundingContracts);
+            return networkContract == null ? null : networkContract.CelestialBodyName;
         }
 
         /// <summary>
@@ -116,9 +116,9 @@ namespace TheRaceForSpace.Rivals
         /// PreOrbit steps advance 20%; orbital and satellite mission steps advance 10%.
         /// Stable mission target IDs are authoritative; presentation text is not used as a fallback.
         /// </summary>
-        public static double CalculateLaunchProgressCost(
+        public static double CalculateMissionProgressCost(
             AgencyState agency,
-            IList<ObjectiveFundingContract> achievementProgrammes,
+            IList<ObjectiveFundingContract> objectiveFundingContracts,
             IList<SatelliteNetworkFundingContract> satelliteNetworkFundingContracts)
         {
             if (agency == null)
@@ -126,7 +126,7 @@ namespace TheRaceForSpace.Rivals
                 return CampaignSettings.Kerbin.ProbeProgressCostFunds;
             }
 
-            return CalculateLaunchProgressCostForTarget(
+            return CalculateMissionProgressCostForTarget(
                 agency.NextMissionTargetId,
                 satelliteNetworkFundingContracts);
         }
@@ -141,7 +141,7 @@ namespace TheRaceForSpace.Rivals
             double currentUniversalTime,
             double nextFundingUniversalTime,
             double fundingIntervalSeconds,
-            IList<ObjectiveFundingContract> achievementProgrammes,
+            IList<ObjectiveFundingContract> objectiveFundingContracts,
             IList<SatelliteNetworkFundingContract> satelliteNetworkFundingContracts)
         {
             return CalculateEstimatedLaunchDays(
@@ -149,7 +149,7 @@ namespace TheRaceForSpace.Rivals
                 currentUniversalTime,
                 nextFundingUniversalTime,
                 fundingIntervalSeconds,
-                CalculateLaunchProgressCost(agency, achievementProgrammes, satelliteNetworkFundingContracts));
+                CalculateMissionProgressCost(agency, objectiveFundingContracts, satelliteNetworkFundingContracts));
         }
 
         private static int? CalculateEstimatedLaunchDays(
@@ -262,7 +262,7 @@ namespace TheRaceForSpace.Rivals
             {
                 agency.NextMissionDisplayName = GetMissionTargetDisplayName(
                     targetId,
-                    context.AchievementProgrammes,
+                    context.ObjectiveFundingContracts,
                     context.SatelliteNetworkFundingContracts);
             }
 
@@ -299,9 +299,9 @@ namespace TheRaceForSpace.Rivals
 
                 if (!string.IsNullOrEmpty(agency.NextMissionTargetId))
                 {
-                    double launchProgressCostFunds = CalculateLaunchProgressCost(
+                    double launchProgressCostFunds = CalculateMissionProgressCost(
                         agency,
-                        context.AchievementProgrammes,
+                        context.ObjectiveFundingContracts,
                         context.SatelliteNetworkFundingContracts);
                     int launchProgressIncrementPercent = CalculateLaunchProgressIncrementPercent(agency);
 
@@ -339,21 +339,21 @@ namespace TheRaceForSpace.Rivals
                 return false;
             }
 
-            ObjectiveFundingContract achievementProgramme = FindAchievementProgramme(
+            ObjectiveFundingContract objectiveFundingContract = FindObjectiveFundingContract(
                 targetId,
-                context.AchievementProgrammes);
-            if (achievementProgramme != null)
+                context.ObjectiveFundingContracts);
+            if (objectiveFundingContract != null)
             {
-                ObjectiveDefinition objective = ObjectiveCatalogue.FindById(achievementProgramme.Id);
+                ObjectiveDefinition objective = ObjectiveCatalogue.FindById(objectiveFundingContract.Id);
                 if (objective == null)
                 {
                     return false;
                 }
 
-                bool recordedAchievement = agency.RecordObjectiveCompletion(
+                bool recordedObjective = agency.RecordObjectiveCompletion(
                     objective.Id,
                     completionUniversalTime);
-                if (recordedAchievement
+                if (recordedObjective
                     && objective.ObjectiveType == ObjectiveType.Orbit
                     && objective.CrewRequirement == ObjectiveCrewRequirement.UncrewedProbe)
                 {
@@ -366,17 +366,17 @@ namespace TheRaceForSpace.Rivals
             }
             else
             {
-                SatelliteNetworkFundingContract fundingProgramme = FindSatelliteNetworkFundingContract(
+                SatelliteNetworkFundingContract networkContract = FindSatelliteNetworkFundingContract(
                     targetId,
                     context.SatelliteNetworkFundingContracts);
-                if (fundingProgramme == null || string.IsNullOrEmpty(fundingProgramme.CelestialBodyName))
+                if (networkContract == null || string.IsNullOrEmpty(networkContract.CelestialBodyName))
                 {
                     return false;
                 }
 
                 agency.SetSatelliteCount(
-                    fundingProgramme.CelestialBodyName,
-                    agency.GetSatelliteCount(fundingProgramme.CelestialBodyName) + 1);
+                    networkContract.CelestialBodyName,
+                    agency.GetSatelliteCount(networkContract.CelestialBodyName) + 1);
             }
 
             agency.MissionProgressPercent = 0;
@@ -394,23 +394,23 @@ namespace TheRaceForSpace.Rivals
                 return true;
             }
 
-            ObjectiveFundingContract achievementProgramme = FindAchievementProgramme(
+            ObjectiveFundingContract objectiveFundingContract = FindObjectiveFundingContract(
                 targetId,
-                context.AchievementProgrammes);
-            if (achievementProgramme != null)
+                context.ObjectiveFundingContracts);
+            if (objectiveFundingContract != null)
             {
-                return ObjectiveCatalogue.FindById(achievementProgramme.Id) != null
-                    && achievementProgramme.IsOffered
-                    && !achievementProgramme.IsExpired
-                    && !agency.HasCompletedObjective(achievementProgramme.Id);
+                return ObjectiveCatalogue.FindById(objectiveFundingContract.Id) != null
+                    && objectiveFundingContract.IsOffered
+                    && !objectiveFundingContract.IsExpired
+                    && !agency.HasCompletedObjective(objectiveFundingContract.Id);
             }
 
-            SatelliteNetworkFundingContract fundingProgramme = FindSatelliteNetworkFundingContract(targetId, context.SatelliteNetworkFundingContracts);
-            if (fundingProgramme != null)
+            SatelliteNetworkFundingContract networkContract = FindSatelliteNetworkFundingContract(targetId, context.SatelliteNetworkFundingContracts);
+            if (networkContract != null)
             {
-                return !string.IsNullOrEmpty(fundingProgramme.CelestialBodyName)
-                    && fundingProgramme.IsAvailable
-                    && fundingProgramme.IsOffered;
+                return !string.IsNullOrEmpty(networkContract.CelestialBodyName)
+                    && networkContract.IsAvailable
+                    && networkContract.IsOffered;
             }
 
             return false;
@@ -423,33 +423,33 @@ namespace TheRaceForSpace.Rivals
             var availableOneOffTargets = new List<string>();
             var availableSatelliteTargets = new List<string>();
 
-            for (int programmeIndex = 0;
-                programmeIndex < context.AchievementProgrammes.Count;
-                programmeIndex++)
+            for (int contractIndex = 0;
+                contractIndex < context.ObjectiveFundingContracts.Count;
+                contractIndex++)
             {
-                ObjectiveFundingContract programme = context.AchievementProgrammes[programmeIndex];
-                if (programme == null
-                    || ObjectiveCatalogue.FindById(programme.Id) == null
-                    || !IsTargetAvailable(programme.Id, agency, context))
+                ObjectiveFundingContract contract = context.ObjectiveFundingContracts[contractIndex];
+                if (contract == null
+                    || ObjectiveCatalogue.FindById(contract.Id) == null
+                    || !IsTargetAvailable(contract.Id, agency, context))
                 {
                     continue;
                 }
 
-                availableOneOffTargets.Add(programme.Id);
+                availableOneOffTargets.Add(contract.Id);
             }
 
-            for (int programmeIndex = 0; programmeIndex < context.SatelliteNetworkFundingContracts.Count; programmeIndex++)
+            for (int contractIndex = 0; contractIndex < context.SatelliteNetworkFundingContracts.Count; contractIndex++)
             {
-                SatelliteNetworkFundingContract programme = context.SatelliteNetworkFundingContracts[programmeIndex];
-                if (programme == null
-                    || string.IsNullOrEmpty(programme.Id)
-                    || string.IsNullOrEmpty(programme.CelestialBodyName)
-                    || !IsTargetAvailable(programme.Id, agency, context))
+                SatelliteNetworkFundingContract contract = context.SatelliteNetworkFundingContracts[contractIndex];
+                if (contract == null
+                    || string.IsNullOrEmpty(contract.Id)
+                    || string.IsNullOrEmpty(contract.CelestialBodyName)
+                    || !IsTargetAvailable(contract.Id, agency, context))
                 {
                     continue;
                 }
 
-                availableSatelliteTargets.Add(programme.Id);
+                availableSatelliteTargets.Add(contract.Id);
             }
 
             if (availableOneOffTargets.Count == 0 && availableSatelliteTargets.Count == 0)
@@ -476,7 +476,7 @@ namespace TheRaceForSpace.Rivals
             return selectedTargetType[RandomGenerator.Next(selectedTargetType.Count)];
         }
 
-        private static double CalculateLaunchProgressCostForTarget(
+        private static double CalculateMissionProgressCostForTarget(
             string targetId,
             IList<SatelliteNetworkFundingContract> satelliteNetworkFundingContracts)
         {
@@ -494,10 +494,10 @@ namespace TheRaceForSpace.Rivals
                     : bodySettings.ProbeProgressCostFunds;
             }
 
-            SatelliteNetworkFundingContract fundingProgramme = FindSatelliteNetworkFundingContract(targetId, satelliteNetworkFundingContracts);
-            if (fundingProgramme != null && !string.IsNullOrEmpty(fundingProgramme.CelestialBodyName))
+            SatelliteNetworkFundingContract networkContract = FindSatelliteNetworkFundingContract(targetId, satelliteNetworkFundingContracts);
+            if (networkContract != null && !string.IsNullOrEmpty(networkContract.CelestialBodyName))
             {
-                return CampaignSettings.GetBodySettings(fundingProgramme.CelestialBodyName)
+                return CampaignSettings.GetBodySettings(networkContract.CelestialBodyName)
                     .SatelliteProgressCostFunds;
             }
 
@@ -517,26 +517,26 @@ namespace TheRaceForSpace.Rivals
             agency.NextMissionTargetId = targetId;
             agency.NextMissionDisplayName = GetMissionTargetDisplayName(
                 targetId,
-                context.AchievementProgrammes,
+                context.ObjectiveFundingContracts,
                 context.SatelliteNetworkFundingContracts);
         }
 
-        private static ObjectiveFundingContract FindAchievementProgramme(
+        private static ObjectiveFundingContract FindObjectiveFundingContract(
             string targetId,
-            IList<ObjectiveFundingContract> achievementProgrammes)
+            IList<ObjectiveFundingContract> objectiveFundingContracts)
         {
-            if (string.IsNullOrEmpty(targetId) || achievementProgrammes == null)
+            if (string.IsNullOrEmpty(targetId) || objectiveFundingContracts == null)
             {
                 return null;
             }
 
-            for (int programmeIndex = 0; programmeIndex < achievementProgrammes.Count; programmeIndex++)
+            for (int contractIndex = 0; contractIndex < objectiveFundingContracts.Count; contractIndex++)
             {
-                ObjectiveFundingContract programme = achievementProgrammes[programmeIndex];
-                if (programme != null
-                    && string.Equals(programme.Id, targetId, StringComparison.OrdinalIgnoreCase))
+                ObjectiveFundingContract contract = objectiveFundingContracts[contractIndex];
+                if (contract != null
+                    && string.Equals(contract.Id, targetId, StringComparison.OrdinalIgnoreCase))
                 {
-                    return programme;
+                    return contract;
                 }
             }
 
@@ -552,13 +552,13 @@ namespace TheRaceForSpace.Rivals
                 return null;
             }
 
-            for (int programmeIndex = 0; programmeIndex < satelliteNetworkFundingContracts.Count; programmeIndex++)
+            for (int contractIndex = 0; contractIndex < satelliteNetworkFundingContracts.Count; contractIndex++)
             {
-                SatelliteNetworkFundingContract programme = satelliteNetworkFundingContracts[programmeIndex];
-                if (programme != null
-                    && string.Equals(programme.Id, targetId, StringComparison.OrdinalIgnoreCase))
+                SatelliteNetworkFundingContract contract = satelliteNetworkFundingContracts[contractIndex];
+                if (contract != null
+                    && string.Equals(contract.Id, targetId, StringComparison.OrdinalIgnoreCase))
                 {
-                    return programme;
+                    return contract;
                 }
             }
 

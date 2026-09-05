@@ -19,7 +19,7 @@ namespace TheRaceForSpace.ControllerTests
 
             ObjectiveDefinition objective = ObjectiveCatalogue.FindById(
                 ObjectiveCatalogue.MinmusCrewedOrbitId);
-            var programme = new ObjectiveFundingContract(
+            var contract = new ObjectiveFundingContract(
                 objective.Id,
                 objective.Name,
                 objective.ObjectiveDescription,
@@ -31,7 +31,7 @@ namespace TheRaceForSpace.ControllerTests
                             ObjectiveCatalogue.ProbeOrbitId,
                             UnlockAgencyScope.AnyRival,
                             2))));
-            var achievementProgrammes = new List<ObjectiveFundingContract> { programme };
+            var objectiveFundingContracts = new List<ObjectiveFundingContract> { contract };
             var agencies = new List<AgencyState> { player, aster, cobalt, delta };
 
             // The unlock rule is satisfied at this time, but sponsors have not selected the
@@ -39,18 +39,18 @@ namespace TheRaceForSpace.ControllerTests
             RivalSimulation.Refresh(
                 agencies,
                 200.0,
-                achievementProgrammes,
+                objectiveFundingContracts,
                 new List<SatelliteNetworkFundingContract>());
             RequireEqual(
                 null,
                 cobalt.NextMissionTargetId,
                 "An unlocked but unoffered target must not be selected by a rival.");
 
-            programme.Offer();
+            contract.Offer();
             RivalSimulation.Refresh(
                 agencies,
                 200.0,
-                achievementProgrammes,
+                objectiveFundingContracts,
                 new List<SatelliteNetworkFundingContract>());
             RequireEqual(
                 ObjectiveCatalogue.MinmusCrewedOrbitId,

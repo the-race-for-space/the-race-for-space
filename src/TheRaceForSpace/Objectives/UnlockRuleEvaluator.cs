@@ -98,7 +98,7 @@ namespace TheRaceForSpace.Objectives
             int achievedProgramCount = 0;
             for (int agencyIndex = 0; agencyIndex < agencies.Count; agencyIndex++)
             {
-                if (DoesProgramSatisfyAchievementCondition(
+                if (DoesAgencySatisfyObjectiveCompletionCondition(
                     agencies[agencyIndex],
                     condition,
                     evaluationUniversalTime))
@@ -146,7 +146,7 @@ namespace TheRaceForSpace.Objectives
         /// Returns whether one agency satisfies the scope, objective and historical-time parts of
         /// an objectiveCompletion condition. This supports read-only UI attribution without duplicating rules.
         /// </summary>
-        public static bool DoesProgramSatisfyAchievementCondition(
+        public static bool DoesAgencySatisfyObjectiveCompletionCondition(
             AgencyState agency,
             UnlockConditionDefinition condition,
             double evaluationUniversalTime)
@@ -161,9 +161,9 @@ namespace TheRaceForSpace.Objectives
                 return false;
             }
 
-            double achievementUniversalTime = agency.GetObjectiveCompletionTime(condition.ObjectiveId);
-            return achievementUniversalTime >= 0.0
-                && achievementUniversalTime <= evaluationUniversalTime;
+            double completionUniversalTime = agency.GetObjectiveCompletionTime(condition.ObjectiveId);
+            return completionUniversalTime >= 0.0
+                && completionUniversalTime <= evaluationUniversalTime;
         }
 
         private static bool IsPathSatisfied(

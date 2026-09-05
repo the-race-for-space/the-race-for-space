@@ -8,7 +8,7 @@ namespace TheRaceForSpace.Tests.Tracking
 {
     internal static class OrbitalVesselTrackerTests
     {
-        public static void NormalizedSnapshotsUpdateCountsAndMilestones()
+        public static void NormalizedSnapshotsUpdateCountsAndObjectives()
         {
             FlightContractTrackerTests.RunAll();
 
@@ -41,7 +41,7 @@ namespace TheRaceForSpace.Tests.Tracking
                 playerAgency.GetObjectiveCompletionTime(ObjectiveCatalogue.MunProbeOrbitId),
                 "Objectives recorded from one snapshot refresh should use the supplied observation time.");
 
-            CurrentSnapshotSatelliteCountUnlocksMilestone();
+            CurrentSnapshotSatelliteCountUnlocksObjective();
         }
 
         public static void EmptySnapshotsResetTrackedBodyCounts()
@@ -63,7 +63,7 @@ namespace TheRaceForSpace.Tests.Tracking
             RequireEqual(0, playerAgency.GetSatelliteCount("Eve"), "Missing arbitrary-body snapshots should clear the previous count without objective definitions.");
         }
 
-        public static void CrewedProbeCountsAsSatelliteButNotProbeMilestone()
+        public static void CrewedProbeCountsAsSatelliteButNotProbeObjective()
         {
             var playerAgency = new AgencyState("player", "Player", true);
             var agencies = new List<AgencyState> { playerAgency };
@@ -152,7 +152,7 @@ namespace TheRaceForSpace.Tests.Tracking
                 "The tracker should use rival state and exact universal time through the shared evaluator.");
         }
 
-        private static void CurrentSnapshotSatelliteCountUnlocksMilestone()
+        private static void CurrentSnapshotSatelliteCountUnlocksObjective()
         {
             var playerAgency = new AgencyState("player", "Player", true);
             var agencies = new List<AgencyState> { playerAgency };

@@ -128,7 +128,7 @@ namespace TheRaceForSpace.KspIntegration
         public static bool TryRestoreRaceProgress(
             AgencyState playerAgency,
             IList<SatelliteNetworkFundingContract> satelliteContracts,
-            IList<ObjectiveFundingContract> achievementContracts,
+            IList<ObjectiveFundingContract> objectiveFundingContracts,
             out double nextFundingUniversalTime)
         {
             nextFundingUniversalTime = -1.0;
@@ -143,7 +143,7 @@ namespace TheRaceForSpace.KspIntegration
             FundingContractsState.ApplyTo(
                 playerAgency,
                 satelliteContracts,
-                achievementContracts);
+                objectiveFundingContracts);
             nextFundingUniversalTime = FundingContractsState.NextFundingUniversalTime;
             return true;
         }
@@ -186,7 +186,7 @@ namespace TheRaceForSpace.KspIntegration
         public static void CaptureRaceProgress(
             AgencyState playerAgency,
             IList<SatelliteNetworkFundingContract> satelliteContracts,
-            IList<ObjectiveFundingContract> achievementContracts,
+            IList<ObjectiveFundingContract> objectiveFundingContracts,
             double nextFundingUniversalTime)
         {
             if (!_stateReady || _loadedGame == null || _loadedGame != HighLogic.CurrentGame)
@@ -197,7 +197,7 @@ namespace TheRaceForSpace.KspIntegration
             FundingContractsState.Capture(
                 playerAgency,
                 satelliteContracts,
-                achievementContracts,
+                objectiveFundingContracts,
                 nextFundingUniversalTime);
         }
 

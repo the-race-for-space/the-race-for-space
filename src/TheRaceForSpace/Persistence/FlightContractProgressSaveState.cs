@@ -77,7 +77,7 @@ namespace TheRaceForSpace.Persistence
                     objectiveId,
                     tracker.GetControlHoldSeconds(objectiveId),
                     tracker.IsControlSampleInBand(objectiveId),
-                    tracker.IsControlMilestoneQualified(objectiveId)));
+                    tracker.IsControlObjectiveQualified(objectiveId)));
             }
         }
 

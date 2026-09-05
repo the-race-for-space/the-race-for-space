@@ -53,7 +53,7 @@ namespace TheRaceForSpace.Tracking
         public bool EnteredOrbit { get { return _enteredOrbit; } }
 
         // Persistence captures this live key collection directly, avoiding a temporary list allocation
-        // on the once-per-second starter-state capture path.
+        // on the once-per-second flight-contract capture path.
         internal ICollection<string> ControlStateObjectiveIds { get { return _controlStates.Keys; } }
 
         /// <summary>
@@ -72,7 +72,7 @@ namespace TheRaceForSpace.Tracking
         /// Returns whether one Control contract has completed its altitude hold and is waiting
         /// for the required crewed Kerbin landing.
         /// </summary>
-        public bool IsControlMilestoneQualified(string objectiveId)
+        public bool IsControlObjectiveQualified(string objectiveId)
         {
             ControlContractState state;
             return !string.IsNullOrEmpty(objectiveId)
@@ -115,17 +115,17 @@ namespace TheRaceForSpace.Tracking
         }
 
         /// <summary>
-        /// Applies one active-vessel observation against the supplied active starter-contract set.
+        /// Applies one active-vessel observation against the supplied active flight-contract set.
         /// Every supplied Mass, Biome, and Control contract is evaluated independently so one flight
         /// may satisfy multiple separately offered levels.
         /// </summary>
-        public bool RefreshPlayerMilestones(
+        public bool EvaluateActiveFlightContracts(
             AgencyState playerAgency,
-            IList<ObjectiveDefinition> starterMilestones,
+            IList<ObjectiveDefinition> activeFlightContracts,
             ActiveVesselSnapshot snapshot)
         {
             if (playerAgency == null
-                || starterMilestones == null
+                || activeFlightContracts == null
                 || snapshot == null
                 || string.IsNullOrEmpty(snapshot.VesselId)
                 || string.IsNullOrEmpty(snapshot.CelestialBodyName))
@@ -178,7 +178,7 @@ namespace TheRaceForSpace.Tracking
                 _enteredOrbit = true;
             }
 
-            bool recordedAchievement = false;
+            bool recordedObjective = false;
             bool isKerbin = string.Equals(
                 snapshot.CelestialBodyName,
                 "Kerbin",
@@ -189,9 +189,9 @@ namespace TheRaceForSpace.Tracking
                 // The controller already filtered this collection to Offered, unexpired contracts
                 // the player has not completed. Evaluate each supplied definition on its own terms
                 // so earlier and later offered levels remain genuinely independent.
-                for (int milestoneIndex = 0; milestoneIndex < starterMilestones.Count; milestoneIndex++)
+                for (int objectiveIndex = 0; objectiveIndex < activeFlightContracts.Count; objectiveIndex++)
                 {
-                    ObjectiveDefinition objective = starterMilestones[milestoneIndex];
+                    ObjectiveDefinition objective = activeFlightContracts[objectiveIndex];
                     if (objective == null || playerAgency.HasCompletedObjective(objective.Id))
                     {
                         continue;
@@ -204,7 +204,7 @@ namespace TheRaceForSpace.Tracking
                     {
                         // Mass represents delivery of a finished craft, so the final landed vessel
                         // must still meet both the mass and distance requirement for this contract.
-                        recordedAchievement |= playerAgency.RecordObjectiveCompletion(
+                        recordedObjective |= playerAgency.RecordObjectiveCompletion(
                             objective.Id,
                             snapshot.ObservationUniversalTime);
                         continue;
@@ -220,15 +220,15 @@ namespace TheRaceForSpace.Tracking
                     {
                         // Flying over a biome is not enough; this individual contract completes
                         // only when the active craft finishes landed in its requested biome.
-                        recordedAchievement |= playerAgency.RecordObjectiveCompletion(
+                        recordedObjective |= playerAgency.RecordObjectiveCompletion(
                             objective.Id,
                             snapshot.ObservationUniversalTime);
                     }
                 }
 
-                recordedAchievement |= EvaluateControlMilestones(
+                recordedObjective |= EvaluateControlObjectives(
                     playerAgency,
-                    starterMilestones,
+                    activeFlightContracts,
                     snapshot,
                     sampleDeltaSeconds);
             }
@@ -238,7 +238,7 @@ namespace TheRaceForSpace.Tracking
             }
 
             _lastSampleUniversalTime = snapshot.ObservationUniversalTime;
-            return recordedAchievement;
+            return recordedObjective;
         }
 
         /// <summary>
@@ -248,13 +248,13 @@ namespace TheRaceForSpace.Tracking
         /// </summary>
         public bool RecordSurfaceImpact(
             AgencyState playerAgency,
-            IList<ObjectiveDefinition> starterMilestones,
+            IList<ObjectiveDefinition> activeFlightContracts,
             string vesselId,
             string celestialBodyName,
             double impactUniversalTime)
         {
             if (playerAgency == null
-                || starterMilestones == null
+                || activeFlightContracts == null
                 || !HasActiveAttempt
                 || string.IsNullOrEmpty(vesselId)
                 || !string.Equals(_vesselId, vesselId, StringComparison.OrdinalIgnoreCase))
@@ -262,13 +262,13 @@ namespace TheRaceForSpace.Tracking
                 return false;
             }
 
-            bool recordedAchievement = false;
+            bool recordedObjective = false;
             if (!_enteredOrbit
                 && string.Equals(celestialBodyName, "Kerbin", StringComparison.OrdinalIgnoreCase))
             {
-                for (int milestoneIndex = 0; milestoneIndex < starterMilestones.Count; milestoneIndex++)
+                for (int objectiveIndex = 0; objectiveIndex < activeFlightContracts.Count; objectiveIndex++)
                 {
-                    ObjectiveDefinition objective = starterMilestones[milestoneIndex];
+                    ObjectiveDefinition objective = activeFlightContracts[objectiveIndex];
                     if (objective == null
                         || objective.PreOrbitLine != PreOrbitContractLine.DirectedPower
                         || playerAgency.HasCompletedObjective(objective.Id)
@@ -279,18 +279,18 @@ namespace TheRaceForSpace.Tracking
                         continue;
                     }
 
-                    recordedAchievement |= playerAgency.RecordObjectiveCompletion(
+                    recordedObjective |= playerAgency.RecordObjectiveCompletion(
                         objective.Id,
                         impactUniversalTime);
                 }
             }
 
             ClearAttempt();
-            return recordedAchievement;
+            return recordedObjective;
         }
 
         /// <summary>
-        /// Restores the common historical fields for one persisted starter-flight attempt. Current
+        /// Restores the common historical fields for one persisted flight-contract attempt. Current
         /// Control states are restored separately by stable contract ID through RestoreControlState.
         /// </summary>
         public void RestoreState(
@@ -366,38 +366,38 @@ namespace TheRaceForSpace.Tracking
             _enteredOrbit = false;
         }
 
-        private bool EvaluateControlMilestones(
+        private bool EvaluateControlObjectives(
             AgencyState playerAgency,
-            IList<ObjectiveDefinition> starterMilestones,
+            IList<ObjectiveDefinition> activeFlightContracts,
             ActiveVesselSnapshot snapshot,
             double sampleDeltaSeconds)
         {
-            bool recordedAchievement = false;
+            bool recordedObjective = false;
 
-            for (int milestoneIndex = 0; milestoneIndex < starterMilestones.Count; milestoneIndex++)
+            for (int objectiveIndex = 0; objectiveIndex < activeFlightContracts.Count; objectiveIndex++)
             {
-                ObjectiveDefinition controlMilestone = starterMilestones[milestoneIndex];
-                if (controlMilestone == null
-                    || controlMilestone.PreOrbitLine != PreOrbitContractLine.Control
-                    || playerAgency.HasCompletedObjective(controlMilestone.Id))
+                ObjectiveDefinition controlObjective = activeFlightContracts[objectiveIndex];
+                if (controlObjective == null
+                    || controlObjective.PreOrbitLine != PreOrbitContractLine.Control
+                    || playerAgency.HasCompletedObjective(controlObjective.Id))
                 {
                     continue;
                 }
 
-                ControlContractState state = GetOrCreateControlState(controlMilestone.Id);
+                ControlContractState state = GetOrCreateControlState(controlObjective.Id);
                 if (state.IsQualified
                     && snapshot.Situation == FlightSituation.Landed
                     && snapshot.CrewCount > 0)
                 {
-                    recordedAchievement |= playerAgency.RecordObjectiveCompletion(
-                        controlMilestone.Id,
+                    recordedObjective |= playerAgency.RecordObjectiveCompletion(
+                        controlObjective.Id,
                         snapshot.ObservationUniversalTime);
                     continue;
                 }
 
                 bool isInBand = snapshot.CrewCount > 0
-                    && snapshot.AltitudeMeters >= controlMilestone.MinimumAltitudeMeters
-                    && snapshot.AltitudeMeters <= controlMilestone.MaximumAltitudeMeters;
+                    && snapshot.AltitudeMeters >= controlObjective.MinimumAltitudeMeters
+                    && snapshot.AltitudeMeters <= controlObjective.MaximumAltitudeMeters;
                 if (!isInBand)
                 {
                     state.WasSampleInBand = false;
@@ -414,13 +414,13 @@ namespace TheRaceForSpace.Tracking
                 }
 
                 state.WasSampleInBand = true;
-                if (state.HoldSeconds >= controlMilestone.RequiredDurationSeconds)
+                if (state.HoldSeconds >= controlObjective.RequiredDurationSeconds)
                 {
                     state.IsQualified = true;
                 }
             }
 
-            return recordedAchievement;
+            return recordedObjective;
         }
 
         private ControlContractState GetOrCreateControlState(string objectiveId)

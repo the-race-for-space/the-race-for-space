@@ -25,20 +25,20 @@ namespace TheRaceForSpace.ControllerTests
             Require(!Contains(controller, ObjectiveCatalogue.Mass3Id),
                 "Mass III must remain inactive until it is separately offered.");
 
-            tracker.RefreshPlayerMilestones(
+            tracker.EvaluateActiveFlightContracts(
                 controller.PlayerAgency,
                 controller.ActiveFlightContracts,
                 Snapshot("mass-independent", 100.0, 100.0, 100.0, 0.0, 6.0, 0, null,
                     FlightSituation.Prelaunch, 0.0));
 
-            bool recorded = tracker.RefreshPlayerMilestones(
+            bool recorded = tracker.EvaluateActiveFlightContracts(
                 controller.PlayerAgency,
                 controller.ActiveFlightContracts,
                 Snapshot("mass-independent", 100.0, 110.0, 0.0, 0.0, 6.0, 0, null,
                     FlightSituation.Landed, 20.0));
 
             Require(recorded,
-                "One landing satisfying both offered Mass contracts should record achievements.");
+                "One landing satisfying both offered Mass contracts should record objectives.");
             Require(controller.PlayerAgency.HasCompletedObjective(ObjectiveCatalogue.Mass1Id),
                 "Mass I should complete from the shared qualifying landing.");
             Require(controller.PlayerAgency.HasCompletedObjective(ObjectiveCatalogue.Mass2Id),
@@ -53,12 +53,12 @@ namespace TheRaceForSpace.ControllerTests
                 ObjectiveCatalogue.DirectedPower1Id);
             var tracker = new FlightContractTracker();
 
-            tracker.RefreshPlayerMilestones(
+            tracker.EvaluateActiveFlightContracts(
                 controller.PlayerAgency,
                 controller.ActiveFlightContracts,
                 Snapshot("power-independent", 200.0, 200.0, 100.0, 0.0, 1.0, 0, null,
                     FlightSituation.Prelaunch));
-            tracker.RefreshPlayerMilestones(
+            tracker.EvaluateActiveFlightContracts(
                 controller.PlayerAgency,
                 controller.ActiveFlightContracts,
                 Snapshot("power-independent", 200.0, 210.0, 50000.0, 1200.0, 1.0, 0, null,
@@ -87,13 +87,13 @@ namespace TheRaceForSpace.ControllerTests
                 ObjectiveCatalogue.Biome1Id);
             var tracker = new FlightContractTracker();
 
-            tracker.RefreshPlayerMilestones(
+            tracker.EvaluateActiveFlightContracts(
                 controller.PlayerAgency,
                 controller.ActiveFlightContracts,
                 Snapshot("biome-independent", 300.0, 300.0, 100.0, 0.0, 1.0, 0, "Shores",
                     FlightSituation.Prelaunch));
 
-            Require(tracker.RefreshPlayerMilestones(
+            Require(tracker.EvaluateActiveFlightContracts(
                     controller.PlayerAgency,
                     controller.ActiveFlightContracts,
                     Snapshot("biome-independent", 300.0, 310.0, 0.0, 0.0, 1.0, 0, "Grasslands",
@@ -106,7 +106,7 @@ namespace TheRaceForSpace.ControllerTests
 
             // Match the live runtime: completion invalidates the controller cache immediately, but
             // the same vessel attempt remains alive and can continue toward another offered contract.
-            controller.NotifyPlayerPreOrbitAchievementRecorded();
+            controller.NotifyPlayerPreOrbitObjectiveCompleted();
             Planetarium.CurrentUniversalTime = FundingIntervalSeconds + 20.0;
             controller.Refresh(false);
 
@@ -115,12 +115,12 @@ namespace TheRaceForSpace.ControllerTests
             Require(Contains(controller, ObjectiveCatalogue.Biome2Id),
                 "Unfinished offered Biome II should remain active.");
 
-            tracker.RefreshPlayerMilestones(
+            tracker.EvaluateActiveFlightContracts(
                 controller.PlayerAgency,
                 controller.ActiveFlightContracts,
                 Snapshot("biome-independent", 300.0, 320.0, 1000.0, 100.0, 1.0, 0, "Highlands",
                     FlightSituation.Flying));
-            Require(tracker.RefreshPlayerMilestones(
+            Require(tracker.EvaluateActiveFlightContracts(
                     controller.PlayerAgency,
                     controller.ActiveFlightContracts,
                     Snapshot("biome-independent", 300.0, 321.0, 0.0, 0.0, 1.0, 0, "Highlands",
@@ -147,7 +147,7 @@ namespace TheRaceForSpace.ControllerTests
 
             for (int elapsedSeconds = 0; elapsedSeconds <= 30; elapsedSeconds += 5)
             {
-                tracker.RefreshPlayerMilestones(
+                tracker.EvaluateActiveFlightContracts(
                     controller.PlayerAgency,
                     controller.ActiveFlightContracts,
                     Snapshot(
@@ -162,15 +162,15 @@ namespace TheRaceForSpace.ControllerTests
                         FlightSituation.Flying));
             }
 
-            Require(tracker.IsControlMilestoneQualified(ObjectiveCatalogue.Control1Id),
+            Require(tracker.IsControlObjectiveQualified(ObjectiveCatalogue.Control1Id),
                 "Control I should retain its own qualified hold state.");
-            Require(!tracker.IsControlMilestoneQualified(ObjectiveCatalogue.Control2Id),
+            Require(!tracker.IsControlObjectiveQualified(ObjectiveCatalogue.Control2Id),
                 "Control II should remain unqualified until its own altitude hold is completed.");
 
             for (int observationUniversalTime = 435; observationUniversalTime <= 480;
                 observationUniversalTime += 5)
             {
-                tracker.RefreshPlayerMilestones(
+                tracker.EvaluateActiveFlightContracts(
                     controller.PlayerAgency,
                     controller.ActiveFlightContracts,
                     Snapshot(
@@ -185,16 +185,16 @@ namespace TheRaceForSpace.ControllerTests
                         FlightSituation.Flying));
             }
 
-            Require(tracker.IsControlMilestoneQualified(ObjectiveCatalogue.Control1Id),
+            Require(tracker.IsControlObjectiveQualified(ObjectiveCatalogue.Control1Id),
                 "Leaving Control I's band after qualification must not erase its completed hold.");
-            Require(tracker.IsControlMilestoneQualified(ObjectiveCatalogue.Control2Id),
+            Require(tracker.IsControlObjectiveQualified(ObjectiveCatalogue.Control2Id),
                 "Control II should qualify independently after its own 45-second hold.");
             Require(tracker.GetControlHoldSeconds(ObjectiveCatalogue.Control1Id) >= 30.0,
                 "Control I should retain its own accumulated hold duration.");
             Require(tracker.GetControlHoldSeconds(ObjectiveCatalogue.Control2Id) >= 45.0,
                 "Control II should retain its own accumulated hold duration.");
 
-            bool recorded = tracker.RefreshPlayerMilestones(
+            bool recorded = tracker.EvaluateActiveFlightContracts(
                 controller.PlayerAgency,
                 controller.ActiveFlightContracts,
                 Snapshot(
@@ -238,9 +238,9 @@ namespace TheRaceForSpace.ControllerTests
 
         private static bool Contains(CampaignController controller, string objectiveId)
         {
-            for (int milestoneIndex = 0; milestoneIndex < controller.ActiveFlightContracts.Count; milestoneIndex++)
+            for (int objectiveIndex = 0; objectiveIndex < controller.ActiveFlightContracts.Count; objectiveIndex++)
             {
-                ObjectiveDefinition objective = controller.ActiveFlightContracts[milestoneIndex];
+                ObjectiveDefinition objective = controller.ActiveFlightContracts[objectiveIndex];
                 if (objective != null
                     && string.Equals(objective.Id, objectiveId, StringComparison.OrdinalIgnoreCase))
                 {

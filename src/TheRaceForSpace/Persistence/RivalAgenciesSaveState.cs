@@ -116,7 +116,7 @@ namespace TheRaceForSpace.Persistence
         /// </summary>
         private sealed class SavedRivalProgram
         {
-            private const string AchievementNodeName = "ACHIEVEMENT";
+            private const string ObjectiveCompletionNodeName = "OBJECTIVE_COMPLETION";
             private const string SatelliteNodeName = "SATELLITE";
             private const string IdValueName = "id";
             private const string UniversalTimeValueName = "universalTime";
@@ -251,21 +251,21 @@ namespace TheRaceForSpace.Persistence
                     NextMissionProgressCheckUniversalTime = Math.Max(0.0, parsedDouble);
                 }
 
-                ConfigNode[] achievementNodes = node.GetNodes(AchievementNodeName);
-                for (int nodeIndex = 0; nodeIndex < achievementNodes.Length; nodeIndex++)
+                ConfigNode[] completionNodes = node.GetNodes(ObjectiveCompletionNodeName);
+                for (int nodeIndex = 0; nodeIndex < completionNodes.Length; nodeIndex++)
                 {
-                    ConfigNode achievementNode = achievementNodes[nodeIndex];
-                    string id = achievementNode.GetValue(IdValueName);
+                    ConfigNode completionNode = completionNodes[nodeIndex];
+                    string id = completionNode.GetValue(IdValueName);
                     double universalTime;
                     if (string.IsNullOrEmpty(id)
                         || !TryParseFiniteDouble(
-                            achievementNode.GetValue(UniversalTimeValueName),
+                            completionNode.GetValue(UniversalTimeValueName),
                             out universalTime))
                     {
                         continue;
                     }
 
-                    StoreAchievement(id, universalTime);
+                    StoreObjectiveCompletion(id, universalTime);
                 }
 
                 ConfigNode[] satelliteNodes = node.GetNodes(SatelliteNodeName);
@@ -313,14 +313,14 @@ namespace TheRaceForSpace.Persistence
                     NextMissionProgressCheckUniversalTimeValueName,
                     NextMissionProgressCheckUniversalTime.ToString("R", CultureInfo.InvariantCulture));
 
-                var achievementIds = new List<string>(_objectiveCompletionTimesById.Keys);
-                achievementIds.Sort(StringComparer.OrdinalIgnoreCase);
-                for (int idIndex = 0; idIndex < achievementIds.Count; idIndex++)
+                var objectiveIds = new List<string>(_objectiveCompletionTimesById.Keys);
+                objectiveIds.Sort(StringComparer.OrdinalIgnoreCase);
+                for (int idIndex = 0; idIndex < objectiveIds.Count; idIndex++)
                 {
-                    string id = achievementIds[idIndex];
-                    ConfigNode achievementNode = node.AddNode(AchievementNodeName);
-                    achievementNode.AddValue(IdValueName, id);
-                    achievementNode.AddValue(
+                    string id = objectiveIds[idIndex];
+                    ConfigNode completionNode = node.AddNode(ObjectiveCompletionNodeName);
+                    completionNode.AddValue(IdValueName, id);
+                    completionNode.AddValue(
                         UniversalTimeValueName,
                         _objectiveCompletionTimesById[id].ToString("R", CultureInfo.InvariantCulture));
                 }
@@ -350,7 +350,7 @@ namespace TheRaceForSpace.Persistence
                 _satellitesByBody.Clear();
             }
 
-            private void StoreAchievement(string id, double universalTime)
+            private void StoreObjectiveCompletion(string id, double universalTime)
             {
                 universalTime = Math.Max(0.0, universalTime);
                 double existingTime;

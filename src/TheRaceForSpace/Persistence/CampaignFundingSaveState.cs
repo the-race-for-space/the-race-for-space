@@ -13,8 +13,8 @@ namespace TheRaceForSpace.Persistence
     /// </summary>
     public sealed class CampaignFundingSaveState
     {
-        private const string PlayerAchievementNodeName = "PLAYER_OBJECTIVE_COMPLETION";
-        private const string AchievementContractNodeName = "OBJECTIVE_FUNDING_CONTRACT";
+        private const string PlayerObjectiveCompletionNodeName = "PLAYER_OBJECTIVE_COMPLETION";
+        private const string ObjectiveFundingContractNodeName = "OBJECTIVE_FUNDING_CONTRACT";
         private const string SatelliteContractNodeName = "SATELLITE_NETWORK_FUNDING_CONTRACT";
         private const string IdValueName = "id";
         private const string UniversalTimeValueName = "universalTime";
@@ -25,10 +25,10 @@ namespace TheRaceForSpace.Persistence
         private const string SatelliteTargetReachedValueName = "targetReached";
         private const string NextFundingUniversalTimeValueName = "nextFundingUniversalTime";
 
-        private readonly Dictionary<string, double> _playerAchievementTimesById =
+        private readonly Dictionary<string, double> _playerObjectiveCompletionTimesById =
             new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
-        private readonly Dictionary<string, SavedAchievementContract> _achievementContractsById =
-            new Dictionary<string, SavedAchievementContract>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, SavedObjectiveFundingContract> _objectiveFundingContractsById =
+            new Dictionary<string, SavedObjectiveFundingContract>(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, SavedSatelliteContract> _satelliteContractsById =
             new Dictionary<string, SavedSatelliteContract>(StringComparer.OrdinalIgnoreCase);
 
@@ -38,10 +38,10 @@ namespace TheRaceForSpace.Persistence
         public void Capture(
             AgencyState playerAgency,
             IList<SatelliteNetworkFundingContract> satelliteContracts,
-            IList<ObjectiveFundingContract> achievementContracts,
+            IList<ObjectiveFundingContract> objectiveFundingContracts,
             double nextFundingUniversalTime)
         {
-            if (playerAgency == null || satelliteContracts == null || achievementContracts == null)
+            if (playerAgency == null || satelliteContracts == null || objectiveFundingContracts == null)
             {
                 return;
             }
@@ -61,18 +61,18 @@ namespace TheRaceForSpace.Persistence
                     continue;
                 }
 
-                _playerAchievementTimesById[objectiveCompletion.Key] = Math.Max(0.0, objectiveCompletion.Value);
+                _playerObjectiveCompletionTimesById[objectiveCompletion.Key] = Math.Max(0.0, objectiveCompletion.Value);
             }
 
-            for (int contractIndex = 0; contractIndex < achievementContracts.Count; contractIndex++)
+            for (int contractIndex = 0; contractIndex < objectiveFundingContracts.Count; contractIndex++)
             {
-                ObjectiveFundingContract contract = achievementContracts[contractIndex];
+                ObjectiveFundingContract contract = objectiveFundingContracts[contractIndex];
                 if (contract == null || string.IsNullOrEmpty(contract.Id))
                 {
                     continue;
                 }
 
-                _achievementContractsById[contract.Id] = new SavedAchievementContract(
+                _objectiveFundingContractsById[contract.Id] = new SavedObjectiveFundingContract(
                     contract.IsOffered,
                     contract.HasStarted,
                     Math.Max(0, Math.Min(10, contract.PaymentsProcessed)));
@@ -96,29 +96,29 @@ namespace TheRaceForSpace.Persistence
         public void ApplyTo(
             AgencyState playerAgency,
             IList<SatelliteNetworkFundingContract> satelliteContracts,
-            IList<ObjectiveFundingContract> achievementContracts)
+            IList<ObjectiveFundingContract> objectiveFundingContracts)
         {
-            if (!HasData || playerAgency == null || satelliteContracts == null || achievementContracts == null)
+            if (!HasData || playerAgency == null || satelliteContracts == null || objectiveFundingContracts == null)
             {
                 return;
             }
 
             playerAgency.ClearObjectiveCompletionTimes();
-            foreach (KeyValuePair<string, double> objectiveCompletion in _playerAchievementTimesById)
+            foreach (KeyValuePair<string, double> objectiveCompletion in _playerObjectiveCompletionTimesById)
             {
                 playerAgency.RecordObjectiveCompletion(objectiveCompletion.Key, objectiveCompletion.Value);
             }
 
-            for (int contractIndex = 0; contractIndex < achievementContracts.Count; contractIndex++)
+            for (int contractIndex = 0; contractIndex < objectiveFundingContracts.Count; contractIndex++)
             {
-                ObjectiveFundingContract contract = achievementContracts[contractIndex];
+                ObjectiveFundingContract contract = objectiveFundingContracts[contractIndex];
                 if (contract == null || string.IsNullOrEmpty(contract.Id))
                 {
                     continue;
                 }
 
-                SavedAchievementContract savedContract;
-                if (!_achievementContractsById.TryGetValue(contract.Id, out savedContract))
+                SavedObjectiveFundingContract savedContract;
+                if (!_objectiveFundingContractsById.TryGetValue(contract.Id, out savedContract))
                 {
                     contract.RestoreState(false, 0);
                     contract.RestoreOfferState(false);
@@ -170,27 +170,27 @@ namespace TheRaceForSpace.Persistence
                 NextFundingUniversalTime = nextFundingUniversalTime;
             }
 
-            ConfigNode[] achievementNodes = node.GetNodes(PlayerAchievementNodeName);
-            for (int nodeIndex = 0; nodeIndex < achievementNodes.Length; nodeIndex++)
+            ConfigNode[] completionNodes = node.GetNodes(PlayerObjectiveCompletionNodeName);
+            for (int nodeIndex = 0; nodeIndex < completionNodes.Length; nodeIndex++)
             {
-                ConfigNode achievementNode = achievementNodes[nodeIndex];
-                string id = achievementNode.GetValue(IdValueName);
+                ConfigNode completionNode = completionNodes[nodeIndex];
+                string id = completionNode.GetValue(IdValueName);
                 double universalTime;
                 if (string.IsNullOrEmpty(id)
                     || !TryParseFiniteDouble(
-                        achievementNode.GetValue(UniversalTimeValueName),
+                        completionNode.GetValue(UniversalTimeValueName),
                         out universalTime))
                 {
                     continue;
                 }
 
-                StorePlayerAchievement(id, universalTime);
+                StorePlayerObjectiveCompletion(id, universalTime);
             }
 
-            ConfigNode[] achievementContractNodes = node.GetNodes(AchievementContractNodeName);
-            for (int nodeIndex = 0; nodeIndex < achievementContractNodes.Length; nodeIndex++)
+            ConfigNode[] objectiveFundingContractNodes = node.GetNodes(ObjectiveFundingContractNodeName);
+            for (int nodeIndex = 0; nodeIndex < objectiveFundingContractNodes.Length; nodeIndex++)
             {
-                ConfigNode contractNode = achievementContractNodes[nodeIndex];
+                ConfigNode contractNode = objectiveFundingContractNodes[nodeIndex];
                 string id = contractNode.GetValue(IdValueName);
                 bool isOffered;
                 bool hasStarted;
@@ -205,7 +205,7 @@ namespace TheRaceForSpace.Persistence
                     continue;
                 }
 
-                _achievementContractsById[id] = new SavedAchievementContract(
+                _objectiveFundingContractsById[id] = new SavedObjectiveFundingContract(
                     isOffered,
                     hasStarted,
                     paymentsProcessed);
@@ -250,25 +250,25 @@ namespace TheRaceForSpace.Persistence
                     NextFundingUniversalTime.ToString("R", CultureInfo.InvariantCulture));
             }
 
-            var achievementIds = new List<string>(_playerAchievementTimesById.Keys);
-            achievementIds.Sort(StringComparer.OrdinalIgnoreCase);
-            for (int idIndex = 0; idIndex < achievementIds.Count; idIndex++)
+            var objectiveIds = new List<string>(_playerObjectiveCompletionTimesById.Keys);
+            objectiveIds.Sort(StringComparer.OrdinalIgnoreCase);
+            for (int idIndex = 0; idIndex < objectiveIds.Count; idIndex++)
             {
-                string id = achievementIds[idIndex];
-                ConfigNode achievementNode = node.AddNode(PlayerAchievementNodeName);
-                achievementNode.AddValue(IdValueName, id);
-                achievementNode.AddValue(
+                string id = objectiveIds[idIndex];
+                ConfigNode completionNode = node.AddNode(PlayerObjectiveCompletionNodeName);
+                completionNode.AddValue(IdValueName, id);
+                completionNode.AddValue(
                     UniversalTimeValueName,
-                    _playerAchievementTimesById[id].ToString("R", CultureInfo.InvariantCulture));
+                    _playerObjectiveCompletionTimesById[id].ToString("R", CultureInfo.InvariantCulture));
             }
 
-            var achievementContractIds = new List<string>(_achievementContractsById.Keys);
-            achievementContractIds.Sort(StringComparer.OrdinalIgnoreCase);
-            for (int idIndex = 0; idIndex < achievementContractIds.Count; idIndex++)
+            var objectiveFundingContractIds = new List<string>(_objectiveFundingContractsById.Keys);
+            objectiveFundingContractIds.Sort(StringComparer.OrdinalIgnoreCase);
+            for (int idIndex = 0; idIndex < objectiveFundingContractIds.Count; idIndex++)
             {
-                string id = achievementContractIds[idIndex];
-                SavedAchievementContract contract = _achievementContractsById[id];
-                ConfigNode contractNode = node.AddNode(AchievementContractNodeName);
+                string id = objectiveFundingContractIds[idIndex];
+                SavedObjectiveFundingContract contract = _objectiveFundingContractsById[id];
+                ConfigNode contractNode = node.AddNode(ObjectiveFundingContractNodeName);
                 contractNode.AddValue(IdValueName, id);
                 contractNode.AddValue(OfferedValueName, contract.IsOffered);
                 contractNode.AddValue(StartedValueName, contract.HasStarted);
@@ -297,19 +297,19 @@ namespace TheRaceForSpace.Persistence
         {
             HasData = false;
             NextFundingUniversalTime = -1.0;
-            _playerAchievementTimesById.Clear();
-            _achievementContractsById.Clear();
+            _playerObjectiveCompletionTimesById.Clear();
+            _objectiveFundingContractsById.Clear();
             _satelliteContractsById.Clear();
         }
 
-        private void StorePlayerAchievement(string id, double universalTime)
+        private void StorePlayerObjectiveCompletion(string id, double universalTime)
         {
             universalTime = Math.Max(0.0, universalTime);
             double existingTime;
-            if (!_playerAchievementTimesById.TryGetValue(id, out existingTime)
+            if (!_playerObjectiveCompletionTimesById.TryGetValue(id, out existingTime)
                 || universalTime < existingTime)
             {
-                _playerAchievementTimesById[id] = universalTime;
+                _playerObjectiveCompletionTimesById[id] = universalTime;
             }
         }
 
@@ -350,9 +350,9 @@ namespace TheRaceForSpace.Persistence
             return !double.IsNaN(value) && !double.IsInfinity(value);
         }
 
-        private sealed class SavedAchievementContract
+        private sealed class SavedObjectiveFundingContract
         {
-            public SavedAchievementContract(bool isOffered, bool hasStarted, int paymentsProcessed)
+            public SavedObjectiveFundingContract(bool isOffered, bool hasStarted, int paymentsProcessed)
             {
                 IsOffered = isOffered;
                 HasStarted = hasStarted;

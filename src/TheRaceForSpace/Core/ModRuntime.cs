@@ -51,7 +51,7 @@ namespace TheRaceForSpace.Core
         }
 
         /// <summary>
-        /// Read-only access to the runtime-owned starter-flight state for presentation. UI callers
+        /// Read-only access to the runtime-owned flight-contract state for presentation. UI callers
         /// must not advance this tracker; the one-second runtime observation remains authoritative.
         /// </summary>
         public static FlightContractTracker FlightContractTrackingState
@@ -145,7 +145,7 @@ namespace TheRaceForSpace.Core
 
                 // Scenario state may become ready between scheduled five-second controller ticks.
                 // Force the controller's normal non-vessel path once before active-flight evaluation
-                // so persisted achievements are restored before a new starter result can be recorded.
+                // so persisted objectives are restored before a new starter result can be recorded.
                 _campaignController.Refresh(false);
             }
 
@@ -186,7 +186,7 @@ namespace TheRaceForSpace.Core
                 return;
             }
 
-            bool recordedAchievement = false;
+            bool recordedObjective = false;
             bool needsSurfaceImpact = (_flightTelemetryRequirements
                 & FlightTelemetryRequirement.SurfaceImpact) != 0;
 
@@ -203,7 +203,7 @@ namespace TheRaceForSpace.Core
                     out impactBodyName,
                     out impactUniversalTime))
                 {
-                    recordedAchievement = _flightContractTracker.RecordSurfaceImpact(
+                    recordedObjective = _flightContractTracker.RecordSurfaceImpact(
                         _campaignController.PlayerAgency,
                         activeFlightContracts,
                         impactVesselId,
@@ -217,18 +217,18 @@ namespace TheRaceForSpace.Core
                 _flightTelemetryRequirements,
                 out activeVesselSnapshot))
             {
-                recordedAchievement |= _flightContractTracker.RefreshPlayerMilestones(
+                recordedObjective |= _flightContractTracker.EvaluateActiveFlightContracts(
                     _campaignController.PlayerAgency,
                     activeFlightContracts,
                     activeVesselSnapshot);
             }
 
-            if (recordedAchievement)
+            if (recordedObjective)
             {
-                // PreOrbit achievements can immediately unlock the next line level or Probe Orbit.
+                // PreOrbit objectives can immediately unlock the next line level or Probe Orbit.
                 // Mark the active-contract cache dirty before reusing the controller's normal
                 // non-vessel refresh so completion and any resulting offer changes settle together.
-                _campaignController.NotifyPlayerPreOrbitAchievementRecorded();
+                _campaignController.NotifyPlayerPreOrbitObjectiveCompleted();
                 _campaignController.Refresh(false);
             }
 

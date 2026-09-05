@@ -22,19 +22,19 @@ namespace TheRaceForSpace.ControllerTests
             var controller = new CampaignController();
             controller.Refresh();
 
-            Require(FindAchievement(controller, ObjectiveCatalogue.DirectedPower1Id).IsOffered,
+            Require(FindObjectiveFundingContract(controller, ObjectiveCatalogue.DirectedPower1Id).IsOffered,
                 "Directed Power I should be offered at campaign start.");
-            Require(FindAchievement(controller, ObjectiveCatalogue.Mass1Id).IsOffered,
+            Require(FindObjectiveFundingContract(controller, ObjectiveCatalogue.Mass1Id).IsOffered,
                 "Mass I should be offered at campaign start.");
-            Require(FindAchievement(controller, ObjectiveCatalogue.Control1Id).IsOffered,
+            Require(FindObjectiveFundingContract(controller, ObjectiveCatalogue.Control1Id).IsOffered,
                 "Control I should be offered at campaign start.");
-            Require(FindAchievement(controller, ObjectiveCatalogue.Biome1Id).IsOffered,
+            Require(FindObjectiveFundingContract(controller, ObjectiveCatalogue.Biome1Id).IsOffered,
                 "Biome I should be offered at campaign start.");
-            Require(!FindAchievement(controller, ObjectiveCatalogue.ProbeOrbitId).IsOffered,
+            Require(!FindObjectiveFundingContract(controller, ObjectiveCatalogue.ProbeOrbitId).IsOffered,
                 "Probe Orbit should be locked at campaign start.");
-            Equal(4, CountOfferedPreOrbitAchievements(controller));
-            Equal(16, CountLockedPreOrbitAchievements(controller));
-            Equal(0, CountOfferedNormalAchievements(controller));
+            Equal(4, CountOfferedPreOrbitObjectives(controller));
+            Equal(16, CountLockedPreOrbitObjectives(controller));
+            Equal(0, CountOfferedNormalObjectives(controller));
         }
 
         public static void RivalPreOrbitCompletionUnlocksNextLevelForSponsorReview()
@@ -52,13 +52,13 @@ namespace TheRaceForSpace.ControllerTests
             Planetarium.CurrentUniversalTime = 20.0;
             controller.Refresh(false);
 
-            ObjectiveFundingContract first = FindAchievement(
+            ObjectiveFundingContract first = FindObjectiveFundingContract(
                 controller,
                 ObjectiveCatalogue.DirectedPower1Id);
-            ObjectiveFundingContract second = FindAchievement(
+            ObjectiveFundingContract second = FindObjectiveFundingContract(
                 controller,
                 ObjectiveCatalogue.DirectedPower2Id);
-            ObjectiveFundingContract third = FindAchievement(
+            ObjectiveFundingContract third = FindObjectiveFundingContract(
                 controller,
                 ObjectiveCatalogue.DirectedPower3Id);
 
@@ -66,9 +66,9 @@ namespace TheRaceForSpace.ControllerTests
                 "A rival completing Directed Power I should start its shared payout lifecycle.");
             Require(!second.IsOffered,
                 "Directed Power II should remain Unlocked until a sponsor review offers it.");
-            Require(controller.IsAchievementProgrammeAvailable(second),
+            Require(controller.IsObjectiveFundingContractAvailable(second),
                 "A rival completion should globally unlock Directed Power II.");
-            Require(!controller.IsAchievementProgrammeAvailable(third),
+            Require(!controller.IsObjectiveFundingContractAvailable(third),
                 "Directed Power III should remain locked until any agency completes level two.");
         }
 
@@ -97,21 +97,21 @@ namespace TheRaceForSpace.ControllerTests
                 ObjectiveCatalogue.Biome2Id
             };
 
-            for (int milestoneIndex = 0; milestoneIndex < openingObjectiveIds.Length; milestoneIndex++)
+            for (int objectiveIndex = 0; objectiveIndex < openingObjectiveIds.Length; objectiveIndex++)
             {
                 controller.FindAgencyById(CampaignController.AsterAgencyId)
-                    .RecordObjectiveCompletion(openingObjectiveIds[milestoneIndex], 10.0);
+                    .RecordObjectiveCompletion(openingObjectiveIds[objectiveIndex], 10.0);
             }
 
             Planetarium.CurrentUniversalTime = 20.0;
             controller.Refresh(false);
 
-            for (int milestoneIndex = 0; milestoneIndex < secondLevelIds.Length; milestoneIndex++)
+            for (int objectiveIndex = 0; objectiveIndex < secondLevelIds.Length; objectiveIndex++)
             {
-                ObjectiveFundingContract programme = FindAchievement(controller, secondLevelIds[milestoneIndex]);
-                Require(controller.IsAchievementProgrammeAvailable(programme),
+                ObjectiveFundingContract contract = FindObjectiveFundingContract(controller, secondLevelIds[objectiveIndex]);
+                Require(controller.IsObjectiveFundingContractAvailable(contract),
                     "Each second-level pre-orbit contract should unlock after its predecessor completes.");
-                Require(!programme.IsOffered,
+                Require(!contract.IsOffered,
                     "Unlocked pre-orbit contracts should wait for the sponsor review.");
             }
 
@@ -119,19 +119,19 @@ namespace TheRaceForSpace.ControllerTests
             controller.Refresh(false);
 
             int offeredSecondLevelCount = 0;
-            for (int milestoneIndex = 0; milestoneIndex < secondLevelIds.Length; milestoneIndex++)
+            for (int objectiveIndex = 0; objectiveIndex < secondLevelIds.Length; objectiveIndex++)
             {
-                if (FindAchievement(controller, secondLevelIds[milestoneIndex]).IsOffered)
+                if (FindObjectiveFundingContract(controller, secondLevelIds[objectiveIndex]).IsOffered)
                 {
                     offeredSecondLevelCount++;
                 }
             }
 
             Equal(4, offeredSecondLevelCount);
-            Equal(8, CountOfferedPreOrbitAchievements(controller));
+            Equal(8, CountOfferedPreOrbitObjectives(controller));
         }
 
-        public static void PreOrbitOffersDoNotConsumeNormalAchievementLimit()
+        public static void PreOrbitOffersDoNotConsumeNormalObjectiveLimit()
         {
             ResetEnvironment();
             CampaignSettings.RivalProgressChance = 0.0;
@@ -150,8 +150,8 @@ namespace TheRaceForSpace.ControllerTests
             Planetarium.CurrentUniversalTime = FundingIntervalSeconds;
             controller.Refresh(false);
 
-            Equal(4, CountOfferedPreOrbitAchievements(controller));
-            Equal(2, CountOfferedNormalAchievements(controller));
+            Equal(4, CountOfferedPreOrbitObjectives(controller));
+            Equal(2, CountOfferedNormalObjectives(controller));
         }
 
         public static void AnyPreOrbitLevelFiveOffersProbeOrbit()
@@ -179,7 +179,7 @@ namespace TheRaceForSpace.ControllerTests
                 Planetarium.CurrentUniversalTime = 20.0;
                 controller.Refresh(false);
 
-                ObjectiveFundingContract probeOrbit = FindAchievement(
+                ObjectiveFundingContract probeOrbit = FindObjectiveFundingContract(
                     controller,
                     ObjectiveCatalogue.ProbeOrbitId);
                 Require(probeOrbit.IsOffered,
@@ -198,18 +198,18 @@ namespace TheRaceForSpace.ControllerTests
             controller.FindAgencyById(CampaignController.AsterAgencyId).Funds = 0.0;
             controller.FindAgencyById(CampaignController.CobaltAgencyId).Funds = 0.0;
             controller.Refresh();
-            OfferAndCompleteAllPreOrbitAchievements(controller, 1.0);
+            OfferAndCompleteAllPreOrbitObjectives(controller, 1.0);
 
-            ObjectiveFundingContract probeOrbit = FindAchievement(
+            ObjectiveFundingContract probeOrbit = FindObjectiveFundingContract(
                 controller,
                 ObjectiveCatalogue.ProbeOrbitId);
-            ObjectiveFundingContract crewedOrbit = FindAchievement(
+            ObjectiveFundingContract crewedOrbit = FindObjectiveFundingContract(
                 controller,
                 ObjectiveCatalogue.CrewedOrbitId);
-            ObjectiveFundingContract munProbeOrbit = FindAchievement(
+            ObjectiveFundingContract munProbeOrbit = FindObjectiveFundingContract(
                 controller,
                 ObjectiveCatalogue.MunProbeOrbitId);
-            ObjectiveFundingContract minmusProbeOrbit = FindAchievement(
+            ObjectiveFundingContract minmusProbeOrbit = FindObjectiveFundingContract(
                 controller,
                 ObjectiveCatalogue.MinmusProbeOrbitId);
             SatelliteNetworkFundingContract kerbinNetwork = FindFunding(
@@ -226,9 +226,9 @@ namespace TheRaceForSpace.ControllerTests
             controller.Refresh(false);
 
             Require(probeOrbit.HasStarted, "The Probe Orbit offer should start after completion.");
-            Require(controller.IsAchievementProgrammeAvailable(crewedOrbit), "Crewed Orbit should unlock after Probe Orbit.");
-            Require(controller.IsAchievementProgrammeAvailable(munProbeOrbit), "Mun Probe Orbit should be unlocked.");
-            Require(controller.IsAchievementProgrammeAvailable(minmusProbeOrbit), "Minmus Probe Orbit should be unlocked.");
+            Require(controller.IsObjectiveFundingContractAvailable(crewedOrbit), "Crewed Orbit should unlock after Probe Orbit.");
+            Require(controller.IsObjectiveFundingContractAvailable(munProbeOrbit), "Mun Probe Orbit should be unlocked.");
+            Require(controller.IsObjectiveFundingContractAvailable(minmusProbeOrbit), "Minmus Probe Orbit should be unlocked.");
             Require(kerbinNetwork.IsAvailable, "Kerbin network funding should be unlocked.");
             Require(!crewedOrbit.IsOffered && !munProbeOrbit.IsOffered && !minmusProbeOrbit.IsOffered,
                 "Unlocked normal objectiveCompletion funding must wait for a funding review.");
@@ -239,10 +239,10 @@ namespace TheRaceForSpace.ControllerTests
             Planetarium.CurrentUniversalTime = FundingIntervalSeconds;
             controller.Refresh(false);
 
-            int newAchievementOffers = (crewedOrbit.IsOffered ? 1 : 0)
+            int newObjectiveOffers = (crewedOrbit.IsOffered ? 1 : 0)
                 + (munProbeOrbit.IsOffered ? 1 : 0)
                 + (minmusProbeOrbit.IsOffered ? 1 : 0);
-            Equal(2, newAchievementOffers);
+            Equal(2, newObjectiveOffers);
             Require(kerbinNetwork.IsOffered,
                 "The funding review should offer the only unlocked satellite candidate.");
 
@@ -261,28 +261,28 @@ namespace TheRaceForSpace.ControllerTests
             controller.FindAgencyById(CampaignController.AsterAgencyId).Funds = 0.0;
             controller.FindAgencyById(CampaignController.CobaltAgencyId).Funds = 0.0;
             controller.Refresh();
-            OfferAndCompleteAllPreOrbitAchievements(controller, 1.0);
+            OfferAndCompleteAllPreOrbitObjectives(controller, 1.0);
 
-            FindAchievement(controller, ObjectiveCatalogue.ProbeOrbitId).Offer();
+            FindObjectiveFundingContract(controller, ObjectiveCatalogue.ProbeOrbitId).Offer();
 
             // Record every normal uncrewed orbital objective before it is sponsored. PreOrbit
             // contracts are pre-completed in the setup so they do not compete for these review slots.
-            for (int programmeIndex = 0;
-                programmeIndex < controller.ObjectiveFundingContracts.Count;
-                programmeIndex++)
+            for (int contractIndex = 0;
+                contractIndex < controller.ObjectiveFundingContracts.Count;
+                contractIndex++)
             {
-                ObjectiveFundingContract programme =
-                    controller.ObjectiveFundingContracts[programmeIndex];
-                ObjectiveDefinition objective = ObjectiveCatalogue.FindById(programme.Id);
+                ObjectiveFundingContract contract =
+                    controller.ObjectiveFundingContracts[contractIndex];
+                ObjectiveDefinition objective = ObjectiveCatalogue.FindById(contract.Id);
                 if (objective != null
                     && objective.ObjectiveType == ObjectiveType.Orbit
                     && objective.CrewRequirement == ObjectiveCrewRequirement.UncrewedProbe)
                 {
-                    controller.PlayerAgency.RecordObjectiveCompletion(programme.Id, 1.0);
+                    controller.PlayerAgency.RecordObjectiveCompletion(contract.Id, 1.0);
                 }
             }
 
-            FindAchievement(controller, ObjectiveCatalogue.CrewedOrbitId).Offer();
+            FindObjectiveFundingContract(controller, ObjectiveCatalogue.CrewedOrbitId).Offer();
 
             Planetarium.CurrentUniversalTime = 1000.0;
             controller.Refresh(false);
@@ -291,29 +291,29 @@ namespace TheRaceForSpace.ControllerTests
             controller.Refresh(false);
 
             int laterOfferedCount = 0;
-            ObjectiveFundingContract laterOfferedProgramme = null;
-            for (int programmeIndex = 0;
-                programmeIndex < controller.ObjectiveFundingContracts.Count;
-                programmeIndex++)
+            ObjectiveFundingContract laterOfferedContract = null;
+            for (int contractIndex = 0;
+                contractIndex < controller.ObjectiveFundingContracts.Count;
+                contractIndex++)
             {
-                ObjectiveFundingContract programme =
-                    controller.ObjectiveFundingContracts[programmeIndex];
-                if (!programme.IsOffered
-                    || IsPreOrbitAchievement(programme)
-                    || string.Equals(programme.Id, ObjectiveCatalogue.ProbeOrbitId, StringComparison.OrdinalIgnoreCase)
-                    || string.Equals(programme.Id, ObjectiveCatalogue.CrewedOrbitId, StringComparison.OrdinalIgnoreCase))
+                ObjectiveFundingContract contract =
+                    controller.ObjectiveFundingContracts[contractIndex];
+                if (!contract.IsOffered
+                    || IsPreOrbitObjective(contract)
+                    || string.Equals(contract.Id, ObjectiveCatalogue.ProbeOrbitId, StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(contract.Id, ObjectiveCatalogue.CrewedOrbitId, StringComparison.OrdinalIgnoreCase))
                 {
                     continue;
                 }
 
                 laterOfferedCount++;
-                laterOfferedProgramme = programme;
+                laterOfferedContract = contract;
             }
 
             Equal(1, laterOfferedCount);
-            Require(laterOfferedProgramme != null && laterOfferedProgramme.HasStarted,
+            Require(laterOfferedContract != null && laterOfferedContract.HasStarted,
                 "The selected pre-completed contract should start after being offered.");
-            Equal(3, CountOfferedNormalAchievements(controller));
+            Equal(3, CountOfferedNormalObjectives(controller));
         }
 
         public static void SatelliteFulfilmentWaitsForFundingReview()
@@ -395,41 +395,41 @@ namespace TheRaceForSpace.ControllerTests
             controller.FindAgencyById(CampaignController.AsterAgencyId).Funds = 0.0;
             controller.FindAgencyById(CampaignController.CobaltAgencyId).Funds = 0.0;
             controller.Refresh();
-            OfferAndCompleteAllPreOrbitAchievements(controller, 1.0);
+            OfferAndCompleteAllPreOrbitObjectives(controller, 1.0);
 
-            FindAchievement(controller, ObjectiveCatalogue.ProbeOrbitId).Offer();
+            FindObjectiveFundingContract(controller, ObjectiveCatalogue.ProbeOrbitId).Offer();
 
-            for (int programmeIndex = 0;
-                programmeIndex < controller.ObjectiveFundingContracts.Count;
-                programmeIndex++)
+            for (int contractIndex = 0;
+                contractIndex < controller.ObjectiveFundingContracts.Count;
+                contractIndex++)
             {
-                ObjectiveFundingContract programme =
-                    controller.ObjectiveFundingContracts[programmeIndex];
-                ObjectiveDefinition objective = ObjectiveCatalogue.FindById(programme.Id);
+                ObjectiveFundingContract contract =
+                    controller.ObjectiveFundingContracts[contractIndex];
+                ObjectiveDefinition objective = ObjectiveCatalogue.FindById(contract.Id);
                 if (objective != null
                     && objective.ObjectiveType == ObjectiveType.Orbit
                     && objective.CrewRequirement == ObjectiveCrewRequirement.UncrewedProbe)
                 {
-                    controller.PlayerAgency.RecordObjectiveCompletion(programme.Id, 1.0);
+                    controller.PlayerAgency.RecordObjectiveCompletion(contract.Id, 1.0);
                 }
             }
 
-            FindAchievement(controller, ObjectiveCatalogue.CrewedOrbitId).Offer();
+            FindObjectiveFundingContract(controller, ObjectiveCatalogue.CrewedOrbitId).Offer();
 
             Planetarium.CurrentUniversalTime = FundingIntervalSeconds * 2.0;
             controller.Refresh(false);
 
             int laterOfferedCount = 0;
-            for (int programmeIndex = 0;
-                programmeIndex < controller.ObjectiveFundingContracts.Count;
-                programmeIndex++)
+            for (int contractIndex = 0;
+                contractIndex < controller.ObjectiveFundingContracts.Count;
+                contractIndex++)
             {
-                ObjectiveFundingContract programme =
-                    controller.ObjectiveFundingContracts[programmeIndex];
-                if (programme.IsOffered
-                    && !IsPreOrbitAchievement(programme)
-                    && !string.Equals(programme.Id, ObjectiveCatalogue.ProbeOrbitId, StringComparison.OrdinalIgnoreCase)
-                    && !string.Equals(programme.Id, ObjectiveCatalogue.CrewedOrbitId, StringComparison.OrdinalIgnoreCase))
+                ObjectiveFundingContract contract =
+                    controller.ObjectiveFundingContracts[contractIndex];
+                if (contract.IsOffered
+                    && !IsPreOrbitObjective(contract)
+                    && !string.Equals(contract.Id, ObjectiveCatalogue.ProbeOrbitId, StringComparison.OrdinalIgnoreCase)
+                    && !string.Equals(contract.Id, ObjectiveCatalogue.CrewedOrbitId, StringComparison.OrdinalIgnoreCase))
                 {
                     laterOfferedCount++;
                 }
@@ -439,15 +439,15 @@ namespace TheRaceForSpace.ControllerTests
             Equal(FundingIntervalSeconds * 3.0, controller.NextFundingUniversalTime);
         }
 
-        private static int CountOfferedPreOrbitAchievements(CampaignController controller)
+        private static int CountOfferedPreOrbitObjectives(CampaignController controller)
         {
             int count = 0;
-            for (int programmeIndex = 0;
-                programmeIndex < controller.ObjectiveFundingContracts.Count;
-                programmeIndex++)
+            for (int contractIndex = 0;
+                contractIndex < controller.ObjectiveFundingContracts.Count;
+                contractIndex++)
             {
-                ObjectiveFundingContract programme = controller.ObjectiveFundingContracts[programmeIndex];
-                if (programme.IsOffered && IsPreOrbitAchievement(programme))
+                ObjectiveFundingContract contract = controller.ObjectiveFundingContracts[contractIndex];
+                if (contract.IsOffered && IsPreOrbitObjective(contract))
                 {
                     count++;
                 }
@@ -456,17 +456,17 @@ namespace TheRaceForSpace.ControllerTests
             return count;
         }
 
-        private static int CountLockedPreOrbitAchievements(CampaignController controller)
+        private static int CountLockedPreOrbitObjectives(CampaignController controller)
         {
             int count = 0;
-            for (int programmeIndex = 0;
-                programmeIndex < controller.ObjectiveFundingContracts.Count;
-                programmeIndex++)
+            for (int contractIndex = 0;
+                contractIndex < controller.ObjectiveFundingContracts.Count;
+                contractIndex++)
             {
-                ObjectiveFundingContract programme = controller.ObjectiveFundingContracts[programmeIndex];
-                if (IsPreOrbitAchievement(programme)
-                    && !programme.IsOffered
-                    && !controller.IsAchievementProgrammeAvailable(programme))
+                ObjectiveFundingContract contract = controller.ObjectiveFundingContracts[contractIndex];
+                if (IsPreOrbitObjective(contract)
+                    && !contract.IsOffered
+                    && !controller.IsObjectiveFundingContractAvailable(contract))
                 {
                     count++;
                 }
@@ -475,15 +475,15 @@ namespace TheRaceForSpace.ControllerTests
             return count;
         }
 
-        private static int CountOfferedNormalAchievements(CampaignController controller)
+        private static int CountOfferedNormalObjectives(CampaignController controller)
         {
             int count = 0;
-            for (int programmeIndex = 0;
-                programmeIndex < controller.ObjectiveFundingContracts.Count;
-                programmeIndex++)
+            for (int contractIndex = 0;
+                contractIndex < controller.ObjectiveFundingContracts.Count;
+                contractIndex++)
             {
-                ObjectiveFundingContract programme = controller.ObjectiveFundingContracts[programmeIndex];
-                if (programme.IsOffered && !IsPreOrbitAchievement(programme))
+                ObjectiveFundingContract contract = controller.ObjectiveFundingContracts[contractIndex];
+                if (contract.IsOffered && !IsPreOrbitObjective(contract))
                 {
                     count++;
                 }
@@ -492,69 +492,69 @@ namespace TheRaceForSpace.ControllerTests
             return count;
         }
 
-        private static void OfferAndCompleteAllPreOrbitAchievements(
+        private static void OfferAndCompleteAllPreOrbitObjectives(
             CampaignController controller,
-            double achievementUniversalTime)
+            double completionUniversalTime)
         {
-            for (int programmeIndex = 0;
-                programmeIndex < controller.ObjectiveFundingContracts.Count;
-                programmeIndex++)
+            for (int contractIndex = 0;
+                contractIndex < controller.ObjectiveFundingContracts.Count;
+                contractIndex++)
             {
-                ObjectiveFundingContract programme = controller.ObjectiveFundingContracts[programmeIndex];
-                if (!IsPreOrbitAchievement(programme))
+                ObjectiveFundingContract contract = controller.ObjectiveFundingContracts[contractIndex];
+                if (!IsPreOrbitObjective(contract))
                 {
                     continue;
                 }
 
-                programme.Offer();
+                contract.Offer();
                 controller.FindAgencyById(CampaignController.AsterAgencyId)
-                    .RecordObjectiveCompletion(programme.Id, achievementUniversalTime);
+                    .RecordObjectiveCompletion(contract.Id, completionUniversalTime);
             }
         }
 
-        private static bool IsPreOrbitAchievement(ObjectiveFundingContract programme)
+        private static bool IsPreOrbitObjective(ObjectiveFundingContract contract)
         {
-            ObjectiveDefinition objective = programme == null
+            ObjectiveDefinition objective = contract == null
                 ? null
-                : ObjectiveCatalogue.FindById(programme.Id);
+                : ObjectiveCatalogue.FindById(contract.Id);
             return objective != null && objective.IsPreOrbitContract;
         }
 
-        private static ObjectiveFundingContract FindAchievement(
+        private static ObjectiveFundingContract FindObjectiveFundingContract(
             CampaignController controller,
-            string programmeId)
+            string contractId)
         {
-            for (int programmeIndex = 0;
-                programmeIndex < controller.ObjectiveFundingContracts.Count;
-                programmeIndex++)
+            for (int contractIndex = 0;
+                contractIndex < controller.ObjectiveFundingContracts.Count;
+                contractIndex++)
             {
-                ObjectiveFundingContract programme =
-                    controller.ObjectiveFundingContracts[programmeIndex];
-                if (programme != null
-                    && string.Equals(programme.Id, programmeId, StringComparison.OrdinalIgnoreCase))
+                ObjectiveFundingContract contract =
+                    controller.ObjectiveFundingContracts[contractIndex];
+                if (contract != null
+                    && string.Equals(contract.Id, contractId, StringComparison.OrdinalIgnoreCase))
                 {
-                    return programme;
+                    return contract;
                 }
             }
 
-            throw new InvalidOperationException("Missing objectiveCompletion programme '" + programmeId + "'.");
+            throw new InvalidOperationException("Missing objectiveCompletion contract '" + contractId + "'.");
         }
 
         private static SatelliteNetworkFundingContract FindFunding(
             CampaignController controller,
-            string programmeId)
+            string contractId)
         {
-            for (int programmeIndex = 0; programmeIndex < controller.SatelliteNetworkFundingContracts.Count; programmeIndex++)
+            for (int contractIndex = 0; contractIndex < controller.SatelliteNetworkFundingContracts.Count; contractIndex++)
             {
-                SatelliteNetworkFundingContract programme = controller.SatelliteNetworkFundingContracts[programmeIndex];
-                if (programme != null
-                    && string.Equals(programme.Id, programmeId, StringComparison.OrdinalIgnoreCase))
+                SatelliteNetworkFundingContract contract = controller.SatelliteNetworkFundingContracts[contractIndex];
+                if (contract != null
+                    && string.Equals(contract.Id, contractId, StringComparison.OrdinalIgnoreCase))
                 {
-                    return programme;
+                    return contract;
                 }
             }
 
-            throw new InvalidOperationException("Missing satellite programme '" + programmeId + "'.");
+            throw new InvalidOperationException("Missing satellite contract '" + contractId + "'.");
         }
 
         private static void ResetEnvironment()

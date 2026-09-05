@@ -9,19 +9,19 @@ namespace TheRaceForSpace.Tests
     {
         public static void CatalogueMatchesCurrentPrototype()
         {
-            IList<ObjectiveFundingContract> achievements =
-                FundingContractCatalogue.CreateAchievementProgrammes();
-            IList<SatelliteNetworkFundingContract> satelliteProgrammes =
-                FundingContractCatalogue.CreateSatelliteProgrammes();
+            IList<ObjectiveFundingContract> objectives =
+                FundingContractCatalogue.CreateObjectiveFundingContracts();
+            IList<SatelliteNetworkFundingContract> satelliteContracts =
+                FundingContractCatalogue.CreateSatelliteNetworkFundingContracts();
 
             Equal(
                 ObjectiveCatalogue.All.Count + ObjectiveCatalogue.PreOrbitContracts.Count,
-                achievements.Count);
+                objectives.Count);
             Equal(20, ObjectiveCatalogue.PreOrbitContracts.Count);
-            Equal(16, satelliteProgrammes.Count);
+            Equal(16, satelliteContracts.Count);
 
             AssertPreOrbitLine(
-                achievements,
+                objectives,
                 PreOrbitContractLine.DirectedPower,
                 new[]
                 {
@@ -32,7 +32,7 @@ namespace TheRaceForSpace.Tests
                     ObjectiveCatalogue.DirectedPower5Id
                 });
             AssertPreOrbitLine(
-                achievements,
+                objectives,
                 PreOrbitContractLine.Mass,
                 new[]
                 {
@@ -43,7 +43,7 @@ namespace TheRaceForSpace.Tests
                     ObjectiveCatalogue.Mass5Id
                 });
             AssertPreOrbitLine(
-                achievements,
+                objectives,
                 PreOrbitContractLine.Control,
                 new[]
                 {
@@ -54,7 +54,7 @@ namespace TheRaceForSpace.Tests
                     ObjectiveCatalogue.Control5Id
                 });
             AssertPreOrbitLine(
-                achievements,
+                objectives,
                 PreOrbitContractLine.Biome,
                 new[]
                 {
@@ -66,49 +66,49 @@ namespace TheRaceForSpace.Tests
                 });
             AssertPreOrbitCriteriaValues();
 
-            ObjectiveFundingContract probeOrbit = FindAchievement(
-                achievements,
+            ObjectiveFundingContract probeOrbit = FindObjectiveFundingContract(
+                objectives,
                 ObjectiveCatalogue.ProbeOrbitId);
-            Require(probeOrbit != null, "Missing Probe Orbit objectiveCompletion funding programme.");
+            Require(probeOrbit != null, "Missing Probe Orbit objectiveCompletion funding contract.");
             Equal(75000.0, probeOrbit.BaseRewardFunds);
             AssertProbeOrbitUnlockRule(probeOrbit.UnlockRule);
             Equal(
                 "Any agency must achieve Directed Power V or Mass V or Control V or Biome V - Ice Caps.",
                 probeOrbit.UnlockRequirement);
 
-            AssertAchievement(
-                achievements,
+            AssertObjectiveFundingContract(
+                objectives,
                 ObjectiveCatalogue.CrewedOrbitId,
                 150000.0,
                 ObjectiveCatalogue.ProbeOrbitId);
-            AssertAchievement(
-                achievements,
+            AssertObjectiveFundingContract(
+                objectives,
                 ObjectiveCatalogue.MunProbeOrbitId,
                 150000.0,
                 ObjectiveCatalogue.ProbeOrbitId);
-            AssertAchievement(
-                achievements,
+            AssertObjectiveFundingContract(
+                objectives,
                 ObjectiveCatalogue.MinmusProbeOrbitId,
                 150000.0,
                 ObjectiveCatalogue.ProbeOrbitId);
-            AssertAchievement(
-                achievements,
+            AssertObjectiveFundingContract(
+                objectives,
                 ObjectiveCatalogue.DunaProbeOrbitId,
                 300000.0,
                 ObjectiveCatalogue.MunProbeOrbitId,
                 ObjectiveCatalogue.MinmusProbeOrbitId);
-            AssertAchievement(
-                achievements,
+            AssertObjectiveFundingContract(
+                objectives,
                 ObjectiveCatalogue.MunCrewedOrbitId,
                 300000.0,
                 ObjectiveCatalogue.CrewedOrbitId);
-            AssertAchievement(
-                achievements,
+            AssertObjectiveFundingContract(
+                objectives,
                 ObjectiveCatalogue.MinmusCrewedOrbitId,
                 300000.0,
                 ObjectiveCatalogue.CrewedOrbitId);
-            AssertAchievement(
-                achievements,
+            AssertObjectiveFundingContract(
+                objectives,
                 ObjectiveCatalogue.DunaCrewedOrbitId,
                 500000.0,
                 ObjectiveCatalogue.MunCrewedOrbitId,
@@ -122,8 +122,8 @@ namespace TheRaceForSpace.Tests
             int[] interplanetaryNetworkPrerequisiteCounts = { 3, 3 };
 
             AssertBodyFundingSet(
-                achievements,
-                satelliteProgrammes,
+                objectives,
+                satelliteContracts,
                 ObjectiveCatalogue.MohoProbeOrbitId,
                 ObjectiveCatalogue.MohoCrewedOrbitId,
                 FundingContractCatalogue.MohoNetworkId,
@@ -135,8 +135,8 @@ namespace TheRaceForSpace.Tests
                 interplanetaryNetworkPrerequisiteBodies,
                 interplanetaryNetworkPrerequisiteCounts);
             AssertBodyFundingSet(
-                achievements,
-                satelliteProgrammes,
+                objectives,
+                satelliteContracts,
                 ObjectiveCatalogue.EveProbeOrbitId,
                 ObjectiveCatalogue.EveCrewedOrbitId,
                 FundingContractCatalogue.EveNetworkId,
@@ -148,8 +148,8 @@ namespace TheRaceForSpace.Tests
                 interplanetaryNetworkPrerequisiteBodies,
                 interplanetaryNetworkPrerequisiteCounts);
             AssertBodyFundingSet(
-                achievements,
-                satelliteProgrammes,
+                objectives,
+                satelliteContracts,
                 ObjectiveCatalogue.GillyProbeOrbitId,
                 ObjectiveCatalogue.GillyCrewedOrbitId,
                 FundingContractCatalogue.GillyNetworkId,
@@ -161,8 +161,8 @@ namespace TheRaceForSpace.Tests
                 new[] { "Eve" },
                 new[] { 6 });
             AssertBodyFundingSet(
-                achievements,
-                satelliteProgrammes,
+                objectives,
+                satelliteContracts,
                 ObjectiveCatalogue.IkeProbeOrbitId,
                 ObjectiveCatalogue.IkeCrewedOrbitId,
                 FundingContractCatalogue.IkeNetworkId,
@@ -174,8 +174,8 @@ namespace TheRaceForSpace.Tests
                 new[] { "Duna" },
                 new[] { 6 });
             AssertBodyFundingSet(
-                achievements,
-                satelliteProgrammes,
+                objectives,
+                satelliteContracts,
                 ObjectiveCatalogue.DresProbeOrbitId,
                 ObjectiveCatalogue.DresCrewedOrbitId,
                 FundingContractCatalogue.DresNetworkId,
@@ -187,8 +187,8 @@ namespace TheRaceForSpace.Tests
                 interplanetaryNetworkPrerequisiteBodies,
                 interplanetaryNetworkPrerequisiteCounts);
             AssertBodyFundingSet(
-                achievements,
-                satelliteProgrammes,
+                objectives,
+                satelliteContracts,
                 ObjectiveCatalogue.JoolProbeOrbitId,
                 ObjectiveCatalogue.JoolCrewedOrbitId,
                 FundingContractCatalogue.JoolNetworkId,
@@ -200,8 +200,8 @@ namespace TheRaceForSpace.Tests
                 interplanetaryNetworkPrerequisiteBodies,
                 interplanetaryNetworkPrerequisiteCounts);
             AssertBodyFundingSet(
-                achievements,
-                satelliteProgrammes,
+                objectives,
+                satelliteContracts,
                 ObjectiveCatalogue.LaytheProbeOrbitId,
                 ObjectiveCatalogue.LaytheCrewedOrbitId,
                 FundingContractCatalogue.LaytheNetworkId,
@@ -213,8 +213,8 @@ namespace TheRaceForSpace.Tests
                 new[] { "Jool" },
                 new[] { 6 });
             AssertBodyFundingSet(
-                achievements,
-                satelliteProgrammes,
+                objectives,
+                satelliteContracts,
                 ObjectiveCatalogue.VallProbeOrbitId,
                 ObjectiveCatalogue.VallCrewedOrbitId,
                 FundingContractCatalogue.VallNetworkId,
@@ -226,8 +226,8 @@ namespace TheRaceForSpace.Tests
                 new[] { "Jool" },
                 new[] { 6 });
             AssertBodyFundingSet(
-                achievements,
-                satelliteProgrammes,
+                objectives,
+                satelliteContracts,
                 ObjectiveCatalogue.TyloProbeOrbitId,
                 ObjectiveCatalogue.TyloCrewedOrbitId,
                 FundingContractCatalogue.TyloNetworkId,
@@ -239,8 +239,8 @@ namespace TheRaceForSpace.Tests
                 new[] { "Jool" },
                 new[] { 6 });
             AssertBodyFundingSet(
-                achievements,
-                satelliteProgrammes,
+                objectives,
+                satelliteContracts,
                 ObjectiveCatalogue.BopProbeOrbitId,
                 ObjectiveCatalogue.BopCrewedOrbitId,
                 FundingContractCatalogue.BopNetworkId,
@@ -252,8 +252,8 @@ namespace TheRaceForSpace.Tests
                 new[] { "Jool" },
                 new[] { 6 });
             AssertBodyFundingSet(
-                achievements,
-                satelliteProgrammes,
+                objectives,
+                satelliteContracts,
                 ObjectiveCatalogue.PolProbeOrbitId,
                 ObjectiveCatalogue.PolCrewedOrbitId,
                 FundingContractCatalogue.PolNetworkId,
@@ -265,8 +265,8 @@ namespace TheRaceForSpace.Tests
                 new[] { "Jool" },
                 new[] { 6 });
             AssertBodyFundingSet(
-                achievements,
-                satelliteProgrammes,
+                objectives,
+                satelliteContracts,
                 ObjectiveCatalogue.EelooProbeOrbitId,
                 ObjectiveCatalogue.EelooCrewedOrbitId,
                 FundingContractCatalogue.EelooNetworkId,
@@ -280,16 +280,16 @@ namespace TheRaceForSpace.Tests
 
             Equal(
                 "Any agency must achieve Probe Orbit.",
-                FindAchievement(achievements, ObjectiveCatalogue.CrewedOrbitId).UnlockRequirement);
+                FindObjectiveFundingContract(objectives, ObjectiveCatalogue.CrewedOrbitId).UnlockRequirement);
             Equal(
                 "Any agency must achieve Mun Probe Orbit and Minmus Probe Orbit.",
-                FindAchievement(achievements, ObjectiveCatalogue.DunaProbeOrbitId).UnlockRequirement);
+                FindObjectiveFundingContract(objectives, ObjectiveCatalogue.DunaProbeOrbitId).UnlockRequirement);
             Equal(
                 "Any agency must achieve Mun Crewed Orbit and Minmus Crewed Orbit.",
-                FindAchievement(achievements, ObjectiveCatalogue.DunaCrewedOrbitId).UnlockRequirement);
+                FindObjectiveFundingContract(objectives, ObjectiveCatalogue.DunaCrewedOrbitId).UnlockRequirement);
 
             AssertSatellite(
-                satelliteProgrammes,
+                satelliteContracts,
                 FundingContractCatalogue.KerbinNetworkId,
                 "Kerbin",
                 10,
@@ -298,7 +298,7 @@ namespace TheRaceForSpace.Tests
                 new string[0],
                 new int[0]);
             AssertSatellite(
-                satelliteProgrammes,
+                satelliteContracts,
                 FundingContractCatalogue.MunNetworkId,
                 "Mun",
                 5,
@@ -307,7 +307,7 @@ namespace TheRaceForSpace.Tests
                 new[] { "Kerbin" },
                 new[] { 6 });
             AssertSatellite(
-                satelliteProgrammes,
+                satelliteContracts,
                 FundingContractCatalogue.MinmusNetworkId,
                 "Minmus",
                 5,
@@ -316,7 +316,7 @@ namespace TheRaceForSpace.Tests
                 new[] { "Kerbin" },
                 new[] { 6 });
             AssertSatellite(
-                satelliteProgrammes,
+                satelliteContracts,
                 FundingContractCatalogue.DunaNetworkId,
                 "Duna",
                 10,
@@ -327,81 +327,81 @@ namespace TheRaceForSpace.Tests
 
             Equal(
                 "Any agency must achieve Mun Probe Orbit and the Kerbin satellite network must reach 6 qualifying satellites.",
-                FindSatellite(satelliteProgrammes, FundingContractCatalogue.MunNetworkId).UnlockRequirement);
+                FindSatellite(satelliteContracts, FundingContractCatalogue.MunNetworkId).UnlockRequirement);
             Equal(
                 "Any agency must achieve Minmus Probe Orbit and the Kerbin satellite network must reach 6 qualifying satellites.",
-                FindSatellite(satelliteProgrammes, FundingContractCatalogue.MinmusNetworkId).UnlockRequirement);
+                FindSatellite(satelliteContracts, FundingContractCatalogue.MinmusNetworkId).UnlockRequirement);
             Equal(
                 "Any agency must achieve Duna Probe Orbit and the Mun satellite network must reach 3 qualifying satellites and the Minmus satellite network must reach 3 qualifying satellites.",
-                FindSatellite(satelliteProgrammes, FundingContractCatalogue.DunaNetworkId).UnlockRequirement);
+                FindSatellite(satelliteContracts, FundingContractCatalogue.DunaNetworkId).UnlockRequirement);
             Equal(
                 "Any agency must achieve Ike Probe Orbit and the Duna satellite network must reach 6 qualifying satellites.",
-                FindSatellite(satelliteProgrammes, FundingContractCatalogue.IkeNetworkId).UnlockRequirement);
+                FindSatellite(satelliteContracts, FundingContractCatalogue.IkeNetworkId).UnlockRequirement);
         }
 
         public static void CatalogueCreatesFreshCampaignState()
         {
-            IList<ObjectiveFundingContract> firstAchievements =
-                FundingContractCatalogue.CreateAchievementProgrammes();
+            IList<ObjectiveFundingContract> firstObjectives =
+                FundingContractCatalogue.CreateObjectiveFundingContracts();
             IList<SatelliteNetworkFundingContract> firstSatellites =
-                FundingContractCatalogue.CreateSatelliteProgrammes();
+                FundingContractCatalogue.CreateSatelliteNetworkFundingContracts();
 
-            ObjectiveFundingContract directedPower1 = FindAchievement(
-                firstAchievements,
+            ObjectiveFundingContract directedPower1 = FindObjectiveFundingContract(
+                firstObjectives,
                 ObjectiveCatalogue.DirectedPower1Id);
             directedPower1.Start();
             directedPower1.AdvancePayout();
             firstSatellites[0].Unlock();
 
-            IList<ObjectiveFundingContract> secondAchievements =
-                FundingContractCatalogue.CreateAchievementProgrammes();
+            IList<ObjectiveFundingContract> secondObjectives =
+                FundingContractCatalogue.CreateObjectiveFundingContracts();
             IList<SatelliteNetworkFundingContract> secondSatellites =
-                FundingContractCatalogue.CreateSatelliteProgrammes();
+                FundingContractCatalogue.CreateSatelliteNetworkFundingContracts();
 
-            ObjectiveFundingContract freshDirectedPower1 = FindAchievement(
-                secondAchievements,
+            ObjectiveFundingContract freshDirectedPower1 = FindObjectiveFundingContract(
+                secondObjectives,
                 ObjectiveCatalogue.DirectedPower1Id);
             Require(!freshDirectedPower1.HasStarted, "A new catalogue build must not reuse objectiveCompletion campaign state.");
             Equal(0, freshDirectedPower1.PaymentsProcessed);
 
-            Require(FindAchievement(secondAchievements, ObjectiveCatalogue.DirectedPower1Id).IsOffered,
+            Require(FindObjectiveFundingContract(secondObjectives, ObjectiveCatalogue.DirectedPower1Id).IsOffered,
                 "Directed Power I should be an opening starter offer.");
-            Require(FindAchievement(secondAchievements, ObjectiveCatalogue.Mass1Id).IsOffered,
+            Require(FindObjectiveFundingContract(secondObjectives, ObjectiveCatalogue.Mass1Id).IsOffered,
                 "Mass I should be an opening starter offer.");
-            Require(FindAchievement(secondAchievements, ObjectiveCatalogue.Control1Id).IsOffered,
+            Require(FindObjectiveFundingContract(secondObjectives, ObjectiveCatalogue.Control1Id).IsOffered,
                 "Control I should be an opening starter offer.");
-            Require(FindAchievement(secondAchievements, ObjectiveCatalogue.Biome1Id).IsOffered,
+            Require(FindObjectiveFundingContract(secondObjectives, ObjectiveCatalogue.Biome1Id).IsOffered,
                 "Biome I should be an opening starter offer.");
-            Require(!FindAchievement(secondAchievements, ObjectiveCatalogue.DirectedPower2Id).IsOffered,
+            Require(!FindObjectiveFundingContract(secondObjectives, ObjectiveCatalogue.DirectedPower2Id).IsOffered,
                 "Directed Power II should wait for Directed Power I.");
-            Require(!FindAchievement(secondAchievements, ObjectiveCatalogue.ProbeOrbitId).IsOffered,
-                "Probe Orbit should remain locked until a starter line reaches level five.");
+            Require(!FindObjectiveFundingContract(secondObjectives, ObjectiveCatalogue.ProbeOrbitId).IsOffered,
+                "Probe Orbit should remain locked until a pre-orbit line reaches level five.");
             Require(!secondSatellites[0].IsAvailable, "A new catalogue build must not reuse satellite unlock state.");
         }
 
         private static void AssertPreOrbitLine(
-            IList<ObjectiveFundingContract> achievements,
-            PreOrbitContractLine starterLine,
+            IList<ObjectiveFundingContract> objectives,
+            PreOrbitContractLine preOrbitLine,
             string[] objectiveIds)
         {
             Equal(5, objectiveIds.Length);
 
-            for (int milestoneIndex = 0; milestoneIndex < objectiveIds.Length; milestoneIndex++)
+            for (int objectiveIndex = 0; objectiveIndex < objectiveIds.Length; objectiveIndex++)
             {
-                int level = milestoneIndex + 1;
-                string objectiveId = objectiveIds[milestoneIndex];
+                int level = objectiveIndex + 1;
+                string objectiveId = objectiveIds[objectiveIndex];
                 ObjectiveDefinition objective = ObjectiveCatalogue.FindById(objectiveId);
-                ObjectiveFundingContract programme = FindAchievement(achievements, objectiveId);
+                ObjectiveFundingContract contract = FindObjectiveFundingContract(objectives, objectiveId);
 
                 Require(objective != null, "Missing pre-orbit objective '" + objectiveId + "'.");
-                Require(programme != null, "Missing starter funding programme '" + objectiveId + "'.");
+                Require(contract != null, "Missing starter funding contract '" + objectiveId + "'.");
                 Require(objective.IsPreOrbitContract, "PreOrbit objective should be marked special.");
-                Equal(starterLine, objective.PreOrbitLine);
+                Equal(preOrbitLine, objective.PreOrbitLine);
                 Equal(level, objective.PreOrbitLevel);
                 Equal(level * 10000.0, objective.BaseRewardFunds);
                 Equal((level + 1) * 2000.0, objective.RivalProgressCostFunds);
-                Equal(level * 10000.0, programme.BaseRewardFunds);
-                Equal(level == 1, programme.IsOffered);
+                Equal(level * 10000.0, contract.BaseRewardFunds);
+                Equal(level == 1, contract.IsOffered);
 
                 if (level == 1)
                 {
@@ -409,7 +409,7 @@ namespace TheRaceForSpace.Tests
                 }
                 else
                 {
-                    AssertAnyAgencyRule(objective.UnlockRule, objectiveIds[milestoneIndex - 1]);
+                    AssertAnyAgencyRule(objective.UnlockRule, objectiveIds[objectiveIndex - 1]);
                 }
             }
         }
@@ -486,8 +486,8 @@ namespace TheRaceForSpace.Tests
         }
 
         private static void AssertBodyFundingSet(
-            IList<ObjectiveFundingContract> achievements,
-            IList<SatelliteNetworkFundingContract> satelliteProgrammes,
+            IList<ObjectiveFundingContract> objectives,
+            IList<SatelliteNetworkFundingContract> satelliteContracts,
             string probeObjectiveId,
             string crewedObjectiveId,
             string networkId,
@@ -499,18 +499,18 @@ namespace TheRaceForSpace.Tests
             string[] networkPrerequisiteBodyNames,
             int[] networkPrerequisiteSatelliteCounts)
         {
-            AssertAchievement(
-                achievements,
+            AssertObjectiveFundingContract(
+                objectives,
                 probeObjectiveId,
                 300000.0,
                 probePrerequisiteObjectiveIds);
-            AssertAchievement(
-                achievements,
+            AssertObjectiveFundingContract(
+                objectives,
                 crewedObjectiveId,
                 500000.0,
                 crewedPrerequisiteObjectiveIds);
             AssertSatellite(
-                satelliteProgrammes,
+                satelliteContracts,
                 networkId,
                 celestialBodyName,
                 requiredSatellites,
@@ -520,20 +520,20 @@ namespace TheRaceForSpace.Tests
                 networkPrerequisiteSatelliteCounts);
         }
 
-        private static void AssertAchievement(
-            IList<ObjectiveFundingContract> programmes,
+        private static void AssertObjectiveFundingContract(
+            IList<ObjectiveFundingContract> contracts,
             string id,
             double rewardFunds,
             params string[] prerequisiteObjectiveIds)
         {
-            ObjectiveFundingContract programme = FindAchievement(programmes, id);
-            Require(programme != null, "Missing objectiveCompletion funding programme '" + id + "'.");
-            Equal(rewardFunds, programme.BaseRewardFunds);
-            AssertAnyAgencyRule(programme.UnlockRule, prerequisiteObjectiveIds);
+            ObjectiveFundingContract contract = FindObjectiveFundingContract(contracts, id);
+            Require(contract != null, "Missing objectiveCompletion funding contract '" + id + "'.");
+            Equal(rewardFunds, contract.BaseRewardFunds);
+            AssertAnyAgencyRule(contract.UnlockRule, prerequisiteObjectiveIds);
         }
 
         private static void AssertSatellite(
-            IList<SatelliteNetworkFundingContract> programmes,
+            IList<SatelliteNetworkFundingContract> contracts,
             string id,
             string celestialBodyName,
             int requiredSatellites,
@@ -542,17 +542,17 @@ namespace TheRaceForSpace.Tests
             string[] prerequisiteSatelliteBodyNames,
             int[] prerequisiteSatelliteCounts)
         {
-            SatelliteNetworkFundingContract programme = FindSatellite(programmes, id);
-            Require(programme != null, "Missing satellite funding programme '" + id + "'.");
-            Equal(celestialBodyName, programme.CelestialBodyName);
-            Equal(requiredSatellites, programme.RequiredSatellites);
-            Equal(rewardFunds, programme.RewardFunds);
+            SatelliteNetworkFundingContract contract = FindSatellite(contracts, id);
+            Require(contract != null, "Missing satellite funding contract '" + id + "'.");
+            Equal(celestialBodyName, contract.CelestialBodyName);
+            Equal(requiredSatellites, contract.RequiredSatellites);
+            Equal(rewardFunds, contract.RewardFunds);
             AssertSatelliteRule(
-                programme.UnlockRule,
+                contract.UnlockRule,
                 prerequisiteObjectiveId,
                 prerequisiteSatelliteBodyNames,
                 prerequisiteSatelliteCounts);
-            Require(!programme.IsAvailable, "Prototype satellite programmes should begin locked.");
+            Require(!contract.IsAvailable, "Prototype satellite contracts should begin locked.");
         }
 
         private static void AssertSatelliteRule(
@@ -624,30 +624,30 @@ namespace TheRaceForSpace.Tests
             Equal(expectedObjectiveId, condition.ObjectiveId);
         }
 
-        private static ObjectiveFundingContract FindAchievement(
-            IList<ObjectiveFundingContract> programmes,
+        private static ObjectiveFundingContract FindObjectiveFundingContract(
+            IList<ObjectiveFundingContract> contracts,
             string id)
         {
-            for (int programmeIndex = 0; programmeIndex < programmes.Count; programmeIndex++)
+            for (int contractIndex = 0; contractIndex < contracts.Count; contractIndex++)
             {
-                ObjectiveFundingContract programme = programmes[programmeIndex];
-                if (string.Equals(programme.Id, id, StringComparison.OrdinalIgnoreCase))
+                ObjectiveFundingContract contract = contracts[contractIndex];
+                if (string.Equals(contract.Id, id, StringComparison.OrdinalIgnoreCase))
                 {
-                    return programme;
+                    return contract;
                 }
             }
 
             return null;
         }
 
-        private static SatelliteNetworkFundingContract FindSatellite(IList<SatelliteNetworkFundingContract> programmes, string id)
+        private static SatelliteNetworkFundingContract FindSatellite(IList<SatelliteNetworkFundingContract> contracts, string id)
         {
-            for (int programmeIndex = 0; programmeIndex < programmes.Count; programmeIndex++)
+            for (int contractIndex = 0; contractIndex < contracts.Count; contractIndex++)
             {
-                SatelliteNetworkFundingContract programme = programmes[programmeIndex];
-                if (string.Equals(programme.Id, id, StringComparison.OrdinalIgnoreCase))
+                SatelliteNetworkFundingContract contract = contracts[contractIndex];
+                if (string.Equals(contract.Id, id, StringComparison.OrdinalIgnoreCase))
                 {
-                    return programme;
+                    return contract;
                 }
             }
 

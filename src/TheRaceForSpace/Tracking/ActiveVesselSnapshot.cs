@@ -5,7 +5,7 @@ using TheRaceForSpace.Objectives;
 namespace TheRaceForSpace.Tracking
 {
     /// <summary>
-    /// KSP-independent situation values needed by the starter flight contracts.
+    /// KSP-independent situation values needed by the flight contract contracts.
     /// </summary>
     public enum FlightSituation
     {
@@ -19,7 +19,7 @@ namespace TheRaceForSpace.Tracking
     }
 
     /// <summary>
-    /// Condition-specific telemetry requested by the cached active starter-contract plan.
+    /// Condition-specific telemetry requested by the cached active flight-contract plan.
     /// Vessel identity, body, situation, launch time, coordinates, and observation time remain
     /// common attempt context because they are cheap direct values and preserve launch continuity.
     /// </summary>
@@ -37,7 +37,7 @@ namespace TheRaceForSpace.Tracking
     }
 
     /// <summary>
-    /// Converts the controller's cached active starter-contract set into the KSP telemetry fields
+    /// Converts the controller's cached active flight-contract set into the KSP telemetry fields
     /// required by those contracts. Callers can cache the result for as long as the active set instance
     /// remains unchanged.
     /// </summary>
@@ -52,9 +52,9 @@ namespace TheRaceForSpace.Tracking
                 return requirements;
             }
 
-            for (int milestoneIndex = 0; milestoneIndex < activeFlightContracts.Count; milestoneIndex++)
+            for (int objectiveIndex = 0; objectiveIndex < activeFlightContracts.Count; objectiveIndex++)
             {
-                ObjectiveDefinition objective = activeFlightContracts[milestoneIndex];
+                ObjectiveDefinition objective = activeFlightContracts[objectiveIndex];
                 if (objective == null)
                 {
                     continue;
@@ -86,7 +86,7 @@ namespace TheRaceForSpace.Tracking
 
     /// <summary>
     /// Lightweight snapshot of the currently controlled vessel. KSP-specific objects are converted
-    /// by the integration layer before the starter-flight tracker consumes them.
+    /// by the integration layer before the flight-contract tracker consumes them.
     /// </summary>
     public sealed class ActiveVesselSnapshot
     {

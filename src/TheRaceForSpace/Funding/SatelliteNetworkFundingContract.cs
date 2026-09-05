@@ -91,7 +91,7 @@ namespace TheRaceForSpace.Funding
         }
 
         /// <summary>
-        /// Permanently records that the shared race network has reached this programme's full
+        /// Permanently records that the shared race network has reached this contract's full
         /// satellite target at least once. Live satellite counts still determine funding shares.
         /// </summary>
         public void MarkSatelliteTargetReached()
@@ -100,7 +100,7 @@ namespace TheRaceForSpace.Funding
         }
 
         // Persistence replaces campaign state when another save is loaded. Gameplay still uses
-        // Unlock() as the only normal transition and never relocks a programme during a campaign.
+        // Unlock() as the only normal transition and never relocks a contract during a campaign.
         internal void RestoreAvailability(bool isAvailable)
         {
             IsAvailable = isAvailable;
@@ -115,10 +115,10 @@ namespace TheRaceForSpace.Funding
         }
 
         /// <summary>
-        /// Calculates one programme's current share of the fixed funding pool.
+        /// Calculates one contract's current share of the fixed funding pool.
         /// Before the target is saturated, payout follows completion percentage.
-        /// Once all programmes collectively meet or exceed the target, the complete
-        /// pool is distributed by each programme's share of the qualifying satellites.
+        /// Once all contracts collectively meet or exceed the target, the complete
+        /// pool is distributed by each contract's share of the qualifying satellites.
         /// </summary>
         public double CalculateCurrentPayout(int programSatelliteCount, int totalSatelliteCount)
         {
@@ -132,7 +132,7 @@ namespace TheRaceForSpace.Funding
             }
 
             // A defensive floor prevents invalid caller data from producing more than
-            // a 100% ownership share if the supplied total is smaller than this programme's count.
+            // a 100% ownership share if the supplied total is smaller than this contract's count.
             int normalizedTotalSatelliteCount = Math.Max(totalSatelliteCount, programSatelliteCount);
 
             if (normalizedTotalSatelliteCount <= RequiredSatellites)

@@ -38,14 +38,6 @@ namespace TheRaceForSpace.Persistence
         public void Capture(
             SpaceProgramState playerProgram,
             IList<FundingProgramme> satelliteContracts,
-            IList<AchievementFundingProgramme> achievementContracts)
-        {
-            Capture(playerProgram, satelliteContracts, achievementContracts, -1.0);
-        }
-
-        public void Capture(
-            SpaceProgramState playerProgram,
-            IList<FundingProgramme> satelliteContracts,
             IList<AchievementFundingProgramme> achievementContracts,
             double nextFundingUniversalTime)
         {

@@ -1,957 +1,1108 @@
-# The Race for Space - Code Reference
+# The Race for Space - Simple Code Guide
 
-> **Scope:** this reference documents the implementation on `Alpha/KerbalContracts-v0.5`.
-> The `main` branch is currently the repository scaffold and does not contain this implementation.
+> **Branch covered:** `Alpha/KerbalContracts-v0.5`
 >
-> **Purpose:** explain where each part of the mod lives, what every production source file owns, what its classes and important methods do, how the files interact, and where the regression coverage lives.
-
-This document is intended for maintainers. It complements `docs/STRUCTURE.md`: `STRUCTURE.md` describes the intended module boundaries, while this file describes the concrete implementation inside those boundaries.
+> This guide explains the project in simple language. It is written so that someone who does not program can still understand what each file is for.
 
 ---
 
-## 1. Architecture at a glance
+## How to read this guide
 
-The project deliberately separates KSP/Unity-facing code from race rules that can be tested without KSP.
+Each production code file has two numbers:
 
-```mermaid
-flowchart TD
-    KSP[KSP / Unity] --> Runtime[Core/RaceRuntime]
-    Runtime --> Controller[Competition/SatelliteRaceController]
-    Runtime --> Discovery[KspIntegration/KspVesselDiscovery]
+- **File lines** = the total number of lines in that file on this branch.
+- **Member lines** = the approximate size of one function or property. This starts at the function/property declaration and ends at its closing brace. Comments above it are not counted.
+- **Other-file refs** = how many **different production `.cs` files** use that function or property. If one file uses it ten times, it still counts as one file here. Test files and documentation are not counted.
+- **KSP** in the reference column means KSP or Unity calls that function directly. Another project file does not need to call it.
 
-    Discovery --> SatelliteTracker[Tracking/SatelliteTracker]
-    Discovery --> StarterTracker[Tracking/StarterFlightTracker]
-    SatelliteTracker --> ProgramState[Programs/SpaceProgramState]
-    StarterTracker --> ProgramState
+The reference numbers are a simple maintenance guide. They show how widely something is used. They are not a replacement for a compiler search before deleting or renaming code.
 
-    Controller --> ProgramState
-    Controller --> Funding[Funding programmes]
-    Controller --> RivalSim[Simulation/RivalSimulation]
-    Controller --> Unlocks[Milestones/UnlockRuleEvaluator]
-    Controller --> Persistence[KspIntegration/RacePersistenceScenario]
+### Simple meanings of common words
 
-    Definitions[Milestones/PrototypeMilestones] --> Controller
-    Definitions --> FundingCatalogue[Funding/PrototypeFundingCatalogue]
-    FundingCatalogue --> Funding
-
-    Persistence --> SaveStates[Persistence/*SaveState]
-
-    UI[UI/RaceWindow] -. read only .-> Runtime
-    UI -. read only .-> Controller
-    UI -. read only .-> StarterTracker
-```
-
-### Main ownership rules
-
-| Concern | Owner | Notes |
-| --- | --- | --- |
-| Lifetime and update cadence | `Core/RaceRuntime.cs` | Creates/retains one controller and starter tracker per KSP `Game`. |
-| Campaign orchestration | `Competition/SatelliteRaceController.cs` | Orders restore, funding, rival simulation, unlock review, offer review, caches and save capture. |
-| Milestone definitions | `Milestones/PrototypeMilestones.cs` | Code-owned milestone catalogue and starter-contract criteria. |
-| Unlock semantics | `Milestones/UnlockRuleDefinition.cs`, `UnlockRuleEvaluator.cs` | Reusable OR-of-AND rule model and evaluator. |
-| Program state | `Programs/SpaceProgramState.cs` | Generic achievement timestamps, satellite counts and rival mission state. |
-| Player orbital vessel observation | `KspIntegration/KspVesselDiscovery.cs` + `Tracking/SatelliteTracker.cs` | KSP adapter creates snapshots; tracker applies pure race rules. |
-| Starter-flight observation | `KspIntegration/KspVesselDiscovery.cs` + `Tracking/StarterFlightTracker.cs` | Frequent, telemetry-plan-driven active-vessel path. |
-| Rival behaviour | `Simulation/RivalSimulation.cs` | Target choice, development progress, spending, completion and ETA. |
-| Funding definitions | `Funding/PrototypeFundingCatalogue.cs` | Builds achievement and satellite funding state from milestone/config data. |
-| Funding maths | `Funding/AchievementFundingProgramme.cs`, `Funding/FundingProgramme.cs` | Payout state and calculation only; controller owns timing. |
-| Save integration | `KspIntegration/RacePersistenceScenario.cs` | KSP `ScenarioModule` boundary. |
-| Save serialization | `Persistence/*SaveState.cs` | Converts project state to/from `ConfigNode`. |
-| User interface | `UI/RaceWindow.cs` | Presentation only; never advances campaign state. |
-| Balance configuration | `Core/RaceSettings.cs`, `KspIntegration/RaceSettingsLoader.cs`, `GameData/.../RaceSettings.cfg` | Defaults plus user-editable four-tier balance configuration. |
+- **Controller** = the main coordinator. It tells other parts of the mod when to do their work.
+- **Property** = a named value stored or shown by a class.
+- **Function / method** = a named action the code can perform.
+- **State** = information the mod needs to remember, such as money, achievements or progress.
+- **Snapshot** = a small copy of vessel information taken at one moment.
+- **Persistence** = save/load code.
+- **Catalogue** = a list of contracts or milestones that exist in the mod.
+- **Stable ID** = an internal name that should not change because save files use it.
 
 ---
 
-## 2. Runtime flow and timing
+# 1. Very simple project flow
 
-`RaceRuntime` is loaded in every saved-game scene. It keeps one `SatelliteRaceController` and one `StarterFlightTracker` alive across normal scene changes for the current `Game` object.
+The mod works in this order:
 
-The recurring work is intentionally split by cost:
+1. **KSP gives the mod information** about vessels, time, money and saves.
+2. **Tracking code checks the vessel information** and decides whether the player completed something.
+3. **The race controller updates the competition.** It handles rivals, funding, offers and unlocks.
+4. **Persistence code remembers important information** in the KSP save.
+5. **The UI reads the information** and shows it to the player.
 
-- **Every 1 second:** observe only the active vessel for offered unfinished starter contracts. The telemetry bit mask means KSP calls such as total mass, biome lookup or crash callbacks are only used when an active contract needs them.
-- **Every 5 seconds:** run the normal controller refresh: restore if needed, process funding/rivals/unlocks/offers, rebuild payout caches, and capture persistent state.
-- **Every 20 seconds:** include a full saved-vessel scan so player satellite counts and orbital milestones are refreshed without walking every `ProtoVessel` every 5 seconds.
-- **At every crossed funding boundary:** replay the exact funding timestamp in order. Rivals advance to that boundary first, existing offers pay, achievement interest advances, sponsor review fills vacancies, then the next boundary is scheduled.
-
-The UI is not part of this progression loop. `RaceWindow` reads the controller and starter tracker only.
+The UI does not decide race progress. It only displays it.
 
 ---
 
-# 3. Production source reference
+# 2. Quick file list
+
+## Production code
+
+| File | File lines | Simple purpose |
+| --- | ---: | --- |
+| `Competition/SatelliteRaceController.cs` | 961 | Main coordinator for the race. Handles funding dates, offers, rivals and shared race progress. |
+| `Core/RaceRuntime.cs` | 268 | Keeps the race system running while KSP changes scenes. Decides how often different checks happen. |
+| `Core/RaceSettings.cs` | 132 | Stores the default balance numbers used by the mod. |
+| `Funding/AchievementFundingProgramme.cs` | 175 | Stores the life of a one-off achievement contract and works out its payout. |
+| `Funding/FundingProgramme.cs` | 148 | Stores a satellite-network contract and works out its payout. |
+| `Funding/PrototypeFundingCatalogue.cs` | 366 | Builds the list of funding contracts used by the current version of the mod. |
+| `KspIntegration/CareerFundingAdapter.cs` | 28 | Gives real KSP Career funds to the player. |
+| `KspIntegration/KspCelestialBodyOrdering.cs` | 182 | Sorts planets and moons from Kerbin outward for the UI. |
+| `KspIntegration/KspVesselDiscovery.cs` | 547 | Reads vessel information from KSP and turns it into simpler project data. |
+| `KspIntegration/RacePersistenceScenario.cs` | 221 | Connects the mod's save data to the KSP save system. |
+| `KspIntegration/RaceSettingsLoader.cs` | 176 | Reads `RaceSettings.cfg` when the mod starts. |
+| `Milestones/MilestoneDefinition.cs` | 365 | Describes what a milestone is and what must be done to complete it. |
+| `Milestones/PrototypeMilestones.cs` | 658 | Contains the actual starter and orbital milestones used by this version. |
+| `Milestones/UnlockRuleDefinition.cs` | 211 | Describes rules that decide when something becomes unlocked. |
+| `Milestones/UnlockRuleEvaluator.cs` | 223 | Checks whether an unlock rule has been completed. |
+| `Persistence/ActiveContractProgressSaveState.cs` | 299 | Saves temporary starter-flight progress. |
+| `Persistence/FundingContractsSaveState.cs` | 392 | Saves player achievements and funding-contract progress. |
+| `Persistence/RivalProgramsSaveState.cs` | 382 | Saves the simulated rival agencies. |
+| `Programs/SpaceProgramState.cs` | 141 | Stores the current information for one space agency. |
+| `Simulation/RivalSimulation.cs` | 573 | Simulates rival agencies choosing and working on missions. |
+| `Tracking/ActiveVesselTrackingSnapshot.cs` | 137 | Defines the small set of active-vessel information used by starter contracts. |
+| `Tracking/SatelliteTracker.cs` | 138 | Counts player satellites and checks normal orbital milestones. |
+| `Tracking/StarterFlightTracker.cs` | 537 | Checks Directed Power, Mass, Control and Biome starter contracts. |
+| `Tracking/SurfaceImpactEvaluator.cs` | 75 | Decides whether a destroyed vessel probably hit the surface. |
+| `Tracking/VesselTrackingSnapshot.cs` | 34 | Defines the small vessel record used by normal orbital tracking. |
+| `UI/RaceWindow.cs` | 1,697 | Draws the Command Center and all four player-facing tabs. |
+| `TheRaceForSpace.csproj` | 92 | Tells .NET how to build and optionally install the mod. |
+
+---
+
+# 3. Detailed production file guide
 
 ## 3.1 `Competition/SatelliteRaceController.cs`
 
-### Purpose
+**Simple purpose:** This is the main race coordinator. It joins the player, rivals, milestones, funding and save system together. It also decides the order that race events happen.
 
-The central campaign coordinator. It owns the collection of agencies and funding-contract state for one campaign and defines the **order** in which otherwise independent systems run. It does not own the code-defined catalogue, KSP vessel APIs, the raw payout formulas, or the rival mission rules.
+**Main class:** `SatelliteRaceController`
 
-### Primary class: `SatelliteRaceController`
+### Functions and properties
 
-Important state includes:
+| Member | Kind | Approx. lines | Other-file refs | Simple purpose |
+| --- | --- | ---: | ---: | --- |
+| `SatelliteRaceController()` | Constructor | ~73 | 1 | Creates a fresh race. Creates the player, rivals and funding contracts. |
+| `PlayerProgram` | Property | 1 | 2 | Gives other code access to the player's race information. |
+| `Programs` | Property | 1 | 1 | Gives a read-only list of every agency in the race. |
+| `RivalPrograms` | Property | 1 | 1 | Gives a read-only list of rival agencies. |
+| `FundingProgrammes` | Property | 1 | 1 | Gives a read-only list of satellite funding contracts. |
+| `AchievementFundingProgrammes` | Property | ~4 | 1 | Gives a read-only list of achievement funding contracts. |
+| `ActiveStarterContracts` | Property | ~4 | 1 | Gives the runtime the starter contracts that should be checked right now. |
+| `RivalBaseIncomePerFundingPeriod` | Property | 1 | 1 | Shows the guaranteed money each rival gets on a funding date. |
+| `NextFundingUniversalTime` | Property | 1 | 1 | Stores the exact KSP time of the next funding payment. |
+| `NextFundingYear` | Property | ~4 | 1 | Shows the Kerbin year of the next funding date. |
+| `NextFundingDay` | Property | ~4 | 0 | Shows the Kerbin day number of the next funding date. |
+| `DaysUntilNextFunding` | Property | ~16 | 1 | Shows how many whole Kerbin days remain until funding. |
+| `NotifyPlayerStarterAchievementRecorded()` | Function | ~4 | 1 | Tells the controller that the active starter-contract list must be rebuilt. |
+| `FindProgramById()` | Function | ~21 | 0 | Finds an agency by its internal ID. |
+| `GetKerbinYear()` | Function | ~11 | 1 | Converts KSP time into a Kerbin year number. |
+| `GetKerbinDay()` | Function | ~11 | 1 | Converts KSP time into a Kerbin day number. |
+| `GetRivalLaunchProgressCost()` | Function | ~14 | 1 | Asks how much a rival's next development step will cost. |
+| `GetEstimatedRivalLaunchDays()` | Function | ~16 | 1 | Estimates how long a rival may take to finish its current mission. |
+| `HasProgramAchieved()` | Function | ~9 | 1 | Checks whether an agency has completed an achievement. |
+| `IsAchievementProgrammeAvailable()` | Function | ~16 | 1 | Checks whether an achievement contract is unlocked now. |
+| `GetAchievementAgencyCount()` | Function | ~12 | 0 | Counts how many agencies have completed an achievement. |
+| `GetSatelliteCurrentPayout()` | Function | ~28 | 1 | Returns one agency's expected satellite-contract payout. |
+| `GetAchievementCurrentPayout()` | Function | ~26 | 1 | Returns one agency's expected achievement-contract payout. |
+| `Refresh()` | Function | ~4 | 0 | Runs a full controller update including player vessel checks. |
+| `Refresh(bool)` | Function | ~112 | 1 | Runs the main race update. It can skip the slower player vessel scan. |
+| `RefreshRivals()` | Function | ~8 | 0 | Runs the rival simulation. |
+| `UpdateFundingAvailability()` | Function | ~22 | 0 | Unlocks satellite contracts whose requirements are now complete. |
+| `UpdateSpecialAchievementOffers()` | Function | ~28 | 0 | Offers Probe Orbit immediately after any starter line reaches Level V. |
+| `UpdateSatelliteTargetReachedState()` | Function | ~20 | 0 | Remembers when a satellite network has reached its full target. |
+| `StartAchievementContracts()` | Function | ~17 | 0 | Starts the payout life of an offered achievement after an agency completes it. |
+| `ProcessDueFunding()` | Function | ~77 | 0 | Pays every funding date that has been reached. It also runs the sponsor review. |
+| `ReviewFundingOffers()` | Function | ~101 | 0 | Chooses which unlocked contracts sponsors will offer next. |
+| `RebuildActiveStarterContractPlanIfNeeded()` | Function | ~33 | 0 | Rebuilds the list of starter contracts that the player's active flight must check. |
+| `AwardProgramFunds()` | Function | ~18 | 0 | Gives money to the player or adds simulated money to a rival. |
+| `EvaluateFundingProgrammes()` | Function | ~62 | 0 | Recalculates the expected next payout for every agency. |
+| `CalculateSatelliteFundingForProgram()` | Function | ~18 | 0 | Adds together all satellite funding for one agency. |
+| `CalculateSatelliteCurrentPayout()` | Function | ~20 | 0 | Calculates one satellite contract payout for one agency. |
+| `GetCollectiveSatelliteCount()` | Function | ~17 | 0 | Counts all qualifying satellites from all agencies around one body. |
+| `CalculateAchievementCurrentPayout()` | Function | ~22 | 0 | Calculates one achievement payout for one agency. |
+| `IsAchievementProgrammeAvailableAtTime()` | Function | ~10 | 0 | Checks whether an achievement was unlocked at a specific KSP time. |
+| `GetAchievementAgencyCountAtTime()` | Function | ~22 | 0 | Counts agencies that had completed an achievement by a specific time. |
+| `HasProgramAchievedByTime()` | Function | ~15 | 0 | Checks whether one agency had completed an achievement before a funding deadline. |
 
-- `PlayerProgram` plus `_rivalPrograms` and the combined `_programs` collection.
-- Achievement and satellite funding programme collections created by `PrototypeFundingCatalogue`.
-- `_activeStarterContracts`, a cached read-only list used by the 1-second starter tracker.
-- Two 2D payout caches so repeated IMGUI queries do not recalculate cross-agency shares.
-- `_nextFundingUniversalTime` and the configured funding interval.
-- Restore/cache dirty flags.
-
-### Function map
-
-| Function/property | Responsibility |
-| --- | --- |
-| `SatelliteRaceController()` | Creates player/rivals, loads fresh programme state from the catalogue, sets configured rival starting funds, allocates payout caches and exposes read-only collection views. First two rival IDs are `aster` and `cobalt`; extra configured rivals receive stable `rival-N` IDs. |
-| `ActiveStarterContracts` | Internal cached list of offered, unexpired starter contracts the player has not completed. |
-| `NotifyPlayerStarterAchievementRecorded()` | Marks the active starter plan dirty after the 1-second tracker records an achievement. |
-| `FindProgramById(string)` | Stable-ID lookup across player and rivals. |
-| `DaysUntilNextFunding` | Converts the next funding boundary to whole Kerbin days remaining. |
-| `GetKerbinYear(double)` / `GetKerbinDay(double)` | Formats universal time using 21,600-second Kerbin days and 426-day years. |
-| `GetRivalLaunchProgressCost(...)` | Delegates the current rival mission-step cost to `RivalSimulation`. |
-| `GetEstimatedRivalLaunchDays(...)` | Delegates rival ETA projection using the real next funding boundary and interval. |
-| `HasProgramAchieved(...)` | Convenience check using programme ID as the milestone ID. |
-| `IsAchievementProgrammeAvailable(...)` | Evaluates the programme unlock rule at current campaign time; availability is deliberately separate from sponsor offer state. |
-| `GetAchievementAgencyCount(...)` | Returns how many agencies have ever recorded the achievement. |
-| `GetSatelliteCurrentPayout(...)` | Returns cached projected satellite payout after a refresh, with direct calculation as pre-cache fallback. |
-| `GetAchievementCurrentPayout(...)` | Returns cached projected next achievement payout, again with a direct fallback. |
-| `Refresh()` | Public full refresh; calls `Refresh(true)`. |
-| `Refresh(bool refreshPlayerVessels)` | Main orchestration method. Restores persisted campaign state once, initializes funding boundary, processes overdue funding, optionally scans player vessels, updates availability, runs rivals, updates special offers/fulfilment/start state, rebuilds starter plan and payout caches, then captures persistence. Returns whether a full player-vessel observation succeeded. |
-| `RefreshRivals(double)` | Thin boundary around `RivalSimulation.Refresh`. |
-| `UpdateFundingAvailability(double)` | Permanently unlocks satellite programmes whose structured unlock rules are satisfied. |
-| `UpdateSpecialAchievementOffers(double)` | Gives **Probe Orbit** its immediate offer once any Level V starter path unlocks it. Normal starter progression still waits for sponsor review. |
-| `UpdateSatelliteTargetReachedState()` | Permanently marks a satellite contract fulfilled once collective qualifying satellites meet its target. |
-| `StartAchievementContracts(double)` | Starts an offered achievement funding lifecycle when at least one agency has achieved it by the evaluation time. |
-| `ProcessDueFunding(double)` | Replays every crossed global funding boundary. Pays satellite funding and rival base income, then achievement payments, expires completed achievement contracts, runs sponsor review, and advances the boundary. |
-| `ReviewFundingOffers(double)` | Sponsor selection. Offers all unlocked starter contracts independently; fills at most two unfinished normal achievement offers and at most two unfulfilled satellite offers. |
-| `RebuildActiveStarterContractPlanIfNeeded()` | Rebuilds and replaces the read-only starter list only after a relevant offer/completion/expiry transition. This stable list identity is used by `RaceRuntime` to cache telemetry requirements. |
-| `AwardProgramFunds(...)` | Player payouts go through `CareerFundingAdapter`; rival payouts increase simulated `Funds`. |
-| `EvaluateFundingProgrammes()` | Rebuilds both payout caches and each program's `NextPayoutFunds`, including rival base income and next-boundary achievement shares. |
-| `CalculateSatelliteFundingForProgram(...)` | Sums live satellite funding across all offered available satellite programmes for one agency. |
-| `CalculateSatelliteCurrentPayout(...)` | Calculates one agency/programme share using collective satellite count and `FundingProgramme.CalculateCurrentPayout`. |
-| `GetCollectiveSatelliteCount(string)` | Sums body-specific satellite counts across all agencies. |
-| `CalculateAchievementCurrentPayout(...)` | Direct calculation of one agency's share at the next funding boundary. |
-| `IsAchievementProgrammeAvailableAtTime(...)` | Shared historical-time unlock evaluation helper. |
-| `GetAchievementAgencyCountAtTime(...)` | Counts agencies whose first achievement time is at or before the supplied boundary. |
-| `HasProgramAchievedByTime(...)` | Historical eligibility helper used to prevent retroactive funding. |
-
-### Important ordering invariant
-
-A vessel observation that happens on/after a funding boundary is **not** allowed to receive that boundary's payout retroactively. Due funding is processed before the newer player-vessel observation is applied.
+**Important rule:** Funding due at an old funding date is paid before a newer vessel observation is added. This stops a new achievement from receiving money for a funding date that already passed.
 
 ---
 
 ## 3.2 `Core/RaceRuntime.cs`
 
-### Purpose
+**Simple purpose:** This file keeps the race alive while the player moves between KSP screens. It decides when the fast and slow checks happen.
 
-KSP `MonoBehaviour` that owns controller/tracker lifetime and schedules campaign work independently from the UI.
+**Main class:** `RaceRuntime`
 
-### Primary class: `RaceRuntime`
+The main timings are:
 
-| Function/property | Responsibility |
-| --- | --- |
-| `Controller` | Returns the current controller only when the active saved game matches the controller's owner. |
-| `StarterFlightState` | Read-only access for UI presentation; UI must not call tracker progression methods. |
-| `Awake()` | Rejects loading/menu scenes, prevents duplicate `EveryScene` instances and initializes state for the current game. |
-| `OnDestroy()` | Clears static active-instance ownership. |
-| `Update()` | Runs 5-second controller refreshes, 20-second full vessel discovery, one-time starter-progress restoration and 1-second active-vessel starter evaluation. |
-| `RefreshStarterFlightState()` | Reuses the controller's active starter plan, updates the telemetry mask when plan identity changes, consumes a pending impact before sampling a replacement craft, feeds snapshots to `StarterFlightTracker`, triggers immediate non-vessel controller settling after an achievement, and captures temporary progress. |
-| `EnsureControllerForCurrentGame()` | Loads settings before controller construction, creates fresh controller/tracker for a new save and resets KSP callback/cadence state. |
+- starter-flight check: about every 1 second;
+- normal race update: about every 5 seconds;
+- full player vessel scan: about every 20 seconds.
 
-The duplicate-instance checks are important because KSP can briefly instantiate multiple `EveryScene` addons during transitions.
+| Member | Kind | Approx. lines | Other-file refs | Simple purpose |
+| --- | --- | ---: | ---: | --- |
+| `Controller` | Property | ~18 | 1 | Gives the UI the controller for the current KSP save. |
+| `StarterFlightState` | Property | ~18 | 1 | Gives the UI read-only access to the current starter-flight progress. |
+| `Awake()` | Function | ~31 | KSP | Starts this runtime when KSP creates it. It also blocks duplicate copies. |
+| `OnDestroy()` | Function | ~8 | KSP | Clears the active runtime reference when KSP removes it. |
+| `Update()` | Function | ~73 | KSP | Checks the timers and runs the correct race work when each timer is due. |
+| `RefreshStarterFlightState()` | Function | ~85 | 0 | Reads the active vessel, checks starter contracts and saves temporary progress. |
+| `EnsureControllerForCurrentGame()` | Function | ~40 | 0 | Creates a new controller and starter tracker when a different KSP save becomes active. |
 
 ---
 
 ## 3.3 `Core/RaceSettings.cs`
 
-### Purpose
+**Simple purpose:** This file stores the default balance numbers. These values are used if the config file does not replace them.
 
-Holds built-in balance defaults and the runtime values loaded from `RaceSettings.cfg`.
+### Class: `RaceBodySettings`
 
-### `RaceBodySettings`
+This holds the money and satellite settings for one group of celestial bodies.
 
-One mutable balance tier containing probe/crewed rival progress cost, probe/crewed achievement reward, satellite progress cost, network size and network value.
+| Member | Kind | Approx. lines | Other-file refs | Simple purpose |
+| --- | --- | ---: | ---: | --- |
+| `RaceBodySettings(...)` | Constructor | ~18 | 0 | Creates one set of body balance values. |
+| `ProbeProgressCostFunds` | Property | 1 | 2 | Cost of one successful rival probe-development step. |
+| `CrewedProgressCostFunds` | Property | 1 | 2 | Cost of one successful rival crewed-development step. |
+| `ProbeRewardFunds` | Property | 1 | 2 | Base reward for an uncrewed orbital achievement. |
+| `CrewedRewardFunds` | Property | 1 | 2 | Base reward for a crewed orbital achievement. |
+| `SatelliteProgressCostFunds` | Property | 1 | 2 | Cost of one successful rival satellite-network step. |
+| `SatelliteNetworkSize` | Property | 1 | 2 | Number of satellites needed to fill the network target. |
+| `SatelliteNetworkValueFunds` | Property | 1 | 2 | Total funding value of the satellite network. |
 
-### `RaceSettings`
+### Class: `RaceSettings`
 
-| Function | Responsibility |
-| --- | --- |
-| static constructor | Calls `ResetToDefaults()` before any loader changes are applied. |
-| `ResetToDefaults()` | Restores the four built-in tiers and global funding/rival defaults. |
-| `GetBodySettings(string)` | Maps a body name to one of the four tiers. Kerbin, Kerbin moons, selected stock planetary moons and the default interplanetary-planet tier are currently hardcoded here. Unknown bodies deliberately fall back to the more expensive interplanetary-planet tier. |
+This holds the four body groups and the global rival/funding settings.
 
-This is one of the current hardcoding points to revisit if body definitions become data-driven.
+| Member | Kind | Approx. lines | Other-file refs | Simple purpose |
+| --- | --- | ---: | ---: | --- |
+| `RaceSettings()` | Static constructor | ~4 | 0 | Loads the built-in defaults when this class is first used. |
+| `Kerbin` | Property | 1 | 2 | Balance settings for Kerbin. |
+| `KerbinMoons` | Property | 1 | 1 | Balance settings for Mun and Minmus. |
+| `InterplanetaryPlanets` | Property | 1 | 1 | Balance settings for planets beyond the Kerbin system. |
+| `InterplanetaryMoons` | Property | 1 | 1 | Balance settings for moons of other planets. |
+| `FundingIntervalDays` | Property | 1 | 2 | Number of Kerbin days between funding dates. |
+| `RivalStartingFunds` | Property | 1 | 2 | Money each rival starts with. |
+| `RivalProgressChance` | Property | 1 | 2 | Chance that a rival makes progress at a progress check. |
+| `NumberOfRivals` | Property | 1 | 2 | Number of rival agencies to create. |
+| `ResetToDefaults()` | Function | ~50 | 1 | Restores all built-in balance values. |
+| `GetBodySettings()` | Function | ~36 | 2 | Chooses which balance group a planet or moon should use. |
+
+**Current limitation:** Body names are still listed directly inside `GetBodySettings()`. This is one place that will need work if body support becomes fully data-driven.
 
 ---
 
 ## 3.4 `Funding/AchievementFundingProgramme.cs`
 
-### Purpose
+**Simple purpose:** This file represents one achievement contract. It remembers whether the contract was offered, completed and how many declining payments have already happened.
 
-Mutable lifecycle state for one competitive achievement funding contract. The definition is code-owned; the instance records offer/start/payment state for one campaign.
+**Main class:** `AchievementFundingProgramme`
 
-### `AchievementFundingProgramme`
-
-| Member | Responsibility |
-| --- | --- |
-| Constructors | Store stable ID, display/objective text, base reward and optional structured unlock rule. Negative base rewards are clamped to zero. |
-| `IsExpired` | True after 10 processed payments. |
-| `CurrentInterestPercent` | 100%, 90%, ... 10%, then 0% after expiry. |
-| `CurrentTotalPayoutFunds` | Base reward multiplied by current interest. |
-| `Offer()` | One-way gameplay transition into sponsor-offered state unless already expired. |
-| `Start()` | Starts the lifecycle after the first agency achieves the objective. Does not pay immediately. |
-| `CalculateCurrentPayout(bool,int)` | Splits the current total payout equally among agencies eligible at that exact funding boundary. |
-| `AdvancePayout()` | Advances one step through the ten-payment lifecycle. |
-| `RestoreState(...)` | Restores persisted start/payment state with clamping and normalization. |
-| `RestoreOfferState(bool)` | Persistence-only replacement of offer state when another save is loaded. |
+| Member | Kind | Approx. lines | Other-file refs | Simple purpose |
+| --- | --- | ---: | ---: | --- |
+| `AchievementFundingProgramme(...)` basic overload | Constructor | ~18 | 0 | Creates a simple achievement contract with default unlock text. |
+| `AchievementFundingProgramme(...)` text overload | Constructor | ~19 | 0 | Creates a contract with custom unlock text. |
+| `AchievementFundingProgramme(...)` full overload | Constructor | ~20 | 1 | Creates a contract with a real unlock rule. |
+| `Id` | Property | 1 | 4 | Internal contract name used by code and saves. |
+| `Name` | Property | 1 | 2 | Player-facing contract name. |
+| `ObjectiveDescription` | Property | 1 | 1 | Player-facing explanation of the task. |
+| `UnlockRequirement` | Property | 1 | 0 | Stored player-facing unlock text. |
+| `UnlockRule` | Property | 1 | 2 | The real rule that decides when the contract unlocks. |
+| `BaseRewardFunds` | Property | 1 | 1 | Full starting value of the contract. |
+| `IsOffered` | Property | 1 | 4 | True after sponsors have offered the contract. |
+| `HasStarted` | Property | 1 | 3 | True after at least one agency completes the task. |
+| `PaymentsProcessed` | Property | 1 | 1 | Number of contract payments already paid. |
+| `IsExpired` | Property | ~4 | 3 | True after all ten payments are finished. |
+| `CurrentInterestPercent` | Property | ~15 | 1 | Shows the current value percentage: 100%, 90%, down to 10%. |
+| `CurrentTotalPayoutFunds` | Property | ~4 | 1 | Shows the total money available at the next payment. |
+| `Offer()` | Function | ~10 | 2 | Marks the contract as offered. |
+| `Start()` | Function | ~10 | 1 | Starts the ten-payment countdown after the first completion. |
+| `CalculateCurrentPayout()` | Function | ~12 | 1 | Works out one eligible agency's share of the next payment. |
+| `AdvancePayout()` | Function | ~10 | 1 | Moves the contract to the next lower payment level. |
+| `RestoreState()` | Function | ~6 | 1 | Restores payment progress from a save. |
+| `RestoreOfferState()` | Function | ~4 | 1 | Restores whether the contract had been offered. |
 
 ---
 
 ## 3.5 `Funding/FundingProgramme.cs`
 
-### Purpose
+**Simple purpose:** This file represents one satellite-network funding contract. It remembers whether the network is available, offered and has ever reached its target.
 
-Mutable lifecycle state and payout formula for one permanent satellite-network funding target.
+**Main class:** `FundingProgramme`
 
-### `FundingProgramme`
-
-| Member | Responsibility |
-| --- | --- |
-| Constructors | Store stable ID, body, network target/value, availability text and optional structured unlock rule. |
-| `Unlock()` | Permanently marks the target available in the current campaign. |
-| `Offer()` | Permanently marks it sponsor-offered. |
-| `MarkSatelliteTargetReached()` | Remembers that the collective network target was reached at least once; used by sponsor vacancy logic. |
-| `RestoreAvailability(...)` | Persistence-only state replacement. |
-| `RestoreOfferState(...)` | Persistence-only replacement of offered/fulfilled state. |
-| `CalculateCurrentPayout(programCount,totalCount)` | Before network saturation: pays by completion percentage of the fixed pool. After saturation: distributes the same fixed pool by ownership share. Defensive normalization prevents an impossible caller total from producing more than 100% ownership. |
+| Member | Kind | Approx. lines | Other-file refs | Simple purpose |
+| --- | --- | ---: | ---: | --- |
+| `FundingProgramme(...)` basic overload | Constructor | ~20 | 0 | Creates a simple satellite contract. |
+| `FundingProgramme(...)` text overload | Constructor | ~22 | 0 | Creates a contract with custom unlock text. |
+| `FundingProgramme(...)` full overload | Constructor | ~20 | 1 | Creates a contract with its real unlock rule. |
+| `Id` | Property | 1 | 3 | Internal contract name used by code and saves. |
+| `Name` | Property | 1 | 1 | Player-facing network name. |
+| `CelestialBodyName` | Property | 1 | 3 | Planet or moon this network belongs to. |
+| `RequiredSatellites` | Property | 1 | 2 | Number of satellites needed to fill the target. |
+| `RewardFunds` | Property | 1 | 1 | Total money in the network funding pool. |
+| `UnlockRequirement` | Property | 1 | 0 | Stored player-facing unlock text. |
+| `UnlockRule` | Property | 1 | 2 | The real rule that unlocks the network. |
+| `IsAvailable` | Property | 1 | 4 | True when the requirements have been completed. |
+| `IsOffered` | Property | 1 | 4 | True when sponsors have offered the network. |
+| `HasReachedSatelliteTarget` | Property | 1 | 2 | Remembers whether the full network target has ever been reached. |
+| `Unlock()` | Function | ~4 | 1 | Makes the contract available. |
+| `Offer()` | Function | ~4 | 1 | Marks the contract as offered. |
+| `MarkSatelliteTargetReached()` | Function | ~4 | 1 | Records that the network target was reached. |
+| `RestoreAvailability()` | Function | ~4 | 1 | Restores availability from a save. |
+| `RestoreOfferState()` | Function | ~5 | 1 | Restores offered and completed-network state from a save. |
+| `CalculateCurrentPayout()` | Function | ~31 | 1 | Works out how much of the network fund one agency should receive. |
 
 ---
 
 ## 3.6 `Funding/PrototypeFundingCatalogue.cs`
 
-### Purpose
+**Simple purpose:** This file builds the funding contracts that exist in version 0.5. If a new funding target is added, this is one of the main files to check.
 
-Builds the fresh funding programme set for a new controller. Catalogue membership belongs here rather than in the controller.
+**Main class:** `PrototypeFundingCatalogue`
 
-### Key functions
+| Member | Kind | Approx. lines | Other-file refs | Simple purpose |
+| --- | --- | ---: | ---: | --- |
+| `CreateAchievementProgrammes()` | Function | ~28 | 1 | Builds a fresh achievement-contract list for a new race. |
+| `CreateSatelliteProgrammes()` | Function | ~140 | 1 | Builds a fresh satellite-contract list for a new race. |
+| `AddAchievementProgramme()` | Function | ~34 | 0 | Turns one milestone into an achievement funding contract. |
+| `CreateSatelliteProgramme()` | Function | ~20 | 0 | Creates one satellite funding contract using body balance settings. |
+| `CreateKerbinMoonNetworkUnlockRule()` | Function | ~12 | 0 | Builds the unlock rule used by Mun/Minmus networks. |
+| `CreateInterplanetaryPlanetNetworkUnlockRule()` | Function | ~14 | 0 | Builds the unlock rule used by interplanetary planet networks. |
+| `CreatePlanetaryMoonNetworkUnlockRule()` | Function | ~12 | 0 | Builds the unlock rule used by moons of other planets. |
+| `CreateNetworkProgressCondition()` | Function | ~14 | 0 | Creates the 60%-complete satellite-network requirement. |
+| `CreateUnlockRequirementText()` | Function | ~92 | 0 | Turns a technical unlock rule into readable text. |
+| `IsSingleAgencyAchievementCondition()` | Function | ~10 | 0 | Checks whether an unlock condition has the simple shape this file expects. |
+| `FindRequiredMilestone()` | Function | ~12 | 0 | Finds a milestone and stops with an error if the catalogue points at a missing ID. |
 
-| Function | Responsibility |
-| --- | --- |
-| `CreateAchievementProgrammes()` | Creates one achievement funding programme for every starter milestone and every orbital milestone. |
-| `CreateSatelliteProgrammes()` | Creates network programmes for Kerbin, Mun, Minmus, Duna, Moho, Eve, Gilly, Ike, Dres, Jool, Laythe, Vall, Tylo, Bop, Pol and Eeloo. |
-| `AddAchievementProgramme(...)` | Uses explicit starter rewards for starter contracts; ordinary milestones take crewed/probe reward from their body's balance tier. Level I starter contracts are initial offers. |
-| `CreateSatelliteProgramme(...)` | Uses the target body's tier for network size/value and starts the target locked. |
-| `CreateKerbinMoonNetworkUnlockRule(...)` | Requires the target probe achievement plus 60% of the Kerbin network. |
-| `CreateInterplanetaryPlanetNetworkUnlockRule(...)` | Requires the target probe achievement plus 60% of both Mun and Minmus networks. |
-| `CreatePlanetaryMoonNetworkUnlockRule(...)` | Requires the moon probe achievement plus 60% of its parent planet's network. |
-| `CreateNetworkProgressCondition(...)` | Converts 60% of configured network size to a minimum whole qualifying-satellite count using `Ceiling`. |
-| `CreateUnlockRequirementText(...)` | Derives player-facing requirement text from the structured rule and fails fast on rule shapes it cannot describe. |
-| `IsSingleAgencyAchievementCondition(...)` | Validation helper for text generation. |
-| `FindRequiredMilestone(...)` | Stable-ID lookup that throws if catalogue wiring refers to a missing milestone. |
-
-This file is the second major body-content hardcoding point.
+**Current limitation:** The list of supported satellite bodies is written directly in this file.
 
 ---
 
 ## 3.7 `KspIntegration/CareerFundingAdapter.cs`
 
-### Purpose
+**Simple purpose:** This is a very small bridge to KSP's real Career money system.
 
-Keeps direct KSP Career economy calls out of controller/domain logic.
+**Main class:** `CareerFundingAdapter`
 
-### Function
-
-`TryAddFunds(double amount)` validates a finite positive payout, verifies the game is Career and KSP's global `Funding.Instance` exists, then awards funds using `TransactionReasons.ContractReward`.
+| Member | Kind | Approx. lines | Other-file refs | Simple purpose |
+| --- | --- | ---: | ---: | --- |
+| `TryAddFunds()` | Function | ~18 | 1 | Safely adds a positive contract reward to the player's KSP Career funds. |
 
 ---
 
 ## 3.8 `KspIntegration/KspCelestialBodyOrdering.cs`
 
-### Purpose
+**Simple purpose:** This file gives planets and moons a stable distance from Kerbin. The Space Race screen uses that distance to keep targets in a sensible order.
 
-Provides stable UI ordering from Kerbin outward without using moving live planetary positions.
+**Main class:** `KspCelestialBodyOrdering`
 
-### Function map
-
-| Function | Responsibility |
-| --- | --- |
-| `GetSortDistanceFromKerbin(string)` | Finds home/target bodies, walks each parent chain, finds the common ancestor and combines mean orbital-radius distances. Invalid/unresolvable bodies sort at the end using `double.MaxValue`. |
-| `CreatePathToRoot(CelestialBody)` | Builds a parent path and detects malformed cyclic body graphs. |
-| `SumOrbitRadii(...)` | Adds finite orbit radii along part of a path. |
-| `FindBody(string)` | Case-insensitive lookup in `FlightGlobals.Bodies`. |
-| `GetOrbitRadius(CelestialBody)` | Returns absolute semi-major axis or the invalid sentinel. |
-| `GetParent(CelestialBody)` | Safely returns `referenceBody` when a real parent exists. |
-
-The ordering helper itself can handle bodies beyond the current stock catalogue as long as KSP supplies a valid body graph.
+| Member | Kind | Approx. lines | Other-file refs | Simple purpose |
+| --- | --- | ---: | ---: | --- |
+| `GetSortDistanceFromKerbin()` | Function | ~76 | 1 | Gives one body a stable sorting distance from Kerbin. |
+| `CreatePathToRoot()` | Function | ~27 | 0 | Walks from a moon/planet up through its parent bodies. |
+| `SumOrbitRadii()` | Function | ~20 | 0 | Adds orbital distances along part of that parent path. |
+| `FindBody()` | Function | ~27 | 0 | Finds a KSP celestial body by name. |
+| `GetOrbitRadius()` | Function | ~12 | 0 | Gets a safe orbital radius for sorting. |
+| `GetParent()` | Function | ~14 | 0 | Finds the parent body if one exists. |
 
 ---
 
 ## 3.9 `KspIntegration/KspVesselDiscovery.cs`
 
-### Purpose
+**Simple purpose:** This file reads real KSP vessels. It removes the complicated KSP details and gives the rest of the mod simple vessel records.
 
-The main KSP vessel adapter. Converts live/persistent KSP objects into project-owned snapshots and owns the KSP-specific destruction callbacks needed for Directed Power impact detection.
+**Main class:** `KspVesselDiscovery`
 
-### Function map
-
-| Function | Responsibility |
-| --- | --- |
-| `TryCaptureOrbitingVessels(...)` | Scans saved `ProtoVessel`s, preferring live vessel state when loaded, and returns normalized orbiting-vessel snapshots plus one stable observation UT. Loaded and unloaded vessels therefore share one tracker path. |
-| `TryCaptureActiveVessel(StarterTelemetryRequirement,...)` | Captures only the controlled loaded non-EVA vessel. Expensive/condition-specific fields are read only when requested by the telemetry mask. Validates transient numeric data before creating `ActiveVesselTrackingSnapshot`. |
-| `TryConsumeActiveVesselSurfaceImpact(...)` | Returns and clears one pending normalized surface-impact event. |
-| `DisableActiveVesselSurfaceImpactTracking()` | Removes per-vessel and global destruction callbacks and clears all cached impact evidence when no active contract needs it. |
-| `ResetActiveVesselTracking()` | Clears callbacks/evidence and save ownership when the active KSP game changes. |
-| `EnsureActiveTrackingGame()` | Detects a new `Game` and resets callback state. |
-| `EnsureVesselWillDestroySubscription()` | Subscribes to KSP's global destruction event only while Directed Power needs impact data. |
-| `TrackActiveVesselDestruction(Vessel)` | Hooks the active vessel's `OnJustAboutToBeDestroyed` event; switches safely when active vessel/stage changes. |
-| `DetachDestructionCallback()` | Removes the per-vessel callback. |
-| `CaptureDestructionTelemetry(...)` | Stores the most recent genuine Flying/SubOrbital clearance, speed and UT, preserving it if KSP briefly reports Landed/Splashed during breakup. |
-| `OnVesselWillDestroy(Vessel)` | Global-event adapter into normalized impact handling. |
-| `RecordPotentialSurfaceImpact(Vessel)` | Validates vessel identity, obtains current clearance/time and delegates the actual heuristic to `SurfaceImpactEvaluator`; stores a pending impact if eligible. |
-| `GetSurfaceClearanceMeters(Vessel)` | Uses the best available minimum of terrain height and altitude; positive infinity means unavailable. |
-| `ConvertSituation(...)` | Maps KSP situations to `TrackedFlightSituation`. |
-| `ConvertVesselType(...)` | Maps Probe/Relay to project vessel types; everything else becomes `Other`. |
-| `GetProtoCrewCount(...)` | Counts crew in persistent part snapshots for unloaded craft. |
-| `IsFinite(double)` | Numeric validation helper. |
-
-KSP APIs should remain in this module rather than leaking into `Tracking`.
+| Member | Kind | Approx. lines | Other-file refs | Simple purpose |
+| --- | --- | ---: | ---: | --- |
+| `TryCaptureOrbitingVessels()` | Function | ~100 | 1 | Reads all saved orbiting vessels and creates simple orbital snapshots. |
+| `TryCaptureActiveVessel()` | Function | ~105 | 1 | Reads only the vessel the player is currently controlling. It only asks KSP for data the active starter contracts need. |
+| `TryConsumeActiveVesselSurfaceImpact()` | Function | ~25 | 1 | Gives the runtime one saved crash event and then clears it. |
+| `DisableActiveVesselSurfaceImpactTracking()` | Function | ~24 | 1 | Removes crash callbacks when Directed Power no longer needs them. |
+| `ResetActiveVesselTracking()` | Function | ~5 | 1 | Clears all active-vessel crash tracking when the KSP save changes. |
+| `EnsureActiveTrackingGame()` | Function | ~9 | 0 | Makes sure crash tracking belongs to the current KSP save. |
+| `EnsureVesselWillDestroySubscription()` | Function | ~14 | 0 | Connects to KSP's vessel-destroyed event when needed. |
+| `TrackActiveVesselDestruction()` | Function | ~25 | 0 | Watches the current vessel for its final destruction callback. |
+| `DetachDestructionCallback()` | Function | ~11 | 0 | Stops watching the old vessel. |
+| `CaptureDestructionTelemetry()` | Function | ~40 | 0 | Keeps the last useful speed, height and flight state before destruction. |
+| `OnVesselWillDestroy()` | Function | ~4 | 0 | Receives KSP's vessel-destroyed event. |
+| `RecordPotentialSurfaceImpact()` | Function | ~45 | 0 | Checks whether the destruction looks like a real surface impact. |
+| `GetSurfaceClearanceMeters()` | Function | ~19 | 0 | Gets the best available distance between the vessel and the surface. |
+| `ConvertSituation()` | Function | ~27 | 0 | Changes a KSP flight-state value into the mod's simpler flight-state value. |
+| `ConvertVesselType()` | Function | ~16 | 0 | Changes a KSP vessel type into Probe, Relay or Other. |
+| `GetProtoCrewCount()` | Function | ~30 | 0 | Counts crew on an unloaded saved vessel. |
+| `IsFinite()` | Function | ~4 | 0 | Rejects invalid numbers such as infinity or NaN. |
 
 ---
 
 ## 3.10 `KspIntegration/RacePersistenceScenario.cs`
 
-### Purpose
+**Simple purpose:** This file is the bridge between KSP's save system and the mod's own save classes.
 
-KSP `ScenarioModule` boundary that stores Race for Space state inside the active save.
+**Main class:** `RacePersistenceScenario`
 
-### Save sections
-
-- `FUNDING_CONTRACTS` -> `FundingContractsSaveState`
-- `RIVALS` -> `RivalProgramsSaveState`
-- `ACTIVE_CONTRACT_PROGRESS` -> `ActiveContractProgressSaveState`
-- root `commandCenterVisible` -> UI visibility
-
-### Function map
-
-| Function | Responsibility |
-| --- | --- |
-| `OnLoad(ConfigNode)` | Deserializes only when a different KSP `Game` becomes current; ordinary scene changes retain newer in-memory state. |
-| `OnSave(ConfigNode)` | Writes current state only when the scenario is ready and belongs to the current game. |
-| `TryRestoreCommandCenterVisibility(...)` / `CaptureCommandCenterVisibility(...)` | Persist the open/closed command-center state. |
-| `TryRestoreRivalState(...)` | Applies saved rival state by stable program ID. |
-| `TryRestoreRaceProgress(...)` | Restores player achievement history, all funding lifecycle state and next global funding boundary. |
-| `TryRestoreActiveContractProgress(...)` | Restores temporary starter-flight and Control hold state. |
-| `CaptureRivalState(...)` | Captures all simulated rivals. |
-| `CaptureRaceProgress(...)` | Captures player/funding state and next funding time. |
-| `CaptureActiveContractProgress(...)` | Captures the current starter attempt without forcing an immediate disk write. |
+| Member | Kind | Approx. lines | Other-file refs | Simple purpose |
+| --- | --- | ---: | ---: | --- |
+| `OnLoad()` | Function | ~37 | KSP | Called by KSP when save data is loaded. Reads Race for Space data for a new save. |
+| `OnSave()` | Function | ~31 | KSP | Called by KSP when the game is saved. Writes Race for Space data. |
+| `TryRestoreCommandCenterVisibility()` | Function | ~12 | 1 | Restores whether the Command Center window was open. |
+| `CaptureCommandCenterVisibility()` | Function | ~10 | 1 | Remembers whether the Command Center window is open. |
+| `TryRestoreRivalState()` | Function | ~17 | 1 | Restores saved rival information. |
+| `TryRestoreRaceProgress()` | Function | ~24 | 1 | Restores player achievements, funding contracts and the next funding date. |
+| `TryRestoreActiveContractProgress()` | Function | ~17 | 1 | Restores temporary starter-flight progress. |
+| `CaptureRivalState()` | Function | ~15 | 1 | Copies current rival information into the save-state object. |
+| `CaptureRaceProgress()` | Function | ~21 | 1 | Copies player and funding progress into the save-state object. |
+| `CaptureActiveContractProgress()` | Function | ~16 | 1 | Copies current starter-flight progress into the save-state object. |
 
 ---
 
 ## 3.11 `KspIntegration/RaceSettingsLoader.cs`
 
-### Purpose
+**Simple purpose:** This file reads the user-editable balance config once when the race system starts. Bad or missing values fall back to safe defaults.
 
-Loads `GameData/TheRaceForSpace/Config/RaceSettings.cfg` once before the first controller is constructed.
+**Main class:** `RaceSettingsLoader`
 
-| Function | Responsibility |
-| --- | --- |
-| `EnsureLoaded()` | One-shot load. Resets defaults first, reads root/global values and applies all four body tiers. Missing file/node or invalid values keep defaults and log a KSP message. |
-| `ApplyBodySettings(...)` | Applies one tier node to an existing `RaceBodySettings`. |
-| `ReadDouble(...)` | Invariant-culture, finite, range-checked parser with fallback. |
-| `ReadInt(...)` | Invariant-culture, range-checked integer parser with fallback. |
-| `LogInvalidValue(...)` | Emits a warning naming the bad value and fallback. |
+| Member | Kind | Approx. lines | Other-file refs | Simple purpose |
+| --- | --- | ---: | ---: | --- |
+| `EnsureLoaded()` | Function | ~74 | 1 | Loads `RaceSettings.cfg` once. |
+| `ApplyBodySettings()` | Function | ~32 | 0 | Copies one config section into one body-settings group. |
+| `ReadDouble()` | Function | ~34 | 0 | Reads and checks a decimal number from the config. |
+| `ReadInt()` | Function | ~25 | 0 | Reads and checks a whole number from the config. |
+| `LogInvalidValue()` | Function | ~15 | 0 | Writes a warning when a config value is invalid. |
 
 ---
 
 ## 3.12 `Milestones/MilestoneDefinition.cs`
 
-### Purpose
+**Simple purpose:** This file explains what a milestone looks like. It stores the rules and numbers for orbital milestones and starter contracts.
 
-Defines the immutable data model for orbital and starter achievements. Tracking code consumes these definitions rather than hardcoding balance thresholds.
+### Class: `StarterContractCriteria`
 
-### Types
+This is the small group of numbers that describes one starter-contract target.
 
-- `MilestoneCrewRequirement`: `UncrewedProbe`, `Crewed`.
-- `MilestoneSituation`: currently `Orbit`.
-- `MilestoneObjectiveType`: `Orbit`, `DirectedPower`, `DeliveredMass`, `AltitudeHold`, `BiomeVisit`.
-- `StarterContractLine`: `None`, `DirectedPower`, `Mass`, `Control`, `Biome`.
-- `StarterContractCriteria`: internal immutable criteria holder with factories `DirectedPower`, `Mass`, `Control`, `Biome`, plus `None`.
-- `MilestoneVesselObservation`: KSP-independent body/situation/crew observation used by ordinary orbital evaluation.
-- `MilestoneDefinition`: immutable milestone definition with stable ID, body, crew requirement, objective text, unlock rule, starter metadata, reward/progress costs and explicit measurable criteria.
+| Member | Kind | Approx. lines | Other-file refs | Simple purpose |
+| --- | --- | ---: | ---: | --- |
+| `StarterContractCriteria(...)` | Constructor | ~25 | 0 | Stores one set of starter-contract target values. |
+| `RequiredSpeedMetersPerSecond` | Property | 1 | 0 | Required speed for Directed Power. |
+| `RequiredMassTonnes` | Property | 1 | 0 | Required final mass for Mass contracts. |
+| `RequiredDistanceMeters` | Property | 1 | 0 | Required travel distance for Mass contracts. |
+| `MinimumAltitudeMeters` | Property | 1 | 0 | Bottom of a Control altitude band. |
+| `MaximumAltitudeMeters` | Property | 1 | 0 | Top of a Control band or Directed Power ceiling. |
+| `RequiredDurationSeconds` | Property | 1 | 0 | Time the player must remain in a Control band. |
+| `RequiredBiomeName` | Property | 1 | 0 | Required biome for a Biome contract. |
+| `DirectedPower()` | Function | ~13 | 1 | Creates Directed Power criteria. |
+| `Mass()` | Function | ~13 | 1 | Creates Mass criteria. |
+| `Control()` | Function | ~13 | 1 | Creates Control criteria. |
+| `Biome()` | Function | ~13 | 1 | Creates Biome criteria. |
 
-### Important functions
+### Class: `MilestoneVesselObservation`
 
-| Function | Responsibility |
-| --- | --- |
-| `StarterContractCriteria.DirectedPower(...)` | Supplies required speed and altitude ceiling. |
-| `StarterContractCriteria.Mass(...)` | Supplies landed mass and surface-distance requirements. |
-| `StarterContractCriteria.Control(...)` | Supplies altitude band and continuous hold duration. |
-| `StarterContractCriteria.Biome(...)` | Supplies target biome name. |
-| `MilestoneDefinition.IsSatisfiedBy(...)` | Matches ordinary orbital observations by body, situation and crew qualification. Starter contracts deliberately use `StarterFlightTracker` instead. |
-| `CreateObjectiveDescription(...)` | Generates starter contract text from the same criteria used for evaluation, preventing display thresholds from drifting away from gameplay thresholds. |
+This is a tiny description of an orbiting vessel used by normal orbital milestones.
+
+| Member | Kind | Approx. lines | Other-file refs | Simple purpose |
+| --- | --- | ---: | ---: | --- |
+| `MilestoneVesselObservation(...)` | Constructor | ~10 | 1 | Creates a simple orbital-vessel observation. |
+| `CelestialBodyName` | Property | 1 | 0 | Body being orbited. |
+| `Situation` | Property | 1 | 0 | Required flight situation. Currently this is orbit. |
+| `CrewQualification` | Property | 1 | 0 | Says whether the craft counts as uncrewed probe or crewed. |
+
+### Class: `MilestoneDefinition`
+
+This is the main description of one milestone.
+
+| Member | Kind | Approx. lines | Other-file refs | Simple purpose |
+| --- | --- | ---: | ---: | --- |
+| `MilestoneDefinition(...)` orbital overload | Constructor | ~27 | 1 | Creates a normal orbital milestone. |
+| `MilestoneDefinition(...)` extended overload | Constructor | ~29 | 0 | Creates a milestone with extra starter-style information but no criteria object. |
+| `MilestoneDefinition(...)` full overload | Constructor | ~50 | 1 | Creates the full milestone and copies all starter criteria into properties. |
+| `Id` | Property | 1 | 7 | Stable internal milestone name used across most race systems. |
+| `Name` | Property | 1 | 2 | Player-facing milestone name. |
+| `CelestialBodyName` | Property | 1 | 3 | Body where the milestone happens. |
+| `Situation` | Property | 1 | 0 | Required situation for normal milestones. |
+| `CrewRequirement` | Property | 1 | 2 | Says whether the milestone needs crew or an uncrewed probe. |
+| `ObjectiveDescription` | Property | 1 | 1 | Player-facing task description. |
+| `UnlockRule` | Property | 1 | 2 | Rule that must be complete before this milestone can count. |
+| `ObjectiveType` | Property | 1 | 1 | Says what kind of objective this is. |
+| `StarterLine` | Property | 1 | 3 | Says which starter line this milestone belongs to. |
+| `StarterLevel` | Property | 1 | 1 | Starter level number from I to V. |
+| `BaseRewardFunds` | Property | 1 | 1 | Base reward used by starter achievement funding. |
+| `RivalProgressCostFunds` | Property | 1 | 1 | Rival development-step cost for this starter milestone. |
+| `RequiredSpeedMetersPerSecond` | Property | 1 | 2 | Directed Power speed target. |
+| `RequiredMassTonnes` | Property | 1 | 2 | Mass target. |
+| `RequiredDistanceMeters` | Property | 1 | 2 | Mass travel-distance target. |
+| `MinimumAltitudeMeters` | Property | 1 | 2 | Bottom of Control altitude band. |
+| `MaximumAltitudeMeters` | Property | 1 | 2 | Top of Control band or Directed Power ceiling. |
+| `RequiredDurationSeconds` | Property | 1 | 2 | Required Control hold time. |
+| `RequiredBiomeName` | Property | 1 | 2 | Biome target. |
+| `IsStarterContract` | Property | ~4 | 4 | Says whether this is one of the special pre-orbit starter contracts. |
+| `IsSatisfiedBy()` | Function | ~25 | 1 | Checks whether a normal orbital vessel observation completes this milestone. |
+| `CreateObjectiveDescription()` | Function | ~60 | 0 | Builds starter-contract text from the same numbers used by gameplay. |
 
 ---
 
 ## 3.13 `Milestones/PrototypeMilestones.cs`
 
-### Purpose
+**Simple purpose:** This file contains the actual milestone list for version 0.5. It is the main place where starter targets and orbital progression are defined.
 
-The code-owned milestone catalogue for the current campaign.
+**Main class:** `PrototypeMilestones`
 
-### Starter catalogue
+### Current starter lines
 
-There are 20 starter milestones: five levels in each of four parallel lines.
+- **Directed Power:** 600, 1,100, 1,400, 1,700 and 2,000 m/s. Stay at or below 70 km. Then impact Kerbin.
+- **Mass:** land with 1 t at 25 km, 2.5 t at 75 km, 5 t at 150 km, 10 t at 300 km, then 20 t at 600 km.
+- **Control:** complete a crewed altitude hold, then land safely with crew.
+- **Biome:** land in Grasslands, Highlands, Mountains, Deserts, then Ice Caps.
 
-| Line | Level I -> V criteria |
-| --- | --- |
-| Directed Power | 600, 1,100, 1,400, 1,700, 2,000 m/s; all must stay at or below 70 km and then impact Kerbin. |
-| Mass | Land with 1 t at 25 km; 2.5 t at 75 km; 5 t at 150 km; 10 t at 300 km; 20 t at 600 km from launch. |
-| Control | Crewed altitude holds: 2-5 km/30 s; 8-12 km/45 s; 15-25 km/60 s; 30-40 km/75 s; 50-65 km/90 s; then land safely on Kerbin. |
-| Biome | Land in Grasslands, Highlands, Mountains, Deserts, then Ice Caps without entering orbit. |
+Completing Level V of **any one** starter line unlocks Probe Orbit.
 
-Each Level II-V rule is unlocked by any agency completing the previous level in the same line. Completing **any** Level V line provides one alternative path to unlock Probe Orbit.
+| Member | Kind | Approx. lines | Other-file refs | Simple purpose |
+| --- | --- | ---: | ---: | --- |
+| `All` | Property | ~4 | 2 | Gives the list of normal orbital milestones. |
+| `StarterContracts` | Property | ~4 | 1 | Gives the list of twenty starter milestones. |
+| `FindById()` | Function | ~14 | 4 | Finds any milestone by its stable ID. |
+| `CreateMilestoneIndex()` | Function | ~30 | 0 | Builds the fast milestone lookup table. |
+| `CreateStarterMilestone()` | Function | ~32 | 0 | Creates one starter milestone with its common settings. |
+| `CreateProbeOrbitUnlockRule()` | Function | ~20 | 0 | Creates the four-way Level V rule that unlocks Probe Orbit. |
+| `CreateInterplanetaryProbeUnlockRule()` | Function | ~12 | 0 | Requires both Mun Probe Orbit and Minmus Probe Orbit. |
+| `CreateInterplanetaryCrewedUnlockRule()` | Function | ~12 | 0 | Requires both Mun Crewed Orbit and Minmus Crewed Orbit. |
 
-### Orbital catalogue
-
-`All` currently contains 32 probe/crewed orbital milestones covering Kerbin, Mun, Minmus, Duna, Moho, Eve, Gilly, Ike, Dres, Jool, Laythe, Vall, Tylo, Bop, Pol and Eeloo.
-
-General progression patterns are:
-
-- Probe Orbit: any one starter Level V.
-- Crewed Kerbin Orbit: Probe Orbit.
-- Mun/Minmus probe: Probe Orbit.
-- Mun/Minmus crewed: Crewed Orbit.
-- Interplanetary planet probes: both Mun Probe Orbit and Minmus Probe Orbit.
-- Interplanetary planet crewed: both Mun Crewed Orbit and Minmus Crewed Orbit.
-- Planetary moons: the matching probe/crewed parent-planet orbit.
-
-### Function map
-
-| Function/property | Responsibility |
-| --- | --- |
-| `All` | Read-only ordinary orbital definitions. |
-| `StarterContracts` | Read-only 20 starter definitions. |
-| `FindById(string)` | Case-insensitive stable-ID lookup across both catalogues. |
-| `CreateMilestoneIndex()` | Builds the lookup dictionary and therefore also fails on duplicate IDs. |
-| `CreateStarterMilestone(...)` | Applies common Kerbin/starter metadata, reward scaling and prior-level unlock wiring. |
-| `CreateProbeOrbitUnlockRule()` | OR rule across the four Level V starter milestones. |
-| `CreateInterplanetaryProbeUnlockRule()` | AND rule for Mun + Minmus probe milestones. |
-| `CreateInterplanetaryCrewedUnlockRule()` | AND rule for Mun + Minmus crewed milestones. |
-
-This file is the primary place to change starter thresholds or add/remove ordinary milestone definitions.
+**Current limitation:** The complete body and milestone list is written directly in this file.
 
 ---
 
 ## 3.14 `Milestones/UnlockRuleDefinition.cs`
 
-### Purpose
+**Simple purpose:** This file describes unlock rules. It does not decide whether a rule is complete. It only describes what must happen.
 
-Reusable immutable model for campaign prerequisites.
+### Class: `UnlockConditionDefinition`
 
-### Rule model
+One condition can ask for an achievement, a campaign time, or a satellite count.
 
-- A `UnlockRuleDefinition` contains one or more **paths**; any path may unlock the target (**OR**).
-- A `UnlockPathDefinition` contains one or more **conditions**; every condition in the path must pass (**AND**).
-- A `null` rule is interpreted by consumers as available from campaign start.
+| Member | Kind | Approx. lines | Other-file refs | Simple purpose |
+| --- | --- | ---: | ---: | --- |
+| `UnlockConditionDefinition(...)` | Constructor | ~20 | 0 | Stores one unlock condition. |
+| `ConditionType` | Property | 1 | 3 | Says what kind of condition this is. |
+| `ProgramScope` | Property | 1 | 3 | Says whether player, rivals or any agency may satisfy it. |
+| `MilestoneId` | Property | 1 | 3 | Milestone needed by an achievement condition. |
+| `RequiredProgramCount` | Property | 1 | 3 | Number of agencies that must meet an achievement condition. |
+| `RequiredUniversalTime` | Property | 1 | 2 | KSP time needed by a time condition. |
+| `CelestialBodyName` | Property | 1 | 3 | Body used by a satellite-count condition. |
+| `RequiredSatelliteCount` | Property | 1 | 3 | Number of satellites needed. |
+| `Achievement()` simple overload | Function | ~5 | 2 | Creates a one-agency achievement requirement. |
+| `Achievement()` count overload | Function | ~31 | 0 | Creates an achievement requirement that can need several agencies. |
+| `AfterUniversalTime()` | Function | ~24 | 0 | Creates a rule that unlocks after a fixed KSP time. |
+| `SatelliteCount()` | Function | ~28 | 1 | Creates a rule that needs a number of satellites around one body. |
 
-### Types/functions
+### Class: `UnlockPathDefinition`
 
-| Type/function | Responsibility |
-| --- | --- |
-| `UnlockConditionType` | Supports `Achievement`, `UniversalTime`, `SatelliteCount`. |
-| `UnlockProgramScope` | Limits achievement conditions to `AnyAgency`, `Player` or `AnyRival`. |
-| `UnlockConditionDefinition.Achievement(...)` | Creates a one- or multi-agency achievement condition with validation. |
-| `AfterUniversalTime(double)` | Creates an exact campaign-time threshold. |
-| `SatelliteCount(string,int)` | Creates a collective body-specific satellite requirement. |
-| `UnlockPathDefinition(...)` | Clones its conditions and exposes them read-only. |
-| `UnlockRuleDefinition(...)` | Clones its paths and exposes them read-only. |
-| `AnyAgencyAchievement(string)` | Convenience constructor for the common single-achievement unlock. |
+A path is a group of conditions that must all be complete.
+
+| Member | Kind | Approx. lines | Other-file refs | Simple purpose |
+| --- | --- | ---: | ---: | --- |
+| `UnlockPathDefinition(...)` | Constructor | ~8 | 2 | Creates one possible route to unlock something. |
+| `Conditions` | Property | ~4 | 3 | Gives the conditions inside that route. |
+
+### Class: `UnlockRuleDefinition`
+
+A rule can contain several paths. Completing any one path unlocks the target.
+
+| Member | Kind | Approx. lines | Other-file refs | Simple purpose |
+| --- | --- | ---: | ---: | --- |
+| `UnlockRuleDefinition(...)` | Constructor | ~8 | 2 | Creates an unlock rule from one or more paths. |
+| `Paths` | Property | ~4 | 3 | Gives all possible routes through the rule. |
+| `AnyAgencyAchievement()` | Function | ~9 | 2 | Creates the common rule: any agency completes one milestone. |
 
 ---
 
 ## 3.15 `Milestones/UnlockRuleEvaluator.cs`
 
-### Purpose
+**Simple purpose:** This file checks unlock rules. It is the single place that decides whether the rule is complete.
 
-Single KSP-independent interpretation of unlock rules. Controller, trackers and UI use this evaluator so availability and displayed progress cannot silently disagree.
+**Main class:** `UnlockRuleEvaluator`
 
-| Function | Responsibility |
-| --- | --- |
-| `IsSatisfied(...)` | Evaluates OR paths; null rule succeeds; malformed/empty rules fail closed. |
-| `IsConditionSatisfied(...)` | Evaluates one time, satellite-count or achievement condition. |
-| `GetSatisfiedProgramCount(...)` | Counts agencies that satisfy an achievement condition at a historical evaluation time. |
-| `GetSatelliteCount(...)` | Sums current qualifying satellites across all programs for the condition body. |
-| `DoesProgramSatisfyAchievementCondition(...)` | Checks program scope and first achievement timestamp against evaluation time. |
-| `IsPathSatisfied(...)` | Internal AND evaluation. |
-| `ProgramMatchesScope(...)` | Applies player/rival/any-agency scope. |
-| `IsValidEvaluationTime(...)` | Finite non-negative UT guard. |
+| Member | Kind | Approx. lines | Other-file refs | Simple purpose |
+| --- | --- | ---: | ---: | --- |
+| `IsSatisfied()` | Function | ~30 | 2 | Checks whether an entire unlock rule is complete. |
+| `IsConditionSatisfied()` | Function | ~29 | 1 | Checks one condition. |
+| `GetSatisfiedProgramCount()` | Function | ~34 | 1 | Counts agencies that meet an achievement condition. |
+| `GetSatelliteCount()` | Function | ~31 | 1 | Counts all qualifying satellites for a satellite condition. |
+| `DoesProgramSatisfyAchievementCondition()` | Function | ~25 | 1 | Checks whether one agency meets one achievement condition at a specific time. |
+| `IsPathSatisfied()` | Function | ~20 | 0 | Checks whether every condition in one path is complete. |
+| `ProgramMatchesScope()` | Function | ~25 | 0 | Checks whether the agency is allowed by Player, Rival or Any Agency scope. |
+| `IsValidEvaluationTime()` | Function | ~6 | 0 | Rejects invalid KSP time values. |
 
 ---
 
 ## 3.16 `Persistence/ActiveContractProgressSaveState.cs`
 
-### Purpose
+**Simple purpose:** This file saves temporary starter-flight information. It lets a partly completed starter flight survive save/load.
 
-Persists **temporary** starter-contract evidence across save/load: one active flight attempt plus independent Control hold states. It does not store funding lifecycle or player orbital vessel counts.
+**Main class:** `ActiveContractProgressSaveState`
 
-| Function/type | Responsibility |
-| --- | --- |
-| `Capture(StarterFlightTracker)` | Copies historical attempt fields and every live Control contract state. |
-| `ApplyTo(StarterFlightTracker)` | Restores the common attempt then each Control state by stable milestone ID; clears the tracker if no active attempt was saved. |
-| `Load(ConfigNode)` | Strictly parses the save node. Partial/malformed attempt data or duplicate/malformed Control entries invalidate the attempt rather than inventing progress. |
-| `Save(ConfigNode)` | Writes the active flag, historical evidence and repeated `CONTROL_STATE` nodes. |
-| `ClearState()` | Resets the internal snapshot. |
-| `AddDouble(...)` | Writes round-trip (`R`) invariant-culture doubles. |
-| `ParseBool(...)`, `TryParseBool(...)`, `TryParseFiniteDouble(...)` | Defensive parsing helpers. |
-| `SavedControlContractProgress` | Private DTO for one Control milestone's hold/in-band/qualified state. |
+| Member | Kind | Approx. lines | Other-file refs | Simple purpose |
+| --- | --- | ---: | ---: | --- |
+| `HasData` | Property | 1 | 1 | Says whether this save-state object contains anything to save. |
+| `Capture()` | Function | ~42 | 1 | Copies current starter-flight progress from the tracker. |
+| `ApplyTo()` | Function | ~35 | 1 | Restores saved starter-flight progress into the tracker. |
+| `Load()` | Function | ~90 | 1 | Reads starter-flight progress from a KSP save node. |
+| `Save()` | Function | ~35 | 1 | Writes starter-flight progress to a KSP save node. |
+| `ClearState()` | Function | ~19 | 0 | Clears the temporary saved values. |
+| `AddDouble()` | Function | ~4 | 0 | Writes a decimal number in a safe save-file format. |
+| `ParseBool()` | Function | ~5 | 0 | Reads a true/false value where missing means false. |
+| `TryParseBool()` | Function | ~5 | 0 | Tries to read a true/false value and reports whether it worked. |
+| `TryParseFiniteDouble()` | Function | ~8 | 0 | Reads a valid decimal number and rejects invalid values. |
+
+### Private saved Control record
+
+These members are only used inside this file, so all have **0 other-file refs**.
+
+| Member | Kind | Approx. lines | Simple purpose |
+| --- | --- | ---: | --- |
+| `SavedControlContractProgress(...)` | Constructor | ~10 | Creates one saved Control-contract progress record. |
+| `MilestoneId` | Property | 1 | Which Control contract this record belongs to. |
+| `HoldSeconds` | Property | 1 | Saved hold time. |
+| `WasSampleInBand` | Property | 1 | Whether the last sample was inside the altitude band. |
+| `IsQualified` | Property | 1 | Whether the required hold had already been completed. |
 
 ---
 
 ## 3.17 `Persistence/FundingContractsSaveState.cs`
 
-### Purpose
+**Simple purpose:** This file saves the player's achievements and all funding-contract progress.
 
-Persists player achievement history, all mutable achievement/satellite funding lifecycle state, and the next shared funding boundary. Definitions remain code-owned and are matched by stable ID.
+**Main class:** `FundingContractsSaveState`
 
-| Function/type | Responsibility |
-| --- | --- |
-| `Capture(...)` overloads | Clears old snapshot and copies player achievement timestamps, achievement offer/start/payment state, satellite availability/offer/target state and optional next funding UT. |
-| `ApplyTo(...)` | Replaces player achievements and contract lifecycle state. Configured contracts absent from the save are explicitly reset to their initial unoffered/unstarted/locked state. |
-| `Load(ConfigNode)` | Parses saved dictionaries by stable ID. Malformed individual entries are skipped rather than crashing the load. |
-| `Save(ConfigNode)` | Writes deterministic case-insensitive sorted IDs for stable save output. |
-| `ClearState()` | Resets dictionaries and next boundary. |
-| `StorePlayerAchievement(...)` | Preserves the earliest valid timestamp for duplicate achievement nodes. |
-| Parsing helpers | Clamp payment counts and reject non-finite doubles. |
-| `SavedAchievementContract` | Private mutable-state DTO: offered, started, payments processed. |
-| `SavedSatelliteContract` | Private mutable-state DTO: available, offered, target reached. |
+| Member | Kind | Approx. lines | Other-file refs | Simple purpose |
+| --- | --- | ---: | ---: | --- |
+| `HasData` | Property | 1 | 1 | Says whether there is funding state to save. |
+| `NextFundingUniversalTime` | Property | 1 | 1 | Stores the next funding date. |
+| `Capture()` simple overload | Function | ~4 | 0 | Captures funding state without supplying a funding date. |
+| `Capture()` full overload | Function | ~61 | 1 | Copies player achievements, funding contracts and next funding time. |
+| `ApplyTo()` | Function | ~67 | 1 | Restores the saved information into fresh runtime objects. |
+| `Load()` | Function | ~78 | 1 | Reads funding state from KSP save nodes. |
+| `Save()` | Function | ~72 | 1 | Writes funding state to KSP save nodes. |
+| `ClearState()` | Function | ~9 | 0 | Clears the internal saved dictionaries. |
+| `StorePlayerAchievement()` | Function | ~11 | 0 | Stores the earliest valid time for one player achievement. |
+| `TryParseBool()` | Function | ~5 | 0 | Safely reads a true/false value. |
+| `TryParsePaymentCount()` | Function | ~18 | 0 | Safely reads and limits the number of processed payments. |
+| `TryParseFiniteDouble()` | Function | ~8 | 0 | Safely reads a decimal number. |
+| `IsFinite()` | Function | ~4 | 0 | Rejects invalid decimal values. |
+
+### Private saved achievement record
+
+All members below have **0 other-file refs**.
+
+| Member | Kind | Approx. lines | Simple purpose |
+| --- | --- | ---: | --- |
+| `SavedAchievementContract(...)` | Constructor | ~7 | Creates one saved achievement-contract record. |
+| `IsOffered` | Property | 1 | Saved offered state. |
+| `HasStarted` | Property | 1 | Saved started state. |
+| `PaymentsProcessed` | Property | 1 | Saved number of payments. |
+
+### Private saved satellite record
+
+All members below have **0 other-file refs**.
+
+| Member | Kind | Approx. lines | Simple purpose |
+| --- | --- | ---: | --- |
+| `SavedSatelliteContract(...)` | Constructor | ~10 | Creates one saved satellite-contract record. |
+| `IsAvailable` | Property | 1 | Saved unlocked state. |
+| `IsOffered` | Property | 1 | Saved offered state. |
+| `HasReachedSatelliteTarget` | Property | 1 | Saved network-target state. |
 
 ---
 
 ## 3.18 `Persistence/RivalProgramsSaveState.cs`
 
-### Purpose
+**Simple purpose:** This file saves every rival agency. Rivals do not have real KSP vessels, so their simulated progress must be saved by the mod.
 
-Persists every rival by stable program ID. Display names are not save-owned; mutable simulation state is.
+**Main class:** `RivalProgramsSaveState`
 
-### `RivalProgramsSaveState`
+| Member | Kind | Approx. lines | Other-file refs | Simple purpose |
+| --- | --- | ---: | ---: | --- |
+| `HasData` | Property | ~4 | 1 | Says whether any rival records exist. |
+| `Capture()` | Function | ~29 | 1 | Copies all rival agencies into saved records. |
+| `ApplyTo()` | Function | ~24 | 1 | Restores saved records into the current rival list. |
+| `Load()` | Function | ~31 | 1 | Reads rival records from the KSP save. |
+| `Save()` | Function | ~20 | 1 | Writes rival records to the KSP save. |
 
-`Capture`, `ApplyTo`, `Load` and `Save` operate on the rival collection as a unit. Duplicate IDs in malformed save data use the last valid node.
+### Private class: `SavedRivalProgram`
 
-### Nested `SavedRivalProgram`
+Everything in this private class is used only by `RivalProgramsSaveState`, so it has **0 other-file refs**.
 
-Stores funds, stable mission target ID, launch progress/check time, arbitrary achievement timestamps and arbitrary body satellite counts.
-
-| Function | Responsibility |
-| --- | --- |
-| `Capture(SpaceProgramState)` | Copies mutable non-player state. |
-| `ApplyTo(SpaceProgramState)` | Replaces rival funds/collections/progress after stable-ID validation. `NextMissionDisplayName` is deliberately cleared so live catalogue data regenerates presentation text. |
-| `Load(ConfigNode)` | Defensive, clamped parsing of scalar state plus repeated achievement/satellite nodes. |
-| `Save(ConfigNode)` | Deterministic sorted output. |
-| `StoreAchievement(...)` | Keeps earliest duplicate timestamp. |
+| Member | Kind | Approx. lines | Simple purpose |
+| --- | --- | ---: | --- |
+| `HasData` | Property | 1 | Says whether this rival record is valid. |
+| `ProgramId` | Property | 1 | Stable ID of the rival. |
+| `Funds` | Property | 1 | Saved rival money. |
+| `NextMissionTargetId` | Property | 1 | Saved ID of the rival's planned mission. |
+| `LaunchProgressPercent` | Property | 1 | Saved mission-development percentage. |
+| `NextLaunchProgressCheckUniversalTime` | Property | 1 | Saved time of the next rival progress check. |
+| `Capture()` | Function | ~38 | Copies one rival into the saved record. |
+| `ApplyTo()` | Function | ~37 | Restores one saved rival. |
+| `Load()` | Function | ~60 | Reads one rival from a save node. |
+| `Save()` | Function | ~52 | Writes one rival to a save node. |
+| `ClearState()` | Function | ~14 | Clears this saved rival record. |
+| `StoreAchievement()` | Function | ~11 | Stores the earliest time for a rival achievement. |
+| `TryParseFiniteDouble()` | Function | ~14 | Safely reads a decimal value. |
+| `IsFinite()` | Function | ~4 | Rejects invalid decimal values. |
 
 ---
 
 ## 3.19 `Programs/SpaceProgramState.cs`
 
-### Purpose
+**Simple purpose:** This file stores the current information for one agency. The same class is used for the player and for rivals.
 
-Generic campaign state for one player or rival agency. This class is deliberately not tied to a fixed milestone field list or fixed celestial-body field list.
+**Main class:** `SpaceProgramState`
 
-### `SpaceProgramState`
-
-| Member | Responsibility |
-| --- | --- |
-| Constructors | Establish stable `Id`, display `Name` and player/rival identity. |
-| `Funds` | Simulated spendable rival balance. The player's real funds remain KSP-owned. |
-| `NextPayoutFunds` | Controller-computed projected next payout for UI/ETA. |
-| `NextMissionTargetId` | Stable rival mission identity used by simulation/persistence. |
-| `NextMissionDisplayName` | Derived presentation text only. |
-| `LaunchProgressPercent` / `NextLaunchProgressCheckUniversalTime` | Rival mission-development state. |
-| `RecordedAchievements` / `SatelliteCountsByBody` | Internal enumerable views used by persistence. |
-| `ClearRecordedAchievements()` / `ClearSatelliteCounts()` | State replacement helpers. |
-| `HasAchievement(string)` | Case-insensitive stable-ID membership check. |
-| `GetAchievementUniversalTime(string)` | First timestamp or `-1`. |
-| `RecordAchievement(string,double)` | Records the first finite observation only; later observations do not replace it because historical funding eligibility depends on that first time. |
-| `GetSatelliteCount(string)` | Body-specific current count. |
-| `SetSatelliteCount(string,int)` | Sets or removes a body entry; non-positive counts remove the key. |
-
-This generic dictionary-based design is already ready for arbitrary future milestone IDs and body names even though the current catalogue is hardcoded.
+| Member | Kind | Approx. lines | Other-file refs | Simple purpose |
+| --- | --- | ---: | ---: | --- |
+| `SpaceProgramState(name, isPlayer)` | Constructor | ~4 | 0 | Creates an agency using its name as its ID. |
+| `SpaceProgramState(id, name, isPlayer)` | Constructor | ~7 | 1 | Creates an agency with a separate stable ID and display name. |
+| `Id` | Property | 1 | 2 | Stable internal agency ID. |
+| `Name` | Property | 1 | 1 | Player-facing agency name. |
+| `IsPlayer` | Property | 1 | 4 | Says whether this agency is the human player. |
+| `Funds` | Property | 1 | 4 | Simulated money for rivals. The player's real money stays in KSP. |
+| `NextPayoutFunds` | Property | 1 | 3 | Expected money at the next funding date. |
+| `NextMissionTargetId` | Property | 1 | 2 | Stable ID of a rival's planned mission. |
+| `NextMissionDisplayName` | Property | 1 | 3 | Readable name of the rival's planned mission. |
+| `LaunchProgressPercent` | Property | 1 | 3 | Rival mission-development percentage. |
+| `NextLaunchProgressCheckUniversalTime` | Property | 1 | 2 | Time of the rival's next progress check. |
+| `RecordedAchievements` | Property | ~4 | 2 | Lets save code read all achievement IDs and times. |
+| `SatelliteCountsByBody` | Property | ~4 | 1 | Lets save code read all simulated satellite counts. |
+| `ClearRecordedAchievements()` | Function | ~4 | 2 | Removes all recorded achievements before restoring saved data. |
+| `ClearSatelliteCounts()` | Function | ~4 | 2 | Removes all current satellite counts before replacing them. |
+| `HasAchievement()` | Function | ~10 | 4 | Checks whether this agency has an achievement. |
+| `GetAchievementUniversalTime()` | Function | ~13 | 2 | Gets the first time this agency completed an achievement. |
+| `RecordAchievement()` | Function | ~16 | 5 | Records an achievement once. Later completions do not replace the original time. |
+| `GetSatelliteCount()` | Function | ~12 | 4 | Gets this agency's current satellite count around one body. |
+| `SetSatelliteCount()` | Function | ~16 | 3 | Sets or removes this agency's satellite count around one body. |
 
 ---
 
 ## 3.20 `Simulation/RivalSimulation.cs`
 
-### Purpose
+**Simple purpose:** This file pretends that rival space agencies are planning, paying for and completing missions in the background.
 
-KSP-independent lightweight competitor simulation.
+**Main class:** `RivalSimulation`
 
-### Behaviour constants
+### Private helper: `RivalSimulationContext`
 
-- Progress check every 5 Kerbin days.
-- Successful ordinary/satellite step: +10%.
-- Successful starter-contract step: +20%.
-- When both target categories exist, 60% chance to choose a satellite mission and 40% an achievement mission.
-- A progress check succeeds only if the rival can afford the step and the configured random progress chance passes.
+| Member | Kind | Approx. lines | Other-file refs | Simple purpose |
+| --- | --- | ---: | ---: | --- |
+| `RivalSimulationContext(...)` | Constructor | ~11 | 0 | Bundles the current time and contract lists so the simulation can pass them around easily. |
 
-### Function map
+### Main functions
 
-| Function | Responsibility |
-| --- | --- |
-| `Refresh(...)` | Validates inputs and advances every non-player program. |
-| `GetMissionTargetDisplayName(...)` | Resolves stable target ID to achievement name or satellite body display text. |
-| `CalculateLaunchProgressIncrementPercent(...)` | Returns 20% for starter targets, otherwise 10%. |
-| `CalculateLaunchProgressCost(...)` | Calculates one successful development-step cost from stable target ID. |
-| `CalculateEstimatedLaunchDays(...)` | Projects average completion time using progress chance, current progress/funds, scheduled next payout and recurring funding interval. Returns `null` if projected income cannot finance the remaining mission. |
-| `RefreshProgram(...)` | Repairs unavailable targets, selects a target when needed, initializes the check schedule, replays crossed 5-day checks, spends on successful progress and completes/retargets missions. |
-| `TryCompleteLaunch(...)` | At 100%, records an achievement or increments a satellite network. Only a real uncrewed **orbital** achievement creates persistent satellite presence; atmospheric starter contracts do not. |
-| `IsTargetAvailable(...)` | Achievement targets require offered/unexpired/unachieved state; satellite targets require available + offered. |
-| `ChooseNextMissionTarget(...)` | Builds live candidate lists, chooses category probabilistically and chooses a target uniformly within it. |
-| `CalculateLaunchProgressCostForTarget(...)` | Starter uses explicit milestone cost; normal achievements use crew/probe body tier; satellite missions use satellite body tier; invalid IDs fall back to Kerbin probe cost. |
-| `SetMissionTarget(...)` | Writes stable ID and regenerates display name. |
-| `FindAchievementProgramme(...)` / `FindFundingProgramme(...)` | Collection lookup helpers. |
-| `IsFinite(double)` | Numeric guard. |
+| Member | Kind | Approx. lines | Other-file refs | Simple purpose |
+| --- | --- | ---: | ---: | --- |
+| `Refresh()` | Function | ~31 | 1 | Advances every rival agency to the current KSP time. |
+| `GetMissionTargetDisplayName()` | Function | ~20 | 0 | Turns a stable mission ID into readable text. |
+| `CalculateLaunchProgressIncrementPercent()` | Function | ~13 | 1 | Returns 20% progress for starter contracts and 10% for normal missions. |
+| `CalculateLaunchProgressCost()` | Function | ~17 | 1 | Works out how much the next successful rival progress step costs. |
+| `CalculateEstimatedLaunchDays()` public | Function | ~14 | 1 | Starts the rival ETA calculation using the current mission cost. |
+| `CalculateEstimatedLaunchDays()` private | Function | ~95 | 0 | Simulates expected progress and future funding to estimate completion time. |
+| `RefreshProgram()` | Function | ~78 | 0 | Updates one rival: target choice, progress checks, spending and completion. |
+| `TryCompleteLaunch()` | Function | ~57 | 0 | Finishes a rival mission when its progress reaches 100%. |
+| `IsTargetAvailable()` | Function | ~39 | 0 | Checks whether a planned mission is still allowed. |
+| `ChooseNextMissionTarget()` | Function | ~67 | 0 | Picks a new offered mission for a rival. |
+| `CalculateLaunchProgressCostForTarget()` | Function | ~32 | 0 | Chooses the correct cost based on target type and body. |
+| `SetMissionTarget()` | Function | ~15 | 0 | Changes a rival's planned mission and readable mission name. |
+| `FindAchievementProgramme()` | Function | ~20 | 0 | Finds an achievement contract by ID. |
+| `FindFundingProgramme()` | Function | ~20 | 0 | Finds a satellite contract by ID. |
+| `IsFinite()` | Function | ~4 | 0 | Rejects invalid numbers. |
 
 ---
 
 ## 3.21 `Tracking/ActiveVesselTrackingSnapshot.cs`
 
-### Purpose
+**Simple purpose:** This file defines the small package of live vessel information used by starter contracts. It also decides which pieces of live KSP telemetry are needed.
 
-Defines the normalized high-frequency active-vessel data contract between KSP integration and starter-flight logic.
+### Class: `StarterTelemetryPlan`
 
-### Types
+| Member | Kind | Approx. lines | Other-file refs | Simple purpose |
+| --- | --- | ---: | ---: | --- |
+| `GetRequirements()` | Function | ~39 | 1 | Looks at active starter contracts and asks KSP only for the data those contracts need. |
 
-- `TrackedFlightSituation`: project-owned situation enum.
-- `StarterTelemetryRequirement`: flags for Altitude, SurfaceSpeed, Mass, Biome, Crew and SurfaceImpact.
-- `StarterTelemetryPlan`: derives the minimum telemetry mask from the current active starter contract set.
-- `ActiveVesselTrackingSnapshot`: immutable sample containing identity, body, situation, selected telemetry, coordinates, launch UT and observation UT.
+### Class: `ActiveVesselTrackingSnapshot`
 
-### `StarterTelemetryPlan.GetRequirements(...)`
-
-- Directed Power -> altitude + surface speed + surface impact.
-- Mass -> mass.
-- Control -> altitude + crew.
-- Biome -> biome.
-
-Common identity/body/situation/launch/coordinate values are always available because they are cheap and preserve attempt continuity.
+| Member | Kind | Approx. lines | Other-file refs | Simple purpose |
+| --- | --- | ---: | ---: | --- |
+| `ActiveVesselTrackingSnapshot(...)` | Constructor | ~33 | 1 | Creates one small live-vessel record. |
+| `VesselId` | Property | 1 | 1 | ID of the active vessel. |
+| `CelestialBodyName` | Property | 1 | 1 | Body the vessel is near. |
+| `Situation` | Property | 1 | 1 | Current flight situation. |
+| `AltitudeMeters` | Property | 1 | 1 | Current altitude. |
+| `SurfaceSpeedMetersPerSecond` | Property | 1 | 1 | Current speed over the surface. |
+| `MassTonnes` | Property | 1 | 1 | Current vessel mass. |
+| `LatitudeDegrees` | Property | 1 | 1 | Current latitude. |
+| `LongitudeDegrees` | Property | 1 | 1 | Current longitude. |
+| `BodyRadiusMeters` | Property | 1 | 1 | Radius of the current body. Used for travel-distance maths. |
+| `BiomeName` | Property | 1 | 1 | Current Kerbin biome name when requested. |
+| `CrewCount` | Property | 1 | 1 | Number of crew aboard when requested. |
+| `LaunchUniversalTime` | Property | 1 | 1 | KSP time when the launch started. |
+| `ObservationUniversalTime` | Property | 1 | 1 | KSP time when this snapshot was taken. |
 
 ---
 
 ## 3.22 `Tracking/VesselTrackingSnapshot.cs`
 
-### Purpose
+**Simple purpose:** This is a much smaller vessel record used by the slower orbital scan.
 
-Minimal normalized snapshot used by the slower orbital/satellite scan.
+**Main class:** `VesselTrackingSnapshot`
 
-- `TrackedVesselType`: `Other`, `Probe`, `Relay`.
-- `VesselTrackingSnapshot`: immutable body, normalized vessel type and crew count.
-
-This keeps `SatelliteTracker` independent of KSP's `Vessel`, `ProtoVessel` and enum types.
+| Member | Kind | Approx. lines | Other-file refs | Simple purpose |
+| --- | --- | ---: | ---: | --- |
+| `VesselTrackingSnapshot(...)` | Constructor | ~9 | 1 | Creates one simple orbiting-vessel record. |
+| `CelestialBodyName` | Property | 1 | 1 | Body being orbited. |
+| `VesselType` | Property | 1 | 1 | Probe, Relay or Other. |
+| `CrewCount` | Property | 1 | 1 | Number of crew aboard. |
 
 ---
 
 ## 3.23 `Tracking/SatelliteTracker.cs`
 
-### Purpose
+**Simple purpose:** This file uses the simple orbital vessel records. It updates player satellite counts and records normal orbital achievements.
 
-Applies normalized orbiting-vessel snapshots to the player's live satellite counts and ordinary orbital milestone state.
+**Main class:** `SatelliteTracker`
 
-| Function | Responsibility |
-| --- | --- |
-| `RefreshPlayerSatelliteCounts(...)` | Rebuilds authoritative Probe/Relay counts by body, creates crewed/uncrewed orbital observations, replaces player satellite counts, then evaluates milestone definitions. Crewed Probe/Relay craft still count as satellites but are qualified as crewed for milestone matching. |
-| `EvaluateMilestones(...)` | Repeats evaluation while a new achievement is recorded, allowing one vessel snapshot to unlock and immediately satisfy a chained milestone without depending on catalogue ordering. |
+| Member | Kind | Approx. lines | Other-file refs | Simple purpose |
+| --- | --- | ---: | ---: | --- |
+| `RefreshPlayerSatelliteCounts()` | Function | ~73 | 1 | Rebuilds the player's satellite counts and checks orbital milestones. |
+| `EvaluateMilestones()` | Function | ~54 | 0 | Keeps checking newly unlocked milestones until the same vessel snapshot cannot unlock anything else. |
 
 ---
 
 ## 3.24 `Tracking/StarterFlightTracker.cs`
 
-### Purpose
+**Simple purpose:** This file checks the four pre-orbit contract lines. It remembers one active launch and the progress made during that launch.
 
-Stateful, KSP-independent evaluator for the four pre-orbit contract lines. Maintains one launch attempt plus independent Control state per active milestone ID.
+**Main class:** `StarterFlightTracker`
 
-### Attempt continuity
+### Properties
 
-A snapshot is the same attempt if it has the same vessel ID, or if staging changes the ID but launch time is within 1 second and the body is unchanged. A gap over 5 seconds cannot prove a continuous Control hold, so unqualified Control progress resets.
+| Member | Kind | Approx. lines | Other-file refs | Simple purpose |
+| --- | --- | ---: | ---: | --- |
+| `HasActiveAttempt` | Property | 1 | 2 | Says whether a starter-contract flight is currently being tracked. |
+| `VesselId` | Property | 1 | 1 | ID of the vessel being tracked. |
+| `CelestialBodyName` | Property | 1 | 2 | Body where the attempt is happening. |
+| `LaunchUniversalTime` | Property | 1 | 1 | Launch start time. |
+| `StartLatitudeDegrees` | Property | 1 | 1 | Latitude where the attempt started. |
+| `StartLongitudeDegrees` | Property | 1 | 1 | Longitude where the attempt started. |
+| `LastSampleUniversalTime` | Property | 1 | 1 | Time of the last live-vessel sample. |
+| `MaximumAltitudeMeters` | Property | 1 | 2 | Highest altitude reached during the attempt. |
+| `MaximumSurfaceSpeedMetersPerSecond` | Property | 1 | 2 | Highest surface speed reached during the attempt. |
+| `CurrentAltitudeMeters` | Property | 1 | 1 | Latest altitude for the UI. |
+| `CurrentSurfaceSpeedMetersPerSecond` | Property | 1 | 0 | Latest surface speed. Currently kept for state visibility but not read by another production file. |
+| `CurrentMassTonnes` | Property | 1 | 1 | Latest vessel mass for the UI. |
+| `CurrentDistanceMeters` | Property | 1 | 1 | Latest distance from launch for the UI. |
+| `CurrentBiomeName` | Property | 1 | 1 | Latest biome for the UI. |
+| `CurrentCrewCount` | Property | 1 | 1 | Latest crew count for the UI. |
+| `CurrentSituation` | Property | 1 | 1 | Latest flight situation for the UI. |
+| `EnteredOrbit` | Property | 1 | 2 | Remembers whether this attempt ever entered orbit. |
+| `ControlStateMilestoneIds` | Property | 1 | 1 | Gives save code the IDs of active Control progress records. |
 
-### Function map
+### Functions
 
-| Function | Responsibility |
-| --- | --- |
-| State getter properties | Expose historical maxima and latest live values for UI/persistence without allowing external mutation. |
-| `GetControlHoldSeconds(...)` | Read current continuous hold for one Control milestone. |
-| `IsControlMilestoneQualified(...)` | True after its hold is complete and it is waiting for a qualifying landing. |
-| `IsControlSampleInBand(...)` | Exposes whether the previous sample was in this specific Control altitude band. |
-| `RestoreControlState(...)` | Persistence-only restoration by stable milestone ID. |
-| `RefreshPlayerMilestones(...)` | Starts/continues an attempt, applies sampling-gap rules, updates current/max telemetry and orbit invalidation, evaluates every supplied offered Mass/Biome contract independently, then evaluates every supplied Control contract independently. Returns whether any achievement was newly recorded. |
-| `RecordSurfaceImpact(...)` | On a normalized Kerbin crash, evaluates every supplied Directed Power contract against the same attempt history: no orbit, never over its ceiling, required max speed achieved. Clears the attempt after processing. |
-| `RestoreState(...)` | Restores historical attempt evidence after validation; intentionally clears instantaneous live telemetry. |
-| `ClearAttempt()` | Resets identity, history, live data, Control states and orbit flag. |
-| `EvaluateControlMilestones(...)` | Per-milestone continuous crewed altitude hold logic. Once qualified, hold progress is preserved while waiting for a crewed Kerbin landing. |
-| `GetOrCreateControlState(...)` | Creates independent state keyed by milestone ID. |
-| `ResetUnqualifiedControlStates()` | Clears only incomplete holds; qualified holds survive temporary band exit while awaiting landing. |
-| `IsSameAttempt(...)` | Staging-aware attempt identity rule. |
-| `BeginAttempt(...)` | Initializes history from the first sample. |
-| `CalculateSurfaceDistanceMeters(...)` | Haversine great-circle distance from launch coordinates using the current body's radius. |
-| `IsFinite(double)` | Numeric validation helper. |
-| `ControlContractState` | Private per-Control milestone fields: hold seconds, previous in-band flag, qualification flag. |
+| Member | Kind | Approx. lines | Other-file refs | Simple purpose |
+| --- | --- | ---: | ---: | --- |
+| `GetControlHoldSeconds()` | Function | ~9 | 2 | Gets the current hold time for one Control contract. |
+| `IsControlMilestoneQualified()` | Function | ~9 | 2 | Says whether one Control hold is finished and only needs the final landing. |
+| `IsControlSampleInBand()` | Function | ~9 | 1 | Says whether the last sample was inside one Control altitude band. |
+| `RestoreControlState()` | Function | ~17 | 1 | Restores one saved Control progress record. |
+| `RefreshPlayerMilestones()` | Function | ~137 | 1 | Main live-flight check. Updates the attempt and checks Mass, Biome and Control contracts. |
+| `RecordSurfaceImpact()` | Function | ~58 | 1 | Checks Directed Power contracts when the tracked vessel crashes into Kerbin. |
+| `RestoreState()` | Function | ~65 | 1 | Restores the saved history of a starter-flight attempt. |
+| `ClearAttempt()` | Function | ~22 | 1 | Clears the current starter-flight attempt. |
+| `EvaluateControlMilestones()` | Function | ~62 | 0 | Updates the independent hold state for every active Control contract. |
+| `GetOrCreateControlState()` | Function | ~12 | 0 | Finds or creates the small progress record for one Control contract. |
+| `ResetUnqualifiedControlStates()` | Function | ~17 | 0 | Clears incomplete Control holds after a bad sample gap or invalid flight state. |
+| `IsSameAttempt()` | Function | ~25 | 0 | Decides whether a new vessel snapshot belongs to the same launch, including staging. |
+| `BeginAttempt()` | Function | ~17 | 0 | Starts tracking a new launch. |
+| `CalculateSurfaceDistanceMeters()` | Function | ~31 | 0 | Calculates distance over the planet surface from the launch point. |
+| `IsFinite()` | Function | ~4 | 0 | Rejects invalid numbers. |
 
-### Contract-specific completion rules
+### Starter-contract rules in simple words
 
-- **Directed Power:** record only on eligible surface impact; maximum speed must meet threshold, maximum altitude must never exceed ceiling, and the attempt must never enter orbit.
-- **Mass:** final active vessel must be Landed and still meet both remaining-mass and launch-distance thresholds.
-- **Control:** crew must continuously remain in the individual altitude band for the required duration, then the same attempt must land with crew aboard.
-- **Biome:** active craft must finish Landed in the requested Kerbin biome without having entered orbit.
+- **Directed Power:** reach the speed, never go above the altitude ceiling, do not orbit, then crash into Kerbin.
+- **Mass:** land far enough away while the final craft still has enough mass.
+- **Control:** keep crew inside the altitude band for the full time, then land with crew.
+- **Biome:** land in the required biome without entering orbit.
 
 ---
 
 ## 3.25 `Tracking/SurfaceImpactEvaluator.cs`
 
-### Purpose
+**Simple purpose:** KSP sometimes changes vessel values during a crash. This file uses the last good flight information to decide whether the destruction was probably a real surface impact.
 
-Pure heuristic for deciding whether KSP vessel destruction is consistent with a real recent surface impact. KSP event handling stays in `KspVesselDiscovery`.
+**Main class:** `SurfaceImpactEvaluator`
 
-### `IsEligible(...)`
-
-Requires:
-
-- a finite/recent last sample no more than 5 universal-time seconds old;
-- last situation genuinely Flying or SubOrbital;
-- at least 5 m/s surface speed;
-- valid non-negative clearances (positive infinity is the deliberate unavailable sentinel);
-- and either destruction within 100 m of the surface or enough speed/time since the last sample that the craft could physically have covered its prior clearance.
-
-This handles KSP changing a dying vessel to Landed/Splashed or zeroing speed before the destruction callback fires.
+| Member | Kind | Approx. lines | Other-file refs | Simple purpose |
+| --- | --- | ---: | ---: | --- |
+| `IsEligible()` | Function | ~55 | 1 | Checks whether the destruction looks like a recent, fast, near-surface impact. |
+| `IsFinite()` | Function | ~4 | 0 | Rejects invalid numbers. |
 
 ---
 
 ## 3.26 `UI/RaceWindow.cs`
 
-### Purpose
+**Simple purpose:** This file draws the whole Command Center. It reads race information and shows it. It does not advance the race.
 
-The KSP IMGUI command center. It presents Overview, Funding Targets, Rival Agencies and Space Race views, plus help. It does **not** own or advance race state.
+**Main class:** `RaceWindow`
 
-### Nested types
+### Private helper class: `SpaceRaceFundingEntry`
 
-- `ActiveView`: current top-level tab.
-- `SpaceRaceFundingCategory`: `Offered`, `Unlocked`, `Locked`, `Expired`.
-- `SpaceRaceFundingEntry`: cached presentation wrapper that can represent either an achievement or satellite programme with body sort distance and original catalogue order.
+This helper only exists inside `RaceWindow`, so every member below has **0 other-file refs**.
 
-### Lifecycle and launcher functions
+| Member | Kind | Approx. lines | Simple purpose |
+| --- | --- | ---: | --- |
+| `SpaceRaceFundingEntry(...)` | Constructor | ~15 | Creates one UI entry for either an achievement or satellite contract. |
+| `AchievementProgramme` | Property | 1 | Holds the achievement contract when this is an achievement entry. |
+| `SatelliteProgramme` | Property | 1 | Holds the satellite contract when this is a satellite entry. |
+| `CelestialBodyName` | Property | 1 | Body used for sorting. |
+| `BodySortDistance` | Property | 1 | Distance used for sorting from Kerbin outward. |
+| `CatalogueOrder` | Property | 1 | Original order used when two entries otherwise sort the same. |
+| `IsAchievement` | Property | ~4 | Says whether this UI entry contains an achievement contract. |
+| `Id` | Property | ~4 | Gets the stable ID of whichever contract this entry contains. |
+| `Name` | Property | ~4 | Gets the display name of whichever contract this entry contains. |
 
-| Function | Responsibility |
-| --- | --- |
-| `Awake()` | Rejects non-game scenes, prevents duplicate UI instances, initializes cached window delegate/position/tab for the current save and references `RaceRuntime.Controller`. |
-| `OnDestroy()` | Removes launcher button and releases non-owning references. |
-| `Update()` | Handles save changes, rebinds runtime controller, restores visibility from `RacePersistenceScenario`, recreates stock launcher button when needed and toggles via F8. |
-| `CreateCenteredWindowRect()` | Produces a 900x720 screen-clamped centered window. |
-| `EnsureApplicationLauncherButton()` | Adds a stock-launcher button using a stock probe icon and synchronizes its state. |
-| `SetCommandCenterVisible(bool)` | Updates visibility, persistence and launcher highlight without recursive callbacks. |
-| `OnGUI()` | Draws an opaque dark backing then the IMGUI window when visible and ready. |
-| `DrawWindow(int)` | Lazily builds styles, draws tabs/help button, dispatches the selected view and enables dragging. |
+### Main `RaceWindow` functions
 
-### View/card functions
+Most functions are private UI helpers, so they have **0 other-file refs**. `Awake`, `Update`, `OnGUI` and `OnDestroy` are called directly by KSP/Unity.
 
-| Function | Responsibility |
-| --- | --- |
-| `DrawOverview()` | Player's offered achievement status, existing satellite counts, projected programme payouts and total next payout. |
-| `DrawFundingTargets()` | Scrollable cards for all currently offered achievement and satellite contracts. |
-| `DrawAchievementFundingCard(...)` | Reusable achievement card: state/unlock progress, objective, lifecycle, completed agencies, payout shares and optional live starter progress. |
-| `DrawStarterFundingLiveProgress(...)` | Connects an offered unfinished starter funding card to read-only `RaceRuntime.StarterFlightState`. |
-| `DrawSatelliteFundingCard(...)` | Reusable network card: target, required count, live agency satellite counts, payout distribution and unclaimed pool. |
-| `DrawPayoutLinesByAmount()` | Reuses scratch arrays and sorts agency payout lines descending without per-card allocations. |
-| `DrawRivalAgencies()` | Scrollable rival cards with funds, mission progress/cost/ETA and projected income. |
-| `DrawHelpGuide()` | Embedded player-facing explanation of funding and starter progression. |
-| `DrawSpaceRace()` | Catalogue browser with pinned selected-contract details plus independently scrollable Offered/Unlocked/Locked/Expired sections. |
-| `DrawStarterLiveProgress(...)` | Line-specific live telemetry presentation for Directed Power, Mass, Control and Biome contracts. |
-| `DrawSelectedSpaceRaceFundingEntry(...)` | Converts category to state label/message and delegates to the appropriate reusable funding card. |
-| `DrawSpaceRaceFundingSection(...)` | Collapsible four-buttons-per-row category list and selection handling. |
-
-### Catalogue/unlock presentation helpers
-
-| Function | Responsibility |
-| --- | --- |
-| `EnsureSpaceRaceFundingEntries()` | Rebuilds cached combined funding entries only if controller identity or catalogue counts change; uses `KspCelestialBodyOrdering`. |
-| `CompareSpaceRaceFundingEntries(...)` | Orders by distance, then body name, then original catalogue order. |
-| `EnsureSelectedSpaceRaceFundingEntry()` | Retains valid selection or chooses the first entry by category priority. |
-| `GetSpaceRaceFundingCategory(...)` | Derives current UI state from lifecycle/availability. |
-| `DrawUnlockRuleProgress(...)` | Displays OR paths and each AND condition without reimplementing unlock semantics. |
-| `DrawUnlockConditionProgress(...)` | Uses `UnlockRuleEvaluator` for pass/fail and displays achievement, satellite or time progress. |
-| `AppendAchievementConditionText(...)` | Builds scope-aware achievement requirement text and attribution. |
-| `FindFirstProgramSatisfyingCondition(...)` | Finds the first agency satisfying the exact evaluator condition for display attribution. |
-| `GetMilestoneDisplayName(...)` | Stable-ID to milestone-name lookup. |
-
-### Remaining UI helpers
-
-| Function | Responsibility |
-| --- | --- |
-| `DrawProgramCard(...)` | Rival detail/income card. |
-| `EnsurePayoutScratchBuffers()` | Sizes reusable payout/name arrays to current agency count. |
-| `GetProgramDisplayName(...)` | Uses `Player` for the player and agency name for rivals. |
-| `DrawCenteredCardTitle(...)` | Common highlighted centered card heading. |
-| `FormatNextFundingDate()` | Next Kerbin year/day plus days remaining. |
-| `FormatKerbinDate(double)` | Formats arbitrary UT via controller date conversion. |
+| Member | Kind | Approx. lines | Other-file refs | Simple purpose |
+| --- | --- | ---: | ---: | --- |
+| `Awake()` | Function | ~39 | KSP | Sets up the window when KSP creates it. Blocks duplicate windows. |
+| `OnDestroy()` | Function | ~21 | KSP | Removes the launcher button and clears window references. |
+| `Update()` | Function | ~59 | KSP | Keeps the window connected to the current save and handles F8. |
+| `CreateCenteredWindowRect()` | Function | ~7 | 0 | Creates the starting window position in the middle of the screen. |
+| `EnsureApplicationLauncherButton()` | Function | ~40 | 0 | Adds the mod button to KSP's stock launcher. |
+| `SetCommandCenterVisible()` | Function | ~25 | 0 | Opens or closes the window and remembers that choice. |
+| `OnGUI()` | Function | ~28 | KSP | Asks Unity to draw the Command Center when it is visible. |
+| `DrawWindow()` | Function | ~82 | 0 | Draws the main tabs and chooses which page to show. |
+| `DrawOverview()` | Function | ~122 | 0 | Draws the player's current objectives, networks and next payout. |
+| `DrawFundingTargets()` | Function | ~40 | 0 | Draws all currently offered funding contracts. |
+| `DrawAchievementFundingCard()` | Function | ~95 | 0 | Draws one achievement-contract information card. |
+| `DrawStarterFundingLiveProgress()` | Function | ~28 | 0 | Adds live starter-flight progress to an offered starter contract card. |
+| `DrawSatelliteFundingCard()` | Function | ~78 | 0 | Draws one satellite-network information card. |
+| `DrawPayoutLinesByAmount()` | Function | ~51 | 0 | Shows agency payouts with the biggest amount first. |
+| `DrawRivalAgencies()` | Function | ~27 | 0 | Draws the scrollable rival-agency page. |
+| `DrawHelpGuide()` | Function | ~39 | 0 | Draws the built-in player help text. |
+| `DrawSpaceRace()` | Function | ~63 | 0 | Draws the full contract catalogue grouped by Offered, Unlocked, Locked and Expired. |
+| `DrawStarterLiveProgress()` | Function | ~105 | 0 | Draws the correct live values for Directed Power, Mass, Control or Biome. |
+| `DrawSelectedSpaceRaceFundingEntry()` | Function | ~47 | 0 | Draws details for the contract selected on the Space Race page. |
+| `DrawSpaceRaceFundingSection()` | Function | ~72 | 0 | Draws one collapsible contract group. |
+| `EnsureSpaceRaceFundingEntries()` | Function | ~60 | 0 | Builds the combined UI list of achievement and satellite contracts when needed. |
+| `CompareSpaceRaceFundingEntries()` | Function | ~25 | 0 | Sorts Space Race entries from Kerbin outward. |
+| `EnsureSelectedSpaceRaceFundingEntry()` | Function | ~48 | 0 | Keeps a valid selected contract or chooses a sensible first one. |
+| `GetSpaceRaceFundingCategory()` | Function | ~31 | 0 | Decides whether a contract belongs under Offered, Unlocked, Locked or Expired. |
+| `DrawUnlockRuleProgress()` | Function | ~45 | 0 | Draws all paths and conditions in an unlock rule. |
+| `DrawUnlockConditionProgress()` | Function | ~73 | 0 | Draws progress for one achievement, date or satellite-count condition. |
+| `AppendAchievementConditionText()` | Function | ~70 | 0 | Builds readable text for an achievement unlock condition. |
+| `FindFirstProgramSatisfyingCondition()` | Function | ~22 | 0 | Finds an agency that has completed the displayed condition. |
+| `GetMilestoneDisplayName()` | Function | ~9 | 0 | Converts a milestone ID into its readable name. |
+| `DrawProgramCard()` | Function | ~122 | 0 | Draws one rival's money, mission progress, ETA and income. |
+| `EnsurePayoutScratchBuffers()` | Function | ~16 | 0 | Keeps small reusable arrays ready for payout display. |
+| `GetProgramDisplayName()` | Function | ~10 | 0 | Returns `Player` for the player or the rival's agency name. |
+| `DrawCenteredCardTitle()` | Function | ~8 | 0 | Draws a centered heading on a card. |
+| `FormatNextFundingDate()` | Function | ~19 | 0 | Creates the readable next-funding-date sentence. |
+| `FormatKerbinDate()` | Function | ~16 | 0 | Changes KSP time into `Year X, Day Y` text. |
 
 ---
 
 ## 3.27 `TheRaceForSpace.csproj`
 
-### Purpose
+**Simple purpose:** This is not gameplay code. It tells .NET how to build the DLL.
 
-Build/deploy definition for the KSP plugin assembly.
+**File lines:** 92
 
-Key decisions:
+It does four main jobs:
 
-- Targets `.NET Framework 4.7.2` (`net472`) and C# 7.3 for KSP compatibility.
-- Requires `KSP_ROOT` and resolves `Assembly-CSharp.dll` plus needed Unity assemblies from the local installation; KSP binaries are never committed.
-- Provides a Linux/Mono reference-assembly fallback for building the same target framework.
-- `ValidateKspReferences` fails early with a useful message when KSP paths are unavailable.
-- Normal output remains under `bin/`.
-- `DeployToKsp=true` explicitly copies the built DLL to `GameData/TheRaceForSpace/Plugins` and the editable config to `GameData/TheRaceForSpace/Config`.
+1. Builds the mod for `.NET Framework 4.7.2`, which matches KSP 1.12.x.
+2. Finds the KSP and Unity DLL files from the local `KSP_ROOT` folder.
+3. Stops with a useful error if the KSP files cannot be found.
+4. Can copy the finished mod DLL and config into KSP when `DeployToKsp=true` is used.
+
+There are no C# functions or properties in this file because it is an MSBuild project file.
 
 ---
 
-# 4. Configuration and automation files
+# 4. Config and scripts
 
 ## `GameData/TheRaceForSpace/Config/RaceSettings.cfg`
 
-User-editable balance file loaded once per KSP process by `RaceSettingsLoader`. Global values control funding interval, rival starting funds, rival progress chance and rival count. Four sections configure Kerbin, Kerbin moons, interplanetary planets and interplanetary moons.
+**File lines:** 55
 
-Changing this file changes costs/rewards/network sizes without changing the code-defined target catalogue.
+**Simple purpose:** This is the user-editable balance file. It changes funding timing, rival settings, rewards, costs and satellite-network sizes without changing C# code.
+
+The four balance groups are:
+
+- Kerbin;
+- Kerbin moons;
+- interplanetary planets;
+- interplanetary moons.
+
+---
 
 ## `tools/run-logic-tests.sh`
 
-Single local/CI entry point. Requires `dotnet`, runs the KSP-independent domain executable test project in Release, then the controller regression executable project in Release. `set -euo pipefail` makes the script fail immediately on any suite failure.
+**File lines:** 18
+
+**Simple purpose:** Runs both standalone test programs. It is the normal quick regression-test command.
+
+---
+
+## `tools/test-prototype.sh`
+
+**File lines:** 95
+
+**Simple purpose:** Helps a developer switch to a chosen existing branch, update it, build the mod and copy it into a Linux KSP installation for live testing. It refuses to switch branches when there are uncommitted changes.
+
+---
 
 ## `.github/workflows/logic-tests.yml`
 
-Runs on every push and pull request using Ubuntu and .NET 8, then calls `tools/run-logic-tests.sh`. It deliberately does not need a KSP installation because both test projects compile selected real production files against no-KSP or test-stub boundaries.
+**File lines:** 24
+
+**Simple purpose:** Runs the same logic tests automatically on GitHub after pushes and pull requests.
 
 ---
 
-# 5. Test source reference
+# 5. Test files
 
-The project uses executable regression suites instead of a third-party test framework. A failure throws/records an exception and returns a non-zero process exit code, which makes the same suites usable locally and in GitHub Actions.
+The test code does **not** run inside KSP. It exists to catch mistakes when gameplay code changes.
+
+The detailed member/reference tables above cover production code under `src/TheRaceForSpace/`. Test functions are not included in the reference counts because that would make heavily tested code look more tightly connected to the game than it really is.
 
 ## 5.1 `tests/TheRaceForSpace.Tests/`
 
-This suite links only production files that are intentionally independent of KSP/Unity.
-
-| File | Purpose |
-| --- | --- |
-| `TheRaceForSpace.Tests.csproj` | .NET 8 executable test project. Links the real settings, funding, milestone, program, simulation, tracking and persistence source files directly. This is a guard that those modules stay KSP-independent. |
-| `Program.cs` | Main runner plus core funding/program/rival regression cases. Runs satellite payout before/after saturation, achievement decay/restore, catalogue/milestone consistency, generic achievement-state semantics, rival target IDs/cost/ETA/availability/completion, and delegates to the specialized suites below. |
-| `ConfigNode.cs` | Minimal test double for KSP's `ConfigNode` API with values and named child-node collections. Allows real persistence classes to compile and round-trip without KSP. |
-| `PrototypeFundingCatalogueTests.cs` | Verifies the current funding catalogue content/unlock wiring and that each controller can receive fresh mutable programme state rather than shared campaign state. |
-| `Milestones/MilestoneEvaluationTests.cs` | Verifies probe/crewed matching, wrong-body/situation rejection and that arbitrary future body definitions use the same generic matching rule. |
-| `Persistence/CollectionPersistenceTests.cs` | Verifies arbitrary funding IDs, arbitrary rival target/body state, malformed-node safety and that empty save nodes do not invent state. |
-| `Simulation/RivalSimulationCollectionTests.cs` | Verifies collection-driven rival selection, locked-target exclusion, repeatable satellite missions, arbitrary satellite targets, body-tier cost lookup and milestone-definition-driven achievement completion. |
-| `Tracking/SatelliteTrackerTests.cs` | Verifies normalized snapshot -> count/milestone updates, empty-snapshot count reset, crewed Probe satellite classification and flexible unlock rules using shared race state/time. |
-| `Tracking/StarterFlightTrackerTests.cs` | Deep starter evaluator coverage: impact/ceiling rules, remaining landed mass + launch distance, continuous crewed Control hold/landing, gap reset, biome launch behaviour, staging continuity, save/load of partial/multiple Control states, persisted Directed Power disqualification, live progress and malformed active-save rejection. |
-| `Tracking/SurfaceImpactEvaluatorTests.cs` | Covers recent impact eligibility, splash transition evidence, physics-warp elapsed UT, stale sample rejection, low-speed deletion, non-flight deletion, too-far destruction and invalid numeric evidence. |
+| File | File lines | Simple purpose |
+| --- | ---: | --- |
+| `TheRaceForSpace.Tests.csproj` | 39 | Builds the KSP-independent test program. It links real production logic directly. |
+| `Program.cs` | 684 | Runs the main logic tests and reports pass/fail results. |
+| `ConfigNode.cs` | 48 | Small fake version of KSP's save-node class so save code can be tested without KSP. |
+| `PrototypeFundingCatalogueTests.cs` | 674 | Checks that the funding catalogue contains the expected contracts and rules. |
+| `Milestones/MilestoneEvaluationTests.cs` | 80 | Checks normal orbital milestone matching. |
+| `Persistence/CollectionPersistenceTests.cs` | 391 | Checks save/load of arbitrary IDs, rival data and malformed save data. |
+| `Simulation/RivalSimulationCollectionTests.cs` | 485 | Checks rival target choice, repeated satellite missions, costs and completion. |
+| `Tracking/SatelliteTrackerTests.cs` | 247 | Checks satellite counts and orbital milestone recording. |
+| `Tracking/StarterFlightTrackerTests.cs` | 576 | Checks all four starter-contract lines, staging and save/load progress. |
+| `Tracking/SurfaceImpactEvaluatorTests.cs` | 150 | Checks valid and invalid crash detection. |
 
 ## 5.2 `tests/TheRaceForSpace.ControllerTests/`
 
-This suite links the **real** `SatelliteRaceController` and its KSP-independent dependencies, then supplies narrow stand-ins for the KSP integration boundaries the controller directly uses.
-
-| File | Purpose |
-| --- | --- |
-| `TheRaceForSpace.ControllerTests.csproj` | .NET 8 executable project linking the real controller, settings, funding, milestone, program, simulation and tracking sources. |
-| `Program.cs` | Main controller regression runner. Groups unlock evaluator, controller timing/payout, active starter-plan, telemetry, starter evaluation and sponsor-offer lifecycle tests. |
-| `ControllerKspStubs.cs` | Test-only `Planetarium`, `CareerFundingAdapter`, `KspVesselDiscovery` and `RacePersistenceScenario`. Gives tests deterministic UT, captures awards, injects vessel snapshots and models persistence readiness/capture without KSP. |
-| `UnlockRuleEvaluatorTests.cs` | Null-rule behaviour, AND/OR paths, agency scopes/counts, historical timestamps, exact time boundaries, collective satellite counts, condition-progress parity and malformed/invalid rule handling. |
-| `UnlockConsumerIntegrationTests.cs` | Ensures rival mission selection respects the controller-owned sponsor `Offered` lifecycle rather than treating merely unlocked contracts as selectable. |
-| `SatelliteRaceControllerTests.cs` | Configured rival count/funds, configured funding interval, optional vessel scan, probe/network unlock flow, exact shared-boundary payout behaviour, overdue boundary replay, no retroactive boundary payout and payout-cache rebuild. |
-| `ActiveStarterContractPlanTests.cs` | Initial four cached starter offers, stable plan reuse, rival unlock waiting for sponsor offer, player-completion invalidation and expiry invalidation. |
-| `StarterTelemetryPlanTests.cs` | Ensures active contract types request only the telemetry they actually need. |
-| `ActiveStarterEvaluationTests.cs` | Verifies multiple simultaneously offered Mass, Directed Power, Biome and Control levels are evaluated independently rather than assuming one active level per line. |
-| `FundingOfferControllerTests.cs` | Initial four starter offers, rival-driven line unlocks, sponsor review of all unlocked starter levels, starter exemption from normal offer cap, any Level V -> Probe Orbit, funding-review delay, no same-review cascade, satellite fulfilment delay/cap, and sponsor review at every crossed boundary. |
+| File | File lines | Simple purpose |
+| --- | ---: | --- |
+| `TheRaceForSpace.ControllerTests.csproj` | 35 | Builds the controller test program without a real KSP installation. |
+| `Program.cs` | 161 | Runs all controller and unlock-rule tests. |
+| `ControllerKspStubs.cs` | 165 | Provides small fake KSP systems for time, funds, vessels and save readiness. |
+| `UnlockRuleEvaluatorTests.cs` | 354 | Checks AND/OR unlock rules, agency scopes, dates and satellite counts. |
+| `UnlockConsumerIntegrationTests.cs` | 70 | Checks that rivals only choose contracts that sponsors have actually offered. |
+| `SatelliteRaceControllerTests.cs` | 447 | Checks funding timing, rival setup, vessel refreshes and payout behaviour. |
+| `ActiveStarterContractPlanTests.cs` | 219 | Checks the cached list of starter contracts that should be active. |
+| `StarterTelemetryPlanTests.cs` | 76 | Checks that each starter line asks KSP only for the telemetry it needs. |
+| `ActiveStarterEvaluationTests.cs` | 299 | Checks that several offered starter levels can be tracked independently. |
+| `FundingOfferControllerTests.cs` | 586 | Checks sponsor reviews, offer limits and the four-way path to Probe Orbit. |
 
 ---
 
-# 6. Where to make common changes
+# 6. Where to change common things
 
-| Desired change | Primary file(s) | Usually also inspect |
+| What you want to change | Start here | Simple reason |
 | --- | --- | --- |
-| Change starter speed/mass/altitude/biome targets | `Milestones/PrototypeMilestones.cs` | `Tracking/StarterFlightTracker.cs`, starter tests, UI live-progress wording (normally criteria-derived). |
-| Add a new starter objective type | `Milestones/MilestoneDefinition.cs` | `StarterFlightTracker`, `ActiveVesselTrackingSnapshot`, `KspVesselDiscovery`, `RaceWindow`, persistence if new historical state is needed, tests. |
-| Change orbital progression prerequisites | `Milestones/PrototypeMilestones.cs` | `UnlockRuleDefinition/Evaluator`, catalogue tests/controller tests. |
-| Add/remove a target body | `PrototypeMilestones.cs`, `Funding/PrototypeFundingCatalogue.cs` | `Core/RaceSettings.cs` tier mapping, config design, tests. |
-| Make body content data-driven | Current hardcoding begins in `PrototypeMilestones.cs`, `PrototypeFundingCatalogue.cs`, `RaceSettings.GetBodySettings()` | Preserve stable IDs and the existing generic `SpaceProgramState`, evaluator and persistence contracts. |
-| Change achievement payout decay | `Funding/AchievementFundingProgramme.cs` | Controller funding tests/domain tests. |
-| Change satellite payout formula | `Funding/FundingProgramme.cs` | Controller cache/funding tests. |
-| Change sponsor offer counts/timing | `Competition/SatelliteRaceController.cs` | `FundingOfferControllerTests.cs`. |
-| Change rival target selection/progress/ETA | `Simulation/RivalSimulation.cs` | `RaceSettings`, simulation tests/controller tests. |
-| Change rival starting funds/count/progress chance | `RaceSettings.cfg` defaults plus `Core/RaceSettings.cs` | `RaceSettingsLoader.cs`. |
-| Change full vessel scan behaviour | `KspIntegration/KspVesselDiscovery.cs` | `Tracking/SatelliteTracker.cs`, `RaceRuntime` cadence. |
-| Change starter flight detection | `Tracking/StarterFlightTracker.cs` | `KspVesselDiscovery`, snapshot/telemetry plan, active persistence, tests. |
-| Change crash eligibility | `Tracking/SurfaceImpactEvaluator.cs` | `KspVesselDiscovery`, impact tests. |
-| Change save format | matching `Persistence/*SaveState.cs` | `RacePersistenceScenario.cs`, round-trip tests. |
-| Change update frequency | `Core/RaceRuntime.cs` | Consider KSP API cost and UI expectations. |
-| Change command-center UI | `UI/RaceWindow.cs` | Keep it read-only; do not move progression into UI callbacks. |
-| Change KSP career award call | `KspIntegration/CareerFundingAdapter.cs` | Keep controller KSP-independent except through this boundary. |
+| Starter speed, mass, altitude or biome targets | `Milestones/PrototypeMilestones.cs` | The actual starter targets are written here. |
+| How starter flights are judged | `Tracking/StarterFlightTracker.cs` | This file decides whether the flight completed the contract. |
+| Crash detection | `Tracking/SurfaceImpactEvaluator.cs` | This file decides whether destruction counts as an impact. |
+| Orbital milestone list | `Milestones/PrototypeMilestones.cs` | The orbital targets and progression are written here. |
+| Unlock logic | `Milestones/UnlockRuleDefinition.cs` and `UnlockRuleEvaluator.cs` | One describes rules and the other checks them. |
+| Funding contract list | `Funding/PrototypeFundingCatalogue.cs` | The current funding targets are created here. |
+| Achievement payout maths | `Funding/AchievementFundingProgramme.cs` | This file owns declining one-off payouts. |
+| Satellite payout maths | `Funding/FundingProgramme.cs` | This file owns satellite-network payouts. |
+| Funding dates and sponsor review behaviour | `Competition/SatelliteRaceController.cs` | The controller decides when funding and offers happen. |
+| Rival behaviour | `Simulation/RivalSimulation.cs` | Rival target choice, spending and progress happen here. |
+| Balance numbers | `RaceSettings.cfg` and `Core/RaceSettings.cs` | Config values replace the built-in defaults. |
+| Reading KSP vessels | `KspIntegration/KspVesselDiscovery.cs` | This is the main bridge from real KSP vessels to project data. |
+| Save/load of funding | `Persistence/FundingContractsSaveState.cs` | This file stores player achievement and funding state. |
+| Save/load of rivals | `Persistence/RivalProgramsSaveState.cs` | This file stores rival state. |
+| Save/load of an active starter flight | `Persistence/ActiveContractProgressSaveState.cs` | This file stores temporary flight progress. |
+| Command Center layout | `UI/RaceWindow.cs` | The whole window is drawn here. |
+| Add/remove target bodies | `PrototypeMilestones.cs` and `PrototypeFundingCatalogue.cs` | The current body lists are still written directly in code. |
 
 ---
 
-# 7. Current extension seams and hardcoded content
+# 7. What is already easy to expand
 
-The current code already has a useful split between **generic state/rules** and **code-defined campaign content**.
+Some parts of the code are already flexible:
 
-### Already generic / expansion-friendly
-
-- `SpaceProgramState` stores achievements by arbitrary stable string ID and satellites by arbitrary body name.
-- All three save-state classes persist collections by stable ID/body rather than fixed fields.
-- `UnlockRuleDefinition` supports reusable OR/AND paths, player/rival scopes, time conditions and collective satellite-count conditions.
-- `UnlockRuleEvaluator` has no KSP dependency.
-- `SatelliteTracker` operates on normalized snapshots and arbitrary milestone definitions.
-- `RivalSimulation` chooses from supplied live programme collections rather than a fixed three-body switch.
-- `KspCelestialBodyOrdering` can calculate presentation distance for bodies present in KSP's body graph.
-- `RaceWindow` builds Space Race entries from the current controller collections and handles any configured number of rivals.
-
-### Still code-defined / hardcoded
-
-- The complete milestone/body list is constructed in `PrototypeMilestones.cs`.
-- The complete satellite funding target list is constructed in `PrototypeFundingCatalogue.cs`.
-- `RaceSettings.GetBodySettings()` decides stock body balance tier by name.
-- `RaceSettings.cfg` exposes four broad balance tiers rather than arbitrary per-body definitions.
-- The first two rival IDs/names are explicitly Aster/Cobalt; higher configured counts use generic stable IDs/names.
-
-That means a future move to expandable bodies/targets should preferably replace the **catalogue construction and body-tier lookup**, while retaining the existing stable-ID state, unlock evaluator, tracking snapshots, controller lifecycle and persistence collection model.
+- `SpaceProgramState` can remember any milestone ID.
+- `SpaceProgramState` can remember satellite counts for any body name.
+- Save files store milestones and bodies by name/ID instead of fixed fields.
+- Unlock rules can combine achievements, dates and satellite counts.
+- Rival simulation reads the current contract lists instead of only knowing three fixed targets.
+- The Space Race UI builds its list from the controller's current contract lists.
 
 ---
 
-# 8. Persistence invariants to preserve
+# 8. What is still hardcoded
 
-When extending the project, keep these behaviours stable unless a save migration is deliberately designed:
+These areas still have fixed lists in C#:
 
-1. **Stable IDs are identity.** Display names are presentation and may change; milestone/programme/program IDs must remain stable if old saves should keep meaning.
-2. **First achievement timestamp wins.** Funding eligibility uses the original time, so later observations must not overwrite it.
-3. **Player satellite counts are live observation state.** They are rebuilt from KSP vessels rather than persisted as authoritative save data.
-4. **Rival satellite counts are simulated state.** They are persisted because no KSP vessel represents them.
-5. **Temporary starter evidence is separate from funding lifecycle.** Active attempt/Control progress belongs in `ACTIVE_CONTRACT_PROGRESS`; achievements/offers/payments belong in `FUNDING_CONTRACTS`.
-6. **Scene change is not save change.** `RacePersistenceScenario` and `RaceRuntime` use KSP `Game` identity to avoid overwriting newer in-memory state during ordinary transitions.
-7. **Absent configured contract state is not inherited state.** On restore, a currently configured contract missing from the save is reset to its fresh lifecycle state.
+1. `PrototypeMilestones.cs` contains the full milestone/body list.
+2. `PrototypeFundingCatalogue.cs` contains the full satellite-funding body list.
+3. `RaceSettings.GetBodySettings()` chooses a balance group by specific stock body names.
+4. `RaceSettings.cfg` has four broad body groups rather than a separate section for every possible body.
+5. The first two rivals are named Aster and Cobalt in the controller. Extra rivals use generic names.
 
----
-
-# 9. Performance-sensitive paths
-
-The following code runs frequently and should stay allocation/KSP-call conscious:
-
-- `RaceRuntime.Update()` - every Unity frame, but most work is gated by timers.
-- `KspVesselDiscovery.TryCaptureActiveVessel()` - scheduled every second when starter contracts are active. Preserve telemetry requirement gating.
-- `StarterFlightTracker.RefreshPlayerMilestones()` - every valid active-vessel sample.
-- `RaceWindow.OnGUI()` / draw helpers - IMGUI can execute multiple times per frame. Existing static `GUILayoutOption[]`, `StringBuilder`, payout scratch arrays and cached catalogue entries intentionally reduce repeated allocations.
-- Full `ProtoVessel` discovery is intentionally separated onto a 20-second interval.
-- Controller payout matrices are rebuilt during controller refresh and then reused by UI queries.
+These are the main places to look when the project moves toward fully expandable targets and celestial bodies.
 
 ---
 
-# 10. Maintainer checklist before changing behaviour
+# 9. Important save rules
 
-1. Read `AGENTS.md` and `docs/STRUCTURE.md` first.
-2. Identify the owning module from this reference; avoid moving logic across boundaries just because another file can access it.
-3. Keep raw KSP/Unity API use in `KspIntegration` or the UI/lifecycle files that already own it.
-4. Add/adjust KSP-independent regression coverage when domain behaviour changes.
-5. Add/adjust controller regressions when orchestration, funding timing, offer lifecycle or active-plan semantics change.
-6. Preserve stable IDs and consider save compatibility for any persistent state change.
-7. For gameplay changes, verify exact funding-boundary ordering and historical achievement timestamps so no retroactive payouts are introduced.
-8. Keep the UI a reader of runtime state, not a second progression engine.
+Keep these rules in mind when changing code:
+
+- Do not casually change stable IDs. Old saves use them.
+- The first achievement time is important. Later completions must not replace it.
+- Player satellite counts come from real KSP vessels. They are rebuilt from the game.
+- Rival satellite counts are simulated, so the mod must save them.
+- Temporary starter-flight progress is saved separately from funding-contract progress.
+- Moving between KSP scenes is not the same as loading a different save.
+
+---
+
+# 10. Important performance rules
+
+Some code runs often:
+
+- `RaceRuntime.Update()` is checked every Unity frame.
+- Active starter-flight data can be sampled every second.
+- The normal race controller updates about every five seconds.
+- The full saved-vessel scan runs about every twenty seconds.
+- `RaceWindow.OnGUI()` may be called several times while Unity draws one frame.
+
+For that reason, do not add heavy vessel searches or large new allocations to these paths without a clear need.
+
+---
+
+# 11. Simple checklist before changing code
+
+1. Read `AGENTS.md`.
+2. Find the file that already owns the behaviour.
+3. Change the existing code rather than creating a second system.
+4. Keep KSP-specific vessel code inside `KspIntegration/` where practical.
+5. Keep the UI as a display layer. Do not make the UI advance race progress.
+6. Keep stable IDs and save compatibility in mind.
+7. Update the relevant tests when gameplay rules change.
+8. Do not create a new branch without permission.

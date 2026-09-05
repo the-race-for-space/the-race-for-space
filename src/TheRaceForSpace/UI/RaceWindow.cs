@@ -14,7 +14,7 @@ using UnityEngine;
 namespace TheRaceForSpace.UI
 {
     /// <summary>
-    /// Prototype command center with four switchable views inside one interface window.
+    /// Command center with four switchable views inside one interface window.
     /// Press F8 or use the stock KSP application launcher button to show or hide the interface.
     /// Race progression and controller lifetime are owned by RaceRuntime in the Core module.
     /// </summary>
@@ -656,7 +656,7 @@ namespace TheRaceForSpace.UI
             GUILayout.Space(24.0f);
             GUILayout.BeginVertical(ExpandWidthOptions);
             GUILayout.Label(_listTextBuilder.ToString());
-            DrawPayoutLinesByAmount(_payoutScratch);
+            DrawPayoutLinesByAmount();
             GUILayout.EndVertical();
 
             GUILayout.EndHorizontal();
@@ -690,7 +690,7 @@ namespace TheRaceForSpace.UI
             // Funding Targets deliberately compares the active craft against every offered,
             // unfinished starter contract, even when a rival unlocked a later level first.
             GUILayout.Space(6.0f);
-            DrawStarterLiveProgress(milestone.StarterLine, milestone, tracker);
+            DrawStarterLiveProgress(milestone, tracker);
         }
 
         private void DrawSatelliteFundingCard(
@@ -763,7 +763,7 @@ namespace TheRaceForSpace.UI
             GUILayout.Space(24.0f);
             GUILayout.BeginVertical(ExpandWidthOptions);
             GUILayout.Label(_listTextBuilder.ToString());
-            DrawPayoutLinesByAmount(_payoutScratch);
+            DrawPayoutLinesByAmount();
             GUILayout.Label("Unclaimed Payout: " + unclaimedPayout.ToString("N0"));
             GUILayout.EndVertical();
 
@@ -771,7 +771,7 @@ namespace TheRaceForSpace.UI
             GUILayout.EndVertical();
         }
 
-        private void DrawPayoutLinesByAmount(double[] nextPayouts)
+        private void DrawPayoutLinesByAmount()
         {
             for (int programIndex = 0; programIndex < _raceController.Programs.Count; programIndex++)
             {
@@ -781,18 +781,18 @@ namespace TheRaceForSpace.UI
             // A small in-place sort keeps the agency with the strongest next payout first while
             // allowing the same UI path to handle any number of current programs. The caller
             // refills the reusable payout buffer before each card, so no per-card array is needed.
-            for (int payoutIndex = 0; payoutIndex < nextPayouts.Length - 1; payoutIndex++)
+            for (int payoutIndex = 0; payoutIndex < _payoutScratch.Length - 1; payoutIndex++)
             {
-                for (int compareIndex = payoutIndex + 1; compareIndex < nextPayouts.Length; compareIndex++)
+                for (int compareIndex = payoutIndex + 1; compareIndex < _payoutScratch.Length; compareIndex++)
                 {
-                    if (nextPayouts[compareIndex] <= nextPayouts[payoutIndex])
+                    if (_payoutScratch[compareIndex] <= _payoutScratch[payoutIndex])
                     {
                         continue;
                     }
 
-                    double payoutToSwap = nextPayouts[payoutIndex];
-                    nextPayouts[payoutIndex] = nextPayouts[compareIndex];
-                    nextPayouts[compareIndex] = payoutToSwap;
+                    double payoutToSwap = _payoutScratch[payoutIndex];
+                    _payoutScratch[payoutIndex] = _payoutScratch[compareIndex];
+                    _payoutScratch[compareIndex] = payoutToSwap;
 
                     string agencyNameToSwap = _agencyNameScratch[payoutIndex];
                     _agencyNameScratch[payoutIndex] = _agencyNameScratch[compareIndex];
@@ -800,9 +800,9 @@ namespace TheRaceForSpace.UI
                 }
             }
 
-            for (int payoutIndex = 0; payoutIndex < nextPayouts.Length; payoutIndex++)
+            for (int payoutIndex = 0; payoutIndex < _payoutScratch.Length; payoutIndex++)
             {
-                if (nextPayouts[payoutIndex] <= 0.0)
+                if (_payoutScratch[payoutIndex] <= 0.0)
                 {
                     continue;
                 }
@@ -810,7 +810,7 @@ namespace TheRaceForSpace.UI
                 GUILayout.Label(
                     _agencyNameScratch[payoutIndex]
                     + " Next Payout: "
-                    + nextPayouts[payoutIndex].ToString("N0"));
+                    + _payoutScratch[payoutIndex].ToString("N0"));
             }
         }
 
@@ -877,15 +877,20 @@ namespace TheRaceForSpace.UI
         private void DrawSpaceRace()
         {
             double currentUniversalTime = Planetarium.fetch == null
-                ? 0.0
+                ? -1.0
                 : Planetarium.GetUniversalTime();
-            SpaceProgramState player = _raceController.PlayerProgram;
+            if (double.IsNaN(currentUniversalTime)
+                || double.IsInfinity(currentUniversalTime)
+                || currentUniversalTime < 0.0)
+            {
+                currentUniversalTime = -1.0;
+            }
 
             EnsurePayoutScratchBuffers();
             EnsureSpaceRaceFundingEntries();
 
             GUILayout.Label("Current Funding Info", _boldLabelStyle);
-            SpaceRaceFundingEntry selectedEntry = EnsureSelectedSpaceRaceFundingEntry(player);
+            SpaceRaceFundingEntry selectedEntry = EnsureSelectedSpaceRaceFundingEntry();
 
             // Keep the selected contract area stable as users switch between contracts with
             // different amounts of descriptive or unlock text. Longer cards scroll internally
@@ -899,7 +904,7 @@ namespace TheRaceForSpace.UI
             }
             else
             {
-                DrawSelectedSpaceRaceFundingEntry(selectedEntry, player, currentUniversalTime);
+                DrawSelectedSpaceRaceFundingEntry(selectedEntry, currentUniversalTime);
             }
             GUILayout.EndScrollView();
 
@@ -911,29 +916,24 @@ namespace TheRaceForSpace.UI
             DrawSpaceRaceFundingSection(
                 "Offered",
                 SpaceRaceFundingCategory.Offered,
-                player,
                 ref _spaceRaceOfferedExpanded);
             DrawSpaceRaceFundingSection(
                 "Unlocked",
                 SpaceRaceFundingCategory.Unlocked,
-                player,
                 ref _spaceRaceUnlockedExpanded);
             DrawSpaceRaceFundingSection(
                 "Locked",
                 SpaceRaceFundingCategory.Locked,
-                player,
                 ref _spaceRaceLockedExpanded);
             DrawSpaceRaceFundingSection(
                 "Expired",
                 SpaceRaceFundingCategory.Expired,
-                player,
                 ref _spaceRaceExpiredExpanded);
 
             GUILayout.EndScrollView();
         }
 
         private void DrawStarterLiveProgress(
-            StarterContractLine starterLine,
             MilestoneDefinition currentMilestone,
             StarterFlightTracker tracker)
         {
@@ -955,7 +955,7 @@ namespace TheRaceForSpace.UI
                 return;
             }
 
-            if (starterLine == StarterContractLine.DirectedPower)
+            if (currentMilestone.StarterLine == StarterContractLine.DirectedPower)
             {
                 GUILayout.Label(
                     "Max Speed: "
@@ -976,7 +976,7 @@ namespace TheRaceForSpace.UI
                 return;
             }
 
-            if (starterLine == StarterContractLine.Mass)
+            if (currentMilestone.StarterLine == StarterContractLine.Mass)
             {
                 GUILayout.Label(
                     "Mass: "
@@ -996,7 +996,7 @@ namespace TheRaceForSpace.UI
                 return;
             }
 
-            if (starterLine == StarterContractLine.Control)
+            if (currentMilestone.StarterLine == StarterContractLine.Control)
             {
                 bool holdQualified = tracker.IsControlMilestoneQualified(currentMilestone.Id);
                 if (holdQualified)
@@ -1023,7 +1023,7 @@ namespace TheRaceForSpace.UI
                 return;
             }
 
-            if (starterLine == StarterContractLine.Biome)
+            if (currentMilestone.StarterLine == StarterContractLine.Biome)
             {
                 GUILayout.Label(
                     "Current Biome: "
@@ -1039,10 +1039,9 @@ namespace TheRaceForSpace.UI
 
         private void DrawSelectedSpaceRaceFundingEntry(
             SpaceRaceFundingEntry entry,
-            SpaceProgramState player,
             double evaluationUniversalTime)
         {
-            SpaceRaceFundingCategory category = GetSpaceRaceFundingCategory(entry, player);
+            SpaceRaceFundingCategory category = GetSpaceRaceFundingCategory(entry);
             string stateLabel;
             string stateMessage = null;
 
@@ -1090,7 +1089,6 @@ namespace TheRaceForSpace.UI
         private void DrawSpaceRaceFundingSection(
             string heading,
             SpaceRaceFundingCategory category,
-            SpaceProgramState player,
             ref bool isExpanded)
         {
             GUILayout.BeginHorizontal();
@@ -1114,7 +1112,7 @@ namespace TheRaceForSpace.UI
             for (int entryIndex = 0; entryIndex < _spaceRaceFundingEntries.Count; entryIndex++)
             {
                 SpaceRaceFundingEntry entry = _spaceRaceFundingEntries[entryIndex];
-                if (GetSpaceRaceFundingCategory(entry, player) != category)
+                if (GetSpaceRaceFundingCategory(entry) != category)
                 {
                     continue;
                 }
@@ -1226,7 +1224,7 @@ namespace TheRaceForSpace.UI
             return firstEntry.CatalogueOrder.CompareTo(secondEntry.CatalogueOrder);
         }
 
-        private SpaceRaceFundingEntry EnsureSelectedSpaceRaceFundingEntry(SpaceProgramState player)
+        private SpaceRaceFundingEntry EnsureSelectedSpaceRaceFundingEntry()
         {
             for (int entryIndex = 0; entryIndex < _spaceRaceFundingEntries.Count; entryIndex++)
             {
@@ -1249,7 +1247,7 @@ namespace TheRaceForSpace.UI
                 for (int entryIndex = 0; entryIndex < _spaceRaceFundingEntries.Count; entryIndex++)
                 {
                     SpaceRaceFundingEntry entry = _spaceRaceFundingEntries[entryIndex];
-                    if (GetSpaceRaceFundingCategory(entry, player) != category)
+                    if (GetSpaceRaceFundingCategory(entry) != category)
                     {
                         continue;
                     }
@@ -1264,9 +1262,7 @@ namespace TheRaceForSpace.UI
             return null;
         }
 
-        private SpaceRaceFundingCategory GetSpaceRaceFundingCategory(
-            SpaceRaceFundingEntry entry,
-            SpaceProgramState player)
+        private SpaceRaceFundingCategory GetSpaceRaceFundingCategory(SpaceRaceFundingEntry entry)
         {
             if (entry.IsAchievement)
             {
@@ -1519,7 +1515,7 @@ namespace TheRaceForSpace.UI
             GUILayout.Label("Funds: " + program.Funds.ToString("N0"));
             GUILayout.Label(
                 "Next Mission Planned: "
-                + (string.IsNullOrEmpty(program.NextLaunchBodyName) ? "Planning" : program.NextLaunchBodyName));
+                + (string.IsNullOrEmpty(program.NextMissionDisplayName) ? "Planning" : program.NextMissionDisplayName));
             GUILayout.Label("Mission Progress: " + program.LaunchProgressPercent + "%");
             GUILayout.Label(
                 "Mission Progress Cost: "
@@ -1685,7 +1681,9 @@ namespace TheRaceForSpace.UI
 
         private string FormatKerbinDate(double universalTime)
         {
-            if (universalTime < 0.0)
+            if (double.IsNaN(universalTime)
+                || double.IsInfinity(universalTime)
+                || universalTime < 0.0)
             {
                 return "Pending";
             }

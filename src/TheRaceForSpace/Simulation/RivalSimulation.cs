@@ -8,7 +8,7 @@ using TheRaceForSpace.Programs;
 namespace TheRaceForSpace.Simulation
 {
     /// <summary>
-    /// Lightweight rival-program simulation used by the current prototype.
+    /// Lightweight rival-program mission simulation.
     /// </summary>
     public static class RivalSimulation
     {
@@ -23,18 +23,15 @@ namespace TheRaceForSpace.Simulation
         private struct RivalSimulationContext
         {
             public RivalSimulationContext(
-                IList<SpaceProgramState> programs,
                 double currentUniversalTime,
                 IList<AchievementFundingProgramme> achievementProgrammes,
                 IList<FundingProgramme> fundingProgrammes)
             {
-                Programs = programs;
                 CurrentUniversalTime = currentUniversalTime;
                 AchievementProgrammes = achievementProgrammes;
                 FundingProgrammes = fundingProgrammes;
             }
 
-            public readonly IList<SpaceProgramState> Programs;
             public readonly double CurrentUniversalTime;
             public readonly IList<AchievementFundingProgramme> AchievementProgrammes;
             public readonly IList<FundingProgramme> FundingProgrammes;
@@ -50,13 +47,16 @@ namespace TheRaceForSpace.Simulation
             IList<AchievementFundingProgramme> achievementProgrammes,
             IList<FundingProgramme> fundingProgrammes)
         {
-            if (programs == null || achievementProgrammes == null || fundingProgrammes == null)
+            if (programs == null
+                || achievementProgrammes == null
+                || fundingProgrammes == null
+                || !IsFinite(currentUniversalTime)
+                || currentUniversalTime < 0.0)
             {
                 return;
             }
 
             var context = new RivalSimulationContext(
-                programs,
                 currentUniversalTime,
                 achievementProgrammes,
                 fundingProgrammes);
@@ -128,14 +128,13 @@ namespace TheRaceForSpace.Simulation
 
             return CalculateLaunchProgressCostForTarget(
                 program.NextMissionTargetId,
-                achievementProgrammes,
                 fundingProgrammes);
         }
 
         /// <summary>
         /// Estimates the average Kerbin days until a rival completes its planned mission.
         /// Returns null when current funds and projected scheduled payouts cannot finance
-        /// all remaining development steps, or when rival progress chance is configured to zero.
+        /// all remaining development steps, or when the supplied simulation state is invalid.
         /// </summary>
         public static int? CalculateEstimatedLaunchDays(
             SpaceProgramState program,
@@ -160,13 +159,27 @@ namespace TheRaceForSpace.Simulation
             double fundingIntervalSeconds,
             double launchProgressCostFunds)
         {
-            if (program == null || RaceSettings.RivalProgressChance <= 0.0)
+            double rivalProgressChance = RaceSettings.RivalProgressChance;
+            if (program == null
+                || !IsFinite(currentUniversalTime)
+                || currentUniversalTime < 0.0
+                || !IsFinite(nextFundingUniversalTime)
+                || !IsFinite(fundingIntervalSeconds)
+                || fundingIntervalSeconds <= 0.0
+                || !IsFinite(launchProgressCostFunds)
+                || launchProgressCostFunds < 0.0
+                || !IsFinite(program.Funds)
+                || !IsFinite(program.NextPayoutFunds)
+                || !IsFinite(rivalProgressChance)
+                || rivalProgressChance <= 0.0
+                || rivalProgressChance > 1.0)
             {
                 return null;
             }
 
             int launchProgressIncrementPercent = CalculateLaunchProgressIncrementPercent(program);
-            int remainingProgressPercent = Math.Max(0, 100 - program.LaunchProgressPercent);
+            int currentProgressPercent = Math.Max(0, Math.Min(100, program.LaunchProgressPercent));
+            int remainingProgressPercent = 100 - currentProgressPercent;
             int remainingProgressSteps = (remainingProgressPercent + launchProgressIncrementPercent - 1)
                 / launchProgressIncrementPercent;
 
@@ -178,12 +191,17 @@ namespace TheRaceForSpace.Simulation
             double availableFunds = Math.Max(0.0, program.Funds);
             double projectedPayoutFunds = Math.Max(0.0, program.NextPayoutFunds);
             double expectedDaysPerSuccessfulStep =
-                (LaunchProgressIntervalSeconds / KerbinDaySeconds) / RaceSettings.RivalProgressChance;
+                (LaunchProgressIntervalSeconds / KerbinDaySeconds) / rivalProgressChance;
             double fundingIntervalDays = fundingIntervalSeconds / KerbinDaySeconds;
             double nextFundingInDays = nextFundingUniversalTime >= 0.0
                 ? Math.Max(0.0, (nextFundingUniversalTime - currentUniversalTime) / KerbinDaySeconds)
                 : double.PositiveInfinity;
             double elapsedDays = 0.0;
+
+            if (!IsFinite(expectedDaysPerSuccessfulStep) || !IsFinite(fundingIntervalDays))
+            {
+                return null;
+            }
 
             for (int stepIndex = 0; stepIndex < remainingProgressSteps; stepIndex++)
             {
@@ -226,7 +244,13 @@ namespace TheRaceForSpace.Simulation
                 elapsedDays = expectedStepDay;
             }
 
-            return (int)Math.Ceiling(elapsedDays);
+            double roundedDays = Math.Ceiling(elapsedDays);
+            if (!IsFinite(roundedDays) || roundedDays > int.MaxValue)
+            {
+                return null;
+            }
+
+            return (int)roundedDays;
         }
 
         private static void RefreshProgram(
@@ -250,10 +274,11 @@ namespace TheRaceForSpace.Simulation
 
             if (string.IsNullOrEmpty(program.NextMissionTargetId))
             {
-                SetMissionTarget(program, ChooseNextLaunchTarget(program, context), context);
+                SetMissionTarget(program, ChooseNextMissionTarget(program, context), context);
             }
 
-            if (program.NextLaunchProgressCheckUniversalTime <= 0.0)
+            if (!IsFinite(program.NextLaunchProgressCheckUniversalTime)
+                || program.NextLaunchProgressCheckUniversalTime <= 0.0)
             {
                 program.NextLaunchProgressCheckUniversalTime =
                     (Math.Floor(context.CurrentUniversalTime / LaunchProgressIntervalSeconds) + 1.0)
@@ -262,14 +287,14 @@ namespace TheRaceForSpace.Simulation
 
             if (TryCompleteLaunch(program, context.CurrentUniversalTime, context))
             {
-                SetMissionTarget(program, ChooseNextLaunchTarget(program, context), context);
+                SetMissionTarget(program, ChooseNextMissionTarget(program, context), context);
             }
 
             while (context.CurrentUniversalTime >= program.NextLaunchProgressCheckUniversalTime)
             {
                 if (string.IsNullOrEmpty(program.NextMissionTargetId))
                 {
-                    SetMissionTarget(program, ChooseNextLaunchTarget(program, context), context);
+                    SetMissionTarget(program, ChooseNextMissionTarget(program, context), context);
                 }
 
                 if (!string.IsNullOrEmpty(program.NextMissionTargetId))
@@ -292,7 +317,7 @@ namespace TheRaceForSpace.Simulation
 
                     if (TryCompleteLaunch(program, program.NextLaunchProgressCheckUniversalTime, context))
                     {
-                        SetMissionTarget(program, ChooseNextLaunchTarget(program, context), context);
+                        SetMissionTarget(program, ChooseNextMissionTarget(program, context), context);
                     }
                 }
 
@@ -306,7 +331,10 @@ namespace TheRaceForSpace.Simulation
             RivalSimulationContext context)
         {
             string targetId = program.NextMissionTargetId;
-            if (program.LaunchProgressPercent < 100 || string.IsNullOrEmpty(targetId))
+            if (program.LaunchProgressPercent < 100
+                || string.IsNullOrEmpty(targetId)
+                || !IsFinite(completionUniversalTime)
+                || completionUniversalTime < 0.0)
             {
                 return false;
             }
@@ -324,7 +352,7 @@ namespace TheRaceForSpace.Simulation
 
                 bool recordedAchievement = program.RecordAchievement(
                     milestone.Id,
-                    Math.Max(0.0, completionUniversalTime));
+                    completionUniversalTime);
                 if (recordedAchievement
                     && milestone.ObjectiveType == MilestoneObjectiveType.Orbit
                     && milestone.CrewRequirement == MilestoneCrewRequirement.UncrewedProbe)
@@ -371,7 +399,8 @@ namespace TheRaceForSpace.Simulation
                 context.AchievementProgrammes);
             if (achievementProgramme != null)
             {
-                return achievementProgramme.IsOffered
+                return PrototypeMilestones.FindById(achievementProgramme.Id) != null
+                    && achievementProgramme.IsOffered
                     && !achievementProgramme.IsExpired
                     && !program.HasAchievement(achievementProgramme.Id);
             }
@@ -379,13 +408,15 @@ namespace TheRaceForSpace.Simulation
             FundingProgramme fundingProgramme = FindFundingProgramme(targetId, context.FundingProgrammes);
             if (fundingProgramme != null)
             {
-                return fundingProgramme.IsAvailable && fundingProgramme.IsOffered;
+                return !string.IsNullOrEmpty(fundingProgramme.CelestialBodyName)
+                    && fundingProgramme.IsAvailable
+                    && fundingProgramme.IsOffered;
             }
 
             return false;
         }
 
-        private static string ChooseNextLaunchTarget(
+        private static string ChooseNextMissionTarget(
             SpaceProgramState program,
             RivalSimulationContext context)
         {
@@ -447,7 +478,6 @@ namespace TheRaceForSpace.Simulation
 
         private static double CalculateLaunchProgressCostForTarget(
             string targetId,
-            IList<AchievementFundingProgramme> achievementProgrammes,
             IList<FundingProgramme> fundingProgrammes)
         {
             MilestoneDefinition milestone = PrototypeMilestones.FindById(targetId);
@@ -465,7 +495,7 @@ namespace TheRaceForSpace.Simulation
             }
 
             FundingProgramme fundingProgramme = FindFundingProgramme(targetId, fundingProgrammes);
-            if (fundingProgramme != null)
+            if (fundingProgramme != null && !string.IsNullOrEmpty(fundingProgramme.CelestialBodyName))
             {
                 return RaceSettings.GetBodySettings(fundingProgramme.CelestialBodyName)
                     .SatelliteProgressCostFunds;
@@ -533,6 +563,11 @@ namespace TheRaceForSpace.Simulation
             }
 
             return null;
+        }
+
+        private static bool IsFinite(double value)
+        {
+            return !double.IsNaN(value) && !double.IsInfinity(value);
         }
     }
 }

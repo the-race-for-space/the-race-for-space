@@ -9,8 +9,9 @@ namespace TheRaceForSpace.Core
 {
     /// <summary>
     /// Owns the current campaign controller and advances campaign progression independently of the UI.
+    /// The runtime persists for the KSP session while campaign state is replaced per loaded save.
     /// </summary>
-    [KSPAddon(KSPAddon.Startup.EveryScene, false)]
+    [KSPAddon(KSPAddon.Startup.Instantly, true)]
     public sealed class ModRuntime : MonoBehaviour
     {
         private const float RefreshIntervalSeconds = 5.0f;
@@ -22,7 +23,6 @@ namespace TheRaceForSpace.Core
         private static FlightContractTracker _flightContractTracker;
         private static Game _controllerGame;
 
-        private bool _isDuplicateInstance;
         private bool _hasRestoredActiveContractProgress;
         private float _nextRefreshTime;
         private float _nextActiveVesselRefreshTime;
@@ -71,41 +71,48 @@ namespace TheRaceForSpace.Core
 
         public void Awake()
         {
-            // EveryScene also instantiates addons during loading and on the main menu. Campaign
-            // progression only exists while KSP has an active saved game.
-            if (!HighLogic.LoadedSceneIsGame || HighLogic.CurrentGame == null)
+            // The once flag should create only one session runtime, but KSP 1.12.x can occasionally
+            // instantiate a once addon more than once. Keep the first persistent owner and discard
+            // any later duplicate instead of replacing the runtime during a scene transition.
+            if (_activeInstance != null && _activeInstance != this)
             {
                 Destroy(this);
                 return;
             }
 
-            // KSP can create the next EveryScene addon before Unity has destroyed the previous
-            // scene's component. The new scene instance must take ownership immediately; otherwise
-            // destroying it as a duplicate can leave the static controller alive with no Update()
-            // owner to sample Flight Contract telemetry or advance campaign progression.
-            if (_activeInstance != null && _activeInstance != this)
+            _activeInstance = this;
+        }
+
+        public void Start()
+        {
+            if (_activeInstance != this)
             {
-                _activeInstance._isDuplicateInstance = true;
-                Destroy(_activeInstance);
+                return;
             }
 
-            _activeInstance = this;
+            // ModRuntime is intentionally session-owned rather than scene-owned. It must survive
+            // Space Center/editor/Flight transitions so a sampler that runs during Flight loading
+            // can retry after KSP reports the final Flight scene and active vessel.
+            DontDestroyOnLoad(this);
+            Debug.Log("[TheRaceForSpace] Persistent ModRuntime started for the KSP session.");
+
+            // Instantly starts before a save normally exists. This call is therefore expected to
+            // do nothing at the main menu and will be retried from Update once a game is available.
             EnsureControllerForCurrentGame();
-            Debug.Log("[TheRaceForSpace] ModRuntime became active for the current saved-game scene.");
         }
 
         public void OnDestroy()
         {
             if (_activeInstance == this)
             {
+                KspVesselMonitor.ResetActiveVesselTracking();
                 _activeInstance = null;
             }
         }
 
         public void Update()
         {
-            if (_isDuplicateInstance
-                || _activeInstance != this
+            if (_activeInstance != this
                 || !HighLogic.LoadedSceneIsGame
                 || HighLogic.CurrentGame == null)
             {
@@ -264,8 +271,9 @@ namespace TheRaceForSpace.Core
             // is read once here before any controller-owned funding or rival state is constructed.
             CampaignSettingsLoader.EnsureLoaded();
 
-            // Keep one controller and one active-flight tracker across scene changes inside a save,
-            // but never carry campaign, vessel-callback, or contract-attempt state into another save.
+            // The runtime persists across scenes, but controller/tracker state belongs to exactly one
+            // KSP Game. Replace both when another save becomes current and clear KSP callback state so
+            // one campaign can never inherit another save's active-vessel attempt.
             _campaignController = new CampaignController();
             _flightContractTracker = new FlightContractTracker();
             _controllerGame = HighLogic.CurrentGame;
@@ -276,6 +284,8 @@ namespace TheRaceForSpace.Core
             _nextPlayerVesselRefreshTime = 0.0f;
             _flightTelemetryPlanSource = null;
             _flightTelemetryRequirements = FlightTelemetryRequirement.None;
+
+            Debug.Log("[TheRaceForSpace] ModRuntime initialized campaign state for the current save.");
         }
     }
 }

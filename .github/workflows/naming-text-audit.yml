@@ -32,6 +32,14 @@ jobs:
           for root in (Path('src'), Path('tests')):
               files.extend(path for path in root.rglob('*.cs') if path.is_file())
 
+          identifier_replacements = [
+              ('restoredRaceProgress', 'restoredCampaignProgress'),
+              ('TryRestoreRaceProgress', 'TryRestoreCampaignProgress'),
+              ('CaptureRaceProgress', 'CaptureCampaignProgress'),
+              ('RaceProgressCaptureCalls', 'CampaignProgressCaptureCalls'),
+              ('FlexibleUnlockRuleUsesRaceStateAndTime', 'FlexibleUnlockRuleUsesCampaignStateAndTime'),
+          ]
+
           exact = [
               ('Competitive objectiveCompletion contract paid on the shared funding calendar.',
                'One-off objective funding contract paid on the shared funding calendar.'),
@@ -64,24 +72,28 @@ jobs:
           for path in files:
               original = path.read_text(encoding='utf-8')
               text = original
+              for old, new in identifier_replacements:
+                  text = text.replace(old, new)
               for old, new in exact:
                   text = text.replace(old, new)
 
               output = []
               is_test = path.as_posix().startswith('tests/')
               for line in text.splitlines(keepends=True):
-                  stripped = line.lstrip()
-                  if stripped.startswith('//'):
+                  if line.lstrip().startswith('//'):
                       line = polish_text(line, is_test)
                   else:
-                      line = string_pattern.sub(
-                          lambda match: polish_text(match.group(0), is_test),
-                          line)
+                      line = string_pattern.sub(lambda m: polish_text(m.group(0), is_test), line)
                   output.append(line)
 
               updated = ''.join(output)
               if updated != original:
                   path.write_text(updated, encoding='utf-8')
+
+          runner = Path('tools/run-logic-tests.sh')
+          runner_text = runner.read_text(encoding='utf-8')
+          runner_text = runner_text.replace('race controller regression tests', 'campaign controller regression tests')
+          runner.write_text(runner_text, encoding='utf-8')
           PY
 
           git diff --check
@@ -92,28 +104,26 @@ jobs:
           import re
 
           string_pattern = re.compile(r'"(?:\\.|[^"\\])*"')
-          bad_text = []
-          bad_identifiers = []
+          bad = []
 
           for root in (Path('src'), Path('tests')):
               for path in root.rglob('*.cs'):
                   is_test = path.as_posix().startswith('tests/')
                   for line_number, line in enumerate(path.read_text(encoding='utf-8').splitlines(), 1):
-                      stripped = line.lstrip()
                       prose_parts = []
-                      if stripped.startswith('//'):
+                      if line.lstrip().startswith('//'):
                           prose_parts.append(line)
                       else:
-                          prose_parts.extend(match.group(0) for match in string_pattern.finditer(line))
+                          prose_parts.extend(m.group(0) for m in string_pattern.finditer(line))
 
                       for prose in prose_parts:
                           check = prose.replace('The Race for Space', '')
                           if 'objectiveCompletion' in check:
-                              bad_text.append(f'{path}:{line_number}: awkward objectiveCompletion prose')
+                              bad.append(f'{path}:{line_number}: awkward objectiveCompletion prose')
                           if re.search(r'\brace\b|\bRace\b', check):
-                              bad_text.append(f'{path}:{line_number}: old race wording')
+                              bad.append(f'{path}:{line_number}: old race wording')
                           if is_test and re.search(r'\bstarter\b|\bStarter\b', check):
-                              bad_text.append(f'{path}:{line_number}: old starter wording')
+                              bad.append(f'{path}:{line_number}: old starter wording')
 
                       code = string_pattern.sub('', line)
                       if '//' in code:
@@ -121,11 +131,11 @@ jobs:
                       code = code.replace('TheRaceForSpace', '')
                       for token in re.findall(r'\b[A-Za-z_][A-Za-z0-9_]*\b', code):
                           if 'Race' in token or 'race' in token:
-                              bad_identifiers.append(f'{path}:{line_number}: {token}')
+                              bad.append(f'{path}:{line_number}: old race identifier {token}')
 
-          if bad_text or bad_identifiers:
-              print('\n'.join((bad_text + bad_identifiers)[:100]))
-              raise SystemExit('Naming text audit failed.')
+          if bad:
+              print('\n'.join(bad[:100]))
+              raise SystemExit('Naming audit failed.')
           PY
 
           if grep -RInE --include='*.cs' 'Programme|programme|Achievement|achievement|Starter|starter|Milestone|milestone|HasProgram|DoesProgram|CreatePrograms|programIndex|Programs\b|programs\b' src; then

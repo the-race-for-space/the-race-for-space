@@ -32,7 +32,7 @@ namespace TheRaceForSpace.Funding
 
         /// <summary>
         /// Creates fresh objectiveCompletion funding state for a new race controller from both the special
-        /// starter catalogue and the normal orbital objective catalogue.
+        /// pre-orbit catalogue and the normal orbital objective catalogue.
         /// </summary>
         public static IList<ObjectiveFundingContract> CreateObjectiveFundingContracts()
         {

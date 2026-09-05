@@ -145,7 +145,7 @@ namespace TheRaceForSpace.Core
 
                 // Scenario state may become ready between scheduled five-second controller ticks.
                 // Force the controller's normal non-vessel path once before active-flight evaluation
-                // so persisted objectives are restored before a new starter result can be recorded.
+                // so persisted objectives are restored before a new flight-contract result can be recorded.
                 _campaignController.Refresh(false);
             }
 

@@ -278,7 +278,7 @@ namespace TheRaceForSpace.Objectives
         public double RivalProgressCostFunds { get; private set; }
 
         // Tracking and UI consume these values directly. ObjectiveCatalogue supplies them explicitly
-        // for each starter definition instead of ObjectiveDefinition inferring balance from line/level.
+        // for each pre-orbit definition instead of ObjectiveDefinition inferring balance from line/level.
         public double RequiredSpeedMetersPerSecond { get; private set; }
         public double RequiredMassTonnes { get; private set; }
         public double RequiredDistanceMeters { get; private set; }

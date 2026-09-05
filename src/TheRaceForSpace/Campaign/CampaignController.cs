@@ -129,7 +129,7 @@ namespace TheRaceForSpace.Campaign
         }
 
         /// <summary>
-        /// Marks the cached active starter set dirty after the flight tracker records a player
+        /// Marks the cached active flight-contract set dirty after the flight tracker records a player
         /// pre-orbit objectiveCompletion. The following controller refresh rebuilds the set once after all
         /// resulting unlock/offer/funding changes have been processed.
         /// </summary>
@@ -641,7 +641,7 @@ namespace TheRaceForSpace.Campaign
                 }
 
                 // PreOrbit contracts are the four parallel pre-orbit development lines. Every
-                // unlocked starter target is offered at the funding review, and starter offers do
+                // unlocked pre-orbit target is offered at the funding review, and pre-orbit offers do
                 // not consume the two unfinished slots reserved for Probe Orbit and later targets.
                 if (isPreOrbitContract)
                 {

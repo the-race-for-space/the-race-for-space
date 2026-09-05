@@ -8,7 +8,7 @@ using TheRaceForSpace.Objectives;
 
 namespace TheRaceForSpace.ControllerTests
 {
-    internal static class ActiveStarterContractPlanTests
+    internal static class ActiveFlightContractPlanTests
     {
         private const double KerbinDaySeconds = 21600.0;
         private const double FundingIntervalSeconds = 90.0 * KerbinDaySeconds;
@@ -18,12 +18,12 @@ namespace TheRaceForSpace.ControllerTests
             ResetEnvironment();
             CampaignSettings.RivalProgressChance = 0.0;
             Planetarium.CurrentUniversalTime = 0.0;
-            KspVesselDiscovery.SetUnavailable();
+            KspVesselMonitor.SetUnavailable();
 
             var controller = new CampaignController();
             controller.Refresh();
 
-            IList<ObjectiveDefinition> initialPlan = controller.ActiveStarterContracts;
+            IList<ObjectiveDefinition> initialPlan = controller.ActiveFlightContracts;
             Equal(4, initialPlan.Count);
             Require(Contains(initialPlan, ObjectiveCatalogue.DirectedPower1Id),
                 "Directed Power I should be active while its opening offer is unfinished.");
@@ -37,7 +37,7 @@ namespace TheRaceForSpace.ControllerTests
             Planetarium.CurrentUniversalTime = 20.0;
             controller.Refresh(false);
 
-            Require(object.ReferenceEquals(initialPlan, controller.ActiveStarterContracts),
+            Require(object.ReferenceEquals(initialPlan, controller.ActiveFlightContracts),
                 "A controller refresh with no relevant contract-state change should reuse the cached active starter plan.");
         }
 
@@ -46,11 +46,11 @@ namespace TheRaceForSpace.ControllerTests
             ResetEnvironment();
             CampaignSettings.RivalProgressChance = 0.0;
             Planetarium.CurrentUniversalTime = 0.0;
-            KspVesselDiscovery.SetUnavailable();
+            KspVesselMonitor.SetUnavailable();
 
             var controller = new CampaignController();
             controller.Refresh();
-            IList<ObjectiveDefinition> openingPlan = controller.ActiveStarterContracts;
+            IList<ObjectiveDefinition> openingPlan = controller.ActiveFlightContracts;
 
             controller.FindAgencyById(CampaignController.AsterAgencyId)
                 .RecordObjectiveCompletion(ObjectiveCatalogue.Mass1Id, 10.0);
@@ -64,22 +64,22 @@ namespace TheRaceForSpace.ControllerTests
                 "A rival Mass I completion should unlock Mass II.");
             Require(!mass2.IsOffered,
                 "Mass II should remain merely unlocked before the sponsor review.");
-            Require(object.ReferenceEquals(openingPlan, controller.ActiveStarterContracts),
+            Require(object.ReferenceEquals(openingPlan, controller.ActiveFlightContracts),
                 "Unlocking a contract without offering it must not rebuild the active starter plan.");
-            Require(!Contains(controller.ActiveStarterContracts, ObjectiveCatalogue.Mass2Id),
-                "An unlocked-but-not-offered starter contract must not enter the active plan.");
+            Require(!Contains(controller.ActiveFlightContracts, ObjectiveCatalogue.Mass2Id),
+                "An unlocked-but-not-offered pre-orbit contract must not enter the active plan.");
 
             Planetarium.CurrentUniversalTime = FundingIntervalSeconds;
             controller.Refresh(false);
 
             Require(mass2.IsOffered,
                 "The funding review should offer the unlocked Mass II contract.");
-            Require(!object.ReferenceEquals(openingPlan, controller.ActiveStarterContracts),
+            Require(!object.ReferenceEquals(openingPlan, controller.ActiveFlightContracts),
                 "Offering Mass II should rebuild the active starter plan once the controller refresh settles.");
-            Equal(5, controller.ActiveStarterContracts.Count);
-            Require(Contains(controller.ActiveStarterContracts, ObjectiveCatalogue.Mass1Id),
+            Equal(5, controller.ActiveFlightContracts.Count);
+            Require(Contains(controller.ActiveFlightContracts, ObjectiveCatalogue.Mass1Id),
                 "Rival completion must not remove the player's unfinished Mass I offer from the active plan.");
-            Require(Contains(controller.ActiveStarterContracts, ObjectiveCatalogue.Mass2Id),
+            Require(Contains(controller.ActiveFlightContracts, ObjectiveCatalogue.Mass2Id),
                 "An offered Mass II contract should join the active plan independently of Mass I.");
         }
 
@@ -88,35 +88,35 @@ namespace TheRaceForSpace.ControllerTests
             ResetEnvironment();
             CampaignSettings.RivalProgressChance = 0.0;
             Planetarium.CurrentUniversalTime = 0.0;
-            KspVesselDiscovery.SetUnavailable();
+            KspVesselMonitor.SetUnavailable();
 
             var controller = new CampaignController();
             controller.Refresh();
-            IList<ObjectiveDefinition> openingPlan = controller.ActiveStarterContracts;
+            IList<ObjectiveDefinition> openingPlan = controller.ActiveFlightContracts;
 
             Require(controller.PlayerAgency.RecordObjectiveCompletion(ObjectiveCatalogue.Mass1Id, 10.0),
                 "Test setup should record the player's Mass I objectiveCompletion once.");
-            controller.NotifyPlayerStarterAchievementRecorded();
+            controller.NotifyPlayerPreOrbitAchievementRecorded();
             Planetarium.CurrentUniversalTime = 20.0;
             controller.Refresh(false);
 
-            Require(!object.ReferenceEquals(openingPlan, controller.ActiveStarterContracts),
+            Require(!object.ReferenceEquals(openingPlan, controller.ActiveFlightContracts),
                 "A player starter completion should invalidate the cached active plan.");
-            Equal(3, controller.ActiveStarterContracts.Count);
-            Require(!Contains(controller.ActiveStarterContracts, ObjectiveCatalogue.Mass1Id),
-                "A starter contract should leave the active plan after the player completes it.");
-            Require(Contains(controller.ActiveStarterContracts, ObjectiveCatalogue.DirectedPower1Id),
-                "Other unfinished offered starter contracts should remain active.");
-            Require(!Contains(controller.ActiveStarterContracts, ObjectiveCatalogue.Mass2Id),
+            Equal(3, controller.ActiveFlightContracts.Count);
+            Require(!Contains(controller.ActiveFlightContracts, ObjectiveCatalogue.Mass1Id),
+                "A pre-orbit contract should leave the active plan after the player completes it.");
+            Require(Contains(controller.ActiveFlightContracts, ObjectiveCatalogue.DirectedPower1Id),
+                "Other unfinished offered pre-orbit contracts should remain active.");
+            Require(!Contains(controller.ActiveFlightContracts, ObjectiveCatalogue.Mass2Id),
                 "Mass II should not become active until its later sponsor offer.");
         }
 
-        public static void StarterExpiryInvalidatesPlanWithoutAnotherStarterOffer()
+        public static void PreOrbitExpiryInvalidatesPlanWithoutAnotherPreOrbitOffer()
         {
             ResetEnvironment();
             CampaignSettings.RivalProgressChance = 0.0;
             Planetarium.CurrentUniversalTime = 0.0;
-            KspVesselDiscovery.SetUnavailable();
+            KspVesselMonitor.SetUnavailable();
 
             var controller = new CampaignController();
             controller.Refresh();
@@ -136,7 +136,7 @@ namespace TheRaceForSpace.ControllerTests
                 "Mass II should already be offered before the expiry-only refresh is tested.");
 
             mass1.RestoreState(true, 9);
-            IList<ObjectiveDefinition> beforeExpiry = controller.ActiveStarterContracts;
+            IList<ObjectiveDefinition> beforeExpiry = controller.ActiveFlightContracts;
             Require(Contains(beforeExpiry, ObjectiveCatalogue.Mass1Id),
                 "Mass I should remain active before its final payout expires the contract.");
             Require(Contains(beforeExpiry, ObjectiveCatalogue.Mass2Id),
@@ -147,11 +147,11 @@ namespace TheRaceForSpace.ControllerTests
 
             Require(mass1.IsExpired,
                 "The tenth Mass I payout should expire the contract.");
-            Require(!object.ReferenceEquals(beforeExpiry, controller.ActiveStarterContracts),
-                "Starter expiry should invalidate the active plan even when no new starter offer is added.");
-            Require(!Contains(controller.ActiveStarterContracts, ObjectiveCatalogue.Mass1Id),
+            Require(!object.ReferenceEquals(beforeExpiry, controller.ActiveFlightContracts),
+                "PreOrbit expiry should invalidate the active plan even when no new starter offer is added.");
+            Require(!Contains(controller.ActiveFlightContracts, ObjectiveCatalogue.Mass1Id),
                 "Expired Mass I should leave the active starter plan.");
-            Require(Contains(controller.ActiveStarterContracts, ObjectiveCatalogue.Mass2Id),
+            Require(Contains(controller.ActiveFlightContracts, ObjectiveCatalogue.Mass2Id),
                 "Mass II should remain active after Mass I expires.");
         }
 
@@ -195,7 +195,7 @@ namespace TheRaceForSpace.ControllerTests
             CampaignSettings.ResetToDefaults();
             Planetarium.Reset();
             CareerFundingAdapter.Reset();
-            KspVesselDiscovery.Reset();
+            KspVesselMonitor.Reset();
             RacePersistenceScenario.Reset();
         }
 

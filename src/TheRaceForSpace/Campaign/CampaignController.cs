@@ -36,7 +36,7 @@ namespace TheRaceForSpace.Campaign
         private readonly IList<AgencyState> _rivalAgenciesView;
         private readonly IList<SatelliteNetworkFundingContract> _satelliteNetworkFundingContractsView;
         private readonly IList<ObjectiveFundingContract> _achievementSatelliteNetworkFundingContractsView;
-        private IList<ObjectiveDefinition> _activeStarterContracts =
+        private IList<ObjectiveDefinition> _activeFlightContracts =
             new List<ObjectiveDefinition>().AsReadOnly();
         private readonly double[,] _satellitePayoutCache;
         private readonly double[,] _achievementPayoutCache;
@@ -44,7 +44,7 @@ namespace TheRaceForSpace.Campaign
         private double _nextFundingUniversalTime = -1.0;
         private bool _hasFundingPayoutCache;
         private bool _hasRestoredPersistentState;
-        private bool _isActiveStarterContractPlanDirty = true;
+        private bool _isActiveFlightContractPlanDirty = true;
 
         public CampaignController()
         {
@@ -120,12 +120,12 @@ namespace TheRaceForSpace.Campaign
         }
 
         /// <summary>
-        /// Cached Offered, unexpired starter contracts the player has not personally completed.
+        /// Cached Offered, unexpired pre-orbit contracts the player has not personally completed.
         /// The controller replaces this read-only collection only after relevant contract state changes.
         /// </summary>
-        internal IList<ObjectiveDefinition> ActiveStarterContracts
+        internal IList<ObjectiveDefinition> ActiveFlightContracts
         {
-            get { return _activeStarterContracts; }
+            get { return _activeFlightContracts; }
         }
 
         /// <summary>
@@ -133,9 +133,9 @@ namespace TheRaceForSpace.Campaign
         /// starter objectiveCompletion. The following controller refresh rebuilds the set once after all
         /// resulting unlock/offer/funding changes have been processed.
         /// </summary>
-        internal void NotifyPlayerStarterAchievementRecorded()
+        internal void NotifyPlayerPreOrbitAchievementRecorded()
         {
-            _isActiveStarterContractPlanDirty = true;
+            _isActiveFlightContractPlanDirty = true;
         }
 
         /// <summary>
@@ -394,9 +394,9 @@ namespace TheRaceForSpace.Campaign
             bool didRefreshPlayerVessels = false;
             if (refreshPlayerVessels)
             {
-                IList<VesselTrackingSnapshot> vesselSnapshots;
+                IList<OrbitingVesselSnapshot> vesselSnapshots;
                 double vesselObservationUniversalTime;
-                if (KspVesselDiscovery.TryCaptureOrbitingVessels(
+                if (KspVesselMonitor.TryCaptureOrbitingVesselSnapshots(
                     out vesselSnapshots,
                     out vesselObservationUniversalTime))
                 {
@@ -404,7 +404,7 @@ namespace TheRaceForSpace.Campaign
                     stateEvaluationUniversalTime = Math.Max(
                         stateEvaluationUniversalTime,
                         vesselObservationUniversalTime);
-                    SatelliteTracker.RefreshPlayerSatelliteCounts(
+                    OrbitalVesselTracker.RefreshOrbitalProgress(
                         PlayerAgency,
                         _agencies,
                         ObjectiveCatalogue.All,
@@ -422,12 +422,12 @@ namespace TheRaceForSpace.Campaign
             }
 
             // Probe Orbit remains an immediate shared-race unlock once any starter line reaches
-            // Level V. Starter Levels II-V wait for the funding-day review, where every unlocked
-            // starter contract is offered without consuming normal one-off objectiveCompletion slots.
+            // Level V. PreOrbit Levels II-V wait for the funding-day review, where every unlocked
+            // pre-orbit contract is offered without consuming normal one-off objectiveCompletion slots.
             UpdateSpecialAchievementOffers(stateEvaluationUniversalTime);
             UpdateSatelliteTargetReachedState();
             StartAchievementContracts(stateEvaluationUniversalTime);
-            RebuildActiveStarterContractPlanIfNeeded();
+            RebuildActiveFlightContractPlanIfNeeded();
             EvaluateSatelliteNetworkFundingContracts();
 
             RacePersistenceScenario.CaptureRivalState(_rivalAgencies);
@@ -470,9 +470,9 @@ namespace TheRaceForSpace.Campaign
         }
 
         /// <summary>
-        /// Offers Probe Orbit immediately when any agency completes a Level V starter contract.
-        /// Starter Levels II-V otherwise wait in Unlocked until the funding-day sponsor review,
-        /// where every unlocked starter contract is offered independently of the normal offer cap.
+        /// Offers Probe Orbit immediately when any agency completes a Level V pre-orbit contract.
+        /// PreOrbit Levels II-V otherwise wait in Unlocked until the funding-day sponsor review,
+        /// where every unlocked pre-orbit contract is offered independently of the normal offer cap.
         /// </summary>
         private void UpdateSpecialAchievementOffers(double evaluationUniversalTime)
         {
@@ -598,7 +598,7 @@ namespace TheRaceForSpace.Campaign
                         ObjectiveDefinition expiredMilestone = ObjectiveCatalogue.FindById(programme.Id);
                         if (expiredMilestone != null && expiredMilestone.IsPreOrbitContract)
                         {
-                            _isActiveStarterContractPlanDirty = true;
+                            _isActiveFlightContractPlanDirty = true;
                         }
                     }
                 }
@@ -624,11 +624,11 @@ namespace TheRaceForSpace.Campaign
                 }
 
                 ObjectiveDefinition objective = ObjectiveCatalogue.FindById(programme.Id);
-                bool isStarterContract = objective != null && objective.IsPreOrbitContract;
+                bool isPreOrbitContract = objective != null && objective.IsPreOrbitContract;
 
                 if (programme.IsOffered)
                 {
-                    if (!programme.HasStarted && !isStarterContract)
+                    if (!programme.HasStarted && !isPreOrbitContract)
                     {
                         uncompletedNormalAchievementOfferCount++;
                     }
@@ -640,13 +640,13 @@ namespace TheRaceForSpace.Campaign
                     continue;
                 }
 
-                // Starter contracts are the four parallel pre-orbit development lines. Every
+                // PreOrbit contracts are the four parallel pre-orbit development lines. Every
                 // unlocked starter target is offered at the funding review, and starter offers do
                 // not consume the two unfinished slots reserved for Probe Orbit and later targets.
-                if (isStarterContract)
+                if (isPreOrbitContract)
                 {
                     programme.Offer();
-                    _isActiveStarterContractPlanDirty = true;
+                    _isActiveFlightContractPlanDirty = true;
                     continue;
                 }
 
@@ -704,14 +704,14 @@ namespace TheRaceForSpace.Campaign
             }
         }
 
-        private void RebuildActiveStarterContractPlanIfNeeded()
+        private void RebuildActiveFlightContractPlanIfNeeded()
         {
-            if (!_isActiveStarterContractPlanDirty)
+            if (!_isActiveFlightContractPlanDirty)
             {
                 return;
             }
 
-            var activeStarterContracts = new List<ObjectiveDefinition>();
+            var activeFlightContracts = new List<ObjectiveDefinition>();
             for (int programmeIndex = 0;
                 programmeIndex < _achievementSatelliteNetworkFundingContracts.Count;
                 programmeIndex++)
@@ -728,14 +728,14 @@ namespace TheRaceForSpace.Campaign
                 ObjectiveDefinition objective = ObjectiveCatalogue.FindById(programme.Id);
                 if (objective != null && objective.IsPreOrbitContract)
                 {
-                    activeStarterContracts.Add(objective);
+                    activeFlightContracts.Add(objective);
                 }
             }
 
             // Replacing the read-only list rather than mutating it lets frequent readers keep a
             // stable snapshot until a real offer/completion/expiry transition invalidates the plan.
-            _activeStarterContracts = activeStarterContracts.AsReadOnly();
-            _isActiveStarterContractPlanDirty = false;
+            _activeFlightContracts = activeFlightContracts.AsReadOnly();
+            _isActiveFlightContractPlanDirty = false;
         }
 
         private void AwardProgramFunds(AgencyState agency, double payout)

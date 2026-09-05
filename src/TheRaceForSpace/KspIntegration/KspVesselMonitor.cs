@@ -8,7 +8,7 @@ namespace TheRaceForSpace.KspIntegration
     /// Reads KSP vessel state and converts it into project-owned tracking snapshots.
     /// Loaded vessels use live state; unloaded vessels use persistent ProtoVessel state.
     /// </summary>
-    public static class KspVesselDiscovery
+    public static class KspVesselMonitor
     {
         private static Game _activeTrackingGame;
         private static Vessel _destructionTrackedVessel;
@@ -17,7 +17,7 @@ namespace TheRaceForSpace.KspIntegration
         private static string _lastTrackedBodyName;
         private static double _lastTrackedSurfaceClearanceMeters = double.PositiveInfinity;
         private static double _lastTrackedSurfaceSpeedMetersPerSecond;
-        private static TrackedFlightSituation _lastTrackedSituation = TrackedFlightSituation.Other;
+        private static FlightSituation _lastTrackedSituation = FlightSituation.Other;
         private static double _lastTrackedInFlightUniversalTime = -1.0;
         private static bool _isVesselWillDestroySubscribed;
         private static string _pendingImpactVesselId;
@@ -28,8 +28,8 @@ namespace TheRaceForSpace.KspIntegration
         /// Captures the orbiting vessels available in the current save together with the KSP
         /// universal time for that observation. Returns false while required game state is not ready.
         /// </summary>
-        public static bool TryCaptureOrbitingVessels(
-            out IList<VesselTrackingSnapshot> vesselSnapshots,
+        public static bool TryCaptureOrbitingVesselSnapshots(
+            out IList<OrbitingVesselSnapshot> vesselSnapshots,
             out double currentUniversalTime)
         {
             vesselSnapshots = null;
@@ -53,7 +53,7 @@ namespace TheRaceForSpace.KspIntegration
 
             currentUniversalTime = observationUniversalTime;
             List<ProtoVessel> protoVessels = HighLogic.CurrentGame.flightState.protoVessels;
-            var snapshots = new List<VesselTrackingSnapshot>(protoVessels.Count);
+            var snapshots = new List<OrbitingVesselSnapshot>(protoVessels.Count);
 
             for (int vesselIndex = 0; vesselIndex < protoVessels.Count; vesselIndex++)
             {
@@ -114,7 +114,7 @@ namespace TheRaceForSpace.KspIntegration
                     continue;
                 }
 
-                snapshots.Add(new VesselTrackingSnapshot(
+                snapshots.Add(new OrbitingVesselSnapshot(
                     bodyName,
                     ConvertVesselType(vesselType),
                     Math.Max(0, crewCount)));
@@ -129,14 +129,14 @@ namespace TheRaceForSpace.KspIntegration
         /// path. Condition-specific KSP calls are made only when the cached active-contract plan
         /// requests them; identity, situation, launch data, and coordinates remain cheap common context.
         /// </summary>
-        public static bool TryCaptureActiveVessel(
-            StarterTelemetryRequirement telemetryRequirements,
-            out ActiveVesselTrackingSnapshot vesselSnapshot)
+        public static bool TryCaptureActiveVesselSnapshot(
+            FlightTelemetryRequirement telemetryRequirements,
+            out ActiveVesselSnapshot vesselSnapshot)
         {
             vesselSnapshot = null;
             EnsureActiveTrackingGame();
 
-            if (telemetryRequirements == StarterTelemetryRequirement.None)
+            if (telemetryRequirements == FlightTelemetryRequirement.None)
             {
                 DisableActiveVesselSurfaceImpactTracking();
                 return false;
@@ -160,14 +160,14 @@ namespace TheRaceForSpace.KspIntegration
                 return false;
             }
 
-            bool needsSurfaceImpact = (telemetryRequirements & StarterTelemetryRequirement.SurfaceImpact) != 0;
+            bool needsSurfaceImpact = (telemetryRequirements & FlightTelemetryRequirement.SurfaceImpact) != 0;
             bool needsAltitude = needsSurfaceImpact
-                || (telemetryRequirements & StarterTelemetryRequirement.Altitude) != 0;
+                || (telemetryRequirements & FlightTelemetryRequirement.Altitude) != 0;
             bool needsSurfaceSpeed = needsSurfaceImpact
-                || (telemetryRequirements & StarterTelemetryRequirement.SurfaceSpeed) != 0;
-            bool needsMass = (telemetryRequirements & StarterTelemetryRequirement.Mass) != 0;
-            bool needsBiome = (telemetryRequirements & StarterTelemetryRequirement.Biome) != 0;
-            bool needsCrew = (telemetryRequirements & StarterTelemetryRequirement.Crew) != 0;
+                || (telemetryRequirements & FlightTelemetryRequirement.SurfaceSpeed) != 0;
+            bool needsMass = (telemetryRequirements & FlightTelemetryRequirement.Mass) != 0;
+            bool needsBiome = (telemetryRequirements & FlightTelemetryRequirement.Biome) != 0;
+            bool needsCrew = (telemetryRequirements & FlightTelemetryRequirement.Crew) != 0;
 
             double observationUniversalTime = Planetarium.GetUniversalTime();
             double altitudeMeters = needsAltitude ? vessel.altitude : 0.0;
@@ -224,7 +224,7 @@ namespace TheRaceForSpace.KspIntegration
                     longitudeDegrees);
             }
 
-            vesselSnapshot = new ActiveVesselTrackingSnapshot(
+            vesselSnapshot = new ActiveVesselSnapshot(
                 vessel.id.ToString("D"),
                 vessel.mainBody.bodyName,
                 ConvertSituation(vessel.situation),
@@ -270,7 +270,7 @@ namespace TheRaceForSpace.KspIntegration
 
         /// <summary>
         /// Removes Directed Power destruction callbacks and cached crash telemetry when no active
-        /// starter contract currently requires surface-impact observation.
+        /// pre-orbit contract currently requires surface-impact observation.
         /// </summary>
         public static void DisableActiveVesselSurfaceImpactTracking()
         {
@@ -285,7 +285,7 @@ namespace TheRaceForSpace.KspIntegration
             _lastTrackedBodyName = null;
             _lastTrackedSurfaceClearanceMeters = double.PositiveInfinity;
             _lastTrackedSurfaceSpeedMetersPerSecond = 0.0;
-            _lastTrackedSituation = TrackedFlightSituation.Other;
+            _lastTrackedSituation = FlightSituation.Other;
             _lastTrackedInFlightUniversalTime = -1.0;
             _pendingImpactVesselId = null;
             _pendingImpactBodyName = null;
@@ -381,16 +381,16 @@ namespace TheRaceForSpace.KspIntegration
                 // telemetry, especially when the new vessel is still PRELAUNCH or already landed.
                 _lastTrackedSurfaceClearanceMeters = double.PositiveInfinity;
                 _lastTrackedSurfaceSpeedMetersPerSecond = 0.0;
-                _lastTrackedSituation = TrackedFlightSituation.Other;
+                _lastTrackedSituation = FlightSituation.Other;
                 _lastTrackedInFlightUniversalTime = -1.0;
             }
 
             _destructionTrackedVesselId = vesselId;
             _lastTrackedBodyName = vessel.mainBody.bodyName;
 
-            TrackedFlightSituation currentSituation = ConvertSituation(vessel.situation);
-            if (currentSituation != TrackedFlightSituation.Flying
-                && currentSituation != TrackedFlightSituation.SubOrbital)
+            FlightSituation currentSituation = ConvertSituation(vessel.situation);
+            if (currentSituation != FlightSituation.Flying
+                && currentSituation != FlightSituation.SubOrbital)
             {
                 // KSP can report SPLASHED or LANDED for a fraction of a second before a violent
                 // impact finishes destroying the vessel. Preserve the immediately preceding genuine
@@ -474,40 +474,40 @@ namespace TheRaceForSpace.KspIntegration
             return clearanceMeters;
         }
 
-        private static TrackedFlightSituation ConvertSituation(Vessel.Situations situation)
+        private static FlightSituation ConvertSituation(Vessel.Situations situation)
         {
             switch (situation)
             {
                 case Vessel.Situations.PRELAUNCH:
-                    return TrackedFlightSituation.Prelaunch;
+                    return FlightSituation.Prelaunch;
                 case Vessel.Situations.FLYING:
-                    return TrackedFlightSituation.Flying;
+                    return FlightSituation.Flying;
                 case Vessel.Situations.SUB_ORBITAL:
-                    return TrackedFlightSituation.SubOrbital;
+                    return FlightSituation.SubOrbital;
                 case Vessel.Situations.ORBITING:
-                    return TrackedFlightSituation.Orbiting;
+                    return FlightSituation.Orbiting;
                 case Vessel.Situations.LANDED:
-                    return TrackedFlightSituation.Landed;
+                    return FlightSituation.Landed;
                 case Vessel.Situations.SPLASHED:
-                    return TrackedFlightSituation.Splashed;
+                    return FlightSituation.Splashed;
                 default:
-                    return TrackedFlightSituation.Other;
+                    return FlightSituation.Other;
             }
         }
 
-        private static TrackedVesselType ConvertVesselType(VesselType vesselType)
+        private static OrbitalVesselType ConvertVesselType(VesselType vesselType)
         {
             if (vesselType == VesselType.Probe)
             {
-                return TrackedVesselType.Probe;
+                return OrbitalVesselType.Probe;
             }
 
             if (vesselType == VesselType.Relay)
             {
-                return TrackedVesselType.Relay;
+                return OrbitalVesselType.Relay;
             }
 
-            return TrackedVesselType.Other;
+            return OrbitalVesselType.Other;
         }
 
         private static int GetProtoCrewCount(ProtoVessel protoVessel)

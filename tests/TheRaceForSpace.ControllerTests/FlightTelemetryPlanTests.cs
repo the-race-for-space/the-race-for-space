@@ -5,28 +5,28 @@ using TheRaceForSpace.Tracking;
 
 namespace TheRaceForSpace.ControllerTests
 {
-    internal static class StarterTelemetryPlanTests
+    internal static class FlightTelemetryPlanTests
     {
         public static void ActiveContractTypesRequestOnlyNeededTelemetry()
         {
             Equal(
-                StarterTelemetryRequirement.None,
-                StarterTelemetryPlan.GetRequirements(new List<ObjectiveDefinition>()),
+                FlightTelemetryRequirement.None,
+                FlightTelemetryPlan.GetRequirements(new List<ObjectiveDefinition>()),
                 "An empty active-contract plan should request no condition-specific telemetry.");
 
             Equal(
-                StarterTelemetryRequirement.Altitude
-                    | StarterTelemetryRequirement.SurfaceSpeed
-                    | StarterTelemetryRequirement.SurfaceImpact,
-                StarterTelemetryPlan.GetRequirements(new List<ObjectiveDefinition>
+                FlightTelemetryRequirement.Altitude
+                    | FlightTelemetryRequirement.SurfaceSpeed
+                    | FlightTelemetryRequirement.SurfaceImpact,
+                FlightTelemetryPlan.GetRequirements(new List<ObjectiveDefinition>
                 {
                     ObjectiveCatalogue.FindById(ObjectiveCatalogue.DirectedPower1Id)
                 }),
                 "Directed Power should request only altitude, speed, and surface-impact tracking.");
 
             Equal(
-                StarterTelemetryRequirement.Mass,
-                StarterTelemetryPlan.GetRequirements(new List<ObjectiveDefinition>
+                FlightTelemetryRequirement.Mass,
+                FlightTelemetryPlan.GetRequirements(new List<ObjectiveDefinition>
                 {
                     ObjectiveCatalogue.FindById(ObjectiveCatalogue.Mass1Id),
                     ObjectiveCatalogue.FindById(ObjectiveCatalogue.Mass2Id)
@@ -34,24 +34,24 @@ namespace TheRaceForSpace.ControllerTests
                 "Multiple active Mass contracts should share one Mass telemetry requirement.");
 
             Equal(
-                StarterTelemetryRequirement.Altitude | StarterTelemetryRequirement.Crew,
-                StarterTelemetryPlan.GetRequirements(new List<ObjectiveDefinition>
+                FlightTelemetryRequirement.Altitude | FlightTelemetryRequirement.Crew,
+                FlightTelemetryPlan.GetRequirements(new List<ObjectiveDefinition>
                 {
                     ObjectiveCatalogue.FindById(ObjectiveCatalogue.Control1Id)
                 }),
                 "Control should request altitude and crew telemetry only.");
 
             Equal(
-                StarterTelemetryRequirement.Biome,
-                StarterTelemetryPlan.GetRequirements(new List<ObjectiveDefinition>
+                FlightTelemetryRequirement.Biome,
+                FlightTelemetryPlan.GetRequirements(new List<ObjectiveDefinition>
                 {
                     ObjectiveCatalogue.FindById(ObjectiveCatalogue.Biome1Id)
                 }),
                 "Biome should request only biome telemetry.");
 
             Equal(
-                StarterTelemetryRequirement.All,
-                StarterTelemetryPlan.GetRequirements(new List<ObjectiveDefinition>
+                FlightTelemetryRequirement.All,
+                FlightTelemetryPlan.GetRequirements(new List<ObjectiveDefinition>
                 {
                     ObjectiveCatalogue.FindById(ObjectiveCatalogue.DirectedPower1Id),
                     ObjectiveCatalogue.FindById(ObjectiveCatalogue.Mass1Id),
@@ -62,8 +62,8 @@ namespace TheRaceForSpace.ControllerTests
         }
 
         private static void Equal(
-            StarterTelemetryRequirement expected,
-            StarterTelemetryRequirement actual,
+            FlightTelemetryRequirement expected,
+            FlightTelemetryRequirement actual,
             string message)
         {
             if (expected != actual)

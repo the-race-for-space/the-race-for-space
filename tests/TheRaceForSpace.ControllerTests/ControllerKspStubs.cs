@@ -58,16 +58,16 @@ namespace TheRaceForSpace.KspIntegration
     /// Test-only vessel discovery boundary. Tests decide when a KSP snapshot is available and
     /// which observation time belongs to it, matching the production adapter contract.
     /// </summary>
-    public static class KspVesselDiscovery
+    public static class KspVesselMonitor
     {
-        private static IList<VesselTrackingSnapshot> _vesselSnapshots;
+        private static IList<OrbitingVesselSnapshot> _vesselSnapshots;
         private static double _observationUniversalTime = -1.0;
 
         public static bool IsReady { get; private set; }
         public static int CaptureCalls { get; private set; }
 
         public static void SetSnapshots(
-            IList<VesselTrackingSnapshot> vesselSnapshots,
+            IList<OrbitingVesselSnapshot> vesselSnapshots,
             double observationUniversalTime)
         {
             _vesselSnapshots = vesselSnapshots;
@@ -82,8 +82,8 @@ namespace TheRaceForSpace.KspIntegration
             IsReady = false;
         }
 
-        public static bool TryCaptureOrbitingVessels(
-            out IList<VesselTrackingSnapshot> vesselSnapshots,
+        public static bool TryCaptureOrbitingVesselSnapshots(
+            out IList<OrbitingVesselSnapshot> vesselSnapshots,
             out double currentUniversalTime)
         {
             CaptureCalls++;

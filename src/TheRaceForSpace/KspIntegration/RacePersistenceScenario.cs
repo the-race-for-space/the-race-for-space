@@ -152,17 +152,17 @@ namespace TheRaceForSpace.KspIntegration
         /// Restores temporary progress used to continue evaluating active contract conditions,
         /// including the tracked flight history and independent Control contract hold state.
         /// </summary>
-        public static bool TryRestoreActiveContractProgress(StarterFlightTracker starterFlightTracker)
+        public static bool TryRestoreActiveContractProgress(FlightContractTracker flightContractTracker)
         {
             if (!_stateReady
                 || _loadedGame == null
                 || _loadedGame != HighLogic.CurrentGame
-                || starterFlightTracker == null)
+                || flightContractTracker == null)
             {
                 return false;
             }
 
-            ActiveContractProgressState.ApplyTo(starterFlightTracker);
+            ActiveContractProgressState.ApplyTo(flightContractTracker);
             return true;
         }
 
@@ -205,17 +205,17 @@ namespace TheRaceForSpace.KspIntegration
         /// Captures temporary active-condition progress. This only updates ScenarioModule state;
         /// KSP writes it to disk during the normal save path.
         /// </summary>
-        public static void CaptureActiveContractProgress(StarterFlightTracker starterFlightTracker)
+        public static void CaptureActiveContractProgress(FlightContractTracker flightContractTracker)
         {
             if (!_stateReady
                 || _loadedGame == null
                 || _loadedGame != HighLogic.CurrentGame
-                || starterFlightTracker == null)
+                || flightContractTracker == null)
             {
                 return;
             }
 
-            ActiveContractProgressState.Capture(starterFlightTracker);
+            ActiveContractProgressState.Capture(flightContractTracker);
         }
     }
 }

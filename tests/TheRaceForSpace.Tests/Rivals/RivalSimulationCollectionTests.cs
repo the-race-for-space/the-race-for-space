@@ -327,7 +327,7 @@ namespace TheRaceForSpace.Tests.Rivals
                 starterProgramme.Offer();
 
                 var player = new AgencyState("Player", true);
-                var starterRival = new AgencyState("StarterRival", false)
+                var starterRival = new AgencyState("PreOrbitRival", false)
                 {
                     NextMissionTargetId = ObjectiveCatalogue.DirectedPower1Id,
                     Funds = 100000.0,
@@ -342,7 +342,7 @@ namespace TheRaceForSpace.Tests.Rivals
                 TestAssert.Equal(20, starterRival.MissionProgressPercent);
                 TestAssert.Equal(96000.0, starterRival.Funds);
 
-                var starterEtaRival = new AgencyState("StarterEta", false)
+                var starterEtaRival = new AgencyState("PreOrbitEta", false)
                 {
                     NextMissionTargetId = ObjectiveCatalogue.DirectedPower1Id,
                     Funds = 1000000.0

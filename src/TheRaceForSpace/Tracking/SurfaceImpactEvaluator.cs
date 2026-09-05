@@ -19,7 +19,7 @@ namespace TheRaceForSpace.Tracking
         /// vessel to LANDED/SPLASHED or cleared its destruction-time speed.
         /// </summary>
         public static bool IsEligible(
-            TrackedFlightSituation lastInFlightSituation,
+            FlightSituation lastInFlightSituation,
             double lastInFlightSurfaceClearanceMeters,
             double lastInFlightSurfaceSpeedMetersPerSecond,
             double lastInFlightUniversalTime,
@@ -45,8 +45,8 @@ namespace TheRaceForSpace.Tracking
                 destructionUniversalTime - lastInFlightUniversalTime;
             bool hasRecentInFlightSample = flightSampleAgeSeconds >= 0.0
                 && flightSampleAgeSeconds <= MaximumFlightSampleAgeSeconds;
-            bool wasInFlight = lastInFlightSituation == TrackedFlightSituation.Flying
-                || lastInFlightSituation == TrackedFlightSituation.SubOrbital;
+            bool wasInFlight = lastInFlightSituation == FlightSituation.Flying
+                || lastInFlightSituation == FlightSituation.SubOrbital;
 
             if (!hasRecentInFlightSample
                 || !wasInFlight

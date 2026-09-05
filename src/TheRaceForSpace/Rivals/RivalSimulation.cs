@@ -16,7 +16,7 @@ namespace TheRaceForSpace.Rivals
         private const double LaunchProgressIntervalSeconds = 5.0 * KerbinDaySeconds;
         private const double SatelliteMissionSelectionChance = 0.60;
         private const int StandardLaunchProgressIncrementPercent = 10;
-        private const int StarterLaunchProgressIncrementPercent = 20;
+        private const int PreOrbitLaunchProgressIncrementPercent = 20;
 
         private static readonly Random RandomGenerator = new Random();
 
@@ -96,7 +96,7 @@ namespace TheRaceForSpace.Rivals
 
         /// <summary>
         /// Returns the mission-progress percentage gained by the rival on a successful progress check.
-        /// Starter contracts are smaller pre-orbit launches and advance at 20%; all other missions use 10%.
+        /// PreOrbit contracts are smaller pre-orbit launches and advance at 20%; all other missions use 10%.
         /// </summary>
         public static int CalculateLaunchProgressIncrementPercent(AgencyState agency)
         {
@@ -107,13 +107,13 @@ namespace TheRaceForSpace.Rivals
 
             ObjectiveDefinition objective = ObjectiveCatalogue.FindById(agency.NextMissionTargetId);
             return objective != null && objective.IsPreOrbitContract
-                ? StarterLaunchProgressIncrementPercent
+                ? PreOrbitLaunchProgressIncrementPercent
                 : StandardLaunchProgressIncrementPercent;
         }
 
         /// <summary>
         /// Returns the funds required for the rival's next successful mission-progress step.
-        /// Starter steps advance 20%; orbital and satellite mission steps advance 10%.
+        /// PreOrbit steps advance 20%; orbital and satellite mission steps advance 10%.
         /// Stable mission target IDs are authoritative; presentation text is not used as a fallback.
         /// </summary>
         public static double CalculateLaunchProgressCost(
@@ -358,7 +358,7 @@ namespace TheRaceForSpace.Rivals
                     && objective.CrewRequirement == ObjectiveCrewRequirement.UncrewedProbe)
                 {
                     // Only an actual uncrewed orbital objective creates persistent satellite presence.
-                    // Starter contracts can be uncrewed but represent atmospheric/ballistic work.
+                    // PreOrbit contracts can be uncrewed but represent atmospheric/ballistic work.
                     agency.SetSatelliteCount(
                         objective.CelestialBodyName,
                         agency.GetSatelliteCount(objective.CelestialBodyName) + 1);

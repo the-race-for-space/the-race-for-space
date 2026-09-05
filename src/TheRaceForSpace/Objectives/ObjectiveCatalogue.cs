@@ -534,7 +534,7 @@ namespace TheRaceForSpace.Objectives
         /// <summary>
         /// The twenty special pre-orbit objectives. Batch B supplies their flight-state evaluation.
         /// </summary>
-        public static IList<ObjectiveDefinition> StarterContracts
+        public static IList<ObjectiveDefinition> PreOrbitContracts
         {
             get { return PreOrbitDefinitions; }
         }

@@ -14,7 +14,7 @@ namespace TheRaceForSpace.Objectives
 
     /// <summary>
     /// Vessel situation required by the orbital objective objectives.
-    /// Starter contracts are evaluated from flight-attempt state rather than this value.
+    /// PreOrbit contracts are evaluated from flight-attempt state rather than this value.
     /// </summary>
     public enum ObjectiveSituation
     {
@@ -46,7 +46,7 @@ namespace TheRaceForSpace.Objectives
     }
 
     /// <summary>
-    /// Immutable measurable criteria supplied by each starter objective definition.
+    /// Immutable measurable criteria supplied by each pre-orbit objective definition.
     /// Keeping these values as catalogue data prevents line/level metadata from secretly defining balance.
     /// </summary>
     internal sealed class PreOrbitContractCriteria
@@ -259,7 +259,7 @@ namespace TheRaceForSpace.Objectives
             RequiredDurationSeconds = criteria.RequiredDurationSeconds;
             RequiredBiomeName = criteria.RequiredBiomeName;
 
-            // Starter criteria are the single source of truth for both evaluation and player-facing
+            // PreOrbit criteria are the single source of truth for both evaluation and player-facing
             // wording. This prevents catalogue text from drifting away from the tracker thresholds.
             ObjectiveDescription = CreateObjectiveDescription(objectiveDescription);
         }
@@ -294,7 +294,7 @@ namespace TheRaceForSpace.Objectives
 
         /// <summary>
         /// Returns whether one KSP-independent vessel observation satisfies this objective.
-        /// Starter objectives are evaluated by the flight-attempt tracker.
+        /// PreOrbit objectives are evaluated by the flight-attempt tracker.
         /// </summary>
         public bool IsSatisfiedBy(OrbitalObjectiveObservation observation)
         {

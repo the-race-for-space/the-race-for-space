@@ -6,24 +6,24 @@ using TheRaceForSpace.Tracking;
 
 namespace TheRaceForSpace.Tests.Tracking
 {
-    internal static class SatelliteTrackerTests
+    internal static class OrbitalVesselTrackerTests
     {
         public static void NormalizedSnapshotsUpdateCountsAndMilestones()
         {
-            StarterFlightTrackerTests.RunAll();
+            FlightContractTrackerTests.RunAll();
 
             var playerAgency = new AgencyState("player", "Player", true);
             playerAgency.RecordObjectiveCompletion(ObjectiveCatalogue.DirectedPower5Id, 1200.0);
             var agencies = new List<AgencyState> { playerAgency };
-            var vesselSnapshots = new List<VesselTrackingSnapshot>
+            var vesselSnapshots = new List<OrbitingVesselSnapshot>
             {
-                new VesselTrackingSnapshot("Kerbin", TrackedVesselType.Probe, 0),
-                new VesselTrackingSnapshot("Kerbin", TrackedVesselType.Other, 1),
-                new VesselTrackingSnapshot("Mun", TrackedVesselType.Relay, 0),
-                new VesselTrackingSnapshot("Eve", TrackedVesselType.Probe, 0)
+                new OrbitingVesselSnapshot("Kerbin", OrbitalVesselType.Probe, 0),
+                new OrbitingVesselSnapshot("Kerbin", OrbitalVesselType.Other, 1),
+                new OrbitingVesselSnapshot("Mun", OrbitalVesselType.Relay, 0),
+                new OrbitingVesselSnapshot("Eve", OrbitalVesselType.Probe, 0)
             };
 
-            SatelliteTracker.RefreshPlayerSatelliteCounts(
+            OrbitalVesselTracker.RefreshOrbitalProgress(
                 playerAgency,
                 agencies,
                 ObjectiveCatalogue.All,
@@ -51,11 +51,11 @@ namespace TheRaceForSpace.Tests.Tracking
             playerAgency.SetSatelliteCount("Mun", 2);
             playerAgency.SetSatelliteCount("Eve", 1);
 
-            SatelliteTracker.RefreshPlayerSatelliteCounts(
+            OrbitalVesselTracker.RefreshOrbitalProgress(
                 playerAgency,
                 null,
                 null,
-                new List<VesselTrackingSnapshot>(),
+                new List<OrbitingVesselSnapshot>(),
                 2000.0);
 
             RequireEqual(0, playerAgency.GetSatelliteCount("Kerbin"), "Missing Kerbin snapshots should clear the previous count.");
@@ -67,12 +67,12 @@ namespace TheRaceForSpace.Tests.Tracking
         {
             var playerAgency = new AgencyState("player", "Player", true);
             var agencies = new List<AgencyState> { playerAgency };
-            var vesselSnapshots = new List<VesselTrackingSnapshot>
+            var vesselSnapshots = new List<OrbitingVesselSnapshot>
             {
-                new VesselTrackingSnapshot("Kerbin", TrackedVesselType.Probe, 1)
+                new OrbitingVesselSnapshot("Kerbin", OrbitalVesselType.Probe, 1)
             };
 
-            SatelliteTracker.RefreshPlayerSatelliteCounts(
+            OrbitalVesselTracker.RefreshOrbitalProgress(
                 playerAgency,
                 agencies,
                 ObjectiveCatalogue.All,
@@ -86,7 +86,7 @@ namespace TheRaceForSpace.Tests.Tracking
                 "Crewed Orbit must stay locked when no agency has achieved Probe Orbit.");
 
             playerAgency.RecordObjectiveCompletion(ObjectiveCatalogue.ProbeOrbitId, 3001.0);
-            SatelliteTracker.RefreshPlayerSatelliteCounts(
+            OrbitalVesselTracker.RefreshOrbitalProgress(
                 playerAgency,
                 agencies,
                 ObjectiveCatalogue.All,
@@ -126,12 +126,12 @@ namespace TheRaceForSpace.Tests.Tracking
                                 UnlockAgencyScope.AnyRival),
                             UnlockConditionDefinition.AfterUniversalTime(600.0))))
             };
-            var vesselSnapshots = new List<VesselTrackingSnapshot>
+            var vesselSnapshots = new List<OrbitingVesselSnapshot>
             {
-                new VesselTrackingSnapshot("Eve", TrackedVesselType.Probe, 0)
+                new OrbitingVesselSnapshot("Eve", OrbitalVesselType.Probe, 0)
             };
 
-            SatelliteTracker.RefreshPlayerSatelliteCounts(
+            OrbitalVesselTracker.RefreshOrbitalProgress(
                 playerAgency,
                 agencies,
                 objectives,
@@ -141,7 +141,7 @@ namespace TheRaceForSpace.Tests.Tracking
                 !playerAgency.HasCompletedObjective("eve-response"),
                 "The tracker should keep a objective locked until every condition in its path is satisfied.");
 
-            SatelliteTracker.RefreshPlayerSatelliteCounts(
+            OrbitalVesselTracker.RefreshOrbitalProgress(
                 playerAgency,
                 agencies,
                 objectives,
@@ -169,12 +169,12 @@ namespace TheRaceForSpace.Tests.Tracking
                         new UnlockPathDefinition(
                             UnlockConditionDefinition.SatelliteCount("Kerbin", 1))))
             };
-            var vesselSnapshots = new List<VesselTrackingSnapshot>
+            var vesselSnapshots = new List<OrbitingVesselSnapshot>
             {
-                new VesselTrackingSnapshot("Kerbin", TrackedVesselType.Probe, 0)
+                new OrbitingVesselSnapshot("Kerbin", OrbitalVesselType.Probe, 0)
             };
 
-            SatelliteTracker.RefreshPlayerSatelliteCounts(
+            OrbitalVesselTracker.RefreshOrbitalProgress(
                 playerAgency,
                 agencies,
                 objectives,
@@ -202,12 +202,12 @@ namespace TheRaceForSpace.Tests.Tracking
                     "Orbit an uncrewed probe.",
                     null)
             };
-            var vesselSnapshots = new List<VesselTrackingSnapshot>
+            var vesselSnapshots = new List<OrbitingVesselSnapshot>
             {
-                new VesselTrackingSnapshot("Kerbin", TrackedVesselType.Probe, -1)
+                new OrbitingVesselSnapshot("Kerbin", OrbitalVesselType.Probe, -1)
             };
 
-            SatelliteTracker.RefreshPlayerSatelliteCounts(
+            OrbitalVesselTracker.RefreshOrbitalProgress(
                 playerAgency,
                 agencies,
                 objectives,

@@ -7,7 +7,7 @@ namespace TheRaceForSpace.Tracking
     /// <summary>
     /// KSP-independent situation values needed by the starter flight contracts.
     /// </summary>
-    public enum TrackedFlightSituation
+    public enum FlightSituation
     {
         Other,
         Prelaunch,
@@ -24,7 +24,7 @@ namespace TheRaceForSpace.Tracking
     /// common attempt context because they are cheap direct values and preserve launch continuity.
     /// </summary>
     [Flags]
-    public enum StarterTelemetryRequirement
+    public enum FlightTelemetryRequirement
     {
         None = 0,
         Altitude = 1 << 0,
@@ -41,20 +41,20 @@ namespace TheRaceForSpace.Tracking
     /// required by those contracts. Callers can cache the result for as long as the active set instance
     /// remains unchanged.
     /// </summary>
-    public static class StarterTelemetryPlan
+    public static class FlightTelemetryPlan
     {
-        public static StarterTelemetryRequirement GetRequirements(
-            IList<ObjectiveDefinition> activeStarterContracts)
+        public static FlightTelemetryRequirement GetRequirements(
+            IList<ObjectiveDefinition> activeFlightContracts)
         {
-            StarterTelemetryRequirement requirements = StarterTelemetryRequirement.None;
-            if (activeStarterContracts == null)
+            FlightTelemetryRequirement requirements = FlightTelemetryRequirement.None;
+            if (activeFlightContracts == null)
             {
                 return requirements;
             }
 
-            for (int milestoneIndex = 0; milestoneIndex < activeStarterContracts.Count; milestoneIndex++)
+            for (int milestoneIndex = 0; milestoneIndex < activeFlightContracts.Count; milestoneIndex++)
             {
-                ObjectiveDefinition objective = activeStarterContracts[milestoneIndex];
+                ObjectiveDefinition objective = activeFlightContracts[milestoneIndex];
                 if (objective == null)
                 {
                     continue;
@@ -63,19 +63,19 @@ namespace TheRaceForSpace.Tracking
                 switch (objective.PreOrbitLine)
                 {
                     case PreOrbitContractLine.DirectedPower:
-                        requirements |= StarterTelemetryRequirement.Altitude
-                            | StarterTelemetryRequirement.SurfaceSpeed
-                            | StarterTelemetryRequirement.SurfaceImpact;
+                        requirements |= FlightTelemetryRequirement.Altitude
+                            | FlightTelemetryRequirement.SurfaceSpeed
+                            | FlightTelemetryRequirement.SurfaceImpact;
                         break;
                     case PreOrbitContractLine.Mass:
-                        requirements |= StarterTelemetryRequirement.Mass;
+                        requirements |= FlightTelemetryRequirement.Mass;
                         break;
                     case PreOrbitContractLine.Control:
-                        requirements |= StarterTelemetryRequirement.Altitude
-                            | StarterTelemetryRequirement.Crew;
+                        requirements |= FlightTelemetryRequirement.Altitude
+                            | FlightTelemetryRequirement.Crew;
                         break;
                     case PreOrbitContractLine.Biome:
-                        requirements |= StarterTelemetryRequirement.Biome;
+                        requirements |= FlightTelemetryRequirement.Biome;
                         break;
                 }
             }
@@ -88,12 +88,12 @@ namespace TheRaceForSpace.Tracking
     /// Lightweight snapshot of the currently controlled vessel. KSP-specific objects are converted
     /// by the integration layer before the starter-flight tracker consumes them.
     /// </summary>
-    public sealed class ActiveVesselTrackingSnapshot
+    public sealed class ActiveVesselSnapshot
     {
-        public ActiveVesselTrackingSnapshot(
+        public ActiveVesselSnapshot(
             string vesselId,
             string celestialBodyName,
-            TrackedFlightSituation situation,
+            FlightSituation situation,
             double altitudeMeters,
             double surfaceSpeedMetersPerSecond,
             double massTonnes,
@@ -122,7 +122,7 @@ namespace TheRaceForSpace.Tracking
 
         public string VesselId { get; private set; }
         public string CelestialBodyName { get; private set; }
-        public TrackedFlightSituation Situation { get; private set; }
+        public FlightSituation Situation { get; private set; }
         public double AltitudeMeters { get; private set; }
         public double SurfaceSpeedMetersPerSecond { get; private set; }
         public double MassTonnes { get; private set; }

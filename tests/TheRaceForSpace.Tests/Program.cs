@@ -33,11 +33,11 @@ namespace TheRaceForSpace.Tests
             Run("Objective crewed observation matches definition", MilestoneEvaluationTests.CrewedObservationMatchesDefinition);
             Run("Objective rejects wrong body or situation", MilestoneEvaluationTests.WrongBodyOrSituationDoesNotMatch);
             Run("Objective arbitrary body uses same rule", MilestoneEvaluationTests.ArbitraryBodyDefinitionUsesSameRule);
-            Run("Tracking snapshots update counts and objectives", SatelliteTrackerTests.NormalizedSnapshotsUpdateCountsAndMilestones);
-            Run("Tracking empty snapshots reset body counts", SatelliteTrackerTests.EmptySnapshotsResetTrackedBodyCounts);
-            Run("Tracking crewed probe keeps satellite classification", SatelliteTrackerTests.CrewedProbeCountsAsSatelliteButNotProbeMilestone);
-            Run("Tracking flexible unlock uses race state and time", SatelliteTrackerTests.FlexibleUnlockRuleUsesRaceStateAndTime);
-            Run("Starter flight contracts and persistence", StarterFlightTrackerTests.RunAll);
+            Run("Tracking snapshots update counts and objectives", OrbitalVesselTrackerTests.NormalizedSnapshotsUpdateCountsAndMilestones);
+            Run("Tracking empty snapshots reset body counts", OrbitalVesselTrackerTests.EmptySnapshotsResetTrackedBodyCounts);
+            Run("Tracking crewed probe keeps satellite classification", OrbitalVesselTrackerTests.CrewedProbeCountsAsSatelliteButNotProbeMilestone);
+            Run("Tracking flexible unlock uses race state and time", OrbitalVesselTrackerTests.FlexibleUnlockRuleUsesRaceStateAndTime);
+            Run("PreOrbit flight contracts and persistence", FlightContractTrackerTests.RunAll);
             Run("Surface impact eligibility", SurfaceImpactEvaluatorTests.RunAll);
             Run("Generic objectiveCompletion state starts empty", GenericAchievementStateStartsEmpty);
             Run("Generic objectiveCompletion state records first timestamp", GenericAchievementStateRecordsFirstTimestamp);
@@ -46,7 +46,7 @@ namespace TheRaceForSpace.Tests
             Run("Generic objectiveCompletion state validates timestamps", GenericAchievementStateValidatesTimestamps);
             Run("Rival mission target ids map to display names", RivalMissionTargetIdsMapToDisplayNames);
             Run("Rival launch costs match target type", RivalLaunchCostsMatchTargetType);
-            Run("Rival starter completion does not create satellite", RivalStarterCompletionDoesNotCreateSatellite);
+            Run("Rival starter completion does not create satellite", RivalPreOrbitCompletionDoesNotCreateSatellite);
             Run("Rival ETA detects unaffordable mission", RivalEtaDetectsUnaffordableMission);
             Run("Unavailable rival target is abandoned", UnavailableRivalTargetIsAbandoned);
             Run("Invalid rival target id is abandoned", InvalidRivalTargetIdIsAbandoned);
@@ -178,7 +178,7 @@ namespace TheRaceForSpace.Tests
         private static void PrototypeObjectiveDefinitionsMatchCurrentCampaign()
         {
             AssertEqual(32, ObjectiveCatalogue.All.Count);
-            AssertEqual(20, ObjectiveCatalogue.StarterContracts.Count);
+            AssertEqual(20, ObjectiveCatalogue.PreOrbitContracts.Count);
 
             AssertMilestone(
                 ObjectiveCatalogue.All[0],
@@ -254,12 +254,12 @@ namespace TheRaceForSpace.Tests
                     "Duplicate objective id found: " + objective.Id);
             }
 
-            for (int milestoneIndex = 0; milestoneIndex < ObjectiveCatalogue.StarterContracts.Count; milestoneIndex++)
+            for (int milestoneIndex = 0; milestoneIndex < ObjectiveCatalogue.PreOrbitContracts.Count; milestoneIndex++)
             {
-                ObjectiveDefinition objective = ObjectiveCatalogue.StarterContracts[milestoneIndex];
+                ObjectiveDefinition objective = ObjectiveCatalogue.PreOrbitContracts[milestoneIndex];
                 AssertTrue(
                     objectiveIds.Add(objective.Id),
-                    "Duplicate starter objective id found: " + objective.Id);
+                    "Duplicate pre-orbit objective id found: " + objective.Id);
             }
         }
 
@@ -278,7 +278,7 @@ namespace TheRaceForSpace.Tests
                 dunaMilestone.UnlockRule,
                 ObjectiveCatalogue.MunProbeOrbitId,
                 ObjectiveCatalogue.MinmusProbeOrbitId);
-            AssertTrue(starterMilestone != null, "Starter objective IDs should share the stable lookup path.");
+            AssertTrue(starterMilestone != null, "PreOrbit objective IDs should share the stable lookup path.");
             AssertEqual(PreOrbitContractLine.DirectedPower, starterMilestone.PreOrbitLine);
             AssertEqual(null, ObjectiveCatalogue.FindById("not-a-objective"));
         }
@@ -420,7 +420,7 @@ namespace TheRaceForSpace.Tests
                     satelliteNetworkFundingContracts));
         }
 
-        private static void RivalStarterCompletionDoesNotCreateSatellite()
+        private static void RivalPreOrbitCompletionDoesNotCreateSatellite()
         {
             AgencyState player = new AgencyState("Player", true);
             AgencyState rival = new AgencyState("Rival", false)

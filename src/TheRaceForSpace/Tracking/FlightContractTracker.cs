@@ -6,10 +6,10 @@ using TheRaceForSpace.Agencies;
 namespace TheRaceForSpace.Tracking
 {
     /// <summary>
-    /// Maintains one player flight attempt and records the four special starter contract lines
+    /// Maintains one player flight attempt and records the four special pre-orbit contract lines
     /// from KSP-independent active-vessel snapshots.
     /// </summary>
-    public sealed class StarterFlightTracker
+    public sealed class FlightContractTracker
     {
         private const double LaunchTimeMatchToleranceSeconds = 1.0;
         private const double MaximumContinuousSampleGapSeconds = 5.0;
@@ -31,7 +31,7 @@ namespace TheRaceForSpace.Tracking
         private double _currentDistanceMeters;
         private string _currentBiomeName;
         private int _currentCrewCount;
-        private TrackedFlightSituation _currentSituation = TrackedFlightSituation.Other;
+        private FlightSituation _currentSituation = FlightSituation.Other;
         private bool _enteredOrbit;
 
         public bool HasActiveAttempt { get { return !string.IsNullOrEmpty(_vesselId); } }
@@ -49,7 +49,7 @@ namespace TheRaceForSpace.Tracking
         public double CurrentDistanceMeters { get { return _currentDistanceMeters; } }
         public string CurrentBiomeName { get { return _currentBiomeName; } }
         public int CurrentCrewCount { get { return _currentCrewCount; } }
-        public TrackedFlightSituation CurrentSituation { get { return _currentSituation; } }
+        public FlightSituation CurrentSituation { get { return _currentSituation; } }
         public bool EnteredOrbit { get { return _enteredOrbit; } }
 
         // Persistence captures this live key collection directly, avoiding a temporary list allocation
@@ -122,7 +122,7 @@ namespace TheRaceForSpace.Tracking
         public bool RefreshPlayerMilestones(
             AgencyState playerAgency,
             IList<ObjectiveDefinition> starterMilestones,
-            ActiveVesselTrackingSnapshot snapshot)
+            ActiveVesselSnapshot snapshot)
         {
             if (playerAgency == null
                 || starterMilestones == null
@@ -173,7 +173,7 @@ namespace TheRaceForSpace.Tracking
                 _maximumSurfaceSpeedMetersPerSecond,
                 snapshot.SurfaceSpeedMetersPerSecond);
 
-            if (snapshot.Situation == TrackedFlightSituation.Orbiting)
+            if (snapshot.Situation == FlightSituation.Orbiting)
             {
                 _enteredOrbit = true;
             }
@@ -198,7 +198,7 @@ namespace TheRaceForSpace.Tracking
                     }
 
                     if (objective.PreOrbitLine == PreOrbitContractLine.Mass
-                        && snapshot.Situation == TrackedFlightSituation.Landed
+                        && snapshot.Situation == FlightSituation.Landed
                         && snapshot.MassTonnes >= objective.RequiredMassTonnes
                         && _currentDistanceMeters >= objective.RequiredDistanceMeters)
                     {
@@ -211,7 +211,7 @@ namespace TheRaceForSpace.Tracking
                     }
 
                     if (objective.PreOrbitLine == PreOrbitContractLine.Biome
-                        && snapshot.Situation == TrackedFlightSituation.Landed
+                        && snapshot.Situation == FlightSituation.Landed
                         && !string.IsNullOrEmpty(snapshot.BiomeName)
                         && string.Equals(
                             snapshot.BiomeName,
@@ -331,7 +331,7 @@ namespace TheRaceForSpace.Tracking
             _currentDistanceMeters = 0.0;
             _currentBiomeName = null;
             _currentCrewCount = 0;
-            _currentSituation = TrackedFlightSituation.Other;
+            _currentSituation = FlightSituation.Other;
 
             _vesselId = vesselId;
             _celestialBodyName = celestialBodyName;
@@ -361,7 +361,7 @@ namespace TheRaceForSpace.Tracking
             _currentDistanceMeters = 0.0;
             _currentBiomeName = null;
             _currentCrewCount = 0;
-            _currentSituation = TrackedFlightSituation.Other;
+            _currentSituation = FlightSituation.Other;
             _controlStates.Clear();
             _enteredOrbit = false;
         }
@@ -369,7 +369,7 @@ namespace TheRaceForSpace.Tracking
         private bool EvaluateControlMilestones(
             AgencyState playerAgency,
             IList<ObjectiveDefinition> starterMilestones,
-            ActiveVesselTrackingSnapshot snapshot,
+            ActiveVesselSnapshot snapshot,
             double sampleDeltaSeconds)
         {
             bool recordedAchievement = false;
@@ -386,7 +386,7 @@ namespace TheRaceForSpace.Tracking
 
                 ControlContractState state = GetOrCreateControlState(controlMilestone.Id);
                 if (state.IsQualified
-                    && snapshot.Situation == TrackedFlightSituation.Landed
+                    && snapshot.Situation == FlightSituation.Landed
                     && snapshot.CrewCount > 0)
                 {
                     recordedAchievement |= playerAgency.RecordObjectiveCompletion(
@@ -451,7 +451,7 @@ namespace TheRaceForSpace.Tracking
             }
         }
 
-        private bool IsSameAttempt(ActiveVesselTrackingSnapshot snapshot)
+        private bool IsSameAttempt(ActiveVesselSnapshot snapshot)
         {
             if (!HasActiveAttempt)
             {
@@ -476,7 +476,7 @@ namespace TheRaceForSpace.Tracking
                     StringComparison.OrdinalIgnoreCase);
         }
 
-        private void BeginAttempt(ActiveVesselTrackingSnapshot snapshot)
+        private void BeginAttempt(ActiveVesselSnapshot snapshot)
         {
             ClearAttempt();
             _vesselId = snapshot.VesselId;
@@ -489,10 +489,10 @@ namespace TheRaceForSpace.Tracking
             _maximumSurfaceSpeedMetersPerSecond = Math.Max(
                 0.0,
                 snapshot.SurfaceSpeedMetersPerSecond);
-            _enteredOrbit = snapshot.Situation == TrackedFlightSituation.Orbiting;
+            _enteredOrbit = snapshot.Situation == FlightSituation.Orbiting;
         }
 
-        private double CalculateSurfaceDistanceMeters(ActiveVesselTrackingSnapshot snapshot)
+        private double CalculateSurfaceDistanceMeters(ActiveVesselSnapshot snapshot)
         {
             if (snapshot.BodyRadiusMeters <= 0.0)
             {

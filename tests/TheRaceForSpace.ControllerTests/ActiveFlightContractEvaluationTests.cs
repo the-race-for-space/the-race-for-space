@@ -7,7 +7,7 @@ using TheRaceForSpace.Tracking;
 
 namespace TheRaceForSpace.ControllerTests
 {
-    internal static class ActiveStarterEvaluationTests
+    internal static class ActivePreOrbitEvaluationTests
     {
         private const double KerbinDaySeconds = 21600.0;
         private const double FundingIntervalSeconds = 90.0 * KerbinDaySeconds;
@@ -16,7 +16,7 @@ namespace TheRaceForSpace.ControllerTests
         {
             CampaignController controller = CreateControllerWithSecondLevelOffered(
                 ObjectiveCatalogue.Mass1Id);
-            var tracker = new StarterFlightTracker();
+            var tracker = new FlightContractTracker();
 
             Require(Contains(controller, ObjectiveCatalogue.Mass1Id),
                 "Mass I should remain active for the player after a rival unlocks Mass II.");
@@ -27,15 +27,15 @@ namespace TheRaceForSpace.ControllerTests
 
             tracker.RefreshPlayerMilestones(
                 controller.PlayerAgency,
-                controller.ActiveStarterContracts,
+                controller.ActiveFlightContracts,
                 Snapshot("mass-independent", 100.0, 100.0, 100.0, 0.0, 6.0, 0, null,
-                    TrackedFlightSituation.Prelaunch, 0.0));
+                    FlightSituation.Prelaunch, 0.0));
 
             bool recorded = tracker.RefreshPlayerMilestones(
                 controller.PlayerAgency,
-                controller.ActiveStarterContracts,
+                controller.ActiveFlightContracts,
                 Snapshot("mass-independent", 100.0, 110.0, 0.0, 0.0, 6.0, 0, null,
-                    TrackedFlightSituation.Landed, 20.0));
+                    FlightSituation.Landed, 20.0));
 
             Require(recorded,
                 "One landing satisfying both offered Mass contracts should record achievements.");
@@ -51,22 +51,22 @@ namespace TheRaceForSpace.ControllerTests
         {
             CampaignController controller = CreateControllerWithSecondLevelOffered(
                 ObjectiveCatalogue.DirectedPower1Id);
-            var tracker = new StarterFlightTracker();
+            var tracker = new FlightContractTracker();
 
             tracker.RefreshPlayerMilestones(
                 controller.PlayerAgency,
-                controller.ActiveStarterContracts,
+                controller.ActiveFlightContracts,
                 Snapshot("power-independent", 200.0, 200.0, 100.0, 0.0, 1.0, 0, null,
-                    TrackedFlightSituation.Prelaunch));
+                    FlightSituation.Prelaunch));
             tracker.RefreshPlayerMilestones(
                 controller.PlayerAgency,
-                controller.ActiveStarterContracts,
+                controller.ActiveFlightContracts,
                 Snapshot("power-independent", 200.0, 210.0, 50000.0, 1200.0, 1.0, 0, null,
-                    TrackedFlightSituation.Flying));
+                    FlightSituation.Flying));
 
             bool recorded = tracker.RecordSurfaceImpact(
                 controller.PlayerAgency,
-                controller.ActiveStarterContracts,
+                controller.ActiveFlightContracts,
                 "power-independent",
                 "Kerbin",
                 211.0);
@@ -85,19 +85,19 @@ namespace TheRaceForSpace.ControllerTests
         {
             CampaignController controller = CreateControllerWithSecondLevelOffered(
                 ObjectiveCatalogue.Biome1Id);
-            var tracker = new StarterFlightTracker();
+            var tracker = new FlightContractTracker();
 
             tracker.RefreshPlayerMilestones(
                 controller.PlayerAgency,
-                controller.ActiveStarterContracts,
+                controller.ActiveFlightContracts,
                 Snapshot("biome-independent", 300.0, 300.0, 100.0, 0.0, 1.0, 0, "Shores",
-                    TrackedFlightSituation.Prelaunch));
+                    FlightSituation.Prelaunch));
 
             Require(tracker.RefreshPlayerMilestones(
                     controller.PlayerAgency,
-                    controller.ActiveStarterContracts,
+                    controller.ActiveFlightContracts,
                     Snapshot("biome-independent", 300.0, 310.0, 0.0, 0.0, 1.0, 0, "Grasslands",
-                        TrackedFlightSituation.Landed)),
+                        FlightSituation.Landed)),
                 "Landing in Grasslands should complete the active Biome I contract.");
             Require(controller.PlayerAgency.HasCompletedObjective(ObjectiveCatalogue.Biome1Id),
                 "Biome I should be recorded.");
@@ -106,7 +106,7 @@ namespace TheRaceForSpace.ControllerTests
 
             // Match the live runtime: completion invalidates the controller cache immediately, but
             // the same vessel attempt remains alive and can continue toward another offered contract.
-            controller.NotifyPlayerStarterAchievementRecorded();
+            controller.NotifyPlayerPreOrbitAchievementRecorded();
             Planetarium.CurrentUniversalTime = FundingIntervalSeconds + 20.0;
             controller.Refresh(false);
 
@@ -117,14 +117,14 @@ namespace TheRaceForSpace.ControllerTests
 
             tracker.RefreshPlayerMilestones(
                 controller.PlayerAgency,
-                controller.ActiveStarterContracts,
+                controller.ActiveFlightContracts,
                 Snapshot("biome-independent", 300.0, 320.0, 1000.0, 100.0, 1.0, 0, "Highlands",
-                    TrackedFlightSituation.Flying));
+                    FlightSituation.Flying));
             Require(tracker.RefreshPlayerMilestones(
                     controller.PlayerAgency,
-                    controller.ActiveStarterContracts,
+                    controller.ActiveFlightContracts,
                     Snapshot("biome-independent", 300.0, 321.0, 0.0, 0.0, 1.0, 0, "Highlands",
-                        TrackedFlightSituation.Landed)),
+                        FlightSituation.Landed)),
                 "The same launch should be able to complete independently offered Biome II later.");
             Require(controller.PlayerAgency.HasCompletedObjective(ObjectiveCatalogue.Biome2Id),
                 "Biome II should complete independently from Biome I.");
@@ -136,7 +136,7 @@ namespace TheRaceForSpace.ControllerTests
         {
             CampaignController controller = CreateControllerWithSecondLevelOffered(
                 ObjectiveCatalogue.Control1Id);
-            var tracker = new StarterFlightTracker();
+            var tracker = new FlightContractTracker();
 
             Require(Contains(controller, ObjectiveCatalogue.Control1Id),
                 "Control I should remain active after a rival unlocks Control II.");
@@ -149,7 +149,7 @@ namespace TheRaceForSpace.ControllerTests
             {
                 tracker.RefreshPlayerMilestones(
                     controller.PlayerAgency,
-                    controller.ActiveStarterContracts,
+                    controller.ActiveFlightContracts,
                     Snapshot(
                         "control-independent",
                         400.0,
@@ -159,7 +159,7 @@ namespace TheRaceForSpace.ControllerTests
                         1.0,
                         1,
                         null,
-                        TrackedFlightSituation.Flying));
+                        FlightSituation.Flying));
             }
 
             Require(tracker.IsControlMilestoneQualified(ObjectiveCatalogue.Control1Id),
@@ -172,7 +172,7 @@ namespace TheRaceForSpace.ControllerTests
             {
                 tracker.RefreshPlayerMilestones(
                     controller.PlayerAgency,
-                    controller.ActiveStarterContracts,
+                    controller.ActiveFlightContracts,
                     Snapshot(
                         "control-independent",
                         400.0,
@@ -182,7 +182,7 @@ namespace TheRaceForSpace.ControllerTests
                         1.0,
                         1,
                         null,
-                        TrackedFlightSituation.Flying));
+                        FlightSituation.Flying));
             }
 
             Require(tracker.IsControlMilestoneQualified(ObjectiveCatalogue.Control1Id),
@@ -196,7 +196,7 @@ namespace TheRaceForSpace.ControllerTests
 
             bool recorded = tracker.RefreshPlayerMilestones(
                 controller.PlayerAgency,
-                controller.ActiveStarterContracts,
+                controller.ActiveFlightContracts,
                 Snapshot(
                     "control-independent",
                     400.0,
@@ -206,7 +206,7 @@ namespace TheRaceForSpace.ControllerTests
                     1.0,
                     1,
                     null,
-                    TrackedFlightSituation.Landed));
+                    FlightSituation.Landed));
 
             Require(recorded,
                 "One safe landing should complete every active Control contract whose own hold qualified.");
@@ -224,7 +224,7 @@ namespace TheRaceForSpace.ControllerTests
             ResetEnvironment();
             CampaignSettings.RivalProgressChance = 0.0;
             Planetarium.CurrentUniversalTime = 0.0;
-            KspVesselDiscovery.SetUnavailable();
+            KspVesselMonitor.SetUnavailable();
 
             var controller = new CampaignController();
             controller.Refresh();
@@ -238,9 +238,9 @@ namespace TheRaceForSpace.ControllerTests
 
         private static bool Contains(CampaignController controller, string objectiveId)
         {
-            for (int milestoneIndex = 0; milestoneIndex < controller.ActiveStarterContracts.Count; milestoneIndex++)
+            for (int milestoneIndex = 0; milestoneIndex < controller.ActiveFlightContracts.Count; milestoneIndex++)
             {
-                ObjectiveDefinition objective = controller.ActiveStarterContracts[milestoneIndex];
+                ObjectiveDefinition objective = controller.ActiveFlightContracts[milestoneIndex];
                 if (objective != null
                     && string.Equals(objective.Id, objectiveId, StringComparison.OrdinalIgnoreCase))
                 {
@@ -251,7 +251,7 @@ namespace TheRaceForSpace.ControllerTests
             return false;
         }
 
-        private static ActiveVesselTrackingSnapshot Snapshot(
+        private static ActiveVesselSnapshot Snapshot(
             string vesselId,
             double launchUniversalTime,
             double observationUniversalTime,
@@ -260,10 +260,10 @@ namespace TheRaceForSpace.ControllerTests
             double massTonnes,
             int crewCount,
             string biomeName,
-            TrackedFlightSituation situation,
+            FlightSituation situation,
             double longitudeDegrees = 0.0)
         {
-            return new ActiveVesselTrackingSnapshot(
+            return new ActiveVesselSnapshot(
                 vesselId,
                 "Kerbin",
                 situation,
@@ -284,7 +284,7 @@ namespace TheRaceForSpace.ControllerTests
             CampaignSettings.ResetToDefaults();
             Planetarium.Reset();
             CareerFundingAdapter.Reset();
-            KspVesselDiscovery.Reset();
+            KspVesselMonitor.Reset();
             RacePersistenceScenario.Reset();
         }
 

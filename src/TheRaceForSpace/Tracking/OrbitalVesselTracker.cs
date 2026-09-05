@@ -9,18 +9,18 @@ namespace TheRaceForSpace.Tracking
     /// Applies KSP-independent vessel snapshots to player satellite counts and objective state.
     /// Raw KSP vessel discovery is owned by the KSP integration layer.
     /// </summary>
-    public static class SatelliteTracker
+    public static class OrbitalVesselTracker
     {
         /// <summary>
         /// Refreshes player satellite counts from every observed Probe/Relay body and records
         /// objectives whose shared campaign unlock rules are satisfied at the observation time.
         /// Satellite body tracking does not depend on the objective catalogue.
         /// </summary>
-        public static void RefreshPlayerSatelliteCounts(
+        public static void RefreshOrbitalProgress(
             AgencyState playerAgency,
             IList<AgencyState> agencies,
             IList<ObjectiveDefinition> milestoneDefinitions,
-            IList<VesselTrackingSnapshot> vesselSnapshots,
+            IList<OrbitingVesselSnapshot> vesselSnapshots,
             double currentUniversalTime)
         {
             if (playerAgency == null || vesselSnapshots == null)
@@ -33,14 +33,14 @@ namespace TheRaceForSpace.Tracking
 
             for (int vesselIndex = 0; vesselIndex < vesselSnapshots.Count; vesselIndex++)
             {
-                VesselTrackingSnapshot vesselSnapshot = vesselSnapshots[vesselIndex];
+                OrbitingVesselSnapshot vesselSnapshot = vesselSnapshots[vesselIndex];
                 if (vesselSnapshot == null || string.IsNullOrEmpty(vesselSnapshot.CelestialBodyName))
                 {
                     continue;
                 }
 
-                bool isSatellite = vesselSnapshot.VesselType == TrackedVesselType.Probe
-                    || vesselSnapshot.VesselType == TrackedVesselType.Relay;
+                bool isSatellite = vesselSnapshot.VesselType == OrbitalVesselType.Probe
+                    || vesselSnapshot.VesselType == OrbitalVesselType.Relay;
                 ObjectiveCrewRequirement? crewQualification = null;
 
                 if (vesselSnapshot.CrewCount > 0)

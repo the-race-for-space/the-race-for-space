@@ -78,45 +78,45 @@ namespace TheRaceForSpace.ControllerTests
 
             Run(
                 "Active starter plan opens with four cached contracts and reuses stable refresh",
-                ActiveStarterContractPlanTests.OpeningOffersBuildInitialPlanAndStableRefreshReusesIt);
+                ActiveFlightContractPlanTests.OpeningOffersBuildInitialPlanAndStableRefreshReusesIt);
             Run(
                 "Active starter plan waits for sponsor offer after rival unlock",
-                ActiveStarterContractPlanTests.RivalUnlockDoesNotChangePlanUntilSponsorOffersContract);
+                ActiveFlightContractPlanTests.RivalUnlockDoesNotChangePlanUntilSponsorOffersContract);
             Run(
                 "Active starter plan removes player-completed contract",
-                ActiveStarterContractPlanTests.PlayerCompletionInvalidatesAndRemovesOnlyCompletedContract);
+                ActiveFlightContractPlanTests.PlayerCompletionInvalidatesAndRemovesOnlyCompletedContract);
             Run(
                 "Active starter plan removes expired contract",
-                ActiveStarterContractPlanTests.StarterExpiryInvalidatesPlanWithoutAnotherStarterOffer);
+                ActiveFlightContractPlanTests.PreOrbitExpiryInvalidatesPlanWithoutAnotherPreOrbitOffer);
             Run(
-                "Active starter contract types request only needed telemetry",
-                StarterTelemetryPlanTests.ActiveContractTypesRequestOnlyNeededTelemetry);
+                "Active pre-orbit contract types request only needed telemetry",
+                FlightTelemetryPlanTests.ActiveContractTypesRequestOnlyNeededTelemetry);
 
             Run(
                 "Active offered Mass levels complete independently",
-                ActiveStarterEvaluationTests.OfferedMassLevelsCompleteIndependently);
+                ActivePreOrbitEvaluationTests.OfferedMassLevelsCompleteIndependently);
             Run(
                 "Active offered Directed Power levels complete independently",
-                ActiveStarterEvaluationTests.OfferedDirectedPowerLevelsCompleteIndependently);
+                ActivePreOrbitEvaluationTests.OfferedDirectedPowerLevelsCompleteIndependently);
             Run(
                 "Active offered Biome levels remain independent within one launch",
-                ActiveStarterEvaluationTests.OfferedBiomeLevelsRemainIndependentWithinOneLaunch);
+                ActivePreOrbitEvaluationTests.OfferedBiomeLevelsRemainIndependentWithinOneLaunch);
             Run(
                 "Active offered Control levels track and complete independently",
-                ActiveStarterEvaluationTests.OfferedControlLevelsTrackAndCompleteIndependently);
+                ActivePreOrbitEvaluationTests.OfferedControlLevelsTrackAndCompleteIndependently);
 
             Run(
-                "Starter contracts open four offers and lock the remaining sixteen",
-                FundingOfferControllerTests.StarterContractsOpenFourInitialOffersAndLockRemaining);
+                "PreOrbit contracts open four offers and lock the remaining sixteen",
+                FundingOfferControllerTests.PreOrbitContractsOpenFourInitialOffersAndLockRemaining);
             Run(
                 "Rival starter completion unlocks the next level for sponsor review",
-                FundingOfferControllerTests.RivalStarterCompletionUnlocksNextLevelForSponsorReview);
+                FundingOfferControllerTests.RivalPreOrbitCompletionUnlocksNextLevelForSponsorReview);
             Run(
                 "All unlocked starter levels are offered at sponsor review",
                 FundingOfferControllerTests.UnlockedPreOrbitLevelsJoinSponsorReview);
             Run(
-                "Starter offers do not consume the normal objectiveCompletion limit",
-                FundingOfferControllerTests.StarterOffersDoNotConsumeNormalAchievementLimit);
+                "PreOrbit offers do not consume the normal objectiveCompletion limit",
+                FundingOfferControllerTests.PreOrbitOffersDoNotConsumeNormalAchievementLimit);
             Run(
                 "Any starter level five offers Probe Orbit",
                 FundingOfferControllerTests.AnyPreOrbitLevelFiveOffersProbeOrbit);

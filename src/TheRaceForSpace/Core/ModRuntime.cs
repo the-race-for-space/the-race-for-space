@@ -11,15 +11,15 @@ namespace TheRaceForSpace.Core
     /// Owns the current race controller and advances race progression independently of the UI.
     /// </summary>
     [KSPAddon(KSPAddon.Startup.EveryScene, false)]
-    public sealed class RaceRuntime : MonoBehaviour
+    public sealed class ModRuntime : MonoBehaviour
     {
         private const float RefreshIntervalSeconds = 5.0f;
         private const float ActiveVesselRefreshIntervalSeconds = 1.0f;
         private const float PlayerVesselRefreshIntervalSeconds = 20.0f;
 
-        private static RaceRuntime _activeInstance;
+        private static ModRuntime _activeInstance;
         private static CampaignController _raceController;
-        private static StarterFlightTracker _starterFlightTracker;
+        private static FlightContractTracker _flightContractTracker;
         private static Game _controllerGame;
 
         private bool _isDuplicateInstance;
@@ -27,9 +27,9 @@ namespace TheRaceForSpace.Core
         private float _nextRefreshTime;
         private float _nextActiveVesselRefreshTime;
         private float _nextPlayerVesselRefreshTime;
-        private IList<ObjectiveDefinition> _starterTelemetryPlanSource;
-        private StarterTelemetryRequirement _starterTelemetryRequirements =
-            StarterTelemetryRequirement.None;
+        private IList<ObjectiveDefinition> _flightTelemetryPlanSource;
+        private FlightTelemetryRequirement _flightTelemetryRequirements =
+            FlightTelemetryRequirement.None;
 
         /// <summary>
         /// Returns the controller owned by the runtime for the current game, or null while the
@@ -54,7 +54,7 @@ namespace TheRaceForSpace.Core
         /// Read-only access to the runtime-owned starter-flight state for presentation. UI callers
         /// must not advance this tracker; the one-second runtime observation remains authoritative.
         /// </summary>
-        public static StarterFlightTracker StarterFlightState
+        public static FlightContractTracker FlightContractTrackingState
         {
             get
             {
@@ -65,7 +65,7 @@ namespace TheRaceForSpace.Core
                     return null;
                 }
 
-                return _starterFlightTracker;
+                return _flightContractTracker;
             }
         }
 
@@ -115,7 +115,7 @@ namespace TheRaceForSpace.Core
                 EnsureControllerForCurrentGame();
             }
 
-            if (_raceController == null || _starterFlightTracker == null)
+            if (_raceController == null || _flightContractTracker == null)
             {
                 return;
             }
@@ -139,7 +139,7 @@ namespace TheRaceForSpace.Core
             }
 
             if (!_hasRestoredActiveContractProgress
-                && RacePersistenceScenario.TryRestoreActiveContractProgress(_starterFlightTracker))
+                && RacePersistenceScenario.TryRestoreActiveContractProgress(_flightContractTracker))
             {
                 _hasRestoredActiveContractProgress = true;
 
@@ -152,43 +152,43 @@ namespace TheRaceForSpace.Core
             if (_hasRestoredActiveContractProgress
                 && currentRealtime >= _nextActiveVesselRefreshTime)
             {
-                RefreshStarterFlightState();
+                RefreshFlightContractTrackingState();
                 _nextActiveVesselRefreshTime = currentRealtime + ActiveVesselRefreshIntervalSeconds;
             }
         }
 
-        private void RefreshStarterFlightState()
+        private void RefreshFlightContractTrackingState()
         {
-            IList<ObjectiveDefinition> activeStarterContracts = _raceController.ActiveStarterContracts;
+            IList<ObjectiveDefinition> activeFlightContracts = _raceController.ActiveFlightContracts;
 
             // The controller replaces its read-only active list only after an offer/completion/expiry
             // transition. Recompute telemetry needs only when that exact cached plan instance changes,
             // then reuse the bit mask on every one-second observation in between.
-            if (!object.ReferenceEquals(_starterTelemetryPlanSource, activeStarterContracts))
+            if (!object.ReferenceEquals(_flightTelemetryPlanSource, activeFlightContracts))
             {
-                _starterTelemetryPlanSource = activeStarterContracts;
-                _starterTelemetryRequirements = StarterTelemetryPlan.GetRequirements(
-                    activeStarterContracts);
+                _flightTelemetryPlanSource = activeFlightContracts;
+                _flightTelemetryRequirements = FlightTelemetryPlan.GetRequirements(
+                    activeFlightContracts);
 
                 // Surface-impact callbacks are part of the telemetry plan, so remove them once when
                 // a new plan no longer contains Directed Power rather than repeating the same cleanup
                 // on every one-second observation.
-                if ((_starterTelemetryRequirements & StarterTelemetryRequirement.SurfaceImpact) == 0)
+                if ((_flightTelemetryRequirements & FlightTelemetryRequirement.SurfaceImpact) == 0)
                 {
-                    KspVesselDiscovery.DisableActiveVesselSurfaceImpactTracking();
+                    KspVesselMonitor.DisableActiveVesselSurfaceImpactTracking();
                 }
             }
 
-            if (activeStarterContracts == null || activeStarterContracts.Count == 0)
+            if (activeFlightContracts == null || activeFlightContracts.Count == 0)
             {
-                // No active starter contract means the tracker cannot change on this tick. Its last
+                // No active pre-orbit contract means the tracker cannot change on this tick. Its last
                 // captured state is already sufficient for a later save or sponsor offer.
                 return;
             }
 
             bool recordedAchievement = false;
-            bool needsSurfaceImpact = (_starterTelemetryRequirements
-                & StarterTelemetryRequirement.SurfaceImpact) != 0;
+            bool needsSurfaceImpact = (_flightTelemetryRequirements
+                & FlightTelemetryRequirement.SurfaceImpact) != 0;
 
             // Consume destruction before observing a replacement active vessel. KSP can switch
             // control immediately after a crash, and beginning the next attempt first would discard
@@ -198,41 +198,41 @@ namespace TheRaceForSpace.Core
                 string impactVesselId;
                 string impactBodyName;
                 double impactUniversalTime;
-                if (KspVesselDiscovery.TryConsumeActiveVesselSurfaceImpact(
+                if (KspVesselMonitor.TryConsumeActiveVesselSurfaceImpact(
                     out impactVesselId,
                     out impactBodyName,
                     out impactUniversalTime))
                 {
-                    recordedAchievement = _starterFlightTracker.RecordSurfaceImpact(
+                    recordedAchievement = _flightContractTracker.RecordSurfaceImpact(
                         _raceController.PlayerAgency,
-                        activeStarterContracts,
+                        activeFlightContracts,
                         impactVesselId,
                         impactBodyName,
                         impactUniversalTime);
                 }
             }
 
-            ActiveVesselTrackingSnapshot activeVesselSnapshot;
-            if (KspVesselDiscovery.TryCaptureActiveVessel(
-                _starterTelemetryRequirements,
+            ActiveVesselSnapshot activeVesselSnapshot;
+            if (KspVesselMonitor.TryCaptureActiveVesselSnapshot(
+                _flightTelemetryRequirements,
                 out activeVesselSnapshot))
             {
-                recordedAchievement |= _starterFlightTracker.RefreshPlayerMilestones(
+                recordedAchievement |= _flightContractTracker.RefreshPlayerMilestones(
                     _raceController.PlayerAgency,
-                    activeStarterContracts,
+                    activeFlightContracts,
                     activeVesselSnapshot);
             }
 
             if (recordedAchievement)
             {
-                // Starter achievements can immediately unlock the next line level or Probe Orbit.
+                // PreOrbit achievements can immediately unlock the next line level or Probe Orbit.
                 // Mark the active-contract cache dirty before reusing the controller's normal
                 // non-vessel refresh so completion and any resulting offer changes settle together.
-                _raceController.NotifyPlayerStarterAchievementRecorded();
+                _raceController.NotifyPlayerPreOrbitAchievementRecorded();
                 _raceController.Refresh(false);
             }
 
-            RacePersistenceScenario.CaptureActiveContractProgress(_starterFlightTracker);
+            RacePersistenceScenario.CaptureActiveContractProgress(_flightContractTracker);
         }
 
         private void EnsureControllerForCurrentGame()
@@ -254,15 +254,15 @@ namespace TheRaceForSpace.Core
             // Keep one controller and one active-flight tracker across scene changes inside a save,
             // but never carry race, vessel-callback, or contract-attempt state into another save.
             _raceController = new CampaignController();
-            _starterFlightTracker = new StarterFlightTracker();
+            _flightContractTracker = new FlightContractTracker();
             _controllerGame = HighLogic.CurrentGame;
-            KspVesselDiscovery.ResetActiveVesselTracking();
+            KspVesselMonitor.ResetActiveVesselTracking();
             _hasRestoredActiveContractProgress = false;
             _nextRefreshTime = 0.0f;
             _nextActiveVesselRefreshTime = 0.0f;
             _nextPlayerVesselRefreshTime = 0.0f;
-            _starterTelemetryPlanSource = null;
-            _starterTelemetryRequirements = StarterTelemetryRequirement.None;
+            _flightTelemetryPlanSource = null;
+            _flightTelemetryRequirements = FlightTelemetryRequirement.None;
         }
     }
 }

@@ -27,10 +27,10 @@
     <Compile Include="../../src/TheRaceForSpace/Objectives/UnlockRuleEvaluator.cs" Link="Production/Objectives/UnlockRuleEvaluator.cs" />
     <Compile Include="../../src/TheRaceForSpace/Agencies/AgencyState.cs" Link="Production/Agencies/AgencyState.cs" />
     <Compile Include="../../src/TheRaceForSpace/Rivals/RivalSimulation.cs" Link="Production/Rivals/RivalSimulation.cs" />
-    <Compile Include="../../src/TheRaceForSpace/Tracking/VesselTrackingSnapshot.cs" Link="Production/Tracking/VesselTrackingSnapshot.cs" />
-    <Compile Include="../../src/TheRaceForSpace/Tracking/ActiveVesselTrackingSnapshot.cs" Link="Production/Tracking/ActiveVesselTrackingSnapshot.cs" />
-    <Compile Include="../../src/TheRaceForSpace/Tracking/SatelliteTracker.cs" Link="Production/Tracking/SatelliteTracker.cs" />
-    <Compile Include="../../src/TheRaceForSpace/Tracking/StarterFlightTracker.cs" Link="Production/Tracking/StarterFlightTracker.cs" />
+    <Compile Include="../../src/TheRaceForSpace/Tracking/OrbitingVesselSnapshot.cs" Link="Production/Tracking/OrbitingVesselSnapshot.cs" />
+    <Compile Include="../../src/TheRaceForSpace/Tracking/ActiveVesselSnapshot.cs" Link="Production/Tracking/ActiveVesselSnapshot.cs" />
+    <Compile Include="../../src/TheRaceForSpace/Tracking/OrbitalVesselTracker.cs" Link="Production/Tracking/OrbitalVesselTracker.cs" />
+    <Compile Include="../../src/TheRaceForSpace/Tracking/FlightContractTracker.cs" Link="Production/Tracking/FlightContractTracker.cs" />
     <Compile Include="../../src/TheRaceForSpace/Tracking/SurfaceImpactEvaluator.cs" Link="Production/Tracking/SurfaceImpactEvaluator.cs" />
     <Compile Include="../../src/TheRaceForSpace/Persistence/FundingContractsSaveState.cs" Link="Production/Persistence/FundingContractsSaveState.cs" />
     <Compile Include="../../src/TheRaceForSpace/Persistence/RivalAgenciesSaveState.cs" Link="Production/Persistence/RivalAgenciesSaveState.cs" />

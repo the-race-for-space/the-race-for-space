@@ -37,13 +37,13 @@ namespace TheRaceForSpace.Funding
         public static IList<ObjectiveFundingContract> CreateAchievementProgrammes()
         {
             var programmes = new List<ObjectiveFundingContract>(
-                ObjectiveCatalogue.StarterContracts.Count + ObjectiveCatalogue.All.Count);
+                ObjectiveCatalogue.PreOrbitContracts.Count + ObjectiveCatalogue.All.Count);
 
             for (int milestoneIndex = 0;
-                milestoneIndex < ObjectiveCatalogue.StarterContracts.Count;
+                milestoneIndex < ObjectiveCatalogue.PreOrbitContracts.Count;
                 milestoneIndex++)
             {
-                AddAchievementProgramme(programmes, ObjectiveCatalogue.StarterContracts[milestoneIndex]);
+                AddAchievementProgramme(programmes, ObjectiveCatalogue.PreOrbitContracts[milestoneIndex]);
             }
 
             for (int milestoneIndex = 0; milestoneIndex < ObjectiveCatalogue.All.Count; milestoneIndex++)

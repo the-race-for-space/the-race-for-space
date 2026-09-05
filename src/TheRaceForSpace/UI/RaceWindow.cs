@@ -16,7 +16,7 @@ namespace TheRaceForSpace.UI
     /// <summary>
     /// Command center with four switchable views inside one interface window.
     /// Press F8 or use the stock KSP application launcher button to show or hide the interface.
-    /// Race progression and controller lifetime are owned by RaceRuntime in the Core module.
+    /// Race progression and controller lifetime are owned by ModRuntime in the Core module.
     /// </summary>
     [KSPAddon(KSPAddon.Startup.EveryScene, false)]
     public sealed class RaceWindow : MonoBehaviour
@@ -176,7 +176,7 @@ namespace TheRaceForSpace.UI
             }
 
             _visibilityGame = HighLogic.CurrentGame;
-            _raceController = RaceRuntime.Controller;
+            _raceController = ModRuntime.Controller;
         }
 
         public void OnDestroy()
@@ -221,7 +221,7 @@ namespace TheRaceForSpace.UI
 
             // The Core runtime owns controller creation and progression. A null controller here
             // simply means this UI instance started before the runtime was ready in the scene.
-            _raceController = RaceRuntime.Controller;
+            _raceController = ModRuntime.Controller;
             if (_raceController == null)
             {
                 return;
@@ -563,7 +563,7 @@ namespace TheRaceForSpace.UI
                     continue;
                 }
 
-                DrawAchievementFundingCard(programme, showStarterLiveProgress: true);
+                DrawAchievementFundingCard(programme, showPreOrbitLiveProgress: true);
                 GUILayout.Space(8.0f);
             }
 
@@ -587,7 +587,7 @@ namespace TheRaceForSpace.UI
             string stateLabel = null,
             double? unlockEvaluationUniversalTime = null,
             string stateMessage = null,
-            bool showStarterLiveProgress = false,
+            bool showPreOrbitLiveProgress = false,
             bool showFundingLifecycleDetails = true)
         {
             _listTextBuilder.Length = 0;
@@ -661,15 +661,15 @@ namespace TheRaceForSpace.UI
 
             GUILayout.EndHorizontal();
 
-            if (showStarterLiveProgress)
+            if (showPreOrbitLiveProgress)
             {
-                DrawStarterFundingLiveProgress(programme);
+                DrawPreOrbitFundingLiveProgress(programme);
             }
 
             GUILayout.EndVertical();
         }
 
-        private void DrawStarterFundingLiveProgress(ObjectiveFundingContract programme)
+        private void DrawPreOrbitFundingLiveProgress(ObjectiveFundingContract programme)
         {
             ObjectiveDefinition objective = programme == null
                 ? null
@@ -682,7 +682,7 @@ namespace TheRaceForSpace.UI
             }
 
             GUILayout.Space(6.0f);
-            StarterFlightTracker tracker = RaceRuntime.StarterFlightState;
+            FlightContractTracker tracker = ModRuntime.FlightContractTrackingState;
             if (tracker == null)
             {
                 GUILayout.Label("Live Flight", _boldLabelStyle);
@@ -701,8 +701,8 @@ namespace TheRaceForSpace.UI
             }
 
             // Funding Targets deliberately compares the active craft against every offered,
-            // unfinished starter contract, even when a rival unlocked a later level first.
-            DrawStarterLiveProgress(objective, tracker);
+            // unfinished pre-orbit contract, even when a rival unlocked a later level first.
+            DrawPreOrbitLiveProgress(objective, tracker);
         }
 
         private void DrawSatelliteFundingCard(
@@ -873,9 +873,9 @@ namespace TheRaceForSpace.UI
                 "Funding is given for the number of satellite in orbit of the body. This is a fixed contract and will always pay out. Once the maximum number of satellites is meet which ever agencies has the biggest share of satellites will get the bigger share of the payout.");
 
             GUILayout.Space(8.0f);
-            GUILayout.Label("Starter Contracts", _boldLabelStyle);
+            GUILayout.Label("PreOrbit Contracts", _boldLabelStyle);
             GUILayout.Label(
-                "The campaign begins with Directed Power I, Mass I, Control I and Biome I offered. The remaining sixteen starter contracts use the normal Offered, Unlocked, Locked and Expired states. Any agency, including a rival, completing a level unlocks the next level in that same line. Every starter contract that is Offered and unfinished for you is active independently, so one flight may satisfy more than one offered contract. Completing level five in any one line unlocks Probe Orbit for the race.");
+                "The campaign begins with Directed Power I, Mass I, Control I and Biome I offered. The remaining sixteen pre-orbit contracts use the normal Offered, Unlocked, Locked and Expired states. Any agency, including a rival, completing a level unlocks the next level in that same line. Every pre-orbit contract that is Offered and unfinished for you is active independently, so one flight may satisfy more than one offered contract. Completing level five in any one line unlocks Probe Orbit for the race.");
 
             GUILayout.Space(8.0f);
             GUILayout.Label("Unlocking New Funding Target", _boldLabelStyle);
@@ -945,9 +945,9 @@ namespace TheRaceForSpace.UI
             GUILayout.EndScrollView();
         }
 
-        private void DrawStarterLiveProgress(
+        private void DrawPreOrbitLiveProgress(
             ObjectiveDefinition currentMilestone,
-            StarterFlightTracker tracker)
+            FlightContractTracker tracker)
         {
             GUILayout.Space(4.0f);
             GUILayout.Label("Live Flight", _boldLabelStyle);
@@ -1003,7 +1003,7 @@ namespace TheRaceForSpace.UI
             {
                 bool massMet = tracker.CurrentMassTonnes >= currentMilestone.RequiredMassTonnes;
                 bool distanceMet = tracker.CurrentDistanceMeters >= currentMilestone.RequiredDistanceMeters;
-                bool landed = tracker.CurrentSituation == TrackedFlightSituation.Landed;
+                bool landed = tracker.CurrentSituation == FlightSituation.Landed;
 
                 GUILayout.Label(
                     "Mass: "
@@ -1067,7 +1067,7 @@ namespace TheRaceForSpace.UI
                     currentBiome,
                     currentMilestone.RequiredBiomeName,
                     StringComparison.OrdinalIgnoreCase);
-                bool landed = tracker.CurrentSituation == TrackedFlightSituation.Landed;
+                bool landed = tracker.CurrentSituation == FlightSituation.Landed;
 
                 GUILayout.Label("Current Biome: " + currentBiome);
                 GUILayout.Label("Target: " + currentMilestone.RequiredBiomeName);

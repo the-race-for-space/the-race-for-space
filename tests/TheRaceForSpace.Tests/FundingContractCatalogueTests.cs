@@ -15,9 +15,9 @@ namespace TheRaceForSpace.Tests
                 FundingContractCatalogue.CreateSatelliteProgrammes();
 
             Equal(
-                ObjectiveCatalogue.All.Count + ObjectiveCatalogue.StarterContracts.Count,
+                ObjectiveCatalogue.All.Count + ObjectiveCatalogue.PreOrbitContracts.Count,
                 achievements.Count);
-            Equal(20, ObjectiveCatalogue.StarterContracts.Count);
+            Equal(20, ObjectiveCatalogue.PreOrbitContracts.Count);
             Equal(16, satelliteProgrammes.Count);
 
             AssertPreOrbitLine(
@@ -64,7 +64,7 @@ namespace TheRaceForSpace.Tests
                     ObjectiveCatalogue.Biome4Id,
                     ObjectiveCatalogue.Biome5Id
                 });
-            AssertStarterCriteriaValues();
+            AssertPreOrbitCriteriaValues();
 
             ObjectiveFundingContract probeOrbit = FindAchievement(
                 achievements,
@@ -393,9 +393,9 @@ namespace TheRaceForSpace.Tests
                 ObjectiveDefinition objective = ObjectiveCatalogue.FindById(objectiveId);
                 ObjectiveFundingContract programme = FindAchievement(achievements, objectiveId);
 
-                Require(objective != null, "Missing starter objective '" + objectiveId + "'.");
+                Require(objective != null, "Missing pre-orbit objective '" + objectiveId + "'.");
                 Require(programme != null, "Missing starter funding programme '" + objectiveId + "'.");
-                Require(objective.IsPreOrbitContract, "Starter objective should be marked special.");
+                Require(objective.IsPreOrbitContract, "PreOrbit objective should be marked special.");
                 Equal(starterLine, objective.PreOrbitLine);
                 Equal(level, objective.PreOrbitLevel);
                 Equal(level * 10000.0, objective.BaseRewardFunds);
@@ -414,34 +414,34 @@ namespace TheRaceForSpace.Tests
             }
         }
 
-        private static void AssertStarterCriteriaValues()
+        private static void AssertPreOrbitCriteriaValues()
         {
-            AssertStarterCriteria(ObjectiveCatalogue.DirectedPower1Id, 600.0, 0.0, 0.0, 0.0, 70000.0, 0.0, null);
-            AssertStarterCriteria(ObjectiveCatalogue.DirectedPower2Id, 1100.0, 0.0, 0.0, 0.0, 70000.0, 0.0, null);
-            AssertStarterCriteria(ObjectiveCatalogue.DirectedPower3Id, 1400.0, 0.0, 0.0, 0.0, 70000.0, 0.0, null);
-            AssertStarterCriteria(ObjectiveCatalogue.DirectedPower4Id, 1700.0, 0.0, 0.0, 0.0, 70000.0, 0.0, null);
-            AssertStarterCriteria(ObjectiveCatalogue.DirectedPower5Id, 2000.0, 0.0, 0.0, 0.0, 70000.0, 0.0, null);
+            AssertPreOrbitCriteria(ObjectiveCatalogue.DirectedPower1Id, 600.0, 0.0, 0.0, 0.0, 70000.0, 0.0, null);
+            AssertPreOrbitCriteria(ObjectiveCatalogue.DirectedPower2Id, 1100.0, 0.0, 0.0, 0.0, 70000.0, 0.0, null);
+            AssertPreOrbitCriteria(ObjectiveCatalogue.DirectedPower3Id, 1400.0, 0.0, 0.0, 0.0, 70000.0, 0.0, null);
+            AssertPreOrbitCriteria(ObjectiveCatalogue.DirectedPower4Id, 1700.0, 0.0, 0.0, 0.0, 70000.0, 0.0, null);
+            AssertPreOrbitCriteria(ObjectiveCatalogue.DirectedPower5Id, 2000.0, 0.0, 0.0, 0.0, 70000.0, 0.0, null);
 
-            AssertStarterCriteria(ObjectiveCatalogue.Mass1Id, 0.0, 1.0, 25000.0, 0.0, 0.0, 0.0, null);
-            AssertStarterCriteria(ObjectiveCatalogue.Mass2Id, 0.0, 2.5, 75000.0, 0.0, 0.0, 0.0, null);
-            AssertStarterCriteria(ObjectiveCatalogue.Mass3Id, 0.0, 5.0, 150000.0, 0.0, 0.0, 0.0, null);
-            AssertStarterCriteria(ObjectiveCatalogue.Mass4Id, 0.0, 10.0, 300000.0, 0.0, 0.0, 0.0, null);
-            AssertStarterCriteria(ObjectiveCatalogue.Mass5Id, 0.0, 20.0, 600000.0, 0.0, 0.0, 0.0, null);
+            AssertPreOrbitCriteria(ObjectiveCatalogue.Mass1Id, 0.0, 1.0, 25000.0, 0.0, 0.0, 0.0, null);
+            AssertPreOrbitCriteria(ObjectiveCatalogue.Mass2Id, 0.0, 2.5, 75000.0, 0.0, 0.0, 0.0, null);
+            AssertPreOrbitCriteria(ObjectiveCatalogue.Mass3Id, 0.0, 5.0, 150000.0, 0.0, 0.0, 0.0, null);
+            AssertPreOrbitCriteria(ObjectiveCatalogue.Mass4Id, 0.0, 10.0, 300000.0, 0.0, 0.0, 0.0, null);
+            AssertPreOrbitCriteria(ObjectiveCatalogue.Mass5Id, 0.0, 20.0, 600000.0, 0.0, 0.0, 0.0, null);
 
-            AssertStarterCriteria(ObjectiveCatalogue.Control1Id, 0.0, 0.0, 0.0, 2000.0, 5000.0, 30.0, null);
-            AssertStarterCriteria(ObjectiveCatalogue.Control2Id, 0.0, 0.0, 0.0, 8000.0, 12000.0, 45.0, null);
-            AssertStarterCriteria(ObjectiveCatalogue.Control3Id, 0.0, 0.0, 0.0, 15000.0, 25000.0, 60.0, null);
-            AssertStarterCriteria(ObjectiveCatalogue.Control4Id, 0.0, 0.0, 0.0, 30000.0, 40000.0, 75.0, null);
-            AssertStarterCriteria(ObjectiveCatalogue.Control5Id, 0.0, 0.0, 0.0, 50000.0, 65000.0, 90.0, null);
+            AssertPreOrbitCriteria(ObjectiveCatalogue.Control1Id, 0.0, 0.0, 0.0, 2000.0, 5000.0, 30.0, null);
+            AssertPreOrbitCriteria(ObjectiveCatalogue.Control2Id, 0.0, 0.0, 0.0, 8000.0, 12000.0, 45.0, null);
+            AssertPreOrbitCriteria(ObjectiveCatalogue.Control3Id, 0.0, 0.0, 0.0, 15000.0, 25000.0, 60.0, null);
+            AssertPreOrbitCriteria(ObjectiveCatalogue.Control4Id, 0.0, 0.0, 0.0, 30000.0, 40000.0, 75.0, null);
+            AssertPreOrbitCriteria(ObjectiveCatalogue.Control5Id, 0.0, 0.0, 0.0, 50000.0, 65000.0, 90.0, null);
 
-            AssertStarterCriteria(ObjectiveCatalogue.Biome1Id, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, "Grasslands");
-            AssertStarterCriteria(ObjectiveCatalogue.Biome2Id, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, "Highlands");
-            AssertStarterCriteria(ObjectiveCatalogue.Biome3Id, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, "Mountains");
-            AssertStarterCriteria(ObjectiveCatalogue.Biome4Id, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, "Deserts");
-            AssertStarterCriteria(ObjectiveCatalogue.Biome5Id, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, "Ice Caps");
+            AssertPreOrbitCriteria(ObjectiveCatalogue.Biome1Id, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, "Grasslands");
+            AssertPreOrbitCriteria(ObjectiveCatalogue.Biome2Id, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, "Highlands");
+            AssertPreOrbitCriteria(ObjectiveCatalogue.Biome3Id, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, "Mountains");
+            AssertPreOrbitCriteria(ObjectiveCatalogue.Biome4Id, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, "Deserts");
+            AssertPreOrbitCriteria(ObjectiveCatalogue.Biome5Id, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, "Ice Caps");
         }
 
-        private static void AssertStarterCriteria(
+        private static void AssertPreOrbitCriteria(
             string objectiveId,
             double requiredSpeedMetersPerSecond,
             double requiredMassTonnes,
@@ -452,7 +452,7 @@ namespace TheRaceForSpace.Tests
             string requiredBiomeName)
         {
             ObjectiveDefinition objective = ObjectiveCatalogue.FindById(objectiveId);
-            Require(objective != null, "Missing starter objective '" + objectiveId + "'.");
+            Require(objective != null, "Missing pre-orbit objective '" + objectiveId + "'.");
             Equal(requiredSpeedMetersPerSecond, objective.RequiredSpeedMetersPerSecond);
             Equal(requiredMassTonnes, objective.RequiredMassTonnes);
             Equal(requiredDistanceMeters, objective.RequiredDistanceMeters);

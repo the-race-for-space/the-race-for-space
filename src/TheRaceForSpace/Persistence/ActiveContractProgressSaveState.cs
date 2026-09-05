@@ -44,7 +44,7 @@ namespace TheRaceForSpace.Persistence
 
         public bool HasData { get; private set; }
 
-        public void Capture(StarterFlightTracker tracker)
+        public void Capture(FlightContractTracker tracker)
         {
             ClearState();
             if (tracker == null)
@@ -81,7 +81,7 @@ namespace TheRaceForSpace.Persistence
             }
         }
 
-        public void ApplyTo(StarterFlightTracker tracker)
+        public void ApplyTo(FlightContractTracker tracker)
         {
             if (tracker == null)
             {

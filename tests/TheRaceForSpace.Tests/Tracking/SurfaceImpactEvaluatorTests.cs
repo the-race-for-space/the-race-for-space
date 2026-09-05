@@ -21,7 +21,7 @@ namespace TheRaceForSpace.Tests.Tracking
         {
             Require(
                 SurfaceImpactEvaluator.IsEligible(
-                    TrackedFlightSituation.Flying,
+                    FlightSituation.Flying,
                     80.0,
                     100.0,
                     100.0,
@@ -34,7 +34,7 @@ namespace TheRaceForSpace.Tests.Tracking
         {
             Require(
                 SurfaceImpactEvaluator.IsEligible(
-                    TrackedFlightSituation.Flying,
+                    FlightSituation.Flying,
                     400.0,
                     500.0,
                     200.0,
@@ -47,7 +47,7 @@ namespace TheRaceForSpace.Tests.Tracking
         {
             Require(
                 SurfaceImpactEvaluator.IsEligible(
-                    TrackedFlightSituation.SubOrbital,
+                    FlightSituation.SubOrbital,
                     1800.0,
                     500.0,
                     300.0,
@@ -60,7 +60,7 @@ namespace TheRaceForSpace.Tests.Tracking
         {
             Require(
                 !SurfaceImpactEvaluator.IsEligible(
-                    TrackedFlightSituation.Flying,
+                    FlightSituation.Flying,
                     10.0,
                     500.0,
                     400.0,
@@ -73,7 +73,7 @@ namespace TheRaceForSpace.Tests.Tracking
         {
             Require(
                 !SurfaceImpactEvaluator.IsEligible(
-                    TrackedFlightSituation.Flying,
+                    FlightSituation.Flying,
                     10.0,
                     4.0,
                     500.0,
@@ -86,7 +86,7 @@ namespace TheRaceForSpace.Tests.Tracking
         {
             Require(
                 !SurfaceImpactEvaluator.IsEligible(
-                    TrackedFlightSituation.Landed,
+                    FlightSituation.Landed,
                     0.0,
                     500.0,
                     600.0,
@@ -99,7 +99,7 @@ namespace TheRaceForSpace.Tests.Tracking
         {
             Require(
                 !SurfaceImpactEvaluator.IsEligible(
-                    TrackedFlightSituation.Flying,
+                    FlightSituation.Flying,
                     2500.0,
                     500.0,
                     700.0,
@@ -112,7 +112,7 @@ namespace TheRaceForSpace.Tests.Tracking
         {
             Require(
                 !SurfaceImpactEvaluator.IsEligible(
-                    TrackedFlightSituation.Flying,
+                    FlightSituation.Flying,
                     1000.0,
                     double.PositiveInfinity,
                     800.0,
@@ -121,7 +121,7 @@ namespace TheRaceForSpace.Tests.Tracking
                 "Infinite speed must not make every surface clearance reachable.");
             Require(
                 !SurfaceImpactEvaluator.IsEligible(
-                    TrackedFlightSituation.Flying,
+                    FlightSituation.Flying,
                     80.0,
                     100.0,
                     900.0,
@@ -130,7 +130,7 @@ namespace TheRaceForSpace.Tests.Tracking
                 "NaN destruction clearance must not be treated as valid impact evidence.");
             Require(
                 !SurfaceImpactEvaluator.IsEligible(
-                    TrackedFlightSituation.Flying,
+                    FlightSituation.Flying,
                     double.NaN,
                     100.0,
                     1000.0,

@@ -47,7 +47,7 @@ namespace TheRaceForSpace.ControllerTests
             ResetEnvironment();
             CampaignSettings.FundingIntervalDays = 30.0;
             Planetarium.CurrentUniversalTime = 0.0;
-            KspVesselDiscovery.SetUnavailable();
+            KspVesselMonitor.SetUnavailable();
 
             var controller = new CampaignController();
             controller.Refresh();
@@ -60,10 +60,10 @@ namespace TheRaceForSpace.ControllerTests
             ResetEnvironment();
             const double observationUniversalTime = 1000.0;
             Planetarium.CurrentUniversalTime = observationUniversalTime;
-            KspVesselDiscovery.SetSnapshots(
-                new List<VesselTrackingSnapshot>
+            KspVesselMonitor.SetSnapshots(
+                new List<OrbitingVesselSnapshot>
                 {
-                    new VesselTrackingSnapshot("Kerbin", TrackedVesselType.Probe, 0)
+                    new OrbitingVesselSnapshot("Kerbin", OrbitalVesselType.Probe, 0)
                 },
                 observationUniversalTime);
 
@@ -75,7 +75,7 @@ namespace TheRaceForSpace.ControllerTests
             bool skippedObservation = controller.Refresh(false);
 
             Require(!skippedObservation, "A scheduled non-vessel refresh should report no player observation.");
-            Equal(0, KspVesselDiscovery.CaptureCalls);
+            Equal(0, KspVesselMonitor.CaptureCalls);
             Require(
                 !controller.PlayerAgency.HasCompletedObjective(ObjectiveCatalogue.ProbeOrbitId),
                 "Skipping the vessel observation must leave player Probe Orbit state unchanged.");
@@ -85,7 +85,7 @@ namespace TheRaceForSpace.ControllerTests
             bool completedObservation = controller.Refresh(true);
 
             Require(completedObservation, "An available scheduled vessel refresh should report success.");
-            Equal(1, KspVesselDiscovery.CaptureCalls);
+            Equal(1, KspVesselMonitor.CaptureCalls);
             Require(
                 controller.PlayerAgency.HasCompletedObjective(ObjectiveCatalogue.ProbeOrbitId),
                 "The next scheduled vessel observation should record the qualified Probe Orbit.");
@@ -96,10 +96,10 @@ namespace TheRaceForSpace.ControllerTests
             ResetEnvironment();
             const double observationUniversalTime = 1234.0;
             Planetarium.CurrentUniversalTime = observationUniversalTime;
-            KspVesselDiscovery.SetSnapshots(
-                new List<VesselTrackingSnapshot>
+            KspVesselMonitor.SetSnapshots(
+                new List<OrbitingVesselSnapshot>
                 {
-                    new VesselTrackingSnapshot("Kerbin", TrackedVesselType.Probe, 0)
+                    new OrbitingVesselSnapshot("Kerbin", OrbitalVesselType.Probe, 0)
                 },
                 observationUniversalTime);
 
@@ -153,15 +153,15 @@ namespace TheRaceForSpace.ControllerTests
             ResetEnvironment();
             const double observationUniversalTime = 2000.0;
             Planetarium.CurrentUniversalTime = observationUniversalTime;
-            KspVesselDiscovery.SetSnapshots(
-                new List<VesselTrackingSnapshot>
+            KspVesselMonitor.SetSnapshots(
+                new List<OrbitingVesselSnapshot>
                 {
-                    new VesselTrackingSnapshot("Kerbin", TrackedVesselType.Probe, 0),
-                    new VesselTrackingSnapshot("Kerbin", TrackedVesselType.Probe, 0),
-                    new VesselTrackingSnapshot("Kerbin", TrackedVesselType.Probe, 0),
-                    new VesselTrackingSnapshot("Kerbin", TrackedVesselType.Probe, 0),
-                    new VesselTrackingSnapshot("Kerbin", TrackedVesselType.Probe, 0),
-                    new VesselTrackingSnapshot("Kerbin", TrackedVesselType.Probe, 0)
+                    new OrbitingVesselSnapshot("Kerbin", OrbitalVesselType.Probe, 0),
+                    new OrbitingVesselSnapshot("Kerbin", OrbitalVesselType.Probe, 0),
+                    new OrbitingVesselSnapshot("Kerbin", OrbitalVesselType.Probe, 0),
+                    new OrbitingVesselSnapshot("Kerbin", OrbitalVesselType.Probe, 0),
+                    new OrbitingVesselSnapshot("Kerbin", OrbitalVesselType.Probe, 0),
+                    new OrbitingVesselSnapshot("Kerbin", OrbitalVesselType.Probe, 0)
                 },
                 observationUniversalTime);
 
@@ -225,7 +225,7 @@ namespace TheRaceForSpace.ControllerTests
         {
             ResetEnvironment();
             Planetarium.CurrentUniversalTime = 0.0;
-            KspVesselDiscovery.SetUnavailable();
+            KspVesselMonitor.SetUnavailable();
 
             var controller = new CampaignController();
             controller.FindAgencyById(CampaignController.AsterAgencyId).Funds = 0.0;
@@ -260,7 +260,7 @@ namespace TheRaceForSpace.ControllerTests
             ResetEnvironment();
             Planetarium.CurrentUniversalTime = FundingIntervalSeconds + 1.0;
             RacePersistenceScenario.RestoredNextFundingUniversalTime = FundingIntervalSeconds;
-            KspVesselDiscovery.SetUnavailable();
+            KspVesselMonitor.SetUnavailable();
 
             var controller = new CampaignController();
             controller.FindAgencyById(CampaignController.AsterAgencyId).Funds = 0.0;
@@ -284,7 +284,7 @@ namespace TheRaceForSpace.ControllerTests
         {
             ResetEnvironment();
             Planetarium.CurrentUniversalTime = 0.0;
-            KspVesselDiscovery.SetSnapshots(new List<VesselTrackingSnapshot>(), 0.0);
+            KspVesselMonitor.SetSnapshots(new List<OrbitingVesselSnapshot>(), 0.0);
 
             var controller = new CampaignController();
             controller.FindAgencyById(CampaignController.AsterAgencyId).Funds = 0.0;
@@ -295,10 +295,10 @@ namespace TheRaceForSpace.ControllerTests
             // funding boundary, but the actual orbital observation still occurs after that payout.
             QualifyForProbeOrbit(controller, 1.0);
             Planetarium.CurrentUniversalTime = FundingIntervalSeconds;
-            KspVesselDiscovery.SetSnapshots(
-                new List<VesselTrackingSnapshot>
+            KspVesselMonitor.SetSnapshots(
+                new List<OrbitingVesselSnapshot>
                 {
-                    new VesselTrackingSnapshot("Kerbin", TrackedVesselType.Probe, 0)
+                    new OrbitingVesselSnapshot("Kerbin", OrbitalVesselType.Probe, 0)
                 },
                 FundingIntervalSeconds);
 
@@ -327,10 +327,10 @@ namespace TheRaceForSpace.ControllerTests
         {
             ResetEnvironment();
             Planetarium.CurrentUniversalTime = 1000.0;
-            KspVesselDiscovery.SetSnapshots(
-                new List<VesselTrackingSnapshot>
+            KspVesselMonitor.SetSnapshots(
+                new List<OrbitingVesselSnapshot>
                 {
-                    new VesselTrackingSnapshot("Kerbin", TrackedVesselType.Probe, 0)
+                    new OrbitingVesselSnapshot("Kerbin", OrbitalVesselType.Probe, 0)
                 },
                 1000.0);
 
@@ -358,7 +358,7 @@ namespace TheRaceForSpace.ControllerTests
                 controller.GetAchievementCurrentPayout(controller.PlayerAgency, probeOrbit));
 
             Planetarium.CurrentUniversalTime = 2000.0;
-            KspVesselDiscovery.SetSnapshots(new List<VesselTrackingSnapshot>(), 2000.0);
+            KspVesselMonitor.SetSnapshots(new List<OrbitingVesselSnapshot>(), 2000.0);
             controller.Refresh();
 
             Equal(
@@ -423,7 +423,7 @@ namespace TheRaceForSpace.ControllerTests
             CampaignSettings.ResetToDefaults();
             Planetarium.Reset();
             CareerFundingAdapter.Reset();
-            KspVesselDiscovery.Reset();
+            KspVesselMonitor.Reset();
             RacePersistenceScenario.Reset();
         }
 

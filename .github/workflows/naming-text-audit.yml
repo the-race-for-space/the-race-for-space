@@ -1,0 +1,24 @@
+name: Naming Text Audit
+
+on:
+  push:
+    branches:
+      - Alpha/KerbalContracts-v0.5
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    if: "github.event.head_commit.message == 'chore: audit naming text'"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Audit old wording
+        run: |
+          echo '--- race wording outside root namespace ---'
+          grep -RInE --include='*.cs' 'Race|race' src/TheRaceForSpace | grep -v 'TheRaceForSpace' || true
+          echo '--- mechanically awkward objectiveCompletion wording ---'
+          grep -RIn --include='*.cs' 'objectiveCompletion' src tests || true
+          echo '--- old starter/programme/achievement/milestone wording ---'
+          grep -RInE --include='*.cs' 'Programme|programme|Achievement|achievement|Starter|starter|Milestone|milestone' src tests || true

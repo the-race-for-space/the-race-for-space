@@ -11,7 +11,7 @@ namespace TheRaceForSpace.KspIntegration
     /// </summary>
     public static class KspVesselMonitor
     {
-        private static Game _activeTrackingGame;
+        private static string _activeTrackingSaveFolder;
         private static Vessel _destructionTrackedVessel;
         private static Callback _destructionCallback;
         private static string _destructionTrackedVesselId;
@@ -136,7 +136,14 @@ namespace TheRaceForSpace.KspIntegration
             out ActiveVesselSnapshot vesselSnapshot)
         {
             vesselSnapshot = null;
-            EnsureActiveTrackingGame();
+            EnsureActiveTrackingSaveFolder();
+
+            if (string.IsNullOrEmpty(_activeTrackingSaveFolder))
+            {
+                LogActiveVesselTelemetryStatus("blocked because KSP save identity is not ready");
+                DisableActiveVesselSurfaceImpactTracking();
+                return false;
+            }
 
             if (telemetryRequirements == FlightTelemetryRequirement.None)
             {
@@ -321,7 +328,7 @@ namespace TheRaceForSpace.KspIntegration
             out string celestialBodyName,
             out double impactUniversalTime)
         {
-            EnsureActiveTrackingGame();
+            EnsureActiveTrackingSaveFolder();
 
             vesselId = _pendingImpactVesselId;
             celestialBodyName = _pendingImpactBodyName;
@@ -368,19 +375,26 @@ namespace TheRaceForSpace.KspIntegration
         public static void ResetActiveVesselTracking()
         {
             DisableActiveVesselSurfaceImpactTracking();
-            _activeTrackingGame = null;
+            _activeTrackingSaveFolder = null;
             _lastActiveVesselTelemetryStatus = null;
         }
 
-        private static void EnsureActiveTrackingGame()
+        private static void EnsureActiveTrackingSaveFolder()
         {
-            if (_activeTrackingGame == HighLogic.CurrentGame)
+            string currentSaveFolder = HighLogic.SaveFolder;
+            if (string.IsNullOrEmpty(currentSaveFolder)
+                || string.Equals(
+                    _activeTrackingSaveFolder,
+                    currentSaveFolder,
+                    StringComparison.Ordinal))
             {
                 return;
             }
 
+            // HighLogic.CurrentGame can be replaced during ordinary scene changes. Only a genuine
+            // save-folder change should discard pending impact callbacks and active-flight telemetry.
             ResetActiveVesselTracking();
-            _activeTrackingGame = HighLogic.CurrentGame;
+            _activeTrackingSaveFolder = currentSaveFolder;
         }
 
         private static void LogActiveVesselTelemetryStatus(string status)
@@ -399,7 +413,7 @@ namespace TheRaceForSpace.KspIntegration
 
         private static void EnsureVesselWillDestroySubscription()
         {
-            if (_isVesselWillDestroySubscribed || _activeTrackingGame == null)
+            if (_isVesselWillDestroySubscribed || string.IsNullOrEmpty(_activeTrackingSaveFolder))
             {
                 return;
             }

@@ -29,7 +29,7 @@ namespace TheRaceForSpace.Tracking
             }
 
             var countsByBody = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-            var observations = new List<MilestoneVesselObservation>();
+            var observations = new List<MilestoneVesselObservation>(vesselSnapshots.Count);
 
             for (int vesselIndex = 0; vesselIndex < vesselSnapshots.Count; vesselIndex++)
             {
@@ -39,7 +39,7 @@ namespace TheRaceForSpace.Tracking
                     continue;
                 }
 
-                bool isPrototypeSatellite = vesselSnapshot.VesselType == TrackedVesselType.Probe
+                bool isSatellite = vesselSnapshot.VesselType == TrackedVesselType.Probe
                     || vesselSnapshot.VesselType == TrackedVesselType.Relay;
                 MilestoneCrewRequirement? crewQualification = null;
 
@@ -47,7 +47,7 @@ namespace TheRaceForSpace.Tracking
                 {
                     crewQualification = MilestoneCrewRequirement.Crewed;
                 }
-                else if (isPrototypeSatellite)
+                else if (vesselSnapshot.CrewCount == 0 && isSatellite)
                 {
                     crewQualification = MilestoneCrewRequirement.UncrewedProbe;
                 }
@@ -60,12 +60,21 @@ namespace TheRaceForSpace.Tracking
                         crewQualification));
                 }
 
-                if (isPrototypeSatellite)
+                if (isSatellite)
                 {
                     int currentCount;
                     countsByBody.TryGetValue(vesselSnapshot.CelestialBodyName, out currentCount);
                     countsByBody[vesselSnapshot.CelestialBodyName] = currentCount + 1;
                 }
+            }
+
+            // A successful snapshot refresh is authoritative for player vessel presence. Apply the
+            // new counts before evaluating milestone unlock rules so satellite-count prerequisites
+            // see the same observation that may satisfy the milestone itself.
+            playerProgram.ClearSatelliteCounts();
+            foreach (KeyValuePair<string, int> bodyCount in countsByBody)
+            {
+                playerProgram.SetSatelliteCount(bodyCount.Key, bodyCount.Value);
             }
 
             if (milestoneDefinitions != null)
@@ -76,15 +85,6 @@ namespace TheRaceForSpace.Tracking
                     milestoneDefinitions,
                     observations,
                     currentUniversalTime);
-            }
-
-            // A successful snapshot refresh is authoritative for player vessel presence. Clear
-            // stale body counts first so removing the last satellite from any body returns it to zero,
-            // including bodies that are not represented by the current milestone catalogue.
-            playerProgram.ClearSatelliteCounts();
-            foreach (KeyValuePair<string, int> bodyCount in countsByBody)
-            {
-                playerProgram.SetSatelliteCount(bodyCount.Key, bodyCount.Value);
             }
         }
 

@@ -20,7 +20,6 @@ namespace TheRaceForSpace.KspIntegration
         private static double _lastTrackedSurfaceSpeedMetersPerSecond;
         private static FlightSituation _lastTrackedSituation = FlightSituation.Other;
         private static double _lastTrackedInFlightUniversalTime = -1.0;
-        private static bool _isVesselWillDestroySubscribed;
         private static string _pendingImpactVesselId;
         private static string _pendingImpactBodyName;
         private static double _pendingImpactUniversalTime = -1.0;
@@ -276,7 +275,9 @@ namespace TheRaceForSpace.KspIntegration
 
             if (needsSurfaceImpact)
             {
-                EnsureVesselWillDestroySubscription();
+                // The vessel-specific callback is the supported impact signal here. KSP's global
+                // onVesselWillDestroy event can throw during Flight even when its event reference is
+                // non-null, so active telemetry must not depend on that additional global fallback.
                 TrackActiveVesselDestruction(vessel);
                 CaptureDestructionTelemetry(
                     vessel,
@@ -352,18 +353,6 @@ namespace TheRaceForSpace.KspIntegration
         public static void DisableActiveVesselSurfaceImpactTracking()
         {
             DetachDestructionCallback();
-            if (_isVesselWillDestroySubscribed)
-            {
-                // KSP can tear down the static event object before our persistent runtime leaves
-                // the scene. The subscription flag still belongs to us, so clear it even when the
-                // event itself is temporarily unavailable.
-                if (GameEvents.onVesselWillDestroy != null)
-                {
-                    GameEvents.onVesselWillDestroy.Remove(OnVesselWillDestroy);
-                }
-
-                _isVesselWillDestroySubscribed = false;
-            }
 
             _destructionTrackedVesselId = null;
             _lastTrackedBodyName = null;
@@ -416,28 +405,6 @@ namespace TheRaceForSpace.KspIntegration
 
             _lastActiveVesselTelemetryStatus = status;
             Debug.Log("[TheRaceForSpace] Flight telemetry: " + status + ".");
-        }
-
-        private static void EnsureVesselWillDestroySubscription()
-        {
-            if (_isVesselWillDestroySubscribed || string.IsNullOrEmpty(_activeTrackingSaveFolder))
-            {
-                return;
-            }
-
-            // KSP can expose the active vessel before every global GameEvents object has finished
-            // initializing for Flight. The vessel-specific destruction callback below is sufficient
-            // for normal tracking, so defer this additional fallback instead of blocking telemetry.
-            if (GameEvents.onVesselWillDestroy == null)
-            {
-                return;
-            }
-
-            // Vessel.OnJustAboutToBeDestroyed can be missed during some breakup sequences.
-            // KSP's global event is an additional last-chance notification for the same vessel,
-            // but it is subscribed only while a Directed Power contract actually needs impact data.
-            GameEvents.onVesselWillDestroy.Add(OnVesselWillDestroy);
-            _isVesselWillDestroySubscribed = true;
         }
 
         private static void TrackActiveVesselDestruction(Vessel vessel)
@@ -518,11 +485,6 @@ namespace TheRaceForSpace.KspIntegration
             _lastTrackedInFlightUniversalTime = observationUniversalTime;
         }
 
-        private static void OnVesselWillDestroy(Vessel vessel)
-        {
-            RecordPotentialSurfaceImpact(vessel);
-        }
-
         private static void RecordPotentialSurfaceImpact(Vessel vessel)
         {
             if (vessel == null
@@ -538,8 +500,8 @@ namespace TheRaceForSpace.KspIntegration
 
             // Destruction-time vessel values are not stable during a violent breakup: KSP may
             // already report LANDED/SPLASHED and zero surface speed by the time the death callback
-            // runs. Keep KSP event and vessel handling here, but delegate the normalized impact
-            // decision to the KSP-independent evaluator used by the standalone regression suite.
+            // runs. Keep KSP vessel handling here, but delegate the normalized impact decision to
+            // the KSP-independent evaluator used by the standalone regression suite.
             double currentUniversalTime = Planetarium.fetch == null
                 ? -1.0
                 : Planetarium.GetUniversalTime();

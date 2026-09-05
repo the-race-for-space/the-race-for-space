@@ -48,10 +48,10 @@ Owns runtime scheduling and campaign-wide settings.
 
 Main classes:
 
-- `ModRuntime` — persistent KSP-session scheduler that owns the live `CampaignController` and `FlightContractTracker` for the current KSP game.
+- `ModRuntime` — persistent KSP-session scheduler that owns the live `CampaignController` and `FlightContractTracker` for the current KSP save.
 - `CampaignSettings` — reads and exposes campaign balance settings.
 
-`ModRuntime` starts once for the KSP session and survives normal scene changes. Campaign state remains scoped to one `HighLogic.CurrentGame`: loading a different save replaces the controller/tracker and resets active-vessel callback state rather than carrying progress between saves.
+`ModRuntime` starts once for the KSP session and survives normal scene changes. KSP can replace `HighLogic.CurrentGame` during those transitions, so campaign ownership uses `HighLogic.SaveFolder` as the stable save identity instead of `Game` object reference equality. Loading a different save folder replaces the controller/tracker and active-vessel callback state; returning to the main menu releases current-save state so reloading the same folder later restores it cleanly.
 
 Current runtime cadences:
 
@@ -130,7 +130,7 @@ Main classes:
 Two funding types exist:
 
 1. **Objective Funding Contracts** — one-off objectives with the declining ten-payment sequence.
-2. **Satellite Network Funding Contracts** — continuing network funding based on qualifying satellites.
+2. **Satellite Network Funding Contracts** — continuing network funding based on qualifying satellites around a body.
 
 The controller coordinates these contracts, but the contract types own their own funding state and calculations.
 

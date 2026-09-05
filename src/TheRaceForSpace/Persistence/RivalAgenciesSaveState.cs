@@ -1,77 +1,77 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using TheRaceForSpace.Programs;
+using TheRaceForSpace.Agencies;
 
 namespace TheRaceForSpace.Persistence
 {
     /// <summary>
-    /// Persists all simulated rival programs by stable program ID. Each saved rival keeps only
+    /// Persists all simulated rival agencies by stable agency ID. Each saved rival keeps only
     /// mutable campaign state; display names and other presentation values remain code-owned.
     /// </summary>
-    public sealed class RivalProgramsSaveState
+    public sealed class RivalAgenciesSaveState
     {
         private const string RivalNodeName = "RIVAL";
 
-        private readonly Dictionary<string, SavedRivalProgram> _statesByProgramId =
+        private readonly Dictionary<string, SavedRivalProgram> _statesByAgencyId =
             new Dictionary<string, SavedRivalProgram>(StringComparer.OrdinalIgnoreCase);
 
         public bool HasData
         {
-            get { return _statesByProgramId.Count > 0; }
+            get { return _statesByAgencyId.Count > 0; }
         }
 
-        public void Capture(IList<SpaceProgramState> rivalPrograms)
+        public void Capture(IList<AgencyState> rivalAgencies)
         {
-            _statesByProgramId.Clear();
-            if (rivalPrograms == null)
+            _statesByAgencyId.Clear();
+            if (rivalAgencies == null)
             {
                 return;
             }
 
-            for (int programIndex = 0; programIndex < rivalPrograms.Count; programIndex++)
+            for (int agencyIndex = 0; agencyIndex < rivalAgencies.Count; agencyIndex++)
             {
-                SpaceProgramState program = rivalPrograms[programIndex];
-                if (program == null || program.IsPlayer || string.IsNullOrEmpty(program.Id))
+                AgencyState agency = rivalAgencies[agencyIndex];
+                if (agency == null || agency.IsPlayer || string.IsNullOrEmpty(agency.Id))
                 {
                     continue;
                 }
 
                 var state = new SavedRivalProgram();
-                state.Capture(program);
+                state.Capture(agency);
                 if (state.HasData)
                 {
-                    _statesByProgramId[program.Id] = state;
+                    _statesByAgencyId[agency.Id] = state;
                 }
             }
         }
 
-        public void ApplyTo(IList<SpaceProgramState> rivalPrograms)
+        public void ApplyTo(IList<AgencyState> rivalAgencies)
         {
-            if (rivalPrograms == null)
+            if (rivalAgencies == null)
             {
                 return;
             }
 
-            for (int programIndex = 0; programIndex < rivalPrograms.Count; programIndex++)
+            for (int agencyIndex = 0; agencyIndex < rivalAgencies.Count; agencyIndex++)
             {
-                SpaceProgramState program = rivalPrograms[programIndex];
-                if (program == null || program.IsPlayer || string.IsNullOrEmpty(program.Id))
+                AgencyState agency = rivalAgencies[agencyIndex];
+                if (agency == null || agency.IsPlayer || string.IsNullOrEmpty(agency.Id))
                 {
                     continue;
                 }
 
                 SavedRivalProgram state;
-                if (_statesByProgramId.TryGetValue(program.Id, out state))
+                if (_statesByAgencyId.TryGetValue(agency.Id, out state))
                 {
-                    state.ApplyTo(program);
+                    state.ApplyTo(agency);
                 }
             }
         }
 
         public void Load(ConfigNode node)
         {
-            _statesByProgramId.Clear();
+            _statesByAgencyId.Clear();
             if (node == null)
             {
                 return;
@@ -82,14 +82,14 @@ namespace TheRaceForSpace.Persistence
             {
                 var state = new SavedRivalProgram();
                 state.Load(rivalNodes[nodeIndex]);
-                if (!state.HasData || string.IsNullOrEmpty(state.ProgramId))
+                if (!state.HasData || string.IsNullOrEmpty(state.AgencyId))
                 {
                     continue;
                 }
 
                 // Stable IDs are unique in the runtime collection. If malformed save data repeats
                 // an ID, the last valid node wins rather than inventing another rival identity.
-                _statesByProgramId[state.ProgramId] = state;
+                _statesByAgencyId[state.AgencyId] = state;
             }
         }
 
@@ -100,12 +100,12 @@ namespace TheRaceForSpace.Persistence
                 return;
             }
 
-            var programIds = new List<string>(_statesByProgramId.Keys);
+            var programIds = new List<string>(_statesByAgencyId.Keys);
             programIds.Sort(StringComparer.OrdinalIgnoreCase);
 
-            for (int programIndex = 0; programIndex < programIds.Count; programIndex++)
+            for (int agencyIndex = 0; agencyIndex < programIds.Count; agencyIndex++)
             {
-                SavedRivalProgram state = _statesByProgramId[programIds[programIndex]];
+                SavedRivalProgram state = _statesByAgencyId[programIds[agencyIndex]];
                 state.Save(node.AddNode(RivalNodeName));
             }
         }
@@ -122,52 +122,52 @@ namespace TheRaceForSpace.Persistence
             private const string UniversalTimeValueName = "universalTime";
             private const string BodyValueName = "body";
             private const string CountValueName = "count";
-            private const string ProgramIdValueName = "programId";
+            private const string AgencyIdValueName = "programId";
             private const string FundsValueName = "funds";
             private const string NextMissionTargetIdValueName = "nextMissionTargetId";
-            private const string LaunchProgressPercentValueName = "launchProgressPercent";
-            private const string NextLaunchProgressCheckUniversalTimeValueName =
+            private const string MissionProgressPercentValueName = "launchProgressPercent";
+            private const string NextMissionProgressCheckUniversalTimeValueName =
                 "nextLaunchProgressCheckUniversalTime";
 
-            private readonly Dictionary<string, double> _achievementTimesById =
+            private readonly Dictionary<string, double> _objectiveCompletionTimesById =
                 new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
             private readonly Dictionary<string, int> _satellitesByBody =
                 new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 
             public bool HasData { get; private set; }
-            public string ProgramId { get; private set; }
+            public string AgencyId { get; private set; }
             public double Funds { get; private set; }
             public string NextMissionTargetId { get; private set; }
-            public int LaunchProgressPercent { get; private set; }
-            public double NextLaunchProgressCheckUniversalTime { get; private set; }
+            public int MissionProgressPercent { get; private set; }
+            public double NextMissionProgressCheckUniversalTime { get; private set; }
 
-            public void Capture(SpaceProgramState program)
+            public void Capture(AgencyState agency)
             {
                 ClearState();
-                if (program == null || program.IsPlayer || string.IsNullOrEmpty(program.Id))
+                if (agency == null || agency.IsPlayer || string.IsNullOrEmpty(agency.Id))
                 {
                     return;
                 }
 
                 HasData = true;
-                ProgramId = program.Id;
-                Funds = Math.Max(0.0, program.Funds);
-                NextMissionTargetId = program.NextMissionTargetId;
-                LaunchProgressPercent = Math.Max(0, Math.Min(100, program.LaunchProgressPercent));
-                NextLaunchProgressCheckUniversalTime = Math.Max(
+                AgencyId = agency.Id;
+                Funds = Math.Max(0.0, agency.Funds);
+                NextMissionTargetId = agency.NextMissionTargetId;
+                MissionProgressPercent = Math.Max(0, Math.Min(100, agency.MissionProgressPercent));
+                NextMissionProgressCheckUniversalTime = Math.Max(
                     0.0,
-                    program.NextLaunchProgressCheckUniversalTime);
+                    agency.NextMissionProgressCheckUniversalTime);
 
-                foreach (KeyValuePair<string, double> achievement in program.RecordedAchievements)
+                foreach (KeyValuePair<string, double> objectiveCompletion in agency.ObjectiveCompletionTimes)
                 {
-                    if (!string.IsNullOrEmpty(achievement.Key)
-                        && IsFinite(achievement.Value))
+                    if (!string.IsNullOrEmpty(objectiveCompletion.Key)
+                        && IsFinite(objectiveCompletion.Value))
                     {
-                        _achievementTimesById[achievement.Key] = Math.Max(0.0, achievement.Value);
+                        _objectiveCompletionTimesById[objectiveCompletion.Key] = Math.Max(0.0, objectiveCompletion.Value);
                     }
                 }
 
-                foreach (KeyValuePair<string, int> bodyCount in program.SatelliteCountsByBody)
+                foreach (KeyValuePair<string, int> bodyCount in agency.SatelliteCountsByBody)
                 {
                     if (!string.IsNullOrEmpty(bodyCount.Key))
                     {
@@ -176,39 +176,39 @@ namespace TheRaceForSpace.Persistence
                 }
             }
 
-            public void ApplyTo(SpaceProgramState program)
+            public void ApplyTo(AgencyState agency)
             {
                 if (!HasData
-                    || program == null
-                    || program.IsPlayer
-                    || (!string.IsNullOrEmpty(ProgramId)
-                        && !string.Equals(ProgramId, program.Id, StringComparison.OrdinalIgnoreCase)))
+                    || agency == null
+                    || agency.IsPlayer
+                    || (!string.IsNullOrEmpty(AgencyId)
+                        && !string.Equals(AgencyId, agency.Id, StringComparison.OrdinalIgnoreCase)))
                 {
                     return;
                 }
 
-                program.Funds = Math.Max(0.0, Funds);
-                program.ClearSatelliteCounts();
-                program.ClearRecordedAchievements();
+                agency.Funds = Math.Max(0.0, Funds);
+                agency.ClearSatelliteCounts();
+                agency.ClearObjectiveCompletionTimes();
 
                 foreach (KeyValuePair<string, int> bodyCount in _satellitesByBody)
                 {
-                    program.SetSatelliteCount(bodyCount.Key, bodyCount.Value);
+                    agency.SetSatelliteCount(bodyCount.Key, bodyCount.Value);
                 }
 
-                foreach (KeyValuePair<string, double> achievement in _achievementTimesById)
+                foreach (KeyValuePair<string, double> objectiveCompletion in _objectiveCompletionTimesById)
                 {
-                    program.RecordAchievement(achievement.Key, achievement.Value);
+                    agency.RecordObjectiveCompletion(objectiveCompletion.Key, objectiveCompletion.Value);
                 }
 
-                program.NextMissionTargetId = NextMissionTargetId;
+                agency.NextMissionTargetId = NextMissionTargetId;
                 // Presentation text is derived from the live target collections on the next rival
                 // simulation refresh. Persistence stores only the stable mission identity.
-                program.NextMissionDisplayName = null;
-                program.LaunchProgressPercent = Math.Max(0, Math.Min(100, LaunchProgressPercent));
-                program.NextLaunchProgressCheckUniversalTime = Math.Max(
+                agency.NextMissionDisplayName = null;
+                agency.MissionProgressPercent = Math.Max(0, Math.Min(100, MissionProgressPercent));
+                agency.NextMissionProgressCheckUniversalTime = Math.Max(
                     0.0,
-                    NextLaunchProgressCheckUniversalTime);
+                    NextMissionProgressCheckUniversalTime);
             }
 
             public void Load(ConfigNode node)
@@ -220,7 +220,7 @@ namespace TheRaceForSpace.Persistence
                     return;
                 }
 
-                ProgramId = node.GetValue(ProgramIdValueName);
+                AgencyId = node.GetValue(AgencyIdValueName);
 
                 double parsedDouble;
                 if (TryParseFiniteDouble(node.GetValue(FundsValueName), out parsedDouble))
@@ -236,19 +236,19 @@ namespace TheRaceForSpace.Persistence
 
                 int parsedInt;
                 if (int.TryParse(
-                    node.GetValue(LaunchProgressPercentValueName),
+                    node.GetValue(MissionProgressPercentValueName),
                     NumberStyles.Integer,
                     CultureInfo.InvariantCulture,
                     out parsedInt))
                 {
-                    LaunchProgressPercent = Math.Max(0, Math.Min(100, parsedInt));
+                    MissionProgressPercent = Math.Max(0, Math.Min(100, parsedInt));
                 }
 
                 if (TryParseFiniteDouble(
-                    node.GetValue(NextLaunchProgressCheckUniversalTimeValueName),
+                    node.GetValue(NextMissionProgressCheckUniversalTimeValueName),
                     out parsedDouble))
                 {
-                    NextLaunchProgressCheckUniversalTime = Math.Max(0.0, parsedDouble);
+                    NextMissionProgressCheckUniversalTime = Math.Max(0.0, parsedDouble);
                 }
 
                 ConfigNode[] achievementNodes = node.GetNodes(AchievementNodeName);
@@ -295,9 +295,9 @@ namespace TheRaceForSpace.Persistence
                     return;
                 }
 
-                if (!string.IsNullOrEmpty(ProgramId))
+                if (!string.IsNullOrEmpty(AgencyId))
                 {
-                    node.AddValue(ProgramIdValueName, ProgramId);
+                    node.AddValue(AgencyIdValueName, AgencyId);
                 }
 
                 node.AddValue(FundsValueName, Funds.ToString("R", CultureInfo.InvariantCulture));
@@ -307,13 +307,13 @@ namespace TheRaceForSpace.Persistence
                 }
 
                 node.AddValue(
-                    LaunchProgressPercentValueName,
-                    LaunchProgressPercent.ToString(CultureInfo.InvariantCulture));
+                    MissionProgressPercentValueName,
+                    MissionProgressPercent.ToString(CultureInfo.InvariantCulture));
                 node.AddValue(
-                    NextLaunchProgressCheckUniversalTimeValueName,
-                    NextLaunchProgressCheckUniversalTime.ToString("R", CultureInfo.InvariantCulture));
+                    NextMissionProgressCheckUniversalTimeValueName,
+                    NextMissionProgressCheckUniversalTime.ToString("R", CultureInfo.InvariantCulture));
 
-                var achievementIds = new List<string>(_achievementTimesById.Keys);
+                var achievementIds = new List<string>(_objectiveCompletionTimesById.Keys);
                 achievementIds.Sort(StringComparer.OrdinalIgnoreCase);
                 for (int idIndex = 0; idIndex < achievementIds.Count; idIndex++)
                 {
@@ -322,7 +322,7 @@ namespace TheRaceForSpace.Persistence
                     achievementNode.AddValue(IdValueName, id);
                     achievementNode.AddValue(
                         UniversalTimeValueName,
-                        _achievementTimesById[id].ToString("R", CultureInfo.InvariantCulture));
+                        _objectiveCompletionTimesById[id].ToString("R", CultureInfo.InvariantCulture));
                 }
 
                 var bodyNames = new List<string>(_satellitesByBody.Keys);
@@ -341,12 +341,12 @@ namespace TheRaceForSpace.Persistence
             private void ClearState()
             {
                 HasData = false;
-                ProgramId = null;
+                AgencyId = null;
                 Funds = 0.0;
                 NextMissionTargetId = null;
-                LaunchProgressPercent = 0;
-                NextLaunchProgressCheckUniversalTime = 0.0;
-                _achievementTimesById.Clear();
+                MissionProgressPercent = 0;
+                NextMissionProgressCheckUniversalTime = 0.0;
+                _objectiveCompletionTimesById.Clear();
                 _satellitesByBody.Clear();
             }
 
@@ -354,10 +354,10 @@ namespace TheRaceForSpace.Persistence
             {
                 universalTime = Math.Max(0.0, universalTime);
                 double existingTime;
-                if (!_achievementTimesById.TryGetValue(id, out existingTime)
+                if (!_objectiveCompletionTimesById.TryGetValue(id, out existingTime)
                     || universalTime < existingTime)
                 {
-                    _achievementTimesById[id] = universalTime;
+                    _objectiveCompletionTimesById[id] = universalTime;
                 }
             }
 

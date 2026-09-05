@@ -1,35 +1,35 @@
 using System;
 using System.Collections.Generic;
-using TheRaceForSpace.Milestones;
-using TheRaceForSpace.Programs;
+using TheRaceForSpace.Objectives;
+using TheRaceForSpace.Agencies;
 
 namespace TheRaceForSpace.Tracking
 {
     /// <summary>
-    /// Applies KSP-independent vessel snapshots to player satellite counts and milestone state.
+    /// Applies KSP-independent vessel snapshots to player satellite counts and objective state.
     /// Raw KSP vessel discovery is owned by the KSP integration layer.
     /// </summary>
     public static class SatelliteTracker
     {
         /// <summary>
         /// Refreshes player satellite counts from every observed Probe/Relay body and records
-        /// milestones whose shared campaign unlock rules are satisfied at the observation time.
-        /// Satellite body tracking does not depend on the milestone catalogue.
+        /// objectives whose shared campaign unlock rules are satisfied at the observation time.
+        /// Satellite body tracking does not depend on the objective catalogue.
         /// </summary>
         public static void RefreshPlayerSatelliteCounts(
-            SpaceProgramState playerProgram,
-            IList<SpaceProgramState> programs,
-            IList<MilestoneDefinition> milestoneDefinitions,
+            AgencyState playerAgency,
+            IList<AgencyState> agencies,
+            IList<ObjectiveDefinition> milestoneDefinitions,
             IList<VesselTrackingSnapshot> vesselSnapshots,
             double currentUniversalTime)
         {
-            if (playerProgram == null || vesselSnapshots == null)
+            if (playerAgency == null || vesselSnapshots == null)
             {
                 return;
             }
 
             var countsByBody = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-            var observations = new List<MilestoneVesselObservation>(vesselSnapshots.Count);
+            var observations = new List<OrbitalObjectiveObservation>(vesselSnapshots.Count);
 
             for (int vesselIndex = 0; vesselIndex < vesselSnapshots.Count; vesselIndex++)
             {
@@ -41,22 +41,22 @@ namespace TheRaceForSpace.Tracking
 
                 bool isSatellite = vesselSnapshot.VesselType == TrackedVesselType.Probe
                     || vesselSnapshot.VesselType == TrackedVesselType.Relay;
-                MilestoneCrewRequirement? crewQualification = null;
+                ObjectiveCrewRequirement? crewQualification = null;
 
                 if (vesselSnapshot.CrewCount > 0)
                 {
-                    crewQualification = MilestoneCrewRequirement.Crewed;
+                    crewQualification = ObjectiveCrewRequirement.Crewed;
                 }
                 else if (vesselSnapshot.CrewCount == 0 && isSatellite)
                 {
-                    crewQualification = MilestoneCrewRequirement.UncrewedProbe;
+                    crewQualification = ObjectiveCrewRequirement.UncrewedProbe;
                 }
 
                 if (crewQualification.HasValue)
                 {
-                    observations.Add(new MilestoneVesselObservation(
+                    observations.Add(new OrbitalObjectiveObservation(
                         vesselSnapshot.CelestialBodyName,
-                        MilestoneSituation.Orbit,
+                        ObjectiveSituation.Orbit,
                         crewQualification));
                 }
 
@@ -69,19 +69,19 @@ namespace TheRaceForSpace.Tracking
             }
 
             // A successful snapshot refresh is authoritative for player vessel presence. Apply the
-            // new counts before evaluating milestone unlock rules so satellite-count prerequisites
-            // see the same observation that may satisfy the milestone itself.
-            playerProgram.ClearSatelliteCounts();
+            // new counts before evaluating objective unlock rules so satellite-count prerequisites
+            // see the same observation that may satisfy the objective itself.
+            playerAgency.ClearSatelliteCounts();
             foreach (KeyValuePair<string, int> bodyCount in countsByBody)
             {
-                playerProgram.SetSatelliteCount(bodyCount.Key, bodyCount.Value);
+                playerAgency.SetSatelliteCount(bodyCount.Key, bodyCount.Value);
             }
 
             if (milestoneDefinitions != null)
             {
                 EvaluateMilestones(
-                    playerProgram,
-                    programs,
+                    playerAgency,
+                    agencies,
                     milestoneDefinitions,
                     observations,
                     currentUniversalTime);
@@ -89,15 +89,15 @@ namespace TheRaceForSpace.Tracking
         }
 
         private static void EvaluateMilestones(
-            SpaceProgramState playerProgram,
-            IList<SpaceProgramState> programs,
-            IList<MilestoneDefinition> milestoneDefinitions,
-            IList<MilestoneVesselObservation> observations,
+            AgencyState playerAgency,
+            IList<AgencyState> agencies,
+            IList<ObjectiveDefinition> milestoneDefinitions,
+            IList<OrbitalObjectiveObservation> observations,
             double currentUniversalTime)
         {
-            // Repeat only when this refresh records a new achievement. The player state in the
-            // shared program collection changes immediately, so a newly satisfied unlock rule can
-            // enable another milestone from the same vessel snapshot without depending on ordering.
+            // Repeat only when this refresh records a new objectiveCompletion. The player state in the
+            // shared agency collection changes immediately, so a newly satisfied unlock rule can
+            // enable another objective from the same vessel snapshot without depending on ordering.
             bool recordedAchievement;
             do
             {
@@ -105,12 +105,12 @@ namespace TheRaceForSpace.Tracking
 
                 for (int milestoneIndex = 0; milestoneIndex < milestoneDefinitions.Count; milestoneIndex++)
                 {
-                    MilestoneDefinition milestone = milestoneDefinitions[milestoneIndex];
-                    if (milestone == null
-                        || playerProgram.HasAchievement(milestone.Id)
+                    ObjectiveDefinition objective = milestoneDefinitions[milestoneIndex];
+                    if (objective == null
+                        || playerAgency.HasCompletedObjective(objective.Id)
                         || !UnlockRuleEvaluator.IsSatisfied(
-                            milestone.UnlockRule,
-                            programs,
+                            objective.UnlockRule,
+                            agencies,
                             currentUniversalTime))
                     {
                         continue;
@@ -118,12 +118,12 @@ namespace TheRaceForSpace.Tracking
 
                     for (int observationIndex = 0; observationIndex < observations.Count; observationIndex++)
                     {
-                        if (!milestone.IsSatisfiedBy(observations[observationIndex]))
+                        if (!objective.IsSatisfiedBy(observations[observationIndex]))
                         {
                             continue;
                         }
 
-                        if (playerProgram.RecordAchievement(milestone.Id, currentUniversalTime))
+                        if (playerAgency.RecordObjectiveCompletion(objective.Id, currentUniversalTime))
                         {
                             recordedAchievement = true;
                         }

@@ -2,13 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using TheRaceForSpace.Funding;
-using TheRaceForSpace.Programs;
+using TheRaceForSpace.Agencies;
 
 namespace TheRaceForSpace.Persistence
 {
     /// <summary>
-    /// Persists the player's achievement history and the lifecycle state of every configured
-    /// achievement and satellite funding contract. Contract definitions remain code-owned; only
+    /// Persists the player's objectiveCompletion history and the lifecycle state of every configured
+    /// objectiveCompletion and satellite funding contract. Contract definitions remain code-owned; only
     /// mutable campaign state is stored by stable ID.
     /// </summary>
     public sealed class FundingContractsSaveState
@@ -36,12 +36,12 @@ namespace TheRaceForSpace.Persistence
         public double NextFundingUniversalTime { get; private set; }
 
         public void Capture(
-            SpaceProgramState playerProgram,
-            IList<FundingProgramme> satelliteContracts,
-            IList<AchievementFundingProgramme> achievementContracts,
+            AgencyState playerAgency,
+            IList<SatelliteNetworkFundingContract> satelliteContracts,
+            IList<ObjectiveFundingContract> achievementContracts,
             double nextFundingUniversalTime)
         {
-            if (playerProgram == null || satelliteContracts == null || achievementContracts == null)
+            if (playerAgency == null || satelliteContracts == null || achievementContracts == null)
             {
                 return;
             }
@@ -54,19 +54,19 @@ namespace TheRaceForSpace.Persistence
                 NextFundingUniversalTime = nextFundingUniversalTime;
             }
 
-            foreach (KeyValuePair<string, double> achievement in playerProgram.RecordedAchievements)
+            foreach (KeyValuePair<string, double> objectiveCompletion in playerAgency.ObjectiveCompletionTimes)
             {
-                if (string.IsNullOrEmpty(achievement.Key) || !IsFinite(achievement.Value))
+                if (string.IsNullOrEmpty(objectiveCompletion.Key) || !IsFinite(objectiveCompletion.Value))
                 {
                     continue;
                 }
 
-                _playerAchievementTimesById[achievement.Key] = Math.Max(0.0, achievement.Value);
+                _playerAchievementTimesById[objectiveCompletion.Key] = Math.Max(0.0, objectiveCompletion.Value);
             }
 
             for (int contractIndex = 0; contractIndex < achievementContracts.Count; contractIndex++)
             {
-                AchievementFundingProgramme contract = achievementContracts[contractIndex];
+                ObjectiveFundingContract contract = achievementContracts[contractIndex];
                 if (contract == null || string.IsNullOrEmpty(contract.Id))
                 {
                     continue;
@@ -80,7 +80,7 @@ namespace TheRaceForSpace.Persistence
 
             for (int contractIndex = 0; contractIndex < satelliteContracts.Count; contractIndex++)
             {
-                FundingProgramme contract = satelliteContracts[contractIndex];
+                SatelliteNetworkFundingContract contract = satelliteContracts[contractIndex];
                 if (contract == null || string.IsNullOrEmpty(contract.Id))
                 {
                     continue;
@@ -94,24 +94,24 @@ namespace TheRaceForSpace.Persistence
         }
 
         public void ApplyTo(
-            SpaceProgramState playerProgram,
-            IList<FundingProgramme> satelliteContracts,
-            IList<AchievementFundingProgramme> achievementContracts)
+            AgencyState playerAgency,
+            IList<SatelliteNetworkFundingContract> satelliteContracts,
+            IList<ObjectiveFundingContract> achievementContracts)
         {
-            if (!HasData || playerProgram == null || satelliteContracts == null || achievementContracts == null)
+            if (!HasData || playerAgency == null || satelliteContracts == null || achievementContracts == null)
             {
                 return;
             }
 
-            playerProgram.ClearRecordedAchievements();
-            foreach (KeyValuePair<string, double> achievement in _playerAchievementTimesById)
+            playerAgency.ClearObjectiveCompletionTimes();
+            foreach (KeyValuePair<string, double> objectiveCompletion in _playerAchievementTimesById)
             {
-                playerProgram.RecordAchievement(achievement.Key, achievement.Value);
+                playerAgency.RecordObjectiveCompletion(objectiveCompletion.Key, objectiveCompletion.Value);
             }
 
             for (int contractIndex = 0; contractIndex < achievementContracts.Count; contractIndex++)
             {
-                AchievementFundingProgramme contract = achievementContracts[contractIndex];
+                ObjectiveFundingContract contract = achievementContracts[contractIndex];
                 if (contract == null || string.IsNullOrEmpty(contract.Id))
                 {
                     continue;
@@ -131,7 +131,7 @@ namespace TheRaceForSpace.Persistence
 
             for (int contractIndex = 0; contractIndex < satelliteContracts.Count; contractIndex++)
             {
-                FundingProgramme contract = satelliteContracts[contractIndex];
+                SatelliteNetworkFundingContract contract = satelliteContracts[contractIndex];
                 if (contract == null || string.IsNullOrEmpty(contract.Id))
                 {
                     continue;

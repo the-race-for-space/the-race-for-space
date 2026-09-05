@@ -17,23 +17,23 @@
     third-party test framework.
   -->
   <ItemGroup>
-    <Compile Include="../../src/TheRaceForSpace/Core/RaceSettings.cs" Link="Production/Core/RaceSettings.cs" />
-    <Compile Include="../../src/TheRaceForSpace/Funding/FundingProgramme.cs" Link="Production/Funding/FundingProgramme.cs" />
-    <Compile Include="../../src/TheRaceForSpace/Funding/AchievementFundingProgramme.cs" Link="Production/Funding/AchievementFundingProgramme.cs" />
-    <Compile Include="../../src/TheRaceForSpace/Funding/PrototypeFundingCatalogue.cs" Link="Production/Funding/PrototypeFundingCatalogue.cs" />
-    <Compile Include="../../src/TheRaceForSpace/Milestones/MilestoneDefinition.cs" Link="Production/Milestones/MilestoneDefinition.cs" />
-    <Compile Include="../../src/TheRaceForSpace/Milestones/PrototypeMilestones.cs" Link="Production/Milestones/PrototypeMilestones.cs" />
-    <Compile Include="../../src/TheRaceForSpace/Milestones/UnlockRuleDefinition.cs" Link="Production/Milestones/UnlockRuleDefinition.cs" />
-    <Compile Include="../../src/TheRaceForSpace/Milestones/UnlockRuleEvaluator.cs" Link="Production/Milestones/UnlockRuleEvaluator.cs" />
-    <Compile Include="../../src/TheRaceForSpace/Programs/SpaceProgramState.cs" Link="Production/Programs/SpaceProgramState.cs" />
-    <Compile Include="../../src/TheRaceForSpace/Simulation/RivalSimulation.cs" Link="Production/Simulation/RivalSimulation.cs" />
+    <Compile Include="../../src/TheRaceForSpace/Core/CampaignSettings.cs" Link="Production/Core/CampaignSettings.cs" />
+    <Compile Include="../../src/TheRaceForSpace/Funding/SatelliteNetworkFundingContract.cs" Link="Production/Funding/SatelliteNetworkFundingContract.cs" />
+    <Compile Include="../../src/TheRaceForSpace/Funding/ObjectiveFundingContract.cs" Link="Production/Funding/ObjectiveFundingContract.cs" />
+    <Compile Include="../../src/TheRaceForSpace/Funding/FundingContractCatalogue.cs" Link="Production/Funding/FundingContractCatalogue.cs" />
+    <Compile Include="../../src/TheRaceForSpace/Objectives/ObjectiveDefinition.cs" Link="Production/Objectives/ObjectiveDefinition.cs" />
+    <Compile Include="../../src/TheRaceForSpace/Objectives/ObjectiveCatalogue.cs" Link="Production/Objectives/ObjectiveCatalogue.cs" />
+    <Compile Include="../../src/TheRaceForSpace/Objectives/UnlockRuleDefinition.cs" Link="Production/Objectives/UnlockRuleDefinition.cs" />
+    <Compile Include="../../src/TheRaceForSpace/Objectives/UnlockRuleEvaluator.cs" Link="Production/Objectives/UnlockRuleEvaluator.cs" />
+    <Compile Include="../../src/TheRaceForSpace/Agencies/AgencyState.cs" Link="Production/Agencies/AgencyState.cs" />
+    <Compile Include="../../src/TheRaceForSpace/Rivals/RivalSimulation.cs" Link="Production/Rivals/RivalSimulation.cs" />
     <Compile Include="../../src/TheRaceForSpace/Tracking/VesselTrackingSnapshot.cs" Link="Production/Tracking/VesselTrackingSnapshot.cs" />
     <Compile Include="../../src/TheRaceForSpace/Tracking/ActiveVesselTrackingSnapshot.cs" Link="Production/Tracking/ActiveVesselTrackingSnapshot.cs" />
     <Compile Include="../../src/TheRaceForSpace/Tracking/SatelliteTracker.cs" Link="Production/Tracking/SatelliteTracker.cs" />
     <Compile Include="../../src/TheRaceForSpace/Tracking/StarterFlightTracker.cs" Link="Production/Tracking/StarterFlightTracker.cs" />
     <Compile Include="../../src/TheRaceForSpace/Tracking/SurfaceImpactEvaluator.cs" Link="Production/Tracking/SurfaceImpactEvaluator.cs" />
     <Compile Include="../../src/TheRaceForSpace/Persistence/FundingContractsSaveState.cs" Link="Production/Persistence/FundingContractsSaveState.cs" />
-    <Compile Include="../../src/TheRaceForSpace/Persistence/RivalProgramsSaveState.cs" Link="Production/Persistence/RivalProgramsSaveState.cs" />
+    <Compile Include="../../src/TheRaceForSpace/Persistence/RivalAgenciesSaveState.cs" Link="Production/Persistence/RivalAgenciesSaveState.cs" />
     <Compile Include="../../src/TheRaceForSpace/Persistence/ActiveContractProgressSaveState.cs" Link="Production/Persistence/ActiveContractProgressSaveState.cs" />
   </ItemGroup>
 </Project>

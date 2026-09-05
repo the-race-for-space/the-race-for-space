@@ -1,22 +1,22 @@
 using System;
 using System.Globalization;
 
-namespace TheRaceForSpace.Milestones
+namespace TheRaceForSpace.Objectives
 {
     /// <summary>
-    /// Crew qualification required by one milestone objective.
+    /// Crew qualification required by one objective objective.
     /// </summary>
-    public enum MilestoneCrewRequirement
+    public enum ObjectiveCrewRequirement
     {
         UncrewedProbe,
         Crewed
     }
 
     /// <summary>
-    /// Vessel situation required by the orbital milestone objectives.
+    /// Vessel situation required by the orbital objective objectives.
     /// Starter contracts are evaluated from flight-attempt state rather than this value.
     /// </summary>
-    public enum MilestoneSituation
+    public enum ObjectiveSituation
     {
         Orbit
     }
@@ -24,7 +24,7 @@ namespace TheRaceForSpace.Milestones
     /// <summary>
     /// Broad objective family used to distinguish orbital achievements from the four starter lines.
     /// </summary>
-    public enum MilestoneObjectiveType
+    public enum ObjectiveType
     {
         Orbit,
         DirectedPower,
@@ -34,9 +34,9 @@ namespace TheRaceForSpace.Milestones
     }
 
     /// <summary>
-    /// Special pre-orbit contract line. None identifies the normal space-race milestone catalogue.
+    /// Special pre-orbit contract line. None identifies the normal space-race objective catalogue.
     /// </summary>
-    public enum StarterContractLine
+    public enum PreOrbitContractLine
     {
         None,
         DirectedPower,
@@ -46,12 +46,12 @@ namespace TheRaceForSpace.Milestones
     }
 
     /// <summary>
-    /// Immutable measurable criteria supplied by each starter milestone definition.
+    /// Immutable measurable criteria supplied by each starter objective definition.
     /// Keeping these values as catalogue data prevents line/level metadata from secretly defining balance.
     /// </summary>
-    internal sealed class StarterContractCriteria
+    internal sealed class PreOrbitContractCriteria
     {
-        public static readonly StarterContractCriteria None = new StarterContractCriteria(
+        public static readonly PreOrbitContractCriteria None = new PreOrbitContractCriteria(
             0.0,
             0.0,
             0.0,
@@ -60,7 +60,7 @@ namespace TheRaceForSpace.Milestones
             0.0,
             null);
 
-        private StarterContractCriteria(
+        private PreOrbitContractCriteria(
             double requiredSpeedMetersPerSecond,
             double requiredMassTonnes,
             double requiredDistanceMeters,
@@ -86,11 +86,11 @@ namespace TheRaceForSpace.Milestones
         public double RequiredDurationSeconds { get; private set; }
         public string RequiredBiomeName { get; private set; }
 
-        public static StarterContractCriteria DirectedPower(
+        public static PreOrbitContractCriteria DirectedPower(
             double requiredSpeedMetersPerSecond,
             double maximumAltitudeMeters)
         {
-            return new StarterContractCriteria(
+            return new PreOrbitContractCriteria(
                 requiredSpeedMetersPerSecond,
                 0.0,
                 0.0,
@@ -100,11 +100,11 @@ namespace TheRaceForSpace.Milestones
                 null);
         }
 
-        public static StarterContractCriteria Mass(
+        public static PreOrbitContractCriteria Mass(
             double requiredMassTonnes,
             double requiredDistanceMeters)
         {
-            return new StarterContractCriteria(
+            return new PreOrbitContractCriteria(
                 0.0,
                 requiredMassTonnes,
                 requiredDistanceMeters,
@@ -114,12 +114,12 @@ namespace TheRaceForSpace.Milestones
                 null);
         }
 
-        public static StarterContractCriteria Control(
+        public static PreOrbitContractCriteria Control(
             double minimumAltitudeMeters,
             double maximumAltitudeMeters,
             double requiredDurationSeconds)
         {
-            return new StarterContractCriteria(
+            return new PreOrbitContractCriteria(
                 0.0,
                 0.0,
                 0.0,
@@ -129,9 +129,9 @@ namespace TheRaceForSpace.Milestones
                 null);
         }
 
-        public static StarterContractCriteria Biome(string requiredBiomeName)
+        public static PreOrbitContractCriteria Biome(string requiredBiomeName)
         {
-            return new StarterContractCriteria(
+            return new PreOrbitContractCriteria(
                 0.0,
                 0.0,
                 0.0,
@@ -143,15 +143,15 @@ namespace TheRaceForSpace.Milestones
     }
 
     /// <summary>
-    /// KSP-independent facts about one observed vessel that are relevant to orbital milestone evaluation.
-    /// A null crew qualification means the vessel does not fit a milestone crew category.
+    /// KSP-independent facts about one observed vessel that are relevant to orbital objective evaluation.
+    /// A null crew qualification means the vessel does not fit a objective crew category.
     /// </summary>
-    public sealed class MilestoneVesselObservation
+    public sealed class OrbitalObjectiveObservation
     {
-        public MilestoneVesselObservation(
+        public OrbitalObjectiveObservation(
             string celestialBodyName,
-            MilestoneSituation situation,
-            MilestoneCrewRequirement? crewQualification)
+            ObjectiveSituation situation,
+            ObjectiveCrewRequirement? crewQualification)
         {
             CelestialBodyName = celestialBodyName;
             Situation = situation;
@@ -159,22 +159,22 @@ namespace TheRaceForSpace.Milestones
         }
 
         public string CelestialBodyName { get; private set; }
-        public MilestoneSituation Situation { get; private set; }
-        public MilestoneCrewRequirement? CrewQualification { get; private set; }
+        public ObjectiveSituation Situation { get; private set; }
+        public ObjectiveCrewRequirement? CrewQualification { get; private set; }
     }
 
     /// <summary>
-    /// Immutable definition of one race milestone. Gameplay state remains owned by space programs;
+    /// Immutable definition of one race objective. Gameplay state remains owned by space agencies;
     /// this type describes the objective, starter-contract balance metadata, and campaign unlock rule.
     /// </summary>
-    public sealed class MilestoneDefinition
+    public sealed class ObjectiveDefinition
     {
-        public MilestoneDefinition(
+        public ObjectiveDefinition(
             string id,
             string name,
             string celestialBodyName,
-            MilestoneSituation situation,
-            MilestoneCrewRequirement crewRequirement,
+            ObjectiveSituation situation,
+            ObjectiveCrewRequirement crewRequirement,
             string objectiveDescription,
             UnlockRuleDefinition unlockRule)
             : this(
@@ -185,24 +185,24 @@ namespace TheRaceForSpace.Milestones
                 crewRequirement,
                 objectiveDescription,
                 unlockRule,
-                MilestoneObjectiveType.Orbit,
-                StarterContractLine.None,
+                ObjectiveType.Orbit,
+                PreOrbitContractLine.None,
                 0,
                 0.0,
                 0.0)
         {
         }
 
-        public MilestoneDefinition(
+        public ObjectiveDefinition(
             string id,
             string name,
             string celestialBodyName,
-            MilestoneSituation situation,
-            MilestoneCrewRequirement crewRequirement,
+            ObjectiveSituation situation,
+            ObjectiveCrewRequirement crewRequirement,
             string objectiveDescription,
             UnlockRuleDefinition unlockRule,
-            MilestoneObjectiveType objectiveType,
-            StarterContractLine starterLine,
+            ObjectiveType objectiveType,
+            PreOrbitContractLine starterLine,
             int starterLevel,
             double baseRewardFunds,
             double rivalProgressCostFunds)
@@ -219,24 +219,24 @@ namespace TheRaceForSpace.Milestones
                 starterLevel,
                 baseRewardFunds,
                 rivalProgressCostFunds,
-                StarterContractCriteria.None)
+                PreOrbitContractCriteria.None)
         {
         }
 
-        internal MilestoneDefinition(
+        internal ObjectiveDefinition(
             string id,
             string name,
             string celestialBodyName,
-            MilestoneSituation situation,
-            MilestoneCrewRequirement crewRequirement,
+            ObjectiveSituation situation,
+            ObjectiveCrewRequirement crewRequirement,
             string objectiveDescription,
             UnlockRuleDefinition unlockRule,
-            MilestoneObjectiveType objectiveType,
-            StarterContractLine starterLine,
+            ObjectiveType objectiveType,
+            PreOrbitContractLine starterLine,
             int starterLevel,
             double baseRewardFunds,
             double rivalProgressCostFunds,
-            StarterContractCriteria starterCriteria)
+            PreOrbitContractCriteria starterCriteria)
         {
             Id = id;
             Name = name;
@@ -245,12 +245,12 @@ namespace TheRaceForSpace.Milestones
             CrewRequirement = crewRequirement;
             UnlockRule = unlockRule;
             ObjectiveType = objectiveType;
-            StarterLine = starterLine;
-            StarterLevel = Math.Max(0, starterLevel);
+            PreOrbitLine = starterLine;
+            PreOrbitLevel = Math.Max(0, starterLevel);
             BaseRewardFunds = Math.Max(0.0, baseRewardFunds);
             RivalProgressCostFunds = Math.Max(0.0, rivalProgressCostFunds);
 
-            StarterContractCriteria criteria = starterCriteria ?? StarterContractCriteria.None;
+            PreOrbitContractCriteria criteria = starterCriteria ?? PreOrbitContractCriteria.None;
             RequiredSpeedMetersPerSecond = criteria.RequiredSpeedMetersPerSecond;
             RequiredMassTonnes = criteria.RequiredMassTonnes;
             RequiredDistanceMeters = criteria.RequiredDistanceMeters;
@@ -267,18 +267,18 @@ namespace TheRaceForSpace.Milestones
         public string Id { get; private set; }
         public string Name { get; private set; }
         public string CelestialBodyName { get; private set; }
-        public MilestoneSituation Situation { get; private set; }
-        public MilestoneCrewRequirement CrewRequirement { get; private set; }
+        public ObjectiveSituation Situation { get; private set; }
+        public ObjectiveCrewRequirement CrewRequirement { get; private set; }
         public string ObjectiveDescription { get; private set; }
         public UnlockRuleDefinition UnlockRule { get; private set; }
-        public MilestoneObjectiveType ObjectiveType { get; private set; }
-        public StarterContractLine StarterLine { get; private set; }
-        public int StarterLevel { get; private set; }
+        public ObjectiveType ObjectiveType { get; private set; }
+        public PreOrbitContractLine PreOrbitLine { get; private set; }
+        public int PreOrbitLevel { get; private set; }
         public double BaseRewardFunds { get; private set; }
         public double RivalProgressCostFunds { get; private set; }
 
-        // Tracking and UI consume these values directly. PrototypeMilestones supplies them explicitly
-        // for each starter definition instead of MilestoneDefinition inferring balance from line/level.
+        // Tracking and UI consume these values directly. ObjectiveCatalogue supplies them explicitly
+        // for each starter definition instead of ObjectiveDefinition inferring balance from line/level.
         public double RequiredSpeedMetersPerSecond { get; private set; }
         public double RequiredMassTonnes { get; private set; }
         public double RequiredDistanceMeters { get; private set; }
@@ -287,18 +287,18 @@ namespace TheRaceForSpace.Milestones
         public double RequiredDurationSeconds { get; private set; }
         public string RequiredBiomeName { get; private set; }
 
-        public bool IsStarterContract
+        public bool IsPreOrbitContract
         {
-            get { return StarterLine != StarterContractLine.None && StarterLevel > 0; }
+            get { return PreOrbitLine != PreOrbitContractLine.None && PreOrbitLevel > 0; }
         }
 
         /// <summary>
-        /// Returns whether one KSP-independent vessel observation satisfies this milestone.
-        /// Starter milestones are evaluated by the flight-attempt tracker.
+        /// Returns whether one KSP-independent vessel observation satisfies this objective.
+        /// Starter objectives are evaluated by the flight-attempt tracker.
         /// </summary>
-        public bool IsSatisfiedBy(MilestoneVesselObservation observation)
+        public bool IsSatisfiedBy(OrbitalObjectiveObservation observation)
         {
-            if (ObjectiveType != MilestoneObjectiveType.Orbit
+            if (ObjectiveType != ObjectiveType.Orbit
                 || observation == null
                 || string.IsNullOrEmpty(observation.CelestialBodyName)
                 || !observation.CrewQualification.HasValue)
@@ -316,7 +316,7 @@ namespace TheRaceForSpace.Milestones
 
         private string CreateObjectiveDescription(string configuredDescription)
         {
-            if (ObjectiveType == MilestoneObjectiveType.DirectedPower
+            if (ObjectiveType == ObjectiveType.DirectedPower
                 && RequiredSpeedMetersPerSecond > 0.0
                 && MaximumAltitudeMeters > 0.0)
             {
@@ -327,7 +327,7 @@ namespace TheRaceForSpace.Milestones
                     + " km altitude, then impact Kerbin.";
             }
 
-            if (ObjectiveType == MilestoneObjectiveType.DeliveredMass
+            if (ObjectiveType == ObjectiveType.DeliveredMass
                 && RequiredMassTonnes > 0.0
                 && RequiredDistanceMeters > 0.0)
             {
@@ -338,7 +338,7 @@ namespace TheRaceForSpace.Milestones
                     + " t of remaining vessel mass.";
             }
 
-            if (ObjectiveType == MilestoneObjectiveType.AltitudeHold
+            if (ObjectiveType == ObjectiveType.AltitudeHold
                 && MaximumAltitudeMeters > MinimumAltitudeMeters
                 && RequiredDurationSeconds > 0.0)
             {
@@ -351,7 +351,7 @@ namespace TheRaceForSpace.Milestones
                     + " seconds, then land safely on Kerbin.";
             }
 
-            if (ObjectiveType == MilestoneObjectiveType.BiomeVisit
+            if (ObjectiveType == ObjectiveType.BiomeVisit
                 && !string.IsNullOrEmpty(RequiredBiomeName))
             {
                 return "Land in Kerbin's "

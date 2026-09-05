@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using TheRaceForSpace.Funding;
 using TheRaceForSpace.Persistence;
-using TheRaceForSpace.Programs;
+using TheRaceForSpace.Agencies;
 using TheRaceForSpace.Tracking;
 
 namespace TheRaceForSpace.KspIntegration
@@ -17,13 +17,13 @@ namespace TheRaceForSpace.KspIntegration
     public sealed class RacePersistenceScenario : ScenarioModule
     {
         private const string FundingContractsNodeName = "FUNDING_CONTRACTS";
-        private const string RivalProgramsNodeName = "RIVALS";
+        private const string RivalAgenciesNodeName = "RIVALS";
         private const string ActiveContractProgressNodeName = "ACTIVE_CONTRACT_PROGRESS";
         private const string CommandCenterVisibleValueName = "commandCenterVisible";
 
         private static readonly FundingContractsSaveState FundingContractsState =
             new FundingContractsSaveState();
-        private static readonly RivalProgramsSaveState RivalProgramsState = new RivalProgramsSaveState();
+        private static readonly RivalAgenciesSaveState RivalAgenciesState = new RivalAgenciesSaveState();
         private static readonly ActiveContractProgressSaveState ActiveContractProgressState =
             new ActiveContractProgressSaveState();
         private static Game _loadedGame;
@@ -38,7 +38,7 @@ namespace TheRaceForSpace.KspIntegration
             {
                 FundingContractsState.Load(
                     node == null ? null : node.GetNode(FundingContractsNodeName));
-                RivalProgramsState.Load(node == null ? null : node.GetNode(RivalProgramsNodeName));
+                RivalAgenciesState.Load(node == null ? null : node.GetNode(RivalAgenciesNodeName));
                 ActiveContractProgressState.Load(
                     node == null ? null : node.GetNode(ActiveContractProgressNodeName));
 
@@ -69,9 +69,9 @@ namespace TheRaceForSpace.KspIntegration
                 FundingContractsState.Save(node.AddNode(FundingContractsNodeName));
             }
 
-            if (RivalProgramsState.HasData)
+            if (RivalAgenciesState.HasData)
             {
-                RivalProgramsState.Save(node.AddNode(RivalProgramsNodeName));
+                RivalAgenciesState.Save(node.AddNode(RivalAgenciesNodeName));
             }
 
             if (ActiveContractProgressState.HasData)
@@ -103,45 +103,45 @@ namespace TheRaceForSpace.KspIntegration
         }
 
         /// <summary>
-        /// Restores each saved rival by stable program ID once KSP has finished loading the current save.
+        /// Restores each saved rival by stable agency ID once KSP has finished loading the current save.
         /// Rivals with no matching saved state keep their constructor defaults, allowing newly added
         /// rivals to enter an existing save created with the current collection format.
         /// </summary>
-        public static bool TryRestoreRivalState(IList<SpaceProgramState> rivalPrograms)
+        public static bool TryRestoreRivalState(IList<AgencyState> rivalAgencies)
         {
             if (!_stateReady
                 || _loadedGame == null
                 || _loadedGame != HighLogic.CurrentGame
-                || rivalPrograms == null)
+                || rivalAgencies == null)
             {
                 return false;
             }
 
-            RivalProgramsState.ApplyTo(rivalPrograms);
+            RivalAgenciesState.ApplyTo(rivalAgencies);
             return true;
         }
 
         /// <summary>
-        /// Restores player achievement history, all funding-contract lifecycle state, and the next
+        /// Restores player objectiveCompletion history, all funding-contract lifecycle state, and the next
         /// shared funding boundary by stable persisted IDs.
         /// </summary>
         public static bool TryRestoreRaceProgress(
-            SpaceProgramState playerProgram,
-            IList<FundingProgramme> satelliteContracts,
-            IList<AchievementFundingProgramme> achievementContracts,
+            AgencyState playerAgency,
+            IList<SatelliteNetworkFundingContract> satelliteContracts,
+            IList<ObjectiveFundingContract> achievementContracts,
             out double nextFundingUniversalTime)
         {
             nextFundingUniversalTime = -1.0;
             if (!_stateReady
                 || _loadedGame == null
                 || _loadedGame != HighLogic.CurrentGame
-                || playerProgram == null)
+                || playerAgency == null)
             {
                 return false;
             }
 
             FundingContractsState.ApplyTo(
-                playerProgram,
+                playerAgency,
                 satelliteContracts,
                 achievementContracts);
             nextFundingUniversalTime = FundingContractsState.NextFundingUniversalTime;
@@ -166,27 +166,27 @@ namespace TheRaceForSpace.KspIntegration
             return true;
         }
 
-        public static void CaptureRivalState(IList<SpaceProgramState> rivalPrograms)
+        public static void CaptureRivalState(IList<AgencyState> rivalAgencies)
         {
             if (!_stateReady
                 || _loadedGame == null
                 || _loadedGame != HighLogic.CurrentGame
-                || rivalPrograms == null)
+                || rivalAgencies == null)
             {
                 return;
             }
 
-            RivalProgramsState.Capture(rivalPrograms);
+            RivalAgenciesState.Capture(rivalAgencies);
         }
 
         /// <summary>
-        /// Captures player achievement history, all funding-contract lifecycle state, and the next
+        /// Captures player objectiveCompletion history, all funding-contract lifecycle state, and the next
         /// shared funding boundary. Player satellite counts remain owned by live KSP vessel tracking.
         /// </summary>
         public static void CaptureRaceProgress(
-            SpaceProgramState playerProgram,
-            IList<FundingProgramme> satelliteContracts,
-            IList<AchievementFundingProgramme> achievementContracts,
+            AgencyState playerAgency,
+            IList<SatelliteNetworkFundingContract> satelliteContracts,
+            IList<ObjectiveFundingContract> achievementContracts,
             double nextFundingUniversalTime)
         {
             if (!_stateReady || _loadedGame == null || _loadedGame != HighLogic.CurrentGame)
@@ -195,7 +195,7 @@ namespace TheRaceForSpace.KspIntegration
             }
 
             FundingContractsState.Capture(
-                playerProgram,
+                playerAgency,
                 satelliteContracts,
                 achievementContracts,
                 nextFundingUniversalTime);

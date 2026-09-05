@@ -44,7 +44,7 @@ namespace TheRaceForSpace.KspIntegration
             }
 
             // Capture the observation time before walking vessel state, matching the previous
-            // tracker behaviour so all milestones found in one refresh share one stable timestamp.
+            // tracker behaviour so all objectives found in one refresh share one stable timestamp.
             double observationUniversalTime = Planetarium.GetUniversalTime();
             if (!IsFinite(observationUniversalTime) || observationUniversalTime < 0.0)
             {

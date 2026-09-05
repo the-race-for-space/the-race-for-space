@@ -1,13 +1,13 @@
 using System;
 using System.Collections.Generic;
-using TheRaceForSpace.Programs;
+using TheRaceForSpace.Agencies;
 
-namespace TheRaceForSpace.Milestones
+namespace TheRaceForSpace.Objectives
 {
     /// <summary>
-    /// Evaluates code-defined campaign unlock rules against project-owned program state and an
+    /// Evaluates code-defined campaign unlock rules against project-owned agency state and an
     /// explicit universal time. The evaluator is KSP-independent so historical controller replay,
-    /// rival target selection, player milestone checks, and UI presentation can share one meaning.
+    /// rival target selection, player objective checks, and UI presentation can share one meaning.
     /// </summary>
     public static class UnlockRuleEvaluator
     {
@@ -17,7 +17,7 @@ namespace TheRaceForSpace.Milestones
         /// </summary>
         public static bool IsSatisfied(
             UnlockRuleDefinition rule,
-            IList<SpaceProgramState> programs,
+            IList<AgencyState> agencies,
             double evaluationUniversalTime)
         {
             if (rule == null)
@@ -33,7 +33,7 @@ namespace TheRaceForSpace.Milestones
             for (int pathIndex = 0; pathIndex < rule.Paths.Count; pathIndex++)
             {
                 UnlockPathDefinition path = rule.Paths[pathIndex];
-                if (IsPathSatisfied(path, programs, evaluationUniversalTime))
+                if (IsPathSatisfied(path, agencies, evaluationUniversalTime))
                 {
                     return true;
                 }
@@ -48,7 +48,7 @@ namespace TheRaceForSpace.Milestones
         /// </summary>
         public static bool IsConditionSatisfied(
             UnlockConditionDefinition condition,
-            IList<SpaceProgramState> programs,
+            IList<AgencyState> agencies,
             double evaluationUniversalTime)
         {
             if (condition == null || !IsValidEvaluationTime(evaluationUniversalTime))
@@ -63,43 +63,43 @@ namespace TheRaceForSpace.Milestones
 
             if (condition.ConditionType == UnlockConditionType.SatelliteCount)
             {
-                return GetSatelliteCount(condition, programs) >= condition.RequiredSatelliteCount;
+                return GetSatelliteCount(condition, agencies) >= condition.RequiredSatelliteCount;
             }
 
-            if (condition.ConditionType != UnlockConditionType.Achievement)
+            if (condition.ConditionType != UnlockConditionType.ObjectiveCompletion)
             {
                 return false;
             }
 
             return GetSatisfiedProgramCount(
                 condition,
-                programs,
-                evaluationUniversalTime) >= condition.RequiredProgramCount;
+                agencies,
+                evaluationUniversalTime) >= condition.RequiredAgencyCount;
         }
 
         /// <summary>
-        /// Counts programs that satisfy an achievement condition at the supplied time. Non-
-        /// achievement or malformed conditions return zero.
+        /// Counts agencies that satisfy an objectiveCompletion condition at the supplied time. Non-
+        /// objectiveCompletion or malformed conditions return zero.
         /// </summary>
         public static int GetSatisfiedProgramCount(
             UnlockConditionDefinition condition,
-            IList<SpaceProgramState> programs,
+            IList<AgencyState> agencies,
             double evaluationUniversalTime)
         {
             if (condition == null
-                || condition.ConditionType != UnlockConditionType.Achievement
-                || programs == null
-                || string.IsNullOrEmpty(condition.MilestoneId)
+                || condition.ConditionType != UnlockConditionType.ObjectiveCompletion
+                || agencies == null
+                || string.IsNullOrEmpty(condition.ObjectiveId)
                 || !IsValidEvaluationTime(evaluationUniversalTime))
             {
                 return 0;
             }
 
             int achievedProgramCount = 0;
-            for (int programIndex = 0; programIndex < programs.Count; programIndex++)
+            for (int agencyIndex = 0; agencyIndex < agencies.Count; agencyIndex++)
             {
                 if (DoesProgramSatisfyAchievementCondition(
-                    programs[programIndex],
+                    agencies[agencyIndex],
                     condition,
                     evaluationUniversalTime))
                 {
@@ -117,58 +117,58 @@ namespace TheRaceForSpace.Milestones
         /// </summary>
         public static int GetSatelliteCount(
             UnlockConditionDefinition condition,
-            IList<SpaceProgramState> programs)
+            IList<AgencyState> agencies)
         {
             if (condition == null
                 || condition.ConditionType != UnlockConditionType.SatelliteCount
-                || programs == null
+                || agencies == null
                 || string.IsNullOrEmpty(condition.CelestialBodyName))
             {
                 return 0;
             }
 
             int satelliteCount = 0;
-            for (int programIndex = 0; programIndex < programs.Count; programIndex++)
+            for (int agencyIndex = 0; agencyIndex < agencies.Count; agencyIndex++)
             {
-                SpaceProgramState program = programs[programIndex];
-                if (program == null)
+                AgencyState agency = agencies[agencyIndex];
+                if (agency == null)
                 {
                     continue;
                 }
 
-                satelliteCount += program.GetSatelliteCount(condition.CelestialBodyName);
+                satelliteCount += agency.GetSatelliteCount(condition.CelestialBodyName);
             }
 
             return satelliteCount;
         }
 
         /// <summary>
-        /// Returns whether one program satisfies the scope, milestone and historical-time parts of
-        /// an achievement condition. This supports read-only UI attribution without duplicating rules.
+        /// Returns whether one agency satisfies the scope, objective and historical-time parts of
+        /// an objectiveCompletion condition. This supports read-only UI attribution without duplicating rules.
         /// </summary>
         public static bool DoesProgramSatisfyAchievementCondition(
-            SpaceProgramState program,
+            AgencyState agency,
             UnlockConditionDefinition condition,
             double evaluationUniversalTime)
         {
-            if (program == null
+            if (agency == null
                 || condition == null
-                || condition.ConditionType != UnlockConditionType.Achievement
-                || string.IsNullOrEmpty(condition.MilestoneId)
+                || condition.ConditionType != UnlockConditionType.ObjectiveCompletion
+                || string.IsNullOrEmpty(condition.ObjectiveId)
                 || !IsValidEvaluationTime(evaluationUniversalTime)
-                || !ProgramMatchesScope(program, condition.ProgramScope))
+                || !ProgramMatchesScope(agency, condition.AgencyScope))
             {
                 return false;
             }
 
-            double achievementUniversalTime = program.GetAchievementUniversalTime(condition.MilestoneId);
+            double achievementUniversalTime = agency.GetObjectiveCompletionTime(condition.ObjectiveId);
             return achievementUniversalTime >= 0.0
                 && achievementUniversalTime <= evaluationUniversalTime;
         }
 
         private static bool IsPathSatisfied(
             UnlockPathDefinition path,
-            IList<SpaceProgramState> programs,
+            IList<AgencyState> agencies,
             double evaluationUniversalTime)
         {
             if (path == null || path.Conditions.Count == 0)
@@ -179,7 +179,7 @@ namespace TheRaceForSpace.Milestones
             for (int conditionIndex = 0; conditionIndex < path.Conditions.Count; conditionIndex++)
             {
                 UnlockConditionDefinition condition = path.Conditions[conditionIndex];
-                if (!IsConditionSatisfied(condition, programs, evaluationUniversalTime))
+                if (!IsConditionSatisfied(condition, agencies, evaluationUniversalTime))
                 {
                     return false;
                 }
@@ -189,24 +189,24 @@ namespace TheRaceForSpace.Milestones
         }
 
         private static bool ProgramMatchesScope(
-            SpaceProgramState program,
-            UnlockProgramScope programScope)
+            AgencyState agency,
+            UnlockAgencyScope agencyScope)
         {
-            if (program == null)
+            if (agency == null)
             {
                 return false;
             }
 
-            switch (programScope)
+            switch (agencyScope)
             {
-                case UnlockProgramScope.AnyAgency:
+                case UnlockAgencyScope.AnyAgency:
                     return true;
 
-                case UnlockProgramScope.Player:
-                    return program.IsPlayer;
+                case UnlockAgencyScope.Player:
+                    return agency.IsPlayer;
 
-                case UnlockProgramScope.AnyRival:
-                    return !program.IsPlayer;
+                case UnlockAgencyScope.AnyRival:
+                    return !agency.IsPlayer;
 
                 default:
                     return false;

@@ -7,12 +7,12 @@ namespace TheRaceForSpace.KspIntegration
 {
     /// <summary>
     /// Loads the user-editable race balance config once before the first race controller is created.
-    /// Missing or invalid values keep the built-in defaults from RaceSettings.
+    /// Missing or invalid values keep the built-in defaults from CampaignSettings.
     /// </summary>
-    internal static class RaceSettingsLoader
+    internal static class CampaignSettingsLoader
     {
         private const string RootNodeName = "THE_RACE_FOR_SPACE_SETTINGS";
-        private const string ConfigRelativePath = "GameData/TheRaceForSpace/Config/RaceSettings.cfg";
+        private const string ConfigRelativePath = "GameData/TheRaceForSpace/Config/CampaignSettings.cfg";
         private static bool _hasLoaded;
 
         public static void EnsureLoaded()
@@ -23,7 +23,7 @@ namespace TheRaceForSpace.KspIntegration
             }
 
             _hasLoaded = true;
-            RaceSettings.ResetToDefaults();
+            CampaignSettings.ResetToDefaults();
 
             ConfigNode configFile;
             try
@@ -33,7 +33,7 @@ namespace TheRaceForSpace.KspIntegration
             catch (Exception exception)
             {
                 Debug.LogError(
-                    "[TheRaceForSpace] Could not read RaceSettings.cfg; using defaults. "
+                    "[TheRaceForSpace] Could not read CampaignSettings.cfg; using defaults. "
                     + exception.Message);
                 return;
             }
@@ -41,48 +41,48 @@ namespace TheRaceForSpace.KspIntegration
             ConfigNode rootNode = configFile == null ? null : configFile.GetNode(RootNodeName);
             if (rootNode == null)
             {
-                Debug.LogWarning("[TheRaceForSpace] RaceSettings.cfg missing settings node; using defaults.");
+                Debug.LogWarning("[TheRaceForSpace] CampaignSettings.cfg missing settings node; using defaults.");
                 return;
             }
 
-            RaceSettings.FundingIntervalDays = ReadDouble(
+            CampaignSettings.FundingIntervalDays = ReadDouble(
                 rootNode,
                 "fundingIntervalDays",
-                RaceSettings.FundingIntervalDays,
+                CampaignSettings.FundingIntervalDays,
                 0.000001,
                 double.MaxValue);
-            RaceSettings.RivalStartingFunds = ReadDouble(
+            CampaignSettings.RivalStartingFunds = ReadDouble(
                 rootNode,
                 "rivalStartingFunds",
-                RaceSettings.RivalStartingFunds,
+                CampaignSettings.RivalStartingFunds,
                 0.0,
                 double.MaxValue);
-            RaceSettings.RivalProgressChance = ReadDouble(
+            CampaignSettings.RivalProgressChance = ReadDouble(
                 rootNode,
                 "rivalProgressChancePercent",
-                RaceSettings.RivalProgressChance * 100.0,
+                CampaignSettings.RivalProgressChance * 100.0,
                 0.0,
                 100.0) / 100.0;
-            RaceSettings.NumberOfRivals = ReadInt(
+            CampaignSettings.NumberOfRivals = ReadInt(
                 rootNode,
                 "numberOfRivals",
-                RaceSettings.NumberOfRivals,
+                CampaignSettings.NumberOfRivals,
                 0,
                 int.MaxValue);
 
-            ApplyBodySettings(rootNode.GetNode("KERBIN"), RaceSettings.Kerbin);
-            ApplyBodySettings(rootNode.GetNode("KERBIN_MOONS"), RaceSettings.KerbinMoons);
+            ApplyBodySettings(rootNode.GetNode("KERBIN"), CampaignSettings.Kerbin);
+            ApplyBodySettings(rootNode.GetNode("KERBIN_MOONS"), CampaignSettings.KerbinMoons);
             ApplyBodySettings(
                 rootNode.GetNode("INTERPLANETARY_PLANETS"),
-                RaceSettings.InterplanetaryPlanets);
+                CampaignSettings.InterplanetaryPlanets);
             ApplyBodySettings(
                 rootNode.GetNode("INTERPLANETARY_MOONS"),
-                RaceSettings.InterplanetaryMoons);
+                CampaignSettings.InterplanetaryMoons);
 
-            Debug.Log("[TheRaceForSpace] Loaded RaceSettings.cfg.");
+            Debug.Log("[TheRaceForSpace] Loaded CampaignSettings.cfg.");
         }
 
-        private static void ApplyBodySettings(ConfigNode node, RaceBodySettings settings)
+        private static void ApplyBodySettings(ConfigNode node, BodyBalanceSettings settings)
         {
             if (node == null)
             {

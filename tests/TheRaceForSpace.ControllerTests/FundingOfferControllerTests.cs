@@ -1,9 +1,9 @@
 using System;
-using TheRaceForSpace.Competition;
+using TheRaceForSpace.Campaign;
 using TheRaceForSpace.Core;
 using TheRaceForSpace.Funding;
 using TheRaceForSpace.KspIntegration;
-using TheRaceForSpace.Milestones;
+using TheRaceForSpace.Objectives;
 
 namespace TheRaceForSpace.ControllerTests
 {
@@ -15,22 +15,22 @@ namespace TheRaceForSpace.ControllerTests
         public static void StarterContractsOpenFourInitialOffersAndLockRemaining()
         {
             ResetEnvironment();
-            RaceSettings.RivalProgressChance = 0.0;
+            CampaignSettings.RivalProgressChance = 0.0;
             Planetarium.CurrentUniversalTime = 0.0;
             KspVesselDiscovery.SetUnavailable();
 
-            var controller = new SatelliteRaceController();
+            var controller = new CampaignController();
             controller.Refresh();
 
-            Require(FindAchievement(controller, PrototypeMilestones.DirectedPower1Id).IsOffered,
+            Require(FindAchievement(controller, ObjectiveCatalogue.DirectedPower1Id).IsOffered,
                 "Directed Power I should be offered at campaign start.");
-            Require(FindAchievement(controller, PrototypeMilestones.Mass1Id).IsOffered,
+            Require(FindAchievement(controller, ObjectiveCatalogue.Mass1Id).IsOffered,
                 "Mass I should be offered at campaign start.");
-            Require(FindAchievement(controller, PrototypeMilestones.Control1Id).IsOffered,
+            Require(FindAchievement(controller, ObjectiveCatalogue.Control1Id).IsOffered,
                 "Control I should be offered at campaign start.");
-            Require(FindAchievement(controller, PrototypeMilestones.Biome1Id).IsOffered,
+            Require(FindAchievement(controller, ObjectiveCatalogue.Biome1Id).IsOffered,
                 "Biome I should be offered at campaign start.");
-            Require(!FindAchievement(controller, PrototypeMilestones.ProbeOrbitId).IsOffered,
+            Require(!FindAchievement(controller, ObjectiveCatalogue.ProbeOrbitId).IsOffered,
                 "Probe Orbit should be locked at campaign start.");
             Equal(4, CountOfferedStarterAchievements(controller));
             Equal(16, CountLockedStarterAchievements(controller));
@@ -40,27 +40,27 @@ namespace TheRaceForSpace.ControllerTests
         public static void RivalStarterCompletionUnlocksNextLevelForSponsorReview()
         {
             ResetEnvironment();
-            RaceSettings.RivalProgressChance = 0.0;
+            CampaignSettings.RivalProgressChance = 0.0;
             Planetarium.CurrentUniversalTime = 0.0;
             KspVesselDiscovery.SetUnavailable();
 
-            var controller = new SatelliteRaceController();
+            var controller = new CampaignController();
             controller.Refresh();
 
-            controller.FindProgramById(SatelliteRaceController.AsterProgramId)
-                .RecordAchievement(PrototypeMilestones.DirectedPower1Id, 10.0);
+            controller.FindAgencyById(CampaignController.AsterAgencyId)
+                .RecordObjectiveCompletion(ObjectiveCatalogue.DirectedPower1Id, 10.0);
             Planetarium.CurrentUniversalTime = 20.0;
             controller.Refresh(false);
 
-            AchievementFundingProgramme first = FindAchievement(
+            ObjectiveFundingContract first = FindAchievement(
                 controller,
-                PrototypeMilestones.DirectedPower1Id);
-            AchievementFundingProgramme second = FindAchievement(
+                ObjectiveCatalogue.DirectedPower1Id);
+            ObjectiveFundingContract second = FindAchievement(
                 controller,
-                PrototypeMilestones.DirectedPower2Id);
-            AchievementFundingProgramme third = FindAchievement(
+                ObjectiveCatalogue.DirectedPower2Id);
+            ObjectiveFundingContract third = FindAchievement(
                 controller,
-                PrototypeMilestones.DirectedPower3Id);
+                ObjectiveCatalogue.DirectedPower3Id);
 
             Require(first.HasStarted,
                 "A rival completing Directed Power I should start its shared payout lifecycle.");
@@ -72,35 +72,35 @@ namespace TheRaceForSpace.ControllerTests
                 "Directed Power III should remain locked until any agency completes level two.");
         }
 
-        public static void UnlockedStarterLevelsJoinSponsorReview()
+        public static void UnlockedPreOrbitLevelsJoinSponsorReview()
         {
             ResetEnvironment();
-            RaceSettings.RivalProgressChance = 0.0;
+            CampaignSettings.RivalProgressChance = 0.0;
             Planetarium.CurrentUniversalTime = 0.0;
             KspVesselDiscovery.SetUnavailable();
 
-            var controller = new SatelliteRaceController();
+            var controller = new CampaignController();
             controller.Refresh();
 
-            string[] openingMilestoneIds =
+            string[] openingObjectiveIds =
             {
-                PrototypeMilestones.DirectedPower1Id,
-                PrototypeMilestones.Mass1Id,
-                PrototypeMilestones.Control1Id,
-                PrototypeMilestones.Biome1Id
+                ObjectiveCatalogue.DirectedPower1Id,
+                ObjectiveCatalogue.Mass1Id,
+                ObjectiveCatalogue.Control1Id,
+                ObjectiveCatalogue.Biome1Id
             };
             string[] secondLevelIds =
             {
-                PrototypeMilestones.DirectedPower2Id,
-                PrototypeMilestones.Mass2Id,
-                PrototypeMilestones.Control2Id,
-                PrototypeMilestones.Biome2Id
+                ObjectiveCatalogue.DirectedPower2Id,
+                ObjectiveCatalogue.Mass2Id,
+                ObjectiveCatalogue.Control2Id,
+                ObjectiveCatalogue.Biome2Id
             };
 
-            for (int milestoneIndex = 0; milestoneIndex < openingMilestoneIds.Length; milestoneIndex++)
+            for (int milestoneIndex = 0; milestoneIndex < openingObjectiveIds.Length; milestoneIndex++)
             {
-                controller.FindProgramById(SatelliteRaceController.AsterProgramId)
-                    .RecordAchievement(openingMilestoneIds[milestoneIndex], 10.0);
+                controller.FindAgencyById(CampaignController.AsterAgencyId)
+                    .RecordObjectiveCompletion(openingObjectiveIds[milestoneIndex], 10.0);
             }
 
             Planetarium.CurrentUniversalTime = 20.0;
@@ -108,7 +108,7 @@ namespace TheRaceForSpace.ControllerTests
 
             for (int milestoneIndex = 0; milestoneIndex < secondLevelIds.Length; milestoneIndex++)
             {
-                AchievementFundingProgramme programme = FindAchievement(controller, secondLevelIds[milestoneIndex]);
+                ObjectiveFundingContract programme = FindAchievement(controller, secondLevelIds[milestoneIndex]);
                 Require(controller.IsAchievementProgrammeAvailable(programme),
                     "Each second-level starter contract should unlock after its predecessor completes.");
                 Require(!programme.IsOffered,
@@ -134,16 +134,16 @@ namespace TheRaceForSpace.ControllerTests
         public static void StarterOffersDoNotConsumeNormalAchievementLimit()
         {
             ResetEnvironment();
-            RaceSettings.RivalProgressChance = 0.0;
+            CampaignSettings.RivalProgressChance = 0.0;
             Planetarium.CurrentUniversalTime = 0.0;
             KspVesselDiscovery.SetUnavailable();
 
-            var controller = new SatelliteRaceController();
+            var controller = new CampaignController();
             controller.Refresh();
 
             // Keep all four opening starter contracts offered and uncompleted, then create normal
             // post-Probe availability. Starter offers must not consume the normal two offer slots.
-            controller.PlayerProgram.RecordAchievement(PrototypeMilestones.ProbeOrbitId, 1.0);
+            controller.PlayerAgency.RecordObjectiveCompletion(ObjectiveCatalogue.ProbeOrbitId, 1.0);
             Planetarium.CurrentUniversalTime = 1000.0;
             controller.Refresh(false);
 
@@ -154,73 +154,73 @@ namespace TheRaceForSpace.ControllerTests
             Equal(2, CountOfferedNormalAchievements(controller));
         }
 
-        public static void AnyStarterLevelFiveOffersProbeOrbit()
+        public static void AnyPreOrbitLevelFiveOffersProbeOrbit()
         {
             string[] levelFiveIds =
             {
-                PrototypeMilestones.DirectedPower5Id,
-                PrototypeMilestones.Mass5Id,
-                PrototypeMilestones.Control5Id,
-                PrototypeMilestones.Biome5Id
+                ObjectiveCatalogue.DirectedPower5Id,
+                ObjectiveCatalogue.Mass5Id,
+                ObjectiveCatalogue.Control5Id,
+                ObjectiveCatalogue.Biome5Id
             };
 
             for (int testIndex = 0; testIndex < levelFiveIds.Length; testIndex++)
             {
                 ResetEnvironment();
-                RaceSettings.RivalProgressChance = 0.0;
+                CampaignSettings.RivalProgressChance = 0.0;
                 Planetarium.CurrentUniversalTime = 0.0;
                 KspVesselDiscovery.SetUnavailable();
 
-                var controller = new SatelliteRaceController();
+                var controller = new CampaignController();
                 controller.Refresh();
 
-                controller.FindProgramById(SatelliteRaceController.AsterProgramId)
-                    .RecordAchievement(levelFiveIds[testIndex], 10.0);
+                controller.FindAgencyById(CampaignController.AsterAgencyId)
+                    .RecordObjectiveCompletion(levelFiveIds[testIndex], 10.0);
                 Planetarium.CurrentUniversalTime = 20.0;
                 controller.Refresh(false);
 
-                AchievementFundingProgramme probeOrbit = FindAchievement(
+                ObjectiveFundingContract probeOrbit = FindAchievement(
                     controller,
-                    PrototypeMilestones.ProbeOrbitId);
+                    ObjectiveCatalogue.ProbeOrbitId);
                 Require(probeOrbit.IsOffered,
-                    "Any agency completing any starter level-five achievement should offer Probe Orbit immediately.");
+                    "Any agency completing any starter level-five objectiveCompletion should offer Probe Orbit immediately.");
             }
         }
 
         public static void UnlockedFundingWaitsForFundingReview()
         {
             ResetEnvironment();
-            RaceSettings.RivalProgressChance = 0.0;
+            CampaignSettings.RivalProgressChance = 0.0;
             Planetarium.CurrentUniversalTime = 0.0;
             KspVesselDiscovery.SetUnavailable();
 
-            var controller = new SatelliteRaceController();
-            controller.FindProgramById(SatelliteRaceController.AsterProgramId).Funds = 0.0;
-            controller.FindProgramById(SatelliteRaceController.CobaltProgramId).Funds = 0.0;
+            var controller = new CampaignController();
+            controller.FindAgencyById(CampaignController.AsterAgencyId).Funds = 0.0;
+            controller.FindAgencyById(CampaignController.CobaltAgencyId).Funds = 0.0;
             controller.Refresh();
             OfferAndCompleteAllStarterAchievements(controller, 1.0);
 
-            AchievementFundingProgramme probeOrbit = FindAchievement(
+            ObjectiveFundingContract probeOrbit = FindAchievement(
                 controller,
-                PrototypeMilestones.ProbeOrbitId);
-            AchievementFundingProgramme crewedOrbit = FindAchievement(
+                ObjectiveCatalogue.ProbeOrbitId);
+            ObjectiveFundingContract crewedOrbit = FindAchievement(
                 controller,
-                PrototypeMilestones.CrewedOrbitId);
-            AchievementFundingProgramme munProbeOrbit = FindAchievement(
+                ObjectiveCatalogue.CrewedOrbitId);
+            ObjectiveFundingContract munProbeOrbit = FindAchievement(
                 controller,
-                PrototypeMilestones.MunProbeOrbitId);
-            AchievementFundingProgramme minmusProbeOrbit = FindAchievement(
+                ObjectiveCatalogue.MunProbeOrbitId);
+            ObjectiveFundingContract minmusProbeOrbit = FindAchievement(
                 controller,
-                PrototypeMilestones.MinmusProbeOrbitId);
-            FundingProgramme kerbinNetwork = FindFunding(
+                ObjectiveCatalogue.MinmusProbeOrbitId);
+            SatelliteNetworkFundingContract kerbinNetwork = FindFunding(
                 controller,
-                PrototypeFundingCatalogue.KerbinNetworkId);
+                FundingContractCatalogue.KerbinNetworkId);
 
             // This regression begins at the post-Probe-Orbit state. Offer the contract explicitly
             // rather than depending on the starter Level V immediate-offer path.
             probeOrbit.Offer();
-            controller.PlayerProgram.RecordAchievement(PrototypeMilestones.ProbeOrbitId, 1.0);
-            controller.PlayerProgram.SetSatelliteCount("Kerbin", 1);
+            controller.PlayerAgency.RecordObjectiveCompletion(ObjectiveCatalogue.ProbeOrbitId, 1.0);
+            controller.PlayerAgency.SetSatelliteCount("Kerbin", 1);
 
             Planetarium.CurrentUniversalTime = 1000.0;
             controller.Refresh(false);
@@ -231,10 +231,10 @@ namespace TheRaceForSpace.ControllerTests
             Require(controller.IsAchievementProgrammeAvailable(minmusProbeOrbit), "Minmus Probe Orbit should be unlocked.");
             Require(kerbinNetwork.IsAvailable, "Kerbin network funding should be unlocked.");
             Require(!crewedOrbit.IsOffered && !munProbeOrbit.IsOffered && !minmusProbeOrbit.IsOffered,
-                "Unlocked normal achievement funding must wait for a funding review.");
+                "Unlocked normal objectiveCompletion funding must wait for a funding review.");
             Require(!kerbinNetwork.IsOffered,
                 "Unlocked satellite funding must wait for a funding review.");
-            Equal(0.0, controller.GetSatelliteCurrentPayout(controller.PlayerProgram, kerbinNetwork));
+            Equal(0.0, controller.GetSatelliteCurrentPayout(controller.PlayerAgency, kerbinNetwork));
 
             Planetarium.CurrentUniversalTime = FundingIntervalSeconds;
             controller.Refresh(false);
@@ -253,36 +253,36 @@ namespace TheRaceForSpace.ControllerTests
         public static void FundingReviewDoesNotCascadeCompletedOffers()
         {
             ResetEnvironment();
-            RaceSettings.RivalProgressChance = 0.0;
+            CampaignSettings.RivalProgressChance = 0.0;
             Planetarium.CurrentUniversalTime = 0.0;
             KspVesselDiscovery.SetUnavailable();
 
-            var controller = new SatelliteRaceController();
-            controller.FindProgramById(SatelliteRaceController.AsterProgramId).Funds = 0.0;
-            controller.FindProgramById(SatelliteRaceController.CobaltProgramId).Funds = 0.0;
+            var controller = new CampaignController();
+            controller.FindAgencyById(CampaignController.AsterAgencyId).Funds = 0.0;
+            controller.FindAgencyById(CampaignController.CobaltAgencyId).Funds = 0.0;
             controller.Refresh();
             OfferAndCompleteAllStarterAchievements(controller, 1.0);
 
-            FindAchievement(controller, PrototypeMilestones.ProbeOrbitId).Offer();
+            FindAchievement(controller, ObjectiveCatalogue.ProbeOrbitId).Offer();
 
-            // Record every normal uncrewed orbital milestone before it is sponsored. Starter
+            // Record every normal uncrewed orbital objective before it is sponsored. Starter
             // contracts are pre-completed in the setup so they do not compete for these review slots.
             for (int programmeIndex = 0;
-                programmeIndex < controller.AchievementFundingProgrammes.Count;
+                programmeIndex < controller.ObjectiveFundingContracts.Count;
                 programmeIndex++)
             {
-                AchievementFundingProgramme programme =
-                    controller.AchievementFundingProgrammes[programmeIndex];
-                MilestoneDefinition milestone = PrototypeMilestones.FindById(programme.Id);
-                if (milestone != null
-                    && milestone.ObjectiveType == MilestoneObjectiveType.Orbit
-                    && milestone.CrewRequirement == MilestoneCrewRequirement.UncrewedProbe)
+                ObjectiveFundingContract programme =
+                    controller.ObjectiveFundingContracts[programmeIndex];
+                ObjectiveDefinition objective = ObjectiveCatalogue.FindById(programme.Id);
+                if (objective != null
+                    && objective.ObjectiveType == ObjectiveType.Orbit
+                    && objective.CrewRequirement == ObjectiveCrewRequirement.UncrewedProbe)
                 {
-                    controller.PlayerProgram.RecordAchievement(programme.Id, 1.0);
+                    controller.PlayerAgency.RecordObjectiveCompletion(programme.Id, 1.0);
                 }
             }
 
-            FindAchievement(controller, PrototypeMilestones.CrewedOrbitId).Offer();
+            FindAchievement(controller, ObjectiveCatalogue.CrewedOrbitId).Offer();
 
             Planetarium.CurrentUniversalTime = 1000.0;
             controller.Refresh(false);
@@ -291,17 +291,17 @@ namespace TheRaceForSpace.ControllerTests
             controller.Refresh(false);
 
             int laterOfferedCount = 0;
-            AchievementFundingProgramme laterOfferedProgramme = null;
+            ObjectiveFundingContract laterOfferedProgramme = null;
             for (int programmeIndex = 0;
-                programmeIndex < controller.AchievementFundingProgrammes.Count;
+                programmeIndex < controller.ObjectiveFundingContracts.Count;
                 programmeIndex++)
             {
-                AchievementFundingProgramme programme =
-                    controller.AchievementFundingProgrammes[programmeIndex];
+                ObjectiveFundingContract programme =
+                    controller.ObjectiveFundingContracts[programmeIndex];
                 if (!programme.IsOffered
                     || IsStarterAchievement(programme)
-                    || string.Equals(programme.Id, PrototypeMilestones.ProbeOrbitId, StringComparison.OrdinalIgnoreCase)
-                    || string.Equals(programme.Id, PrototypeMilestones.CrewedOrbitId, StringComparison.OrdinalIgnoreCase))
+                    || string.Equals(programme.Id, ObjectiveCatalogue.ProbeOrbitId, StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(programme.Id, ObjectiveCatalogue.CrewedOrbitId, StringComparison.OrdinalIgnoreCase))
                 {
                     continue;
                 }
@@ -319,18 +319,18 @@ namespace TheRaceForSpace.ControllerTests
         public static void SatelliteFulfilmentWaitsForFundingReview()
         {
             ResetEnvironment();
-            RaceSettings.RivalProgressChance = 0.0;
+            CampaignSettings.RivalProgressChance = 0.0;
             Planetarium.CurrentUniversalTime = 0.0;
             KspVesselDiscovery.SetUnavailable();
 
-            var controller = new SatelliteRaceController();
-            controller.FindProgramById(SatelliteRaceController.AsterProgramId).Funds = 0.0;
-            controller.FindProgramById(SatelliteRaceController.CobaltProgramId).Funds = 0.0;
+            var controller = new CampaignController();
+            controller.FindAgencyById(CampaignController.AsterAgencyId).Funds = 0.0;
+            controller.FindAgencyById(CampaignController.CobaltAgencyId).Funds = 0.0;
             controller.Refresh();
 
-            FundingProgramme kerbin = FindFunding(controller, PrototypeFundingCatalogue.KerbinNetworkId);
-            FundingProgramme mun = FindFunding(controller, PrototypeFundingCatalogue.MunNetworkId);
-            FundingProgramme minmus = FindFunding(controller, PrototypeFundingCatalogue.MinmusNetworkId);
+            SatelliteNetworkFundingContract kerbin = FindFunding(controller, FundingContractCatalogue.KerbinNetworkId);
+            SatelliteNetworkFundingContract mun = FindFunding(controller, FundingContractCatalogue.MunNetworkId);
+            SatelliteNetworkFundingContract minmus = FindFunding(controller, FundingContractCatalogue.MinmusNetworkId);
 
             kerbin.Unlock();
             kerbin.Offer();
@@ -338,8 +338,8 @@ namespace TheRaceForSpace.ControllerTests
             mun.Offer();
             minmus.Unlock();
 
-            controller.PlayerProgram.SetSatelliteCount("Kerbin", 10);
-            controller.PlayerProgram.SetSatelliteCount("Mun", 1);
+            controller.PlayerAgency.SetSatelliteCount("Kerbin", 10);
+            controller.PlayerAgency.SetSatelliteCount("Mun", 1);
 
             Planetarium.CurrentUniversalTime = 1000.0;
             controller.Refresh(false);
@@ -361,16 +361,16 @@ namespace TheRaceForSpace.ControllerTests
         public static void SatelliteReviewCapsUnfulfilledOffersAtTwo()
         {
             ResetEnvironment();
-            RaceSettings.RivalProgressChance = 0.0;
+            CampaignSettings.RivalProgressChance = 0.0;
             Planetarium.CurrentUniversalTime = 0.0;
             KspVesselDiscovery.SetUnavailable();
 
-            var controller = new SatelliteRaceController();
+            var controller = new CampaignController();
             controller.Refresh();
 
-            FundingProgramme kerbin = FindFunding(controller, PrototypeFundingCatalogue.KerbinNetworkId);
-            FundingProgramme mun = FindFunding(controller, PrototypeFundingCatalogue.MunNetworkId);
-            FundingProgramme minmus = FindFunding(controller, PrototypeFundingCatalogue.MinmusNetworkId);
+            SatelliteNetworkFundingContract kerbin = FindFunding(controller, FundingContractCatalogue.KerbinNetworkId);
+            SatelliteNetworkFundingContract mun = FindFunding(controller, FundingContractCatalogue.MunNetworkId);
+            SatelliteNetworkFundingContract minmus = FindFunding(controller, FundingContractCatalogue.MinmusNetworkId);
             kerbin.Unlock();
             mun.Unlock();
             minmus.Unlock();
@@ -387,49 +387,49 @@ namespace TheRaceForSpace.ControllerTests
         public static void CrossedFundingBoundariesEachRunSponsorReview()
         {
             ResetEnvironment();
-            RaceSettings.RivalProgressChance = 0.0;
+            CampaignSettings.RivalProgressChance = 0.0;
             Planetarium.CurrentUniversalTime = 0.0;
             KspVesselDiscovery.SetUnavailable();
 
-            var controller = new SatelliteRaceController();
-            controller.FindProgramById(SatelliteRaceController.AsterProgramId).Funds = 0.0;
-            controller.FindProgramById(SatelliteRaceController.CobaltProgramId).Funds = 0.0;
+            var controller = new CampaignController();
+            controller.FindAgencyById(CampaignController.AsterAgencyId).Funds = 0.0;
+            controller.FindAgencyById(CampaignController.CobaltAgencyId).Funds = 0.0;
             controller.Refresh();
             OfferAndCompleteAllStarterAchievements(controller, 1.0);
 
-            FindAchievement(controller, PrototypeMilestones.ProbeOrbitId).Offer();
+            FindAchievement(controller, ObjectiveCatalogue.ProbeOrbitId).Offer();
 
             for (int programmeIndex = 0;
-                programmeIndex < controller.AchievementFundingProgrammes.Count;
+                programmeIndex < controller.ObjectiveFundingContracts.Count;
                 programmeIndex++)
             {
-                AchievementFundingProgramme programme =
-                    controller.AchievementFundingProgrammes[programmeIndex];
-                MilestoneDefinition milestone = PrototypeMilestones.FindById(programme.Id);
-                if (milestone != null
-                    && milestone.ObjectiveType == MilestoneObjectiveType.Orbit
-                    && milestone.CrewRequirement == MilestoneCrewRequirement.UncrewedProbe)
+                ObjectiveFundingContract programme =
+                    controller.ObjectiveFundingContracts[programmeIndex];
+                ObjectiveDefinition objective = ObjectiveCatalogue.FindById(programme.Id);
+                if (objective != null
+                    && objective.ObjectiveType == ObjectiveType.Orbit
+                    && objective.CrewRequirement == ObjectiveCrewRequirement.UncrewedProbe)
                 {
-                    controller.PlayerProgram.RecordAchievement(programme.Id, 1.0);
+                    controller.PlayerAgency.RecordObjectiveCompletion(programme.Id, 1.0);
                 }
             }
 
-            FindAchievement(controller, PrototypeMilestones.CrewedOrbitId).Offer();
+            FindAchievement(controller, ObjectiveCatalogue.CrewedOrbitId).Offer();
 
             Planetarium.CurrentUniversalTime = FundingIntervalSeconds * 2.0;
             controller.Refresh(false);
 
             int laterOfferedCount = 0;
             for (int programmeIndex = 0;
-                programmeIndex < controller.AchievementFundingProgrammes.Count;
+                programmeIndex < controller.ObjectiveFundingContracts.Count;
                 programmeIndex++)
             {
-                AchievementFundingProgramme programme =
-                    controller.AchievementFundingProgrammes[programmeIndex];
+                ObjectiveFundingContract programme =
+                    controller.ObjectiveFundingContracts[programmeIndex];
                 if (programme.IsOffered
                     && !IsStarterAchievement(programme)
-                    && !string.Equals(programme.Id, PrototypeMilestones.ProbeOrbitId, StringComparison.OrdinalIgnoreCase)
-                    && !string.Equals(programme.Id, PrototypeMilestones.CrewedOrbitId, StringComparison.OrdinalIgnoreCase))
+                    && !string.Equals(programme.Id, ObjectiveCatalogue.ProbeOrbitId, StringComparison.OrdinalIgnoreCase)
+                    && !string.Equals(programme.Id, ObjectiveCatalogue.CrewedOrbitId, StringComparison.OrdinalIgnoreCase))
                 {
                     laterOfferedCount++;
                 }
@@ -439,14 +439,14 @@ namespace TheRaceForSpace.ControllerTests
             Equal(FundingIntervalSeconds * 3.0, controller.NextFundingUniversalTime);
         }
 
-        private static int CountOfferedStarterAchievements(SatelliteRaceController controller)
+        private static int CountOfferedStarterAchievements(CampaignController controller)
         {
             int count = 0;
             for (int programmeIndex = 0;
-                programmeIndex < controller.AchievementFundingProgrammes.Count;
+                programmeIndex < controller.ObjectiveFundingContracts.Count;
                 programmeIndex++)
             {
-                AchievementFundingProgramme programme = controller.AchievementFundingProgrammes[programmeIndex];
+                ObjectiveFundingContract programme = controller.ObjectiveFundingContracts[programmeIndex];
                 if (programme.IsOffered && IsStarterAchievement(programme))
                 {
                     count++;
@@ -456,14 +456,14 @@ namespace TheRaceForSpace.ControllerTests
             return count;
         }
 
-        private static int CountLockedStarterAchievements(SatelliteRaceController controller)
+        private static int CountLockedStarterAchievements(CampaignController controller)
         {
             int count = 0;
             for (int programmeIndex = 0;
-                programmeIndex < controller.AchievementFundingProgrammes.Count;
+                programmeIndex < controller.ObjectiveFundingContracts.Count;
                 programmeIndex++)
             {
-                AchievementFundingProgramme programme = controller.AchievementFundingProgrammes[programmeIndex];
+                ObjectiveFundingContract programme = controller.ObjectiveFundingContracts[programmeIndex];
                 if (IsStarterAchievement(programme)
                     && !programme.IsOffered
                     && !controller.IsAchievementProgrammeAvailable(programme))
@@ -475,14 +475,14 @@ namespace TheRaceForSpace.ControllerTests
             return count;
         }
 
-        private static int CountOfferedNormalAchievements(SatelliteRaceController controller)
+        private static int CountOfferedNormalAchievements(CampaignController controller)
         {
             int count = 0;
             for (int programmeIndex = 0;
-                programmeIndex < controller.AchievementFundingProgrammes.Count;
+                programmeIndex < controller.ObjectiveFundingContracts.Count;
                 programmeIndex++)
             {
-                AchievementFundingProgramme programme = controller.AchievementFundingProgrammes[programmeIndex];
+                ObjectiveFundingContract programme = controller.ObjectiveFundingContracts[programmeIndex];
                 if (programme.IsOffered && !IsStarterAchievement(programme))
                 {
                     count++;
@@ -493,43 +493,43 @@ namespace TheRaceForSpace.ControllerTests
         }
 
         private static void OfferAndCompleteAllStarterAchievements(
-            SatelliteRaceController controller,
+            CampaignController controller,
             double achievementUniversalTime)
         {
             for (int programmeIndex = 0;
-                programmeIndex < controller.AchievementFundingProgrammes.Count;
+                programmeIndex < controller.ObjectiveFundingContracts.Count;
                 programmeIndex++)
             {
-                AchievementFundingProgramme programme = controller.AchievementFundingProgrammes[programmeIndex];
+                ObjectiveFundingContract programme = controller.ObjectiveFundingContracts[programmeIndex];
                 if (!IsStarterAchievement(programme))
                 {
                     continue;
                 }
 
                 programme.Offer();
-                controller.FindProgramById(SatelliteRaceController.AsterProgramId)
-                    .RecordAchievement(programme.Id, achievementUniversalTime);
+                controller.FindAgencyById(CampaignController.AsterAgencyId)
+                    .RecordObjectiveCompletion(programme.Id, achievementUniversalTime);
             }
         }
 
-        private static bool IsStarterAchievement(AchievementFundingProgramme programme)
+        private static bool IsStarterAchievement(ObjectiveFundingContract programme)
         {
-            MilestoneDefinition milestone = programme == null
+            ObjectiveDefinition objective = programme == null
                 ? null
-                : PrototypeMilestones.FindById(programme.Id);
-            return milestone != null && milestone.IsStarterContract;
+                : ObjectiveCatalogue.FindById(programme.Id);
+            return objective != null && objective.IsPreOrbitContract;
         }
 
-        private static AchievementFundingProgramme FindAchievement(
-            SatelliteRaceController controller,
+        private static ObjectiveFundingContract FindAchievement(
+            CampaignController controller,
             string programmeId)
         {
             for (int programmeIndex = 0;
-                programmeIndex < controller.AchievementFundingProgrammes.Count;
+                programmeIndex < controller.ObjectiveFundingContracts.Count;
                 programmeIndex++)
             {
-                AchievementFundingProgramme programme =
-                    controller.AchievementFundingProgrammes[programmeIndex];
+                ObjectiveFundingContract programme =
+                    controller.ObjectiveFundingContracts[programmeIndex];
                 if (programme != null
                     && string.Equals(programme.Id, programmeId, StringComparison.OrdinalIgnoreCase))
                 {
@@ -537,16 +537,16 @@ namespace TheRaceForSpace.ControllerTests
                 }
             }
 
-            throw new InvalidOperationException("Missing achievement programme '" + programmeId + "'.");
+            throw new InvalidOperationException("Missing objectiveCompletion programme '" + programmeId + "'.");
         }
 
-        private static FundingProgramme FindFunding(
-            SatelliteRaceController controller,
+        private static SatelliteNetworkFundingContract FindFunding(
+            CampaignController controller,
             string programmeId)
         {
-            for (int programmeIndex = 0; programmeIndex < controller.FundingProgrammes.Count; programmeIndex++)
+            for (int programmeIndex = 0; programmeIndex < controller.SatelliteNetworkFundingContracts.Count; programmeIndex++)
             {
-                FundingProgramme programme = controller.FundingProgrammes[programmeIndex];
+                SatelliteNetworkFundingContract programme = controller.SatelliteNetworkFundingContracts[programmeIndex];
                 if (programme != null
                     && string.Equals(programme.Id, programmeId, StringComparison.OrdinalIgnoreCase))
                 {
@@ -559,7 +559,7 @@ namespace TheRaceForSpace.ControllerTests
 
         private static void ResetEnvironment()
         {
-            RaceSettings.ResetToDefaults();
+            CampaignSettings.ResetToDefaults();
             Planetarium.Reset();
             CareerFundingAdapter.Reset();
             KspVesselDiscovery.Reset();

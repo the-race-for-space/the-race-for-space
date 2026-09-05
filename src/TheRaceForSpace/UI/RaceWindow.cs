@@ -2,12 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using KSP.UI.Screens;
-using TheRaceForSpace.Competition;
+using TheRaceForSpace.Campaign;
 using TheRaceForSpace.Core;
 using TheRaceForSpace.Funding;
 using TheRaceForSpace.KspIntegration;
-using TheRaceForSpace.Milestones;
-using TheRaceForSpace.Programs;
+using TheRaceForSpace.Objectives;
+using TheRaceForSpace.Agencies;
 using TheRaceForSpace.Tracking;
 using UnityEngine;
 
@@ -40,8 +40,8 @@ namespace TheRaceForSpace.UI
         private sealed class SpaceRaceFundingEntry
         {
             public SpaceRaceFundingEntry(
-                AchievementFundingProgramme achievementProgramme,
-                FundingProgramme satelliteProgramme,
+                ObjectiveFundingContract achievementProgramme,
+                SatelliteNetworkFundingContract satelliteProgramme,
                 string celestialBodyName,
                 double bodySortDistance,
                 int catalogueOrder)
@@ -53,8 +53,8 @@ namespace TheRaceForSpace.UI
                 CatalogueOrder = catalogueOrder;
             }
 
-            public AchievementFundingProgramme AchievementProgramme { get; private set; }
-            public FundingProgramme SatelliteProgramme { get; private set; }
+            public ObjectiveFundingContract AchievementProgramme { get; private set; }
+            public SatelliteNetworkFundingContract SatelliteProgramme { get; private set; }
             public string CelestialBodyName { get; private set; }
             public double BodySortDistance { get; private set; }
             public int CatalogueOrder { get; private set; }
@@ -113,7 +113,7 @@ namespace TheRaceForSpace.UI
 
         // This is a non-owning reference to the current Core runtime controller. RaceWindow never
         // creates or advances the controller; it only reads the state needed for presentation.
-        private SatelliteRaceController _raceController;
+        private CampaignController _raceController;
         private Game _visibilityGame;
 
         private readonly StringBuilder _listTextBuilder = new StringBuilder(128);
@@ -130,7 +130,7 @@ namespace TheRaceForSpace.UI
         private GUI.WindowFunction _drawWindowFunction;
         private double[] _payoutScratch;
         private string[] _agencyNameScratch;
-        private SatelliteRaceController _spaceRaceFundingEntriesController;
+        private CampaignController _spaceRaceFundingEntriesController;
         private int _spaceRaceAchievementFundingCount = -1;
         private int _spaceRaceSatelliteFundingCount = -1;
         private string _selectedSpaceRaceFundingId;
@@ -432,18 +432,18 @@ namespace TheRaceForSpace.UI
 
         private void DrawOverview()
         {
-            SpaceProgramState player = _raceController.PlayerProgram;
+            AgencyState player = _raceController.PlayerAgency;
 
             GUILayout.BeginHorizontal();
             GUILayout.BeginVertical(OverviewObjectivesOptions);
             GUILayout.Label("Your Objectives", _boldLabelStyle);
 
             for (int programmeIndex = 0;
-                programmeIndex < _raceController.AchievementFundingProgrammes.Count;
+                programmeIndex < _raceController.ObjectiveFundingContracts.Count;
                 programmeIndex++)
             {
-                AchievementFundingProgramme programme =
-                    _raceController.AchievementFundingProgrammes[programmeIndex];
+                ObjectiveFundingContract programme =
+                    _raceController.ObjectiveFundingContracts[programmeIndex];
                 if (programme.IsExpired || !programme.IsOffered)
                 {
                     continue;
@@ -459,10 +459,10 @@ namespace TheRaceForSpace.UI
             GUILayout.Label("Your Satellite Networks", _boldLabelStyle);
 
             for (int programmeIndex = 0;
-                programmeIndex < _raceController.FundingProgrammes.Count;
+                programmeIndex < _raceController.SatelliteNetworkFundingContracts.Count;
                 programmeIndex++)
             {
-                FundingProgramme programme = _raceController.FundingProgrammes[programmeIndex];
+                SatelliteNetworkFundingContract programme = _raceController.SatelliteNetworkFundingContracts[programmeIndex];
                 int satelliteCount = player.GetSatelliteCount(programme.CelestialBodyName);
                 if (satelliteCount <= 0)
                 {
@@ -490,11 +490,11 @@ namespace TheRaceForSpace.UI
             // Projected programme payouts are refresh-scoped controller values, so drawing this
             // view does not repeat the cross-agency funding calculations on every IMGUI event.
             for (int programmeIndex = 0;
-                programmeIndex < _raceController.AchievementFundingProgrammes.Count;
+                programmeIndex < _raceController.ObjectiveFundingContracts.Count;
                 programmeIndex++)
             {
-                AchievementFundingProgramme programme =
-                    _raceController.AchievementFundingProgrammes[programmeIndex];
+                ObjectiveFundingContract programme =
+                    _raceController.ObjectiveFundingContracts[programmeIndex];
                 double nextPayout = _raceController.GetAchievementCurrentPayout(player, programme);
                 if (nextPayout <= 0.0)
                 {
@@ -509,10 +509,10 @@ namespace TheRaceForSpace.UI
             }
 
             for (int programmeIndex = 0;
-                programmeIndex < _raceController.FundingProgrammes.Count;
+                programmeIndex < _raceController.SatelliteNetworkFundingContracts.Count;
                 programmeIndex++)
             {
-                FundingProgramme programme = _raceController.FundingProgrammes[programmeIndex];
+                SatelliteNetworkFundingContract programme = _raceController.SatelliteNetworkFundingContracts[programmeIndex];
                 int satelliteCount = player.GetSatelliteCount(programme.CelestialBodyName);
                 double nextPayout = _raceController.GetSatelliteCurrentPayout(player, programme);
                 if (nextPayout <= 0.0)
@@ -555,9 +555,9 @@ namespace TheRaceForSpace.UI
             EnsurePayoutScratchBuffers();
             _fundingScrollPosition = GUILayout.BeginScrollView(_fundingScrollPosition);
 
-            for (int i = 0; i < _raceController.AchievementFundingProgrammes.Count; i++)
+            for (int i = 0; i < _raceController.ObjectiveFundingContracts.Count; i++)
             {
-                AchievementFundingProgramme programme = _raceController.AchievementFundingProgrammes[i];
+                ObjectiveFundingContract programme = _raceController.ObjectiveFundingContracts[i];
                 if (programme.IsExpired || !programme.IsOffered)
                 {
                     continue;
@@ -567,9 +567,9 @@ namespace TheRaceForSpace.UI
                 GUILayout.Space(8.0f);
             }
 
-            for (int i = 0; i < _raceController.FundingProgrammes.Count; i++)
+            for (int i = 0; i < _raceController.SatelliteNetworkFundingContracts.Count; i++)
             {
-                FundingProgramme programme = _raceController.FundingProgrammes[i];
+                SatelliteNetworkFundingContract programme = _raceController.SatelliteNetworkFundingContracts[i];
                 if (!programme.IsOffered)
                 {
                     continue;
@@ -583,7 +583,7 @@ namespace TheRaceForSpace.UI
         }
 
         private void DrawAchievementFundingCard(
-            AchievementFundingProgramme programme,
+            ObjectiveFundingContract programme,
             string stateLabel = null,
             double? unlockEvaluationUniversalTime = null,
             string stateMessage = null,
@@ -594,12 +594,12 @@ namespace TheRaceForSpace.UI
             _listTextBuilder.Append("Completed by: ");
             bool hasCompletedAgency = false;
 
-            for (int programIndex = 0; programIndex < _raceController.Programs.Count; programIndex++)
+            for (int agencyIndex = 0; agencyIndex < _raceController.Agencies.Count; agencyIndex++)
             {
-                SpaceProgramState program = _raceController.Programs[programIndex];
-                _payoutScratch[programIndex] = _raceController.GetAchievementCurrentPayout(program, programme);
+                AgencyState agency = _raceController.Agencies[agencyIndex];
+                _payoutScratch[agencyIndex] = _raceController.GetAchievementCurrentPayout(agency, programme);
 
-                if (!_raceController.HasProgramAchieved(program, programme))
+                if (!_raceController.HasProgramAchieved(agency, programme))
                 {
                     continue;
                 }
@@ -609,7 +609,7 @@ namespace TheRaceForSpace.UI
                     _listTextBuilder.Append(", ");
                 }
 
-                _listTextBuilder.Append(GetProgramDisplayName(program));
+                _listTextBuilder.Append(GetProgramDisplayName(agency));
                 hasCompletedAgency = true;
             }
 
@@ -669,14 +669,14 @@ namespace TheRaceForSpace.UI
             GUILayout.EndVertical();
         }
 
-        private void DrawStarterFundingLiveProgress(AchievementFundingProgramme programme)
+        private void DrawStarterFundingLiveProgress(ObjectiveFundingContract programme)
         {
-            MilestoneDefinition milestone = programme == null
+            ObjectiveDefinition objective = programme == null
                 ? null
-                : PrototypeMilestones.FindById(programme.Id);
-            if (milestone == null
-                || !milestone.IsStarterContract
-                || _raceController.HasProgramAchieved(_raceController.PlayerProgram, programme))
+                : ObjectiveCatalogue.FindById(programme.Id);
+            if (objective == null
+                || !objective.IsPreOrbitContract
+                || _raceController.HasProgramAchieved(_raceController.PlayerAgency, programme))
             {
                 return;
             }
@@ -702,11 +702,11 @@ namespace TheRaceForSpace.UI
 
             // Funding Targets deliberately compares the active craft against every offered,
             // unfinished starter contract, even when a rival unlocked a later level first.
-            DrawStarterLiveProgress(milestone, tracker);
+            DrawStarterLiveProgress(objective, tracker);
         }
 
         private void DrawSatelliteFundingCard(
-            FundingProgramme programme,
+            SatelliteNetworkFundingContract programme,
             string stateLabel = null,
             double? unlockEvaluationUniversalTime = null,
             string stateMessage = null)
@@ -716,12 +716,12 @@ namespace TheRaceForSpace.UI
             bool hasSatelliteSummary = false;
             double claimedPayout = 0.0;
 
-            for (int programIndex = 0; programIndex < _raceController.Programs.Count; programIndex++)
+            for (int agencyIndex = 0; agencyIndex < _raceController.Agencies.Count; agencyIndex++)
             {
-                SpaceProgramState program = _raceController.Programs[programIndex];
-                int satelliteCount = program.GetSatelliteCount(programme.CelestialBodyName);
-                double nextPayout = _raceController.GetSatelliteCurrentPayout(program, programme);
-                _payoutScratch[programIndex] = nextPayout;
+                AgencyState agency = _raceController.Agencies[agencyIndex];
+                int satelliteCount = agency.GetSatelliteCount(programme.CelestialBodyName);
+                double nextPayout = _raceController.GetSatelliteCurrentPayout(agency, programme);
+                _payoutScratch[agencyIndex] = nextPayout;
                 claimedPayout += nextPayout;
 
                 if (satelliteCount <= 0)
@@ -734,7 +734,7 @@ namespace TheRaceForSpace.UI
                     _listTextBuilder.Append(", ");
                 }
 
-                _listTextBuilder.Append(GetProgramDisplayName(program));
+                _listTextBuilder.Append(GetProgramDisplayName(agency));
                 _listTextBuilder.Append(' ');
                 _listTextBuilder.Append(satelliteCount);
                 hasSatelliteSummary = true;
@@ -785,13 +785,13 @@ namespace TheRaceForSpace.UI
 
         private void DrawPayoutLinesByAmount()
         {
-            for (int programIndex = 0; programIndex < _raceController.Programs.Count; programIndex++)
+            for (int agencyIndex = 0; agencyIndex < _raceController.Agencies.Count; agencyIndex++)
             {
-                _agencyNameScratch[programIndex] = GetProgramDisplayName(_raceController.Programs[programIndex]);
+                _agencyNameScratch[agencyIndex] = GetProgramDisplayName(_raceController.Agencies[agencyIndex]);
             }
 
             // A small in-place sort keeps the agency with the strongest next payout first while
-            // allowing the same UI path to handle any number of current programs. The caller
+            // allowing the same UI path to handle any number of current agencies. The caller
             // refills the reusable payout buffer before each card, so no per-card array is needed.
             for (int payoutIndex = 0; payoutIndex < _payoutScratch.Length - 1; payoutIndex++)
             {
@@ -833,18 +833,18 @@ namespace TheRaceForSpace.UI
 
             _rivalsScrollPosition = GUILayout.BeginScrollView(_rivalsScrollPosition);
 
-            for (int programIndex = 0; programIndex < _raceController.RivalPrograms.Count; programIndex++)
+            for (int agencyIndex = 0; agencyIndex < _raceController.RivalAgencies.Count; agencyIndex++)
             {
-                SpaceProgramState program = _raceController.RivalPrograms[programIndex];
-                if (programIndex > 0)
+                AgencyState agency = _raceController.RivalAgencies[agencyIndex];
+                if (agencyIndex > 0)
                 {
                     GUILayout.Space(10.0f);
                 }
 
                 DrawProgramCard(
-                    program,
-                    _raceController.GetEstimatedRivalLaunchDays(program),
-                    _raceController.GetRivalLaunchProgressCost(program));
+                    agency,
+                    _raceController.GetEstimatedRivalMissionDays(agency),
+                    _raceController.GetRivalMissionProgressCost(agency));
             }
 
             GUILayout.EndScrollView();
@@ -864,7 +864,7 @@ namespace TheRaceForSpace.UI
             GUILayout.Label("1. One off achievements");
             GUILayout.Space(4.0f);
             GUILayout.Label(
-                "Once any agency achieves this achievement there are 10 payouts given. As interest in this achievement is lost overtime each following payout is reduced by 10%. If multiple agencies complete the achievement than the next payout is split between those agencies. Being the first to reach the achievement will maximise your payout.");
+                "Once any agency achieves this objectiveCompletion there are 10 payouts given. As interest in this objectiveCompletion is lost overtime each following payout is reduced by 10%. If multiple agencies complete the objectiveCompletion than the next payout is split between those agencies. Being the first to reach the objectiveCompletion will maximise your payout.");
 
             GUILayout.Space(8.0f);
             GUILayout.Label("2. Satellite Contracts");
@@ -946,7 +946,7 @@ namespace TheRaceForSpace.UI
         }
 
         private void DrawStarterLiveProgress(
-            MilestoneDefinition currentMilestone,
+            ObjectiveDefinition currentMilestone,
             StarterFlightTracker tracker)
         {
             GUILayout.Space(4.0f);
@@ -966,7 +966,7 @@ namespace TheRaceForSpace.UI
                 GUILayout.Label("Attempt status: INVALID - vessel entered orbit.");
             }
 
-            if (currentMilestone.StarterLine == StarterContractLine.DirectedPower)
+            if (currentMilestone.PreOrbitLine == PreOrbitContractLine.DirectedPower)
             {
                 bool speedMet = tracker.MaximumSurfaceSpeedMetersPerSecond
                     >= currentMilestone.RequiredSpeedMetersPerSecond;
@@ -999,7 +999,7 @@ namespace TheRaceForSpace.UI
                 return;
             }
 
-            if (currentMilestone.StarterLine == StarterContractLine.Mass)
+            if (currentMilestone.PreOrbitLine == PreOrbitContractLine.Mass)
             {
                 bool massMet = tracker.CurrentMassTonnes >= currentMilestone.RequiredMassTonnes;
                 bool distanceMet = tracker.CurrentDistanceMeters >= currentMilestone.RequiredDistanceMeters;
@@ -1023,7 +1023,7 @@ namespace TheRaceForSpace.UI
                 return;
             }
 
-            if (currentMilestone.StarterLine == StarterContractLine.Control)
+            if (currentMilestone.PreOrbitLine == PreOrbitContractLine.Control)
             {
                 bool holdQualified = tracker.IsControlMilestoneQualified(currentMilestone.Id);
                 bool sampleInBand = tracker.IsControlSampleInBand(currentMilestone.Id);
@@ -1058,7 +1058,7 @@ namespace TheRaceForSpace.UI
                 return;
             }
 
-            if (currentMilestone.StarterLine == StarterContractLine.Biome)
+            if (currentMilestone.PreOrbitLine == PreOrbitContractLine.Biome)
             {
                 string currentBiome = string.IsNullOrEmpty(tracker.CurrentBiomeName)
                     ? "Unknown"
@@ -1199,8 +1199,8 @@ namespace TheRaceForSpace.UI
 
         private void EnsureSpaceRaceFundingEntries()
         {
-            int achievementFundingCount = _raceController.AchievementFundingProgrammes.Count;
-            int satelliteFundingCount = _raceController.FundingProgrammes.Count;
+            int achievementFundingCount = _raceController.ObjectiveFundingContracts.Count;
+            int satelliteFundingCount = _raceController.SatelliteNetworkFundingContracts.Count;
             if (ReferenceEquals(_spaceRaceFundingEntriesController, _raceController)
                 && _spaceRaceAchievementFundingCount == achievementFundingCount
                 && _spaceRaceSatelliteFundingCount == satelliteFundingCount)
@@ -1212,10 +1212,10 @@ namespace TheRaceForSpace.UI
 
             for (int programmeIndex = 0; programmeIndex < achievementFundingCount; programmeIndex++)
             {
-                AchievementFundingProgramme programme =
-                    _raceController.AchievementFundingProgrammes[programmeIndex];
-                MilestoneDefinition milestone = PrototypeMilestones.FindById(programme.Id);
-                string celestialBodyName = milestone == null ? null : milestone.CelestialBodyName;
+                ObjectiveFundingContract programme =
+                    _raceController.ObjectiveFundingContracts[programmeIndex];
+                ObjectiveDefinition objective = ObjectiveCatalogue.FindById(programme.Id);
+                string celestialBodyName = objective == null ? null : objective.CelestialBodyName;
                 _spaceRaceFundingEntries.Add(new SpaceRaceFundingEntry(
                     programme,
                     null,
@@ -1226,7 +1226,7 @@ namespace TheRaceForSpace.UI
 
             for (int programmeIndex = 0; programmeIndex < satelliteFundingCount; programmeIndex++)
             {
-                FundingProgramme programme = _raceController.FundingProgrammes[programmeIndex];
+                SatelliteNetworkFundingContract programme = _raceController.SatelliteNetworkFundingContracts[programmeIndex];
                 _spaceRaceFundingEntries.Add(new SpaceRaceFundingEntry(
                     null,
                     programme,
@@ -1305,7 +1305,7 @@ namespace TheRaceForSpace.UI
         {
             if (entry.IsAchievement)
             {
-                AchievementFundingProgramme programme = entry.AchievementProgramme;
+                ObjectiveFundingContract programme = entry.AchievementProgramme;
                 if (programme.IsExpired)
                 {
                     return SpaceRaceFundingCategory.Expired;
@@ -1321,7 +1321,7 @@ namespace TheRaceForSpace.UI
                     : SpaceRaceFundingCategory.Locked;
             }
 
-            FundingProgramme satelliteProgramme = entry.SatelliteProgramme;
+            SatelliteNetworkFundingContract satelliteProgramme = entry.SatelliteProgramme;
             if (satelliteProgramme.IsOffered)
             {
                 return SpaceRaceFundingCategory.Offered;
@@ -1386,7 +1386,7 @@ namespace TheRaceForSpace.UI
         {
             bool isSatisfied = UnlockRuleEvaluator.IsConditionSatisfied(
                 condition,
-                _raceController.Programs,
+                _raceController.Agencies,
                 evaluationUniversalTime);
 
             _listTextBuilder.Length = 0;
@@ -1396,7 +1396,7 @@ namespace TheRaceForSpace.UI
             {
                 _listTextBuilder.Append("Invalid unlock condition");
             }
-            else if (condition.ConditionType == UnlockConditionType.Achievement)
+            else if (condition.ConditionType == UnlockConditionType.ObjectiveCompletion)
             {
                 AppendAchievementConditionText(
                     condition,
@@ -1407,7 +1407,7 @@ namespace TheRaceForSpace.UI
             {
                 int satelliteCount = UnlockRuleEvaluator.GetSatelliteCount(
                     condition,
-                    _raceController.Programs);
+                    _raceController.Agencies);
                 _listTextBuilder.Append(condition.CelestialBodyName);
                 _listTextBuilder.Append(" satellite network: ");
                 _listTextBuilder.Append(satelliteCount);
@@ -1451,23 +1451,23 @@ namespace TheRaceForSpace.UI
         {
             int satisfiedProgramCount = UnlockRuleEvaluator.GetSatisfiedProgramCount(
                 condition,
-                _raceController.Programs,
+                _raceController.Agencies,
                 evaluationUniversalTime);
-            string milestoneName = GetMilestoneDisplayName(condition.MilestoneId);
+            string milestoneName = GetMilestoneDisplayName(condition.ObjectiveId);
 
-            if (condition.RequiredProgramCount <= 1)
+            if (condition.RequiredAgencyCount <= 1)
             {
-                switch (condition.ProgramScope)
+                switch (condition.AgencyScope)
                 {
-                    case UnlockProgramScope.Player:
+                    case UnlockAgencyScope.Player:
                         _listTextBuilder.Append("You achieve ");
                         break;
 
-                    case UnlockProgramScope.AnyRival:
+                    case UnlockAgencyScope.AnyRival:
                         _listTextBuilder.Append("Any rival agency achieves ");
                         break;
 
-                    case UnlockProgramScope.AnyAgency:
+                    case UnlockAgencyScope.AnyAgency:
                     default:
                         _listTextBuilder.Append("Any agency achieves ");
                         break;
@@ -1475,9 +1475,9 @@ namespace TheRaceForSpace.UI
 
                 _listTextBuilder.Append(milestoneName);
 
-                if (isSatisfied && condition.ProgramScope != UnlockProgramScope.Player)
+                if (isSatisfied && condition.AgencyScope != UnlockAgencyScope.Player)
                 {
-                    SpaceProgramState satisfyingProgram = FindFirstProgramSatisfyingCondition(
+                    AgencyState satisfyingProgram = FindFirstProgramSatisfyingCondition(
                         condition,
                         evaluationUniversalTime);
                     if (satisfyingProgram != null)
@@ -1492,19 +1492,19 @@ namespace TheRaceForSpace.UI
 
             _listTextBuilder.Append(satisfiedProgramCount);
             _listTextBuilder.Append(" / ");
-            _listTextBuilder.Append(condition.RequiredProgramCount);
+            _listTextBuilder.Append(condition.RequiredAgencyCount);
 
-            switch (condition.ProgramScope)
+            switch (condition.AgencyScope)
             {
-                case UnlockProgramScope.AnyRival:
+                case UnlockAgencyScope.AnyRival:
                     _listTextBuilder.Append(" rival agencies have achieved ");
                     break;
 
-                case UnlockProgramScope.Player:
-                    _listTextBuilder.Append(" player achievement count for ");
+                case UnlockAgencyScope.Player:
+                    _listTextBuilder.Append(" player objectiveCompletion count for ");
                     break;
 
-                case UnlockProgramScope.AnyAgency:
+                case UnlockAgencyScope.AnyAgency:
                 default:
                     _listTextBuilder.Append(" agencies have achieved ");
                     break;
@@ -1513,54 +1513,54 @@ namespace TheRaceForSpace.UI
             _listTextBuilder.Append(milestoneName);
         }
 
-        private SpaceProgramState FindFirstProgramSatisfyingCondition(
+        private AgencyState FindFirstProgramSatisfyingCondition(
             UnlockConditionDefinition condition,
             double evaluationUniversalTime)
         {
-            for (int programIndex = 0; programIndex < _raceController.Programs.Count; programIndex++)
+            for (int agencyIndex = 0; agencyIndex < _raceController.Agencies.Count; agencyIndex++)
             {
-                SpaceProgramState program = _raceController.Programs[programIndex];
+                AgencyState agency = _raceController.Agencies[agencyIndex];
                 if (UnlockRuleEvaluator.DoesProgramSatisfyAchievementCondition(
-                    program,
+                    agency,
                     condition,
                     evaluationUniversalTime))
                 {
-                    return program;
+                    return agency;
                 }
             }
 
             return null;
         }
 
-        private static string GetMilestoneDisplayName(string milestoneId)
+        private static string GetMilestoneDisplayName(string objectiveId)
         {
-            MilestoneDefinition milestone = PrototypeMilestones.FindById(milestoneId);
-            return milestone == null || string.IsNullOrEmpty(milestone.Name)
-                ? milestoneId
-                : milestone.Name;
+            ObjectiveDefinition objective = ObjectiveCatalogue.FindById(objectiveId);
+            return objective == null || string.IsNullOrEmpty(objective.Name)
+                ? objectiveId
+                : objective.Name;
         }
 
         private void DrawProgramCard(
-            SpaceProgramState program,
+            AgencyState agency,
             int? launchEtaDays,
             double launchProgressCostFunds)
         {
             GUILayout.BeginVertical("box");
-            DrawCenteredCardTitle(program.Name);
+            DrawCenteredCardTitle(agency.Name);
 
             GUILayout.BeginHorizontal();
             GUILayout.BeginVertical(RivalDetailsOptions);
             GUILayout.Label(string.Empty);
-            GUILayout.Label("Funds: " + program.Funds.ToString("N0"));
+            GUILayout.Label("Funds: " + agency.Funds.ToString("N0"));
             GUILayout.Label(
                 "Next Mission Planned: "
-                + (string.IsNullOrEmpty(program.NextMissionDisplayName) ? "Planning" : program.NextMissionDisplayName));
-            GUILayout.Label("Mission Progress: " + program.LaunchProgressPercent + "%");
+                + (string.IsNullOrEmpty(agency.NextMissionDisplayName) ? "Planning" : agency.NextMissionDisplayName));
+            GUILayout.Label("Mission Progress: " + agency.MissionProgressPercent + "%");
             GUILayout.Label(
                 "Mission Progress Cost: "
                 + launchProgressCostFunds.ToString("N0")
                 + " ("
-                + TheRaceForSpace.Simulation.RivalSimulation.CalculateLaunchProgressIncrementPercent(program)
+                + TheRaceForSpace.Rivals.RivalSimulation.CalculateLaunchProgressIncrementPercent(agency)
                 + "% +)");
 
             string launchEtaText = "Awaiting Funding";
@@ -1588,14 +1588,14 @@ namespace TheRaceForSpace.UI
             GUILayout.Label("Base Income");
 
             for (int programmeIndex = 0;
-                programmeIndex < _raceController.AchievementFundingProgrammes.Count;
+                programmeIndex < _raceController.ObjectiveFundingContracts.Count;
                 programmeIndex++)
             {
-                AchievementFundingProgramme programme =
-                    _raceController.AchievementFundingProgrammes[programmeIndex];
+                ObjectiveFundingContract programme =
+                    _raceController.ObjectiveFundingContracts[programmeIndex];
                 if (programme.IsExpired
                     || !_raceController.IsAchievementProgrammeAvailable(programme)
-                    || !_raceController.HasProgramAchieved(program, programme))
+                    || !_raceController.HasProgramAchieved(agency, programme))
                 {
                     continue;
                 }
@@ -1604,12 +1604,12 @@ namespace TheRaceForSpace.UI
             }
 
             for (int programmeIndex = 0;
-                programmeIndex < _raceController.FundingProgrammes.Count;
+                programmeIndex < _raceController.SatelliteNetworkFundingContracts.Count;
                 programmeIndex++)
             {
-                FundingProgramme programme = _raceController.FundingProgrammes[programmeIndex];
-                int satelliteCount = program.GetSatelliteCount(programme.CelestialBodyName);
-                double nextPayout = _raceController.GetSatelliteCurrentPayout(program, programme);
+                SatelliteNetworkFundingContract programme = _raceController.SatelliteNetworkFundingContracts[programmeIndex];
+                int satelliteCount = agency.GetSatelliteCount(programme.CelestialBodyName);
+                double nextPayout = _raceController.GetSatelliteCurrentPayout(agency, programme);
                 if (satelliteCount <= 0 || nextPayout <= 0.0)
                 {
                     continue;
@@ -1628,29 +1628,29 @@ namespace TheRaceForSpace.UI
             GUILayout.Label(_raceController.RivalBaseIncomePerFundingPeriod.ToString("N0"));
 
             for (int programmeIndex = 0;
-                programmeIndex < _raceController.AchievementFundingProgrammes.Count;
+                programmeIndex < _raceController.ObjectiveFundingContracts.Count;
                 programmeIndex++)
             {
-                AchievementFundingProgramme programme =
-                    _raceController.AchievementFundingProgrammes[programmeIndex];
+                ObjectiveFundingContract programme =
+                    _raceController.ObjectiveFundingContracts[programmeIndex];
                 if (programme.IsExpired
                     || !_raceController.IsAchievementProgrammeAvailable(programme)
-                    || !_raceController.HasProgramAchieved(program, programme))
+                    || !_raceController.HasProgramAchieved(agency, programme))
                 {
                     continue;
                 }
 
-                double nextPayout = _raceController.GetAchievementCurrentPayout(program, programme);
+                double nextPayout = _raceController.GetAchievementCurrentPayout(agency, programme);
                 GUILayout.Label(nextPayout > 0.0 ? nextPayout.ToString("N0") : string.Empty);
             }
 
             for (int programmeIndex = 0;
-                programmeIndex < _raceController.FundingProgrammes.Count;
+                programmeIndex < _raceController.SatelliteNetworkFundingContracts.Count;
                 programmeIndex++)
             {
-                FundingProgramme programme = _raceController.FundingProgrammes[programmeIndex];
-                int satelliteCount = program.GetSatelliteCount(programme.CelestialBodyName);
-                double nextPayout = _raceController.GetSatelliteCurrentPayout(program, programme);
+                SatelliteNetworkFundingContract programme = _raceController.SatelliteNetworkFundingContracts[programmeIndex];
+                int satelliteCount = agency.GetSatelliteCount(programme.CelestialBodyName);
+                double nextPayout = _raceController.GetSatelliteCurrentPayout(agency, programme);
                 if (satelliteCount <= 0 || nextPayout <= 0.0)
                 {
                     continue;
@@ -1660,7 +1660,7 @@ namespace TheRaceForSpace.UI
             }
 
             GUILayout.Space(6.0f);
-            GUILayout.Label(program.NextPayoutFunds.ToString("N0"), _boldLabelStyle);
+            GUILayout.Label(agency.NextPayoutFunds.ToString("N0"), _boldLabelStyle);
             GUILayout.EndVertical();
 
             GUILayout.EndHorizontal();
@@ -1669,7 +1669,7 @@ namespace TheRaceForSpace.UI
 
         private void EnsurePayoutScratchBuffers()
         {
-            int programCount = _raceController == null ? 0 : _raceController.Programs.Count;
+            int programCount = _raceController == null ? 0 : _raceController.Agencies.Count;
             if (_payoutScratch == null || _payoutScratch.Length != programCount)
             {
                 _payoutScratch = new double[programCount];
@@ -1681,14 +1681,14 @@ namespace TheRaceForSpace.UI
             }
         }
 
-        private static string GetProgramDisplayName(SpaceProgramState program)
+        private static string GetProgramDisplayName(AgencyState agency)
         {
-            if (program == null)
+            if (agency == null)
             {
                 return "Unknown";
             }
 
-            return program.IsPlayer ? "Player" : program.Name;
+            return agency.IsPlayer ? "Player" : agency.Name;
         }
 
         private void DrawCenteredCardTitle(string title)

@@ -1,7 +1,7 @@
 using System.Collections.Generic;
-using TheRaceForSpace.Competition;
+using TheRaceForSpace.Campaign;
 using TheRaceForSpace.KspIntegration;
-using TheRaceForSpace.Milestones;
+using TheRaceForSpace.Objectives;
 using TheRaceForSpace.Tracking;
 using UnityEngine;
 
@@ -18,7 +18,7 @@ namespace TheRaceForSpace.Core
         private const float PlayerVesselRefreshIntervalSeconds = 20.0f;
 
         private static RaceRuntime _activeInstance;
-        private static SatelliteRaceController _raceController;
+        private static CampaignController _raceController;
         private static StarterFlightTracker _starterFlightTracker;
         private static Game _controllerGame;
 
@@ -27,7 +27,7 @@ namespace TheRaceForSpace.Core
         private float _nextRefreshTime;
         private float _nextActiveVesselRefreshTime;
         private float _nextPlayerVesselRefreshTime;
-        private IList<MilestoneDefinition> _starterTelemetryPlanSource;
+        private IList<ObjectiveDefinition> _starterTelemetryPlanSource;
         private StarterTelemetryRequirement _starterTelemetryRequirements =
             StarterTelemetryRequirement.None;
 
@@ -35,7 +35,7 @@ namespace TheRaceForSpace.Core
         /// Returns the controller owned by the runtime for the current game, or null while the
         /// runtime is not ready or KSP is not in a saved-game scene.
         /// </summary>
-        public static SatelliteRaceController Controller
+        public static CampaignController Controller
         {
             get
             {
@@ -159,7 +159,7 @@ namespace TheRaceForSpace.Core
 
         private void RefreshStarterFlightState()
         {
-            IList<MilestoneDefinition> activeStarterContracts = _raceController.ActiveStarterContracts;
+            IList<ObjectiveDefinition> activeStarterContracts = _raceController.ActiveStarterContracts;
 
             // The controller replaces its read-only active list only after an offer/completion/expiry
             // transition. Recompute telemetry needs only when that exact cached plan instance changes,
@@ -204,7 +204,7 @@ namespace TheRaceForSpace.Core
                     out impactUniversalTime))
                 {
                     recordedAchievement = _starterFlightTracker.RecordSurfaceImpact(
-                        _raceController.PlayerProgram,
+                        _raceController.PlayerAgency,
                         activeStarterContracts,
                         impactVesselId,
                         impactBodyName,
@@ -218,7 +218,7 @@ namespace TheRaceForSpace.Core
                 out activeVesselSnapshot))
             {
                 recordedAchievement |= _starterFlightTracker.RefreshPlayerMilestones(
-                    _raceController.PlayerProgram,
+                    _raceController.PlayerAgency,
                     activeStarterContracts,
                     activeVesselSnapshot);
             }
@@ -249,11 +249,11 @@ namespace TheRaceForSpace.Core
 
             // KSP has finished loading GameData before saved-game scenes begin, so configuration
             // is read once here before any controller-owned funding or rival state is constructed.
-            RaceSettingsLoader.EnsureLoaded();
+            CampaignSettingsLoader.EnsureLoaded();
 
             // Keep one controller and one active-flight tracker across scene changes inside a save,
             // but never carry race, vessel-callback, or contract-attempt state into another save.
-            _raceController = new SatelliteRaceController();
+            _raceController = new CampaignController();
             _starterFlightTracker = new StarterFlightTracker();
             _controllerGame = HighLogic.CurrentGame;
             KspVesselDiscovery.ResetActiveVesselTracking();

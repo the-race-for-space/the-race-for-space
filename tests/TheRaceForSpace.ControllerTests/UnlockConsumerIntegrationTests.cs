@@ -1,8 +1,8 @@
 using System.Collections.Generic;
 using TheRaceForSpace.Funding;
-using TheRaceForSpace.Milestones;
-using TheRaceForSpace.Programs;
-using TheRaceForSpace.Simulation;
+using TheRaceForSpace.Objectives;
+using TheRaceForSpace.Agencies;
+using TheRaceForSpace.Rivals;
 
 namespace TheRaceForSpace.ControllerTests
 {
@@ -10,37 +10,37 @@ namespace TheRaceForSpace.ControllerTests
     {
         public static void RivalSelectionRequiresOfferedContract()
         {
-            var player = new SpaceProgramState("player", "Player", true);
-            var aster = new SpaceProgramState("aster", "Aster", false);
-            var cobalt = new SpaceProgramState("cobalt", "Cobalt", false);
-            var delta = new SpaceProgramState("delta", "Delta", false);
-            aster.RecordAchievement(PrototypeMilestones.ProbeOrbitId, 100.0);
-            delta.RecordAchievement(PrototypeMilestones.ProbeOrbitId, 200.0);
+            var player = new AgencyState("player", "Player", true);
+            var aster = new AgencyState("aster", "Aster", false);
+            var cobalt = new AgencyState("cobalt", "Cobalt", false);
+            var delta = new AgencyState("delta", "Delta", false);
+            aster.RecordObjectiveCompletion(ObjectiveCatalogue.ProbeOrbitId, 100.0);
+            delta.RecordObjectiveCompletion(ObjectiveCatalogue.ProbeOrbitId, 200.0);
 
-            MilestoneDefinition milestone = PrototypeMilestones.FindById(
-                PrototypeMilestones.MinmusCrewedOrbitId);
-            var programme = new AchievementFundingProgramme(
-                milestone.Id,
-                milestone.Name,
-                milestone.ObjectiveDescription,
+            ObjectiveDefinition objective = ObjectiveCatalogue.FindById(
+                ObjectiveCatalogue.MinmusCrewedOrbitId);
+            var programme = new ObjectiveFundingContract(
+                objective.Id,
+                objective.Name,
+                objective.ObjectiveDescription,
                 300000.0,
                 "Display text",
                 new UnlockRuleDefinition(
                     new UnlockPathDefinition(
-                        UnlockConditionDefinition.Achievement(
-                            PrototypeMilestones.ProbeOrbitId,
-                            UnlockProgramScope.AnyRival,
+                        UnlockConditionDefinition.ObjectiveCompletion(
+                            ObjectiveCatalogue.ProbeOrbitId,
+                            UnlockAgencyScope.AnyRival,
                             2))));
-            var achievementProgrammes = new List<AchievementFundingProgramme> { programme };
-            var programs = new List<SpaceProgramState> { player, aster, cobalt, delta };
+            var achievementProgrammes = new List<ObjectiveFundingContract> { programme };
+            var agencies = new List<AgencyState> { player, aster, cobalt, delta };
 
             // The unlock rule is satisfied at this time, but sponsors have not selected the
             // contract yet. Rivals must therefore leave it alone.
             RivalSimulation.Refresh(
-                programs,
+                agencies,
                 200.0,
                 achievementProgrammes,
-                new List<FundingProgramme>());
+                new List<SatelliteNetworkFundingContract>());
             RequireEqual(
                 null,
                 cobalt.NextMissionTargetId,
@@ -48,12 +48,12 @@ namespace TheRaceForSpace.ControllerTests
 
             programme.Offer();
             RivalSimulation.Refresh(
-                programs,
+                agencies,
                 200.0,
                 achievementProgrammes,
-                new List<FundingProgramme>());
+                new List<SatelliteNetworkFundingContract>());
             RequireEqual(
-                PrototypeMilestones.MinmusCrewedOrbitId,
+                ObjectiveCatalogue.MinmusCrewedOrbitId,
                 cobalt.NextMissionTargetId,
                 "The same target should become selectable once sponsors mark it Offered.");
         }

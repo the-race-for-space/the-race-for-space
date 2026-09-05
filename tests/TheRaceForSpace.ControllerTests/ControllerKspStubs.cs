@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using TheRaceForSpace.Funding;
-using TheRaceForSpace.Programs;
+using TheRaceForSpace.Agencies;
 using TheRaceForSpace.Tracking;
 
 /// <summary>
@@ -111,41 +111,41 @@ namespace TheRaceForSpace.KspIntegration
         public static double RestoredNextFundingUniversalTime { get; set; }
         public static double LastCapturedNextFundingUniversalTime { get; private set; }
 
-        public static bool TryRestoreRivalState(IList<SpaceProgramState> rivalPrograms)
+        public static bool TryRestoreRivalState(IList<AgencyState> rivalAgencies)
         {
-            return IsReady && rivalPrograms != null;
+            return IsReady && rivalAgencies != null;
         }
 
         public static bool TryRestoreRaceProgress(
-            SpaceProgramState playerProgram,
-            IList<FundingProgramme> fundingProgrammes,
-            IList<AchievementFundingProgramme> achievementProgrammes,
+            AgencyState playerAgency,
+            IList<SatelliteNetworkFundingContract> satelliteNetworkFundingContracts,
+            IList<ObjectiveFundingContract> achievementProgrammes,
             out double nextFundingUniversalTime)
         {
             nextFundingUniversalTime = RestoredNextFundingUniversalTime;
             return IsReady
-                && playerProgram != null
-                && fundingProgrammes != null
+                && playerAgency != null
+                && satelliteNetworkFundingContracts != null
                 && achievementProgrammes != null;
         }
 
-        public static void CaptureRivalState(IList<SpaceProgramState> rivalPrograms)
+        public static void CaptureRivalState(IList<AgencyState> rivalAgencies)
         {
-            if (IsReady && rivalPrograms != null)
+            if (IsReady && rivalAgencies != null)
             {
                 RivalCaptureCalls++;
             }
         }
 
         public static void CaptureRaceProgress(
-            SpaceProgramState playerProgram,
-            IList<FundingProgramme> fundingProgrammes,
-            IList<AchievementFundingProgramme> achievementProgrammes,
+            AgencyState playerAgency,
+            IList<SatelliteNetworkFundingContract> satelliteNetworkFundingContracts,
+            IList<ObjectiveFundingContract> achievementProgrammes,
             double nextFundingUniversalTime)
         {
             if (IsReady
-                && playerProgram != null
-                && fundingProgrammes != null
+                && playerAgency != null
+                && satelliteNetworkFundingContracts != null
                 && achievementProgrammes != null)
             {
                 RaceProgressCaptureCalls++;

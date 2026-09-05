@@ -1,12 +1,12 @@
 using System;
 using System.Collections.Generic;
 
-namespace TheRaceForSpace.Milestones
+namespace TheRaceForSpace.Objectives
 {
     /// <summary>
-    /// Defines the achievement milestones used by the current prototype.
+    /// Defines the objectiveCompletion objectives used by the current prototype.
     /// </summary>
-    public static class PrototypeMilestones
+    public static class ObjectiveCatalogue
     {
         public const string DirectedPower1Id = "directed-power-1";
         public const string DirectedPower2Id = "directed-power-2";
@@ -62,551 +62,551 @@ namespace TheRaceForSpace.Milestones
         public const string EelooProbeOrbitId = "eeloo-probe-orbit";
         public const string EelooCrewedOrbitId = "eeloo-crewed-orbit";
 
-        private const double StarterRewardFundsPerLevel = 10000.0;
-        private const double StarterRivalProgressCostFundsPerLevel = 2000.0;
+        private const double PreOrbitRewardFundsPerLevel = 10000.0;
+        private const double PreOrbitRivalProgressCostFundsPerLevel = 2000.0;
         private const double DirectedPowerMaximumAltitudeMeters = 70000.0;
 
-        private static readonly IList<MilestoneDefinition> StarterDefinitions =
-            new List<MilestoneDefinition>
+        private static readonly IList<ObjectiveDefinition> PreOrbitDefinitions =
+            new List<ObjectiveDefinition>
             {
-                CreateStarterMilestone(
+                CreatePreOrbitObjective(
                     DirectedPower1Id,
                     "Directed Power I",
-                    MilestoneObjectiveType.DirectedPower,
-                    StarterContractLine.DirectedPower,
+                    ObjectiveType.DirectedPower,
+                    PreOrbitContractLine.DirectedPower,
                     1,
-                    StarterContractCriteria.DirectedPower(600.0, DirectedPowerMaximumAltitudeMeters),
+                    PreOrbitContractCriteria.DirectedPower(600.0, DirectedPowerMaximumAltitudeMeters),
                     "Reach 600 m/s without exceeding 70 km altitude, then impact Kerbin.",
                     null),
-                CreateStarterMilestone(
+                CreatePreOrbitObjective(
                     DirectedPower2Id,
                     "Directed Power II",
-                    MilestoneObjectiveType.DirectedPower,
-                    StarterContractLine.DirectedPower,
+                    ObjectiveType.DirectedPower,
+                    PreOrbitContractLine.DirectedPower,
                     2,
-                    StarterContractCriteria.DirectedPower(1100.0, DirectedPowerMaximumAltitudeMeters),
+                    PreOrbitContractCriteria.DirectedPower(1100.0, DirectedPowerMaximumAltitudeMeters),
                     "Reach 1,100 m/s without exceeding 70 km altitude, then impact Kerbin.",
                     DirectedPower1Id),
-                CreateStarterMilestone(
+                CreatePreOrbitObjective(
                     DirectedPower3Id,
                     "Directed Power III",
-                    MilestoneObjectiveType.DirectedPower,
-                    StarterContractLine.DirectedPower,
+                    ObjectiveType.DirectedPower,
+                    PreOrbitContractLine.DirectedPower,
                     3,
-                    StarterContractCriteria.DirectedPower(1400.0, DirectedPowerMaximumAltitudeMeters),
+                    PreOrbitContractCriteria.DirectedPower(1400.0, DirectedPowerMaximumAltitudeMeters),
                     "Reach 1,400 m/s without exceeding 70 km altitude, then impact Kerbin.",
                     DirectedPower2Id),
-                CreateStarterMilestone(
+                CreatePreOrbitObjective(
                     DirectedPower4Id,
                     "Directed Power IV",
-                    MilestoneObjectiveType.DirectedPower,
-                    StarterContractLine.DirectedPower,
+                    ObjectiveType.DirectedPower,
+                    PreOrbitContractLine.DirectedPower,
                     4,
-                    StarterContractCriteria.DirectedPower(1700.0, DirectedPowerMaximumAltitudeMeters),
+                    PreOrbitContractCriteria.DirectedPower(1700.0, DirectedPowerMaximumAltitudeMeters),
                     "Reach 1,700 m/s without exceeding 70 km altitude, then impact Kerbin.",
                     DirectedPower3Id),
-                CreateStarterMilestone(
+                CreatePreOrbitObjective(
                     DirectedPower5Id,
                     "Directed Power V",
-                    MilestoneObjectiveType.DirectedPower,
-                    StarterContractLine.DirectedPower,
+                    ObjectiveType.DirectedPower,
+                    PreOrbitContractLine.DirectedPower,
                     5,
-                    StarterContractCriteria.DirectedPower(2000.0, DirectedPowerMaximumAltitudeMeters),
+                    PreOrbitContractCriteria.DirectedPower(2000.0, DirectedPowerMaximumAltitudeMeters),
                     "Reach 2,000 m/s without exceeding 70 km altitude, then impact Kerbin.",
                     DirectedPower4Id),
 
-                CreateStarterMilestone(
+                CreatePreOrbitObjective(
                     Mass1Id,
                     "Mass I",
-                    MilestoneObjectiveType.DeliveredMass,
-                    StarterContractLine.Mass,
+                    ObjectiveType.DeliveredMass,
+                    PreOrbitContractLine.Mass,
                     1,
-                    StarterContractCriteria.Mass(1.0, 25000.0),
+                    PreOrbitContractCriteria.Mass(1.0, 25000.0),
                     "Carry at least 1 t of remaining vessel mass 25 km from the Space Centre.",
                     null),
-                CreateStarterMilestone(
+                CreatePreOrbitObjective(
                     Mass2Id,
                     "Mass II",
-                    MilestoneObjectiveType.DeliveredMass,
-                    StarterContractLine.Mass,
+                    ObjectiveType.DeliveredMass,
+                    PreOrbitContractLine.Mass,
                     2,
-                    StarterContractCriteria.Mass(2.5, 75000.0),
+                    PreOrbitContractCriteria.Mass(2.5, 75000.0),
                     "Carry at least 2.5 t of remaining vessel mass 75 km from the Space Centre.",
                     Mass1Id),
-                CreateStarterMilestone(
+                CreatePreOrbitObjective(
                     Mass3Id,
                     "Mass III",
-                    MilestoneObjectiveType.DeliveredMass,
-                    StarterContractLine.Mass,
+                    ObjectiveType.DeliveredMass,
+                    PreOrbitContractLine.Mass,
                     3,
-                    StarterContractCriteria.Mass(5.0, 150000.0),
+                    PreOrbitContractCriteria.Mass(5.0, 150000.0),
                     "Carry at least 5 t of remaining vessel mass 150 km from the Space Centre.",
                     Mass2Id),
-                CreateStarterMilestone(
+                CreatePreOrbitObjective(
                     Mass4Id,
                     "Mass IV",
-                    MilestoneObjectiveType.DeliveredMass,
-                    StarterContractLine.Mass,
+                    ObjectiveType.DeliveredMass,
+                    PreOrbitContractLine.Mass,
                     4,
-                    StarterContractCriteria.Mass(10.0, 300000.0),
+                    PreOrbitContractCriteria.Mass(10.0, 300000.0),
                     "Carry at least 10 t of remaining vessel mass 300 km from the Space Centre.",
                     Mass3Id),
-                CreateStarterMilestone(
+                CreatePreOrbitObjective(
                     Mass5Id,
                     "Mass V",
-                    MilestoneObjectiveType.DeliveredMass,
-                    StarterContractLine.Mass,
+                    ObjectiveType.DeliveredMass,
+                    PreOrbitContractLine.Mass,
                     5,
-                    StarterContractCriteria.Mass(20.0, 600000.0),
+                    PreOrbitContractCriteria.Mass(20.0, 600000.0),
                     "Carry at least 20 t of remaining vessel mass 600 km from the Space Centre.",
                     Mass4Id),
 
-                CreateStarterMilestone(
+                CreatePreOrbitObjective(
                     Control1Id,
                     "Control I",
-                    MilestoneObjectiveType.AltitudeHold,
-                    StarterContractLine.Control,
+                    ObjectiveType.AltitudeHold,
+                    PreOrbitContractLine.Control,
                     1,
-                    StarterContractCriteria.Control(2000.0, 5000.0, 30.0),
+                    PreOrbitContractCriteria.Control(2000.0, 5000.0, 30.0),
                     "With crew aboard, remain between 2-5 km for 30 seconds, then land safely on Kerbin.",
                     null,
-                    MilestoneCrewRequirement.Crewed),
-                CreateStarterMilestone(
+                    ObjectiveCrewRequirement.Crewed),
+                CreatePreOrbitObjective(
                     Control2Id,
                     "Control II",
-                    MilestoneObjectiveType.AltitudeHold,
-                    StarterContractLine.Control,
+                    ObjectiveType.AltitudeHold,
+                    PreOrbitContractLine.Control,
                     2,
-                    StarterContractCriteria.Control(8000.0, 12000.0, 45.0),
+                    PreOrbitContractCriteria.Control(8000.0, 12000.0, 45.0),
                     "With crew aboard, remain between 8-12 km for 45 seconds, then land safely on Kerbin.",
                     Control1Id,
-                    MilestoneCrewRequirement.Crewed),
-                CreateStarterMilestone(
+                    ObjectiveCrewRequirement.Crewed),
+                CreatePreOrbitObjective(
                     Control3Id,
                     "Control III",
-                    MilestoneObjectiveType.AltitudeHold,
-                    StarterContractLine.Control,
+                    ObjectiveType.AltitudeHold,
+                    PreOrbitContractLine.Control,
                     3,
-                    StarterContractCriteria.Control(15000.0, 25000.0, 60.0),
+                    PreOrbitContractCriteria.Control(15000.0, 25000.0, 60.0),
                     "With crew aboard, remain between 15-25 km for 60 seconds, then land safely on Kerbin.",
                     Control2Id,
-                    MilestoneCrewRequirement.Crewed),
-                CreateStarterMilestone(
+                    ObjectiveCrewRequirement.Crewed),
+                CreatePreOrbitObjective(
                     Control4Id,
                     "Control IV",
-                    MilestoneObjectiveType.AltitudeHold,
-                    StarterContractLine.Control,
+                    ObjectiveType.AltitudeHold,
+                    PreOrbitContractLine.Control,
                     4,
-                    StarterContractCriteria.Control(30000.0, 40000.0, 75.0),
+                    PreOrbitContractCriteria.Control(30000.0, 40000.0, 75.0),
                     "With crew aboard, remain between 30-40 km for 75 seconds, then land safely on Kerbin.",
                     Control3Id,
-                    MilestoneCrewRequirement.Crewed),
-                CreateStarterMilestone(
+                    ObjectiveCrewRequirement.Crewed),
+                CreatePreOrbitObjective(
                     Control5Id,
                     "Control V",
-                    MilestoneObjectiveType.AltitudeHold,
-                    StarterContractLine.Control,
+                    ObjectiveType.AltitudeHold,
+                    PreOrbitContractLine.Control,
                     5,
-                    StarterContractCriteria.Control(50000.0, 65000.0, 90.0),
+                    PreOrbitContractCriteria.Control(50000.0, 65000.0, 90.0),
                     "With crew aboard, remain between 50-65 km for 90 seconds, then land safely on Kerbin.",
                     Control4Id,
-                    MilestoneCrewRequirement.Crewed),
+                    ObjectiveCrewRequirement.Crewed),
 
-                CreateStarterMilestone(
+                CreatePreOrbitObjective(
                     Biome1Id,
                     "Biome I - Grasslands",
-                    MilestoneObjectiveType.BiomeVisit,
-                    StarterContractLine.Biome,
+                    ObjectiveType.BiomeVisit,
+                    PreOrbitContractLine.Biome,
                     1,
-                    StarterContractCriteria.Biome("Grasslands"),
+                    PreOrbitContractCriteria.Biome("Grasslands"),
                     "Visit Kerbin's Grasslands biome without entering orbit.",
                     null),
-                CreateStarterMilestone(
+                CreatePreOrbitObjective(
                     Biome2Id,
                     "Biome II - Highlands",
-                    MilestoneObjectiveType.BiomeVisit,
-                    StarterContractLine.Biome,
+                    ObjectiveType.BiomeVisit,
+                    PreOrbitContractLine.Biome,
                     2,
-                    StarterContractCriteria.Biome("Highlands"),
+                    PreOrbitContractCriteria.Biome("Highlands"),
                     "Visit Kerbin's Highlands biome without entering orbit.",
                     Biome1Id),
-                CreateStarterMilestone(
+                CreatePreOrbitObjective(
                     Biome3Id,
                     "Biome III - Mountains",
-                    MilestoneObjectiveType.BiomeVisit,
-                    StarterContractLine.Biome,
+                    ObjectiveType.BiomeVisit,
+                    PreOrbitContractLine.Biome,
                     3,
-                    StarterContractCriteria.Biome("Mountains"),
+                    PreOrbitContractCriteria.Biome("Mountains"),
                     "Visit Kerbin's Mountains biome without entering orbit.",
                     Biome2Id),
-                CreateStarterMilestone(
+                CreatePreOrbitObjective(
                     Biome4Id,
                     "Biome IV - Deserts",
-                    MilestoneObjectiveType.BiomeVisit,
-                    StarterContractLine.Biome,
+                    ObjectiveType.BiomeVisit,
+                    PreOrbitContractLine.Biome,
                     4,
-                    StarterContractCriteria.Biome("Deserts"),
+                    PreOrbitContractCriteria.Biome("Deserts"),
                     "Visit Kerbin's Deserts biome without entering orbit.",
                     Biome3Id),
-                CreateStarterMilestone(
+                CreatePreOrbitObjective(
                     Biome5Id,
                     "Biome V - Ice Caps",
-                    MilestoneObjectiveType.BiomeVisit,
-                    StarterContractLine.Biome,
+                    ObjectiveType.BiomeVisit,
+                    PreOrbitContractLine.Biome,
                     5,
-                    StarterContractCriteria.Biome("Ice Caps"),
+                    PreOrbitContractCriteria.Biome("Ice Caps"),
                     "Visit Kerbin's Ice Caps biome without entering orbit.",
                     Biome4Id)
             }.AsReadOnly();
 
-        private static readonly IList<MilestoneDefinition> Definitions =
-            new List<MilestoneDefinition>
+        private static readonly IList<ObjectiveDefinition> Definitions =
+            new List<ObjectiveDefinition>
             {
-                new MilestoneDefinition(
+                new ObjectiveDefinition(
                     ProbeOrbitId,
                     "Probe Orbit",
                     "Kerbin",
-                    MilestoneSituation.Orbit,
-                    MilestoneCrewRequirement.UncrewedProbe,
+                    ObjectiveSituation.Orbit,
+                    ObjectiveCrewRequirement.UncrewedProbe,
                     "Achieve orbit around Kerbin with an uncrewed Probe or Relay vessel.",
                     CreateProbeOrbitUnlockRule()),
-                new MilestoneDefinition(
+                new ObjectiveDefinition(
                     CrewedOrbitId,
                     "Crewed Orbit",
                     "Kerbin",
-                    MilestoneSituation.Orbit,
-                    MilestoneCrewRequirement.Crewed,
+                    ObjectiveSituation.Orbit,
+                    ObjectiveCrewRequirement.Crewed,
                     "Achieve orbit around Kerbin with at least one live Kerbal aboard.",
-                    UnlockRuleDefinition.AnyAgencyAchievement(ProbeOrbitId)),
-                new MilestoneDefinition(
+                    UnlockRuleDefinition.AnyAgencyObjectiveCompletion(ProbeOrbitId)),
+                new ObjectiveDefinition(
                     MunProbeOrbitId,
                     "Mun Probe Orbit",
                     "Mun",
-                    MilestoneSituation.Orbit,
-                    MilestoneCrewRequirement.UncrewedProbe,
+                    ObjectiveSituation.Orbit,
+                    ObjectiveCrewRequirement.UncrewedProbe,
                     "Achieve orbit around Mun with an uncrewed Probe or Relay vessel.",
-                    UnlockRuleDefinition.AnyAgencyAchievement(ProbeOrbitId)),
-                new MilestoneDefinition(
+                    UnlockRuleDefinition.AnyAgencyObjectiveCompletion(ProbeOrbitId)),
+                new ObjectiveDefinition(
                     MinmusProbeOrbitId,
                     "Minmus Probe Orbit",
                     "Minmus",
-                    MilestoneSituation.Orbit,
-                    MilestoneCrewRequirement.UncrewedProbe,
+                    ObjectiveSituation.Orbit,
+                    ObjectiveCrewRequirement.UncrewedProbe,
                     "Achieve orbit around Minmus with an uncrewed Probe or Relay vessel.",
-                    UnlockRuleDefinition.AnyAgencyAchievement(ProbeOrbitId)),
-                new MilestoneDefinition(
+                    UnlockRuleDefinition.AnyAgencyObjectiveCompletion(ProbeOrbitId)),
+                new ObjectiveDefinition(
                     DunaProbeOrbitId,
                     "Duna Probe Orbit",
                     "Duna",
-                    MilestoneSituation.Orbit,
-                    MilestoneCrewRequirement.UncrewedProbe,
+                    ObjectiveSituation.Orbit,
+                    ObjectiveCrewRequirement.UncrewedProbe,
                     "Achieve orbit around Duna with an uncrewed Probe or Relay vessel.",
                     CreateInterplanetaryProbeUnlockRule()),
-                new MilestoneDefinition(
+                new ObjectiveDefinition(
                     MunCrewedOrbitId,
                     "Mun Crewed Orbit",
                     "Mun",
-                    MilestoneSituation.Orbit,
-                    MilestoneCrewRequirement.Crewed,
+                    ObjectiveSituation.Orbit,
+                    ObjectiveCrewRequirement.Crewed,
                     "Achieve orbit around Mun with at least one live Kerbal aboard.",
-                    UnlockRuleDefinition.AnyAgencyAchievement(CrewedOrbitId)),
-                new MilestoneDefinition(
+                    UnlockRuleDefinition.AnyAgencyObjectiveCompletion(CrewedOrbitId)),
+                new ObjectiveDefinition(
                     MinmusCrewedOrbitId,
                     "Minmus Crewed Orbit",
                     "Minmus",
-                    MilestoneSituation.Orbit,
-                    MilestoneCrewRequirement.Crewed,
+                    ObjectiveSituation.Orbit,
+                    ObjectiveCrewRequirement.Crewed,
                     "Achieve orbit around Minmus with at least one live Kerbal aboard.",
-                    UnlockRuleDefinition.AnyAgencyAchievement(CrewedOrbitId)),
-                new MilestoneDefinition(
+                    UnlockRuleDefinition.AnyAgencyObjectiveCompletion(CrewedOrbitId)),
+                new ObjectiveDefinition(
                     DunaCrewedOrbitId,
                     "Duna Crewed Orbit",
                     "Duna",
-                    MilestoneSituation.Orbit,
-                    MilestoneCrewRequirement.Crewed,
+                    ObjectiveSituation.Orbit,
+                    ObjectiveCrewRequirement.Crewed,
                     "Achieve orbit around Duna with at least one live Kerbal aboard.",
                     CreateInterplanetaryCrewedUnlockRule()),
-                new MilestoneDefinition(
+                new ObjectiveDefinition(
                     MohoProbeOrbitId,
                     "Moho Probe Orbit",
                     "Moho",
-                    MilestoneSituation.Orbit,
-                    MilestoneCrewRequirement.UncrewedProbe,
+                    ObjectiveSituation.Orbit,
+                    ObjectiveCrewRequirement.UncrewedProbe,
                     "Achieve orbit around Moho with an uncrewed Probe or Relay vessel.",
                     CreateInterplanetaryProbeUnlockRule()),
-                new MilestoneDefinition(
+                new ObjectiveDefinition(
                     MohoCrewedOrbitId,
                     "Moho Crewed Orbit",
                     "Moho",
-                    MilestoneSituation.Orbit,
-                    MilestoneCrewRequirement.Crewed,
+                    ObjectiveSituation.Orbit,
+                    ObjectiveCrewRequirement.Crewed,
                     "Achieve orbit around Moho with at least one live Kerbal aboard.",
                     CreateInterplanetaryCrewedUnlockRule()),
-                new MilestoneDefinition(
+                new ObjectiveDefinition(
                     EveProbeOrbitId,
                     "Eve Probe Orbit",
                     "Eve",
-                    MilestoneSituation.Orbit,
-                    MilestoneCrewRequirement.UncrewedProbe,
+                    ObjectiveSituation.Orbit,
+                    ObjectiveCrewRequirement.UncrewedProbe,
                     "Achieve orbit around Eve with an uncrewed Probe or Relay vessel.",
                     CreateInterplanetaryProbeUnlockRule()),
-                new MilestoneDefinition(
+                new ObjectiveDefinition(
                     EveCrewedOrbitId,
                     "Eve Crewed Orbit",
                     "Eve",
-                    MilestoneSituation.Orbit,
-                    MilestoneCrewRequirement.Crewed,
+                    ObjectiveSituation.Orbit,
+                    ObjectiveCrewRequirement.Crewed,
                     "Achieve orbit around Eve with at least one live Kerbal aboard.",
                     CreateInterplanetaryCrewedUnlockRule()),
-                new MilestoneDefinition(
+                new ObjectiveDefinition(
                     GillyProbeOrbitId,
                     "Gilly Probe Orbit",
                     "Gilly",
-                    MilestoneSituation.Orbit,
-                    MilestoneCrewRequirement.UncrewedProbe,
+                    ObjectiveSituation.Orbit,
+                    ObjectiveCrewRequirement.UncrewedProbe,
                     "Achieve orbit around Gilly with an uncrewed Probe or Relay vessel.",
-                    UnlockRuleDefinition.AnyAgencyAchievement(EveProbeOrbitId)),
-                new MilestoneDefinition(
+                    UnlockRuleDefinition.AnyAgencyObjectiveCompletion(EveProbeOrbitId)),
+                new ObjectiveDefinition(
                     GillyCrewedOrbitId,
                     "Gilly Crewed Orbit",
                     "Gilly",
-                    MilestoneSituation.Orbit,
-                    MilestoneCrewRequirement.Crewed,
+                    ObjectiveSituation.Orbit,
+                    ObjectiveCrewRequirement.Crewed,
                     "Achieve orbit around Gilly with at least one live Kerbal aboard.",
-                    UnlockRuleDefinition.AnyAgencyAchievement(EveCrewedOrbitId)),
-                new MilestoneDefinition(
+                    UnlockRuleDefinition.AnyAgencyObjectiveCompletion(EveCrewedOrbitId)),
+                new ObjectiveDefinition(
                     IkeProbeOrbitId,
                     "Ike Probe Orbit",
                     "Ike",
-                    MilestoneSituation.Orbit,
-                    MilestoneCrewRequirement.UncrewedProbe,
+                    ObjectiveSituation.Orbit,
+                    ObjectiveCrewRequirement.UncrewedProbe,
                     "Achieve orbit around Ike with an uncrewed Probe or Relay vessel.",
-                    UnlockRuleDefinition.AnyAgencyAchievement(DunaProbeOrbitId)),
-                new MilestoneDefinition(
+                    UnlockRuleDefinition.AnyAgencyObjectiveCompletion(DunaProbeOrbitId)),
+                new ObjectiveDefinition(
                     IkeCrewedOrbitId,
                     "Ike Crewed Orbit",
                     "Ike",
-                    MilestoneSituation.Orbit,
-                    MilestoneCrewRequirement.Crewed,
+                    ObjectiveSituation.Orbit,
+                    ObjectiveCrewRequirement.Crewed,
                     "Achieve orbit around Ike with at least one live Kerbal aboard.",
-                    UnlockRuleDefinition.AnyAgencyAchievement(DunaCrewedOrbitId)),
-                new MilestoneDefinition(
+                    UnlockRuleDefinition.AnyAgencyObjectiveCompletion(DunaCrewedOrbitId)),
+                new ObjectiveDefinition(
                     DresProbeOrbitId,
                     "Dres Probe Orbit",
                     "Dres",
-                    MilestoneSituation.Orbit,
-                    MilestoneCrewRequirement.UncrewedProbe,
+                    ObjectiveSituation.Orbit,
+                    ObjectiveCrewRequirement.UncrewedProbe,
                     "Achieve orbit around Dres with an uncrewed Probe or Relay vessel.",
                     CreateInterplanetaryProbeUnlockRule()),
-                new MilestoneDefinition(
+                new ObjectiveDefinition(
                     DresCrewedOrbitId,
                     "Dres Crewed Orbit",
                     "Dres",
-                    MilestoneSituation.Orbit,
-                    MilestoneCrewRequirement.Crewed,
+                    ObjectiveSituation.Orbit,
+                    ObjectiveCrewRequirement.Crewed,
                     "Achieve orbit around Dres with at least one live Kerbal aboard.",
                     CreateInterplanetaryCrewedUnlockRule()),
-                new MilestoneDefinition(
+                new ObjectiveDefinition(
                     JoolProbeOrbitId,
                     "Jool Probe Orbit",
                     "Jool",
-                    MilestoneSituation.Orbit,
-                    MilestoneCrewRequirement.UncrewedProbe,
+                    ObjectiveSituation.Orbit,
+                    ObjectiveCrewRequirement.UncrewedProbe,
                     "Achieve orbit around Jool with an uncrewed Probe or Relay vessel.",
                     CreateInterplanetaryProbeUnlockRule()),
-                new MilestoneDefinition(
+                new ObjectiveDefinition(
                     JoolCrewedOrbitId,
                     "Jool Crewed Orbit",
                     "Jool",
-                    MilestoneSituation.Orbit,
-                    MilestoneCrewRequirement.Crewed,
+                    ObjectiveSituation.Orbit,
+                    ObjectiveCrewRequirement.Crewed,
                     "Achieve orbit around Jool with at least one live Kerbal aboard.",
                     CreateInterplanetaryCrewedUnlockRule()),
-                new MilestoneDefinition(
+                new ObjectiveDefinition(
                     LaytheProbeOrbitId,
                     "Laythe Probe Orbit",
                     "Laythe",
-                    MilestoneSituation.Orbit,
-                    MilestoneCrewRequirement.UncrewedProbe,
+                    ObjectiveSituation.Orbit,
+                    ObjectiveCrewRequirement.UncrewedProbe,
                     "Achieve orbit around Laythe with an uncrewed Probe or Relay vessel.",
-                    UnlockRuleDefinition.AnyAgencyAchievement(JoolProbeOrbitId)),
-                new MilestoneDefinition(
+                    UnlockRuleDefinition.AnyAgencyObjectiveCompletion(JoolProbeOrbitId)),
+                new ObjectiveDefinition(
                     LaytheCrewedOrbitId,
                     "Laythe Crewed Orbit",
                     "Laythe",
-                    MilestoneSituation.Orbit,
-                    MilestoneCrewRequirement.Crewed,
+                    ObjectiveSituation.Orbit,
+                    ObjectiveCrewRequirement.Crewed,
                     "Achieve orbit around Laythe with at least one live Kerbal aboard.",
-                    UnlockRuleDefinition.AnyAgencyAchievement(JoolCrewedOrbitId)),
-                new MilestoneDefinition(
+                    UnlockRuleDefinition.AnyAgencyObjectiveCompletion(JoolCrewedOrbitId)),
+                new ObjectiveDefinition(
                     VallProbeOrbitId,
                     "Vall Probe Orbit",
                     "Vall",
-                    MilestoneSituation.Orbit,
-                    MilestoneCrewRequirement.UncrewedProbe,
+                    ObjectiveSituation.Orbit,
+                    ObjectiveCrewRequirement.UncrewedProbe,
                     "Achieve orbit around Vall with an uncrewed Probe or Relay vessel.",
-                    UnlockRuleDefinition.AnyAgencyAchievement(JoolProbeOrbitId)),
-                new MilestoneDefinition(
+                    UnlockRuleDefinition.AnyAgencyObjectiveCompletion(JoolProbeOrbitId)),
+                new ObjectiveDefinition(
                     VallCrewedOrbitId,
                     "Vall Crewed Orbit",
                     "Vall",
-                    MilestoneSituation.Orbit,
-                    MilestoneCrewRequirement.Crewed,
+                    ObjectiveSituation.Orbit,
+                    ObjectiveCrewRequirement.Crewed,
                     "Achieve orbit around Vall with at least one live Kerbal aboard.",
-                    UnlockRuleDefinition.AnyAgencyAchievement(JoolCrewedOrbitId)),
-                new MilestoneDefinition(
+                    UnlockRuleDefinition.AnyAgencyObjectiveCompletion(JoolCrewedOrbitId)),
+                new ObjectiveDefinition(
                     TyloProbeOrbitId,
                     "Tylo Probe Orbit",
                     "Tylo",
-                    MilestoneSituation.Orbit,
-                    MilestoneCrewRequirement.UncrewedProbe,
+                    ObjectiveSituation.Orbit,
+                    ObjectiveCrewRequirement.UncrewedProbe,
                     "Achieve orbit around Tylo with an uncrewed Probe or Relay vessel.",
-                    UnlockRuleDefinition.AnyAgencyAchievement(JoolProbeOrbitId)),
-                new MilestoneDefinition(
+                    UnlockRuleDefinition.AnyAgencyObjectiveCompletion(JoolProbeOrbitId)),
+                new ObjectiveDefinition(
                     TyloCrewedOrbitId,
                     "Tylo Crewed Orbit",
                     "Tylo",
-                    MilestoneSituation.Orbit,
-                    MilestoneCrewRequirement.Crewed,
+                    ObjectiveSituation.Orbit,
+                    ObjectiveCrewRequirement.Crewed,
                     "Achieve orbit around Tylo with at least one live Kerbal aboard.",
-                    UnlockRuleDefinition.AnyAgencyAchievement(JoolCrewedOrbitId)),
-                new MilestoneDefinition(
+                    UnlockRuleDefinition.AnyAgencyObjectiveCompletion(JoolCrewedOrbitId)),
+                new ObjectiveDefinition(
                     BopProbeOrbitId,
                     "Bop Probe Orbit",
                     "Bop",
-                    MilestoneSituation.Orbit,
-                    MilestoneCrewRequirement.UncrewedProbe,
+                    ObjectiveSituation.Orbit,
+                    ObjectiveCrewRequirement.UncrewedProbe,
                     "Achieve orbit around Bop with an uncrewed Probe or Relay vessel.",
-                    UnlockRuleDefinition.AnyAgencyAchievement(JoolProbeOrbitId)),
-                new MilestoneDefinition(
+                    UnlockRuleDefinition.AnyAgencyObjectiveCompletion(JoolProbeOrbitId)),
+                new ObjectiveDefinition(
                     BopCrewedOrbitId,
                     "Bop Crewed Orbit",
                     "Bop",
-                    MilestoneSituation.Orbit,
-                    MilestoneCrewRequirement.Crewed,
+                    ObjectiveSituation.Orbit,
+                    ObjectiveCrewRequirement.Crewed,
                     "Achieve orbit around Bop with at least one live Kerbal aboard.",
-                    UnlockRuleDefinition.AnyAgencyAchievement(JoolCrewedOrbitId)),
-                new MilestoneDefinition(
+                    UnlockRuleDefinition.AnyAgencyObjectiveCompletion(JoolCrewedOrbitId)),
+                new ObjectiveDefinition(
                     PolProbeOrbitId,
                     "Pol Probe Orbit",
                     "Pol",
-                    MilestoneSituation.Orbit,
-                    MilestoneCrewRequirement.UncrewedProbe,
+                    ObjectiveSituation.Orbit,
+                    ObjectiveCrewRequirement.UncrewedProbe,
                     "Achieve orbit around Pol with an uncrewed Probe or Relay vessel.",
-                    UnlockRuleDefinition.AnyAgencyAchievement(JoolProbeOrbitId)),
-                new MilestoneDefinition(
+                    UnlockRuleDefinition.AnyAgencyObjectiveCompletion(JoolProbeOrbitId)),
+                new ObjectiveDefinition(
                     PolCrewedOrbitId,
                     "Pol Crewed Orbit",
                     "Pol",
-                    MilestoneSituation.Orbit,
-                    MilestoneCrewRequirement.Crewed,
+                    ObjectiveSituation.Orbit,
+                    ObjectiveCrewRequirement.Crewed,
                     "Achieve orbit around Pol with at least one live Kerbal aboard.",
-                    UnlockRuleDefinition.AnyAgencyAchievement(JoolCrewedOrbitId)),
-                new MilestoneDefinition(
+                    UnlockRuleDefinition.AnyAgencyObjectiveCompletion(JoolCrewedOrbitId)),
+                new ObjectiveDefinition(
                     EelooProbeOrbitId,
                     "Eeloo Probe Orbit",
                     "Eeloo",
-                    MilestoneSituation.Orbit,
-                    MilestoneCrewRequirement.UncrewedProbe,
+                    ObjectiveSituation.Orbit,
+                    ObjectiveCrewRequirement.UncrewedProbe,
                     "Achieve orbit around Eeloo with an uncrewed Probe or Relay vessel.",
                     CreateInterplanetaryProbeUnlockRule()),
-                new MilestoneDefinition(
+                new ObjectiveDefinition(
                     EelooCrewedOrbitId,
                     "Eeloo Crewed Orbit",
                     "Eeloo",
-                    MilestoneSituation.Orbit,
-                    MilestoneCrewRequirement.Crewed,
+                    ObjectiveSituation.Orbit,
+                    ObjectiveCrewRequirement.Crewed,
                     "Achieve orbit around Eeloo with at least one live Kerbal aboard.",
                     CreateInterplanetaryCrewedUnlockRule())
             }.AsReadOnly();
 
-        private static readonly Dictionary<string, MilestoneDefinition> MilestonesById =
+        private static readonly Dictionary<string, ObjectiveDefinition> MilestonesById =
             CreateMilestoneIndex();
 
         /// <summary>
-        /// Orbital milestones consumed by the existing vessel-orbit tracker.
+        /// Orbital objectives consumed by the existing vessel-orbit tracker.
         /// </summary>
-        public static IList<MilestoneDefinition> All
+        public static IList<ObjectiveDefinition> All
         {
             get { return Definitions; }
         }
 
         /// <summary>
-        /// The twenty special pre-orbit milestones. Batch B supplies their flight-state evaluation.
+        /// The twenty special pre-orbit objectives. Batch B supplies their flight-state evaluation.
         /// </summary>
-        public static IList<MilestoneDefinition> StarterContracts
+        public static IList<ObjectiveDefinition> StarterContracts
         {
-            get { return StarterDefinitions; }
+            get { return PreOrbitDefinitions; }
         }
 
         /// <summary>
-        /// Returns the prototype milestone with the supplied stable ID, or null when no definition exists.
+        /// Returns the prototype objective with the supplied stable ID, or null when no definition exists.
         /// </summary>
-        public static MilestoneDefinition FindById(string milestoneId)
+        public static ObjectiveDefinition FindById(string objectiveId)
         {
-            if (string.IsNullOrEmpty(milestoneId))
+            if (string.IsNullOrEmpty(objectiveId))
             {
                 return null;
             }
 
-            MilestoneDefinition milestone;
-            return MilestonesById.TryGetValue(milestoneId, out milestone)
-                ? milestone
+            ObjectiveDefinition objective;
+            return MilestonesById.TryGetValue(objectiveId, out objective)
+                ? objective
                 : null;
         }
 
-        private static Dictionary<string, MilestoneDefinition> CreateMilestoneIndex()
+        private static Dictionary<string, ObjectiveDefinition> CreateMilestoneIndex()
         {
-            var milestonesById = new Dictionary<string, MilestoneDefinition>(
+            var milestonesById = new Dictionary<string, ObjectiveDefinition>(
                 StringComparer.OrdinalIgnoreCase);
 
             for (int milestoneIndex = 0;
-                milestoneIndex < StarterDefinitions.Count;
+                milestoneIndex < PreOrbitDefinitions.Count;
                 milestoneIndex++)
             {
-                MilestoneDefinition milestone = StarterDefinitions[milestoneIndex];
-                milestonesById.Add(milestone.Id, milestone);
+                ObjectiveDefinition objective = PreOrbitDefinitions[milestoneIndex];
+                milestonesById.Add(objective.Id, objective);
             }
 
             for (int milestoneIndex = 0;
                 milestoneIndex < Definitions.Count;
                 milestoneIndex++)
             {
-                MilestoneDefinition milestone = Definitions[milestoneIndex];
-                milestonesById.Add(milestone.Id, milestone);
+                ObjectiveDefinition objective = Definitions[milestoneIndex];
+                milestonesById.Add(objective.Id, objective);
             }
 
             return milestonesById;
         }
 
-        private static MilestoneDefinition CreateStarterMilestone(
+        private static ObjectiveDefinition CreatePreOrbitObjective(
             string id,
             string name,
-            MilestoneObjectiveType objectiveType,
-            StarterContractLine starterLine,
+            ObjectiveType objectiveType,
+            PreOrbitContractLine starterLine,
             int starterLevel,
-            StarterContractCriteria starterCriteria,
+            PreOrbitContractCriteria starterCriteria,
             string objectiveDescription,
-            string previousMilestoneId,
-            MilestoneCrewRequirement crewRequirement = MilestoneCrewRequirement.UncrewedProbe)
+            string previousObjectiveId,
+            ObjectiveCrewRequirement crewRequirement = ObjectiveCrewRequirement.UncrewedProbe)
         {
-            UnlockRuleDefinition unlockRule = string.IsNullOrEmpty(previousMilestoneId)
+            UnlockRuleDefinition unlockRule = string.IsNullOrEmpty(previousObjectiveId)
                 ? null
-                : UnlockRuleDefinition.AnyAgencyAchievement(previousMilestoneId);
+                : UnlockRuleDefinition.AnyAgencyObjectiveCompletion(previousObjectiveId);
 
-            return new MilestoneDefinition(
+            return new ObjectiveDefinition(
                 id,
                 name,
                 "Kerbin",
-                MilestoneSituation.Orbit,
+                ObjectiveSituation.Orbit,
                 crewRequirement,
                 objectiveDescription,
                 unlockRule,
                 objectiveType,
                 starterLine,
                 starterLevel,
-                starterLevel * StarterRewardFundsPerLevel,
-                (starterLevel + 1) * StarterRivalProgressCostFundsPerLevel,
+                starterLevel * PreOrbitRewardFundsPerLevel,
+                (starterLevel + 1) * PreOrbitRivalProgressCostFundsPerLevel,
                 starterCriteria);
         }
 
@@ -614,45 +614,45 @@ namespace TheRaceForSpace.Milestones
         {
             return new UnlockRuleDefinition(
                 new UnlockPathDefinition(
-                    UnlockConditionDefinition.Achievement(
+                    UnlockConditionDefinition.ObjectiveCompletion(
                         DirectedPower5Id,
-                        UnlockProgramScope.AnyAgency)),
+                        UnlockAgencyScope.AnyAgency)),
                 new UnlockPathDefinition(
-                    UnlockConditionDefinition.Achievement(
+                    UnlockConditionDefinition.ObjectiveCompletion(
                         Mass5Id,
-                        UnlockProgramScope.AnyAgency)),
+                        UnlockAgencyScope.AnyAgency)),
                 new UnlockPathDefinition(
-                    UnlockConditionDefinition.Achievement(
+                    UnlockConditionDefinition.ObjectiveCompletion(
                         Control5Id,
-                        UnlockProgramScope.AnyAgency)),
+                        UnlockAgencyScope.AnyAgency)),
                 new UnlockPathDefinition(
-                    UnlockConditionDefinition.Achievement(
+                    UnlockConditionDefinition.ObjectiveCompletion(
                         Biome5Id,
-                        UnlockProgramScope.AnyAgency)));
+                        UnlockAgencyScope.AnyAgency)));
         }
 
         private static UnlockRuleDefinition CreateInterplanetaryProbeUnlockRule()
         {
             return new UnlockRuleDefinition(
                 new UnlockPathDefinition(
-                    UnlockConditionDefinition.Achievement(
+                    UnlockConditionDefinition.ObjectiveCompletion(
                         MunProbeOrbitId,
-                        UnlockProgramScope.AnyAgency),
-                    UnlockConditionDefinition.Achievement(
+                        UnlockAgencyScope.AnyAgency),
+                    UnlockConditionDefinition.ObjectiveCompletion(
                         MinmusProbeOrbitId,
-                        UnlockProgramScope.AnyAgency)));
+                        UnlockAgencyScope.AnyAgency)));
         }
 
         private static UnlockRuleDefinition CreateInterplanetaryCrewedUnlockRule()
         {
             return new UnlockRuleDefinition(
                 new UnlockPathDefinition(
-                    UnlockConditionDefinition.Achievement(
+                    UnlockConditionDefinition.ObjectiveCompletion(
                         MunCrewedOrbitId,
-                        UnlockProgramScope.AnyAgency),
-                    UnlockConditionDefinition.Achievement(
+                        UnlockAgencyScope.AnyAgency),
+                    UnlockConditionDefinition.ObjectiveCompletion(
                         MinmusCrewedOrbitId,
-                        UnlockProgramScope.AnyAgency)));
+                        UnlockAgencyScope.AnyAgency)));
         }
     }
 }

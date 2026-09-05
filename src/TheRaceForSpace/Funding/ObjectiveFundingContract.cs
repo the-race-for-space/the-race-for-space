@@ -1,20 +1,20 @@
 using System;
-using TheRaceForSpace.Milestones;
+using TheRaceForSpace.Objectives;
 
 namespace TheRaceForSpace.Funding
 {
     /// <summary>
-    /// Competitive achievement contract paid on the shared funding calendar.
+    /// Competitive objectiveCompletion contract paid on the shared funding calendar.
     /// The first eligible funding date pays 100%, then each later payment declines
     /// by 10 percentage points until the final 10% payment expires the contract.
     /// </summary>
-    public sealed class AchievementFundingProgramme
+    public sealed class ObjectiveFundingContract
     {
         private const int TotalPayments = 10;
         private const int InterestReductionPercentPerPayment = 10;
         private const string DefaultUnlockRequirement = "Available from the start of the campaign";
 
-        public AchievementFundingProgramme(
+        public ObjectiveFundingContract(
             string id,
             string name,
             string objectiveDescription,
@@ -29,7 +29,7 @@ namespace TheRaceForSpace.Funding
         {
         }
 
-        public AchievementFundingProgramme(
+        public ObjectiveFundingContract(
             string id,
             string name,
             string objectiveDescription,
@@ -45,7 +45,7 @@ namespace TheRaceForSpace.Funding
         {
         }
 
-        public AchievementFundingProgramme(
+        public ObjectiveFundingContract(
             string id,
             string name,
             string objectiveDescription,

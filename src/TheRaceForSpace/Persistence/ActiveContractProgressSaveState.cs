@@ -23,7 +23,7 @@ namespace TheRaceForSpace.Persistence
         private const string EnteredOrbitValueName = "enteredOrbit";
 
         private const string ControlStateNodeName = "CONTROL_STATE";
-        private const string ControlMilestoneIdValueName = "milestoneId";
+        private const string ControlObjectiveIdValueName = "objectiveId";
         private const string ControlHoldSecondsValueName = "holdSeconds";
         private const string ControlWasSampleInBandValueName = "wasSampleInBand";
         private const string ControlQualifiedValueName = "qualified";
@@ -71,13 +71,13 @@ namespace TheRaceForSpace.Persistence
 
             // The tracker owns the active Control dictionary. Iterate its live key collection
             // directly so the once-per-second capture path does not allocate a temporary ID list.
-            foreach (string milestoneId in tracker.ControlStateMilestoneIds)
+            foreach (string objectiveId in tracker.ControlStateObjectiveIds)
             {
                 _controlStates.Add(new SavedControlContractProgress(
-                    milestoneId,
-                    tracker.GetControlHoldSeconds(milestoneId),
-                    tracker.IsControlSampleInBand(milestoneId),
-                    tracker.IsControlMilestoneQualified(milestoneId)));
+                    objectiveId,
+                    tracker.GetControlHoldSeconds(objectiveId),
+                    tracker.IsControlSampleInBand(objectiveId),
+                    tracker.IsControlMilestoneQualified(objectiveId)));
             }
         }
 
@@ -109,7 +109,7 @@ namespace TheRaceForSpace.Persistence
             {
                 SavedControlContractProgress state = _controlStates[stateIndex];
                 tracker.RestoreControlState(
-                    state.MilestoneId,
+                    state.ObjectiveId,
                     state.HoldSeconds,
                     state.WasSampleInBand,
                     state.IsQualified);
@@ -162,20 +162,20 @@ namespace TheRaceForSpace.Persistence
 
             // Current-format progress is stored per Control contract ID. Malformed or duplicate
             // entries invalidate the active attempt rather than manufacturing condition progress.
-            var restoredMilestoneIds = new HashSet<string>(System.StringComparer.OrdinalIgnoreCase);
+            var restoredObjectiveIds = new HashSet<string>(System.StringComparer.OrdinalIgnoreCase);
             ConfigNode[] controlStateNodes = node.GetNodes(ControlStateNodeName);
             for (int stateIndex = 0; stateIndex < controlStateNodes.Length; stateIndex++)
             {
                 ConfigNode controlStateNode = controlStateNodes[stateIndex];
-                string milestoneId = controlStateNode == null
+                string objectiveId = controlStateNode == null
                     ? null
-                    : controlStateNode.GetValue(ControlMilestoneIdValueName);
+                    : controlStateNode.GetValue(ControlObjectiveIdValueName);
                 double holdSeconds;
                 bool wasSampleInBand;
                 bool isQualified;
 
-                if (string.IsNullOrEmpty(milestoneId)
-                    || !restoredMilestoneIds.Add(milestoneId)
+                if (string.IsNullOrEmpty(objectiveId)
+                    || !restoredObjectiveIds.Add(objectiveId)
                     || !TryParseFiniteDouble(
                         controlStateNode.GetValue(ControlHoldSecondsValueName),
                         out holdSeconds)
@@ -193,7 +193,7 @@ namespace TheRaceForSpace.Persistence
                 }
 
                 _controlStates.Add(new SavedControlContractProgress(
-                    milestoneId,
+                    objectiveId,
                     holdSeconds,
                     wasSampleInBand,
                     isQualified));
@@ -227,7 +227,7 @@ namespace TheRaceForSpace.Persistence
             {
                 SavedControlContractProgress state = _controlStates[stateIndex];
                 ConfigNode controlStateNode = node.AddNode(ControlStateNodeName);
-                controlStateNode.AddValue(ControlMilestoneIdValueName, state.MilestoneId);
+                controlStateNode.AddValue(ControlObjectiveIdValueName, state.ObjectiveId);
                 AddDouble(controlStateNode, ControlHoldSecondsValueName, state.HoldSeconds);
                 controlStateNode.AddValue(ControlWasSampleInBandValueName, state.WasSampleInBand);
                 controlStateNode.AddValue(ControlQualifiedValueName, state.IsQualified);
@@ -279,18 +279,18 @@ namespace TheRaceForSpace.Persistence
         private sealed class SavedControlContractProgress
         {
             public SavedControlContractProgress(
-                string milestoneId,
+                string objectiveId,
                 double holdSeconds,
                 bool wasSampleInBand,
                 bool isQualified)
             {
-                MilestoneId = milestoneId;
+                ObjectiveId = objectiveId;
                 HoldSeconds = holdSeconds;
                 WasSampleInBand = wasSampleInBand;
                 IsQualified = isQualified;
             }
 
-            public string MilestoneId { get; private set; }
+            public string ObjectiveId { get; private set; }
             public double HoldSeconds { get; private set; }
             public bool WasSampleInBand { get; private set; }
             public bool IsQualified { get; private set; }

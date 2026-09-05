@@ -12,7 +12,7 @@ namespace TheRaceForSpace.Tracking
     }
 
     /// <summary>
-    /// KSP-independent snapshot of one orbiting vessel used by tracking and milestone logic.
+    /// KSP-independent snapshot of one orbiting vessel used by tracking and objective logic.
     /// The KSP integration layer is responsible for resolving loaded and unloaded vessel state.
     /// </summary>
     public sealed class VesselTrackingSnapshot

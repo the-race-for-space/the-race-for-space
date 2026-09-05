@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using TheRaceForSpace.Core;
-using TheRaceForSpace.Milestones;
+using TheRaceForSpace.Objectives;
 
 namespace TheRaceForSpace.Funding
 {
@@ -9,7 +9,7 @@ namespace TheRaceForSpace.Funding
     /// Defines the code-owned funding programme set for the current prototype.
     /// Adding a new prototype funding target belongs here rather than in the race controller.
     /// </summary>
-    public static class PrototypeFundingCatalogue
+    public static class FundingContractCatalogue
     {
         public const string KerbinNetworkId = "kerbin-network";
         public const string MunNetworkId = "mun-survey";
@@ -31,24 +31,24 @@ namespace TheRaceForSpace.Funding
         private const double NetworkUnlockCompletionRatio = 0.60;
 
         /// <summary>
-        /// Creates fresh achievement funding state for a new race controller from both the special
-        /// starter catalogue and the normal orbital milestone catalogue.
+        /// Creates fresh objectiveCompletion funding state for a new race controller from both the special
+        /// starter catalogue and the normal orbital objective catalogue.
         /// </summary>
-        public static IList<AchievementFundingProgramme> CreateAchievementProgrammes()
+        public static IList<ObjectiveFundingContract> CreateAchievementProgrammes()
         {
-            var programmes = new List<AchievementFundingProgramme>(
-                PrototypeMilestones.StarterContracts.Count + PrototypeMilestones.All.Count);
+            var programmes = new List<ObjectiveFundingContract>(
+                ObjectiveCatalogue.StarterContracts.Count + ObjectiveCatalogue.All.Count);
 
             for (int milestoneIndex = 0;
-                milestoneIndex < PrototypeMilestones.StarterContracts.Count;
+                milestoneIndex < ObjectiveCatalogue.StarterContracts.Count;
                 milestoneIndex++)
             {
-                AddAchievementProgramme(programmes, PrototypeMilestones.StarterContracts[milestoneIndex]);
+                AddAchievementProgramme(programmes, ObjectiveCatalogue.StarterContracts[milestoneIndex]);
             }
 
-            for (int milestoneIndex = 0; milestoneIndex < PrototypeMilestones.All.Count; milestoneIndex++)
+            for (int milestoneIndex = 0; milestoneIndex < ObjectiveCatalogue.All.Count; milestoneIndex++)
             {
-                AddAchievementProgramme(programmes, PrototypeMilestones.All[milestoneIndex]);
+                AddAchievementProgramme(programmes, ObjectiveCatalogue.All[milestoneIndex]);
             }
 
             return programmes;
@@ -57,131 +57,131 @@ namespace TheRaceForSpace.Funding
         /// <summary>
         /// Creates fresh satellite-network funding state for a new race controller.
         /// </summary>
-        public static IList<FundingProgramme> CreateSatelliteProgrammes()
+        public static IList<SatelliteNetworkFundingContract> CreateSatelliteProgrammes()
         {
-            return new List<FundingProgramme>
+            return new List<SatelliteNetworkFundingContract>
             {
                 CreateSatelliteProgramme(
                     KerbinNetworkId,
                     "Kerbin Orbital Network",
                     "Kerbin",
-                    UnlockRuleDefinition.AnyAgencyAchievement(PrototypeMilestones.ProbeOrbitId)),
+                    UnlockRuleDefinition.AnyAgencyObjectiveCompletion(ObjectiveCatalogue.ProbeOrbitId)),
                 CreateSatelliteProgramme(
                     MunNetworkId,
                     "Mun Survey Network",
                     "Mun",
-                    CreateKerbinMoonNetworkUnlockRule(PrototypeMilestones.MunProbeOrbitId)),
+                    CreateKerbinMoonNetworkUnlockRule(ObjectiveCatalogue.MunProbeOrbitId)),
                 CreateSatelliteProgramme(
                     MinmusNetworkId,
                     "Minmus Relay Initiative",
                     "Minmus",
-                    CreateKerbinMoonNetworkUnlockRule(PrototypeMilestones.MinmusProbeOrbitId)),
+                    CreateKerbinMoonNetworkUnlockRule(ObjectiveCatalogue.MinmusProbeOrbitId)),
                 CreateSatelliteProgramme(
                     DunaNetworkId,
                     "Duna Orbital Network",
                     "Duna",
-                    CreateInterplanetaryPlanetNetworkUnlockRule(PrototypeMilestones.DunaProbeOrbitId)),
+                    CreateInterplanetaryPlanetNetworkUnlockRule(ObjectiveCatalogue.DunaProbeOrbitId)),
                 CreateSatelliteProgramme(
                     MohoNetworkId,
                     "Moho Orbital Network",
                     "Moho",
-                    CreateInterplanetaryPlanetNetworkUnlockRule(PrototypeMilestones.MohoProbeOrbitId)),
+                    CreateInterplanetaryPlanetNetworkUnlockRule(ObjectiveCatalogue.MohoProbeOrbitId)),
                 CreateSatelliteProgramme(
                     EveNetworkId,
                     "Eve Orbital Network",
                     "Eve",
-                    CreateInterplanetaryPlanetNetworkUnlockRule(PrototypeMilestones.EveProbeOrbitId)),
+                    CreateInterplanetaryPlanetNetworkUnlockRule(ObjectiveCatalogue.EveProbeOrbitId)),
                 CreateSatelliteProgramme(
                     GillyNetworkId,
                     "Gilly Relay/Survey Network",
                     "Gilly",
                     CreatePlanetaryMoonNetworkUnlockRule(
-                        PrototypeMilestones.GillyProbeOrbitId,
+                        ObjectiveCatalogue.GillyProbeOrbitId,
                         "Eve")),
                 CreateSatelliteProgramme(
                     IkeNetworkId,
                     "Ike Relay/Survey Network",
                     "Ike",
                     CreatePlanetaryMoonNetworkUnlockRule(
-                        PrototypeMilestones.IkeProbeOrbitId,
+                        ObjectiveCatalogue.IkeProbeOrbitId,
                         "Duna")),
                 CreateSatelliteProgramme(
                     DresNetworkId,
                     "Dres Orbital Network",
                     "Dres",
-                    CreateInterplanetaryPlanetNetworkUnlockRule(PrototypeMilestones.DresProbeOrbitId)),
+                    CreateInterplanetaryPlanetNetworkUnlockRule(ObjectiveCatalogue.DresProbeOrbitId)),
                 CreateSatelliteProgramme(
                     JoolNetworkId,
                     "Jool Orbital Network",
                     "Jool",
-                    CreateInterplanetaryPlanetNetworkUnlockRule(PrototypeMilestones.JoolProbeOrbitId)),
+                    CreateInterplanetaryPlanetNetworkUnlockRule(ObjectiveCatalogue.JoolProbeOrbitId)),
                 CreateSatelliteProgramme(
                     LaytheNetworkId,
                     "Laythe Orbital Network",
                     "Laythe",
                     CreatePlanetaryMoonNetworkUnlockRule(
-                        PrototypeMilestones.LaytheProbeOrbitId,
+                        ObjectiveCatalogue.LaytheProbeOrbitId,
                         "Jool")),
                 CreateSatelliteProgramme(
                     VallNetworkId,
                     "Vall Relay/Survey Network",
                     "Vall",
                     CreatePlanetaryMoonNetworkUnlockRule(
-                        PrototypeMilestones.VallProbeOrbitId,
+                        ObjectiveCatalogue.VallProbeOrbitId,
                         "Jool")),
                 CreateSatelliteProgramme(
                     TyloNetworkId,
                     "Tylo Relay/Survey Network",
                     "Tylo",
                     CreatePlanetaryMoonNetworkUnlockRule(
-                        PrototypeMilestones.TyloProbeOrbitId,
+                        ObjectiveCatalogue.TyloProbeOrbitId,
                         "Jool")),
                 CreateSatelliteProgramme(
                     BopNetworkId,
                     "Bop Relay/Survey Network",
                     "Bop",
                     CreatePlanetaryMoonNetworkUnlockRule(
-                        PrototypeMilestones.BopProbeOrbitId,
+                        ObjectiveCatalogue.BopProbeOrbitId,
                         "Jool")),
                 CreateSatelliteProgramme(
                     PolNetworkId,
                     "Pol Relay/Survey Network",
                     "Pol",
                     CreatePlanetaryMoonNetworkUnlockRule(
-                        PrototypeMilestones.PolProbeOrbitId,
+                        ObjectiveCatalogue.PolProbeOrbitId,
                         "Jool")),
                 CreateSatelliteProgramme(
                     EelooNetworkId,
                     "Eeloo Orbital Network",
                     "Eeloo",
-                    CreateInterplanetaryPlanetNetworkUnlockRule(PrototypeMilestones.EelooProbeOrbitId))
+                    CreateInterplanetaryPlanetNetworkUnlockRule(ObjectiveCatalogue.EelooProbeOrbitId))
             };
         }
 
         private static void AddAchievementProgramme(
-            IList<AchievementFundingProgramme> programmes,
-            MilestoneDefinition milestone)
+            IList<ObjectiveFundingContract> programmes,
+            ObjectiveDefinition objective)
         {
-            double baseRewardFunds = milestone.BaseRewardFunds;
-            if (!milestone.IsStarterContract)
+            double baseRewardFunds = objective.BaseRewardFunds;
+            if (!objective.IsPreOrbitContract)
             {
-                RaceBodySettings bodySettings = RaceSettings.GetBodySettings(milestone.CelestialBodyName);
-                baseRewardFunds = milestone.CrewRequirement == MilestoneCrewRequirement.Crewed
+                BodyBalanceSettings bodySettings = CampaignSettings.GetBodySettings(objective.CelestialBodyName);
+                baseRewardFunds = objective.CrewRequirement == ObjectiveCrewRequirement.Crewed
                     ? bodySettings.CrewedRewardFunds
                     : bodySettings.ProbeRewardFunds;
             }
 
-            var programme = new AchievementFundingProgramme(
-                milestone.Id,
-                milestone.Name,
-                milestone.ObjectiveDescription,
+            var programme = new ObjectiveFundingContract(
+                objective.Id,
+                objective.Name,
+                objective.ObjectiveDescription,
                 baseRewardFunds,
-                CreateUnlockRequirementText(milestone.UnlockRule),
-                milestone.UnlockRule);
+                CreateUnlockRequirementText(objective.UnlockRule),
+                objective.UnlockRule);
 
             // The four starter lines remain outside the normal two-offer sponsor pool. Their first
-            // milestones are bootstrap offers; later levels are offered deterministically by the controller.
-            if (milestone.IsStarterContract && milestone.StarterLevel == 1)
+            // objectives are bootstrap offers; later levels are offered deterministically by the controller.
+            if (objective.IsPreOrbitContract && objective.PreOrbitLevel == 1)
             {
                 programme.Offer();
             }
@@ -189,14 +189,14 @@ namespace TheRaceForSpace.Funding
             programmes.Add(programme);
         }
 
-        private static FundingProgramme CreateSatelliteProgramme(
+        private static SatelliteNetworkFundingContract CreateSatelliteProgramme(
             string id,
             string name,
             string celestialBodyName,
             UnlockRuleDefinition unlockRule)
         {
-            RaceBodySettings bodySettings = RaceSettings.GetBodySettings(celestialBodyName);
-            return new FundingProgramme(
+            BodyBalanceSettings bodySettings = CampaignSettings.GetBodySettings(celestialBodyName);
+            return new SatelliteNetworkFundingContract(
                 id,
                 name,
                 celestialBodyName,
@@ -208,44 +208,44 @@ namespace TheRaceForSpace.Funding
         }
 
         private static UnlockRuleDefinition CreateKerbinMoonNetworkUnlockRule(
-            string probeMilestoneId)
+            string probeObjectiveId)
         {
             return new UnlockRuleDefinition(
                 new UnlockPathDefinition(
-                    UnlockConditionDefinition.Achievement(
-                        probeMilestoneId,
-                        UnlockProgramScope.AnyAgency),
+                    UnlockConditionDefinition.ObjectiveCompletion(
+                        probeObjectiveId,
+                        UnlockAgencyScope.AnyAgency),
                     CreateNetworkProgressCondition("Kerbin")));
         }
 
         private static UnlockRuleDefinition CreateInterplanetaryPlanetNetworkUnlockRule(
-            string probeMilestoneId)
+            string probeObjectiveId)
         {
             return new UnlockRuleDefinition(
                 new UnlockPathDefinition(
-                    UnlockConditionDefinition.Achievement(
-                        probeMilestoneId,
-                        UnlockProgramScope.AnyAgency),
+                    UnlockConditionDefinition.ObjectiveCompletion(
+                        probeObjectiveId,
+                        UnlockAgencyScope.AnyAgency),
                     CreateNetworkProgressCondition("Mun"),
                     CreateNetworkProgressCondition("Minmus")));
         }
 
         private static UnlockRuleDefinition CreatePlanetaryMoonNetworkUnlockRule(
-            string probeMilestoneId,
+            string probeObjectiveId,
             string parentPlanetName)
         {
             return new UnlockRuleDefinition(
                 new UnlockPathDefinition(
-                    UnlockConditionDefinition.Achievement(
-                        probeMilestoneId,
-                        UnlockProgramScope.AnyAgency),
+                    UnlockConditionDefinition.ObjectiveCompletion(
+                        probeObjectiveId,
+                        UnlockAgencyScope.AnyAgency),
                     CreateNetworkProgressCondition(parentPlanetName)));
         }
 
         private static UnlockConditionDefinition CreateNetworkProgressCondition(
             string celestialBodyName)
         {
-            RaceBodySettings bodySettings = RaceSettings.GetBodySettings(celestialBodyName);
+            BodyBalanceSettings bodySettings = CampaignSettings.GetBodySettings(celestialBodyName);
             int requiredSatelliteCount = Math.Max(
                 1,
                 (int)Math.Ceiling(
@@ -287,7 +287,7 @@ namespace TheRaceForSpace.Funding
                         alternatives += " or ";
                     }
 
-                    alternatives += FindRequiredMilestone(condition.MilestoneId).Name;
+                    alternatives += FindRequiredMilestone(condition.ObjectiveId).Name;
                 }
 
                 return "Any agency must achieve " + alternatives + ".";
@@ -306,18 +306,18 @@ namespace TheRaceForSpace.Funding
             if (!IsSingleAgencyAchievementCondition(firstCondition))
             {
                 throw new InvalidOperationException(
-                    "Funding unlock text requires an AnyAgency achievement as its first condition.");
+                    "Funding unlock text requires an AnyAgency objectiveCompletion as its first condition.");
             }
 
             string unlockRequirement =
-                "Any agency must achieve " + FindRequiredMilestone(firstCondition.MilestoneId).Name;
+                "Any agency must achieve " + FindRequiredMilestone(firstCondition.ObjectiveId).Name;
 
             for (int conditionIndex = 1; conditionIndex < path.Conditions.Count; conditionIndex++)
             {
                 UnlockConditionDefinition condition = path.Conditions[conditionIndex];
                 if (IsSingleAgencyAchievementCondition(condition))
                 {
-                    unlockRequirement += " and " + FindRequiredMilestone(condition.MilestoneId).Name;
+                    unlockRequirement += " and " + FindRequiredMilestone(condition.ObjectiveId).Name;
                     continue;
                 }
 
@@ -345,22 +345,22 @@ namespace TheRaceForSpace.Funding
         private static bool IsSingleAgencyAchievementCondition(UnlockConditionDefinition condition)
         {
             return condition != null
-                && condition.ConditionType == UnlockConditionType.Achievement
-                && condition.ProgramScope == UnlockProgramScope.AnyAgency
-                && condition.RequiredProgramCount == 1
-                && !string.IsNullOrEmpty(condition.MilestoneId);
+                && condition.ConditionType == UnlockConditionType.ObjectiveCompletion
+                && condition.AgencyScope == UnlockAgencyScope.AnyAgency
+                && condition.RequiredAgencyCount == 1
+                && !string.IsNullOrEmpty(condition.ObjectiveId);
         }
 
-        private static MilestoneDefinition FindRequiredMilestone(string milestoneId)
+        private static ObjectiveDefinition FindRequiredMilestone(string objectiveId)
         {
-            MilestoneDefinition milestone = PrototypeMilestones.FindById(milestoneId);
-            if (milestone == null)
+            ObjectiveDefinition objective = ObjectiveCatalogue.FindById(objectiveId);
+            if (objective == null)
             {
                 throw new InvalidOperationException(
-                    "Prototype funding catalogue references unknown milestone '" + milestoneId + "'.");
+                    "Prototype funding catalogue references unknown objective '" + objectiveId + "'.");
             }
 
-            return milestone;
+            return objective;
         }
     }
 }

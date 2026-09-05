@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using TheRaceForSpace.Funding;
 using TheRaceForSpace.Persistence;
-using TheRaceForSpace.Programs;
+using TheRaceForSpace.Agencies;
 
 namespace TheRaceForSpace.Tests.Persistence
 {
@@ -10,12 +10,12 @@ namespace TheRaceForSpace.Tests.Persistence
         public static void FundingContractsRoundTripArbitraryIds()
         {
             const double nextFundingUniversalTime = 98765.0;
-            var player = new SpaceProgramState("Player", true);
-            player.RecordAchievement("duna-probe-orbit", 1234.0);
+            var player = new AgencyState("Player", true);
+            player.RecordObjectiveCompletion("duna-probe-orbit", 1234.0);
 
-            var satelliteContracts = new List<FundingProgramme>
+            var satelliteContracts = new List<SatelliteNetworkFundingContract>
             {
-                new FundingProgramme(
+                new SatelliteNetworkFundingContract(
                     "duna-network",
                     "Duna Network",
                     "Duna",
@@ -23,7 +23,7 @@ namespace TheRaceForSpace.Tests.Persistence
                     100000.0,
                     true,
                     null),
-                new FundingProgramme(
+                new SatelliteNetworkFundingContract(
                     "eve-network",
                     "Eve Network",
                     "Eve",
@@ -35,14 +35,14 @@ namespace TheRaceForSpace.Tests.Persistence
             satelliteContracts[0].Offer();
             satelliteContracts[0].MarkSatelliteTargetReached();
 
-            var achievementContracts = new List<AchievementFundingProgramme>
+            var achievementContracts = new List<ObjectiveFundingContract>
             {
-                new AchievementFundingProgramme(
+                new ObjectiveFundingContract(
                     "duna-probe-orbit",
                     "Duna Probe Orbit",
                     "Orbit Duna",
                     200000.0),
-                new AchievementFundingProgramme(
+                new ObjectiveFundingContract(
                     "eve-probe-orbit",
                     "Eve Probe Orbit",
                     "Orbit Eve",
@@ -69,10 +69,10 @@ namespace TheRaceForSpace.Tests.Persistence
 
             var loaded = new FundingContractsSaveState();
             loaded.Load(node);
-            var restoredPlayer = new SpaceProgramState("Player", true);
-            var restoredSatelliteContracts = new List<FundingProgramme>
+            var restoredPlayer = new AgencyState("Player", true);
+            var restoredSatelliteContracts = new List<SatelliteNetworkFundingContract>
             {
-                new FundingProgramme(
+                new SatelliteNetworkFundingContract(
                     "duna-network",
                     "Duna Network",
                     "Duna",
@@ -80,7 +80,7 @@ namespace TheRaceForSpace.Tests.Persistence
                     100000.0,
                     false,
                     null),
-                new FundingProgramme(
+                new SatelliteNetworkFundingContract(
                     "eve-network",
                     "Eve Network",
                     "Eve",
@@ -92,14 +92,14 @@ namespace TheRaceForSpace.Tests.Persistence
             restoredSatelliteContracts[1].Offer();
             restoredSatelliteContracts[1].MarkSatelliteTargetReached();
 
-            var restoredAchievementContracts = new List<AchievementFundingProgramme>
+            var restoredAchievementContracts = new List<ObjectiveFundingContract>
             {
-                new AchievementFundingProgramme(
+                new ObjectiveFundingContract(
                     "duna-probe-orbit",
                     "Duna Probe Orbit",
                     "Orbit Duna",
                     200000.0),
-                new AchievementFundingProgramme(
+                new ObjectiveFundingContract(
                     "eve-probe-orbit",
                     "Eve Probe Orbit",
                     "Orbit Eve",
@@ -113,7 +113,7 @@ namespace TheRaceForSpace.Tests.Persistence
                 restoredSatelliteContracts,
                 restoredAchievementContracts);
 
-            Equal(1234.0, restoredPlayer.GetAchievementUniversalTime("duna-probe-orbit"));
+            Equal(1234.0, restoredPlayer.GetObjectiveCompletionTime("duna-probe-orbit"));
             Require(restoredSatelliteContracts[0].IsAvailable,
                 "Available satellite contract state should round trip.");
             Require(restoredSatelliteContracts[0].IsOffered,
@@ -128,62 +128,62 @@ namespace TheRaceForSpace.Tests.Persistence
                 "Unfulfilled satellite state should replace stale runtime values.");
 
             Require(restoredAchievementContracts[0].IsOffered,
-                "Achievement offer state should round trip.");
+                "ObjectiveCompletion offer state should round trip.");
             Require(restoredAchievementContracts[0].HasStarted,
-                "Started achievement contracts should remain started.");
+                "Started objectiveCompletion contracts should remain started.");
             Equal(3, restoredAchievementContracts[0].PaymentsProcessed);
             Require(!restoredAchievementContracts[1].IsOffered,
-                "Unoffered achievement contracts should be persisted explicitly.");
+                "Unoffered objectiveCompletion contracts should be persisted explicitly.");
             Require(!restoredAchievementContracts[1].HasStarted,
-                "Unstarted achievement contracts should replace stale runtime values.");
+                "Unstarted objectiveCompletion contracts should replace stale runtime values.");
             Equal(0, restoredAchievementContracts[1].PaymentsProcessed);
             Equal(nextFundingUniversalTime, loaded.NextFundingUniversalTime);
         }
 
         public static void RivalRoundTripsArbitraryBodyAndTargetId()
         {
-            var aster = new SpaceProgramState("aster", "Aster", false)
+            var aster = new AgencyState("aster", "Aster", false)
             {
                 Funds = 54321.0,
                 NextMissionTargetId = "duna-network",
-                LaunchProgressPercent = 60,
-                NextLaunchProgressCheckUniversalTime = 9876.0
+                MissionProgressPercent = 60,
+                NextMissionProgressCheckUniversalTime = 9876.0
             };
-            aster.RecordAchievement("duna-probe-orbit", 4321.0);
+            aster.RecordObjectiveCompletion("duna-probe-orbit", 4321.0);
             aster.SetSatelliteCount("Duna", 4);
 
-            var delta = new SpaceProgramState("delta", "Delta", false)
+            var delta = new AgencyState("delta", "Delta", false)
             {
                 Funds = 22222.0,
                 NextMissionTargetId = "eve-network",
-                LaunchProgressPercent = 30,
-                NextLaunchProgressCheckUniversalTime = 7654.0
+                MissionProgressPercent = 30,
+                NextMissionProgressCheckUniversalTime = 7654.0
             };
-            delta.RecordAchievement("eve-probe-orbit", 3456.0);
+            delta.RecordObjectiveCompletion("eve-probe-orbit", 3456.0);
             delta.SetSatelliteCount("Eve", 2);
 
-            var saved = new RivalProgramsSaveState();
-            saved.Capture(new List<SpaceProgramState> { aster, delta });
+            var saved = new RivalAgenciesSaveState();
+            saved.Capture(new List<AgencyState> { aster, delta });
             var node = new ConfigNode();
             saved.Save(node);
 
             Equal(2, node.GetNodes("RIVAL").Length);
 
-            var loaded = new RivalProgramsSaveState();
+            var loaded = new RivalAgenciesSaveState();
             loaded.Load(node);
 
             // Restore in a different order and with changed display names to prove identity comes
             // from stable IDs rather than fixed Aster/Cobalt slots or list position.
-            var restoredDelta = new SpaceProgramState("delta", "Delta Renamed", false);
-            var unsavedRival = new SpaceProgramState("echo", "Echo", false)
+            var restoredDelta = new AgencyState("delta", "Delta Renamed", false);
+            var unsavedRival = new AgencyState("echo", "Echo", false)
             {
                 Funds = 777.0,
                 NextMissionTargetId = "constructor-default",
-                LaunchProgressPercent = 20
+                MissionProgressPercent = 20
             };
-            var restoredAster = new SpaceProgramState("aster", "Aster Renamed", false);
+            var restoredAster = new AgencyState("aster", "Aster Renamed", false);
 
-            loaded.ApplyTo(new List<SpaceProgramState>
+            loaded.ApplyTo(new List<AgencyState>
             {
                 restoredDelta,
                 unsavedRival,
@@ -191,22 +191,22 @@ namespace TheRaceForSpace.Tests.Persistence
             });
 
             Equal(54321.0, restoredAster.Funds);
-            Equal(4321.0, restoredAster.GetAchievementUniversalTime("duna-probe-orbit"));
+            Equal(4321.0, restoredAster.GetObjectiveCompletionTime("duna-probe-orbit"));
             Equal(4, restoredAster.GetSatelliteCount("Duna"));
             Equal("duna-network", restoredAster.NextMissionTargetId);
-            Equal(60, restoredAster.LaunchProgressPercent);
-            Equal(9876.0, restoredAster.NextLaunchProgressCheckUniversalTime);
+            Equal(60, restoredAster.MissionProgressPercent);
+            Equal(9876.0, restoredAster.NextMissionProgressCheckUniversalTime);
 
             Equal(22222.0, restoredDelta.Funds);
-            Equal(3456.0, restoredDelta.GetAchievementUniversalTime("eve-probe-orbit"));
+            Equal(3456.0, restoredDelta.GetObjectiveCompletionTime("eve-probe-orbit"));
             Equal(2, restoredDelta.GetSatelliteCount("Eve"));
             Equal("eve-network", restoredDelta.NextMissionTargetId);
-            Equal(30, restoredDelta.LaunchProgressPercent);
-            Equal(7654.0, restoredDelta.NextLaunchProgressCheckUniversalTime);
+            Equal(30, restoredDelta.MissionProgressPercent);
+            Equal(7654.0, restoredDelta.NextMissionProgressCheckUniversalTime);
 
             Equal(777.0, unsavedRival.Funds);
             Equal("constructor-default", unsavedRival.NextMissionTargetId);
-            Equal(20, unsavedRival.LaunchProgressPercent);
+            Equal(20, unsavedRival.MissionProgressPercent);
         }
 
         public static void MalformedCollectionNodesAreHandledSafely()
@@ -218,7 +218,7 @@ namespace TheRaceForSpace.Tests.Persistence
             badAchievement.AddValue("id", "bad-time");
             badAchievement.AddValue("universalTime", "NaN");
             ConfigNode earlyAchievement = contractsNode.AddNode("PLAYER_ACHIEVEMENT");
-            earlyAchievement.AddValue("id", "early-milestone");
+            earlyAchievement.AddValue("id", "early-objective");
             earlyAchievement.AddValue("universalTime", "-12");
 
             ConfigNode satelliteContract = contractsNode.AddNode("SATELLITE_CONTRACT");
@@ -241,10 +241,10 @@ namespace TheRaceForSpace.Tests.Persistence
 
             var contractsState = new FundingContractsSaveState();
             contractsState.Load(contractsNode);
-            var player = new SpaceProgramState("Player", true);
-            var satelliteContracts = new List<FundingProgramme>
+            var player = new AgencyState("Player", true);
+            var satelliteContracts = new List<SatelliteNetworkFundingContract>
             {
-                new FundingProgramme(
+                new SatelliteNetworkFundingContract(
                     "future-network",
                     "Future Network",
                     "Duna",
@@ -253,14 +253,14 @@ namespace TheRaceForSpace.Tests.Persistence
                     false,
                     null)
             };
-            var achievementContracts = new List<AchievementFundingProgramme>
+            var achievementContracts = new List<ObjectiveFundingContract>
             {
-                new AchievementFundingProgramme(
+                new ObjectiveFundingContract(
                     "future-contract",
                     "Future Contract",
                     "Objective",
                     100000.0),
-                new AchievementFundingProgramme(
+                new ObjectiveFundingContract(
                     "malformed-contract",
                     "Malformed Contract",
                     "Objective",
@@ -271,9 +271,9 @@ namespace TheRaceForSpace.Tests.Persistence
 
             contractsState.ApplyTo(player, satelliteContracts, achievementContracts);
 
-            Require(!player.HasAchievement("bad-time"),
-                "Non-finite achievement times should be ignored.");
-            Equal(0.0, player.GetAchievementUniversalTime("early-milestone"));
+            Require(!player.HasCompletedObjective("bad-time"),
+                "Non-finite objectiveCompletion times should be ignored.");
+            Equal(0.0, player.GetObjectiveCompletionTime("early-objective"));
             Require(satelliteContracts[0].IsAvailable,
                 "A valid satellite contract node should restore availability.");
             Require(satelliteContracts[0].IsOffered,
@@ -284,7 +284,7 @@ namespace TheRaceForSpace.Tests.Persistence
             Require(achievementContracts[0].HasStarted,
                 "Processed payments should normalize the restored contract to started.");
             Require(achievementContracts[0].IsOffered,
-                "A valid achievement contract node should restore offer state.");
+                "A valid objectiveCompletion contract node should restore offer state.");
             Require(!achievementContracts[1].HasStarted,
                 "Malformed contract state should fail closed instead of preserving stale runtime state.");
             Require(!achievementContracts[1].IsOffered,
@@ -302,15 +302,15 @@ namespace TheRaceForSpace.Tests.Persistence
             satellite.AddValue("body", "Duna");
             satellite.AddValue("count", "-4");
 
-            var rivalState = new RivalProgramsSaveState();
+            var rivalState = new RivalAgenciesSaveState();
             rivalState.Load(rivalsNode);
-            var rival = new SpaceProgramState("aster", "Aster", false);
-            rivalState.ApplyTo(new List<SpaceProgramState> { rival });
+            var rival = new AgencyState("aster", "Aster", false);
+            rivalState.ApplyTo(new List<AgencyState> { rival });
 
             Equal(0.0, rival.Funds);
             Equal("future-target", rival.NextMissionTargetId);
-            Equal(100, rival.LaunchProgressPercent);
-            Equal(0.0, rival.NextLaunchProgressCheckUniversalTime);
+            Equal(100, rival.MissionProgressPercent);
+            Equal(0.0, rival.NextMissionProgressCheckUniversalTime);
             Equal(0, rival.GetSatelliteCount("Duna"));
         }
 
@@ -318,17 +318,17 @@ namespace TheRaceForSpace.Tests.Persistence
         {
             var contractsState = new FundingContractsSaveState();
             contractsState.Load(new ConfigNode());
-            var player = new SpaceProgramState("Player", true);
-            player.RecordAchievement("stale-milestone", 55.0);
-            var satelliteContracts = new List<FundingProgramme>
+            var player = new AgencyState("Player", true);
+            player.RecordObjectiveCompletion("stale-objective", 55.0);
+            var satelliteContracts = new List<SatelliteNetworkFundingContract>
             {
-                new FundingProgramme("future-network", "Future", "Duna", 5, 100000.0, true, null)
+                new SatelliteNetworkFundingContract("future-network", "Future", "Duna", 5, 100000.0, true, null)
             };
             satelliteContracts[0].Offer();
             satelliteContracts[0].MarkSatelliteTargetReached();
-            var achievementContracts = new List<AchievementFundingProgramme>
+            var achievementContracts = new List<ObjectiveFundingContract>
             {
-                new AchievementFundingProgramme("future-contract", "Future", "Objective", 100000.0)
+                new ObjectiveFundingContract("future-contract", "Future", "Objective", 100000.0)
             };
             achievementContracts[0].Offer();
             achievementContracts[0].Start();
@@ -336,7 +336,7 @@ namespace TheRaceForSpace.Tests.Persistence
 
             contractsState.ApplyTo(player, satelliteContracts, achievementContracts);
 
-            Require(!player.HasAchievement("stale-milestone"),
+            Require(!player.HasCompletedObjective("stale-objective"),
                 "Empty funding-contract state should clear stale player achievements.");
             Require(!satelliteContracts[0].IsAvailable,
                 "Missing satellite contract state should restore the contract as locked.");
@@ -345,28 +345,28 @@ namespace TheRaceForSpace.Tests.Persistence
             Require(!satelliteContracts[0].HasReachedSatelliteTarget,
                 "Missing satellite contract state should clear stale fulfilled state.");
             Require(!achievementContracts[0].HasStarted,
-                "Missing achievement contract state should reset lifecycle state.");
+                "Missing objectiveCompletion contract state should reset lifecycle state.");
             Require(!achievementContracts[0].IsOffered,
-                "Missing achievement contract state should clear stale offer state.");
+                "Missing objectiveCompletion contract state should clear stale offer state.");
             Equal(0, achievementContracts[0].PaymentsProcessed);
             Equal(-1.0, contractsState.NextFundingUniversalTime);
 
-            var rivalState = new RivalProgramsSaveState();
+            var rivalState = new RivalAgenciesSaveState();
             rivalState.Load(new ConfigNode());
-            var rival = new SpaceProgramState("aster", "Aster", false)
+            var rival = new AgencyState("aster", "Aster", false)
             {
                 NextMissionTargetId = "constructor-default",
                 Funds = 100.0,
-                LaunchProgressPercent = 80
+                MissionProgressPercent = 80
             };
-            rival.RecordAchievement("existing-rival-achievement", 10.0);
+            rival.RecordObjectiveCompletion("existing-rival-objectiveCompletion", 10.0);
             rival.SetSatelliteCount("Duna", 5);
-            rivalState.ApplyTo(new List<SpaceProgramState> { rival });
+            rivalState.ApplyTo(new List<AgencyState> { rival });
 
             Equal(100.0, rival.Funds);
             Equal("constructor-default", rival.NextMissionTargetId);
-            Equal(80, rival.LaunchProgressPercent);
-            Require(rival.HasAchievement("existing-rival-achievement"),
+            Equal(80, rival.MissionProgressPercent);
+            Require(rival.HasCompletedObjective("existing-rival-objectiveCompletion"),
                 "An unsaved rival should retain constructor/current state rather than receive invented data.");
             Equal(5, rival.GetSatelliteCount("Duna"));
         }

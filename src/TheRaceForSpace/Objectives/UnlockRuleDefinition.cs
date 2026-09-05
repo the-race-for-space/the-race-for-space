@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace TheRaceForSpace.Milestones
+namespace TheRaceForSpace.Objectives
 {
     /// <summary>
     /// Supported requirement types for the first flexible unlock-rule implementation.
@@ -9,15 +9,15 @@ namespace TheRaceForSpace.Milestones
     /// </summary>
     public enum UnlockConditionType
     {
-        Achievement,
+        ObjectiveCompletion,
         UniversalTime,
         SatelliteCount
     }
 
     /// <summary>
-    /// Which space programs may satisfy an achievement-based unlock condition.
+    /// Which space agencies may satisfy an objectiveCompletion-based unlock condition.
     /// </summary>
-    public enum UnlockProgramScope
+    public enum UnlockAgencyScope
     {
         AnyAgency,
         Player,
@@ -25,7 +25,7 @@ namespace TheRaceForSpace.Milestones
     }
 
     /// <summary>
-    /// Immutable requirement inside one unlock path. Achievement conditions may require one or
+    /// Immutable requirement inside one unlock path. ObjectiveCompletion conditions may require one or
     /// more qualifying agencies; universal-time conditions become true at a fixed campaign time;
     /// satellite-count conditions require a collective number of qualifying satellites around a body.
     /// </summary>
@@ -33,65 +33,65 @@ namespace TheRaceForSpace.Milestones
     {
         private UnlockConditionDefinition(
             UnlockConditionType conditionType,
-            UnlockProgramScope programScope,
-            string milestoneId,
-            int requiredProgramCount,
+            UnlockAgencyScope agencyScope,
+            string objectiveId,
+            int requiredAgencyCount,
             double requiredUniversalTime,
             string celestialBodyName,
             int requiredSatelliteCount)
         {
             ConditionType = conditionType;
-            ProgramScope = programScope;
-            MilestoneId = milestoneId;
-            RequiredProgramCount = requiredProgramCount;
+            AgencyScope = agencyScope;
+            ObjectiveId = objectiveId;
+            RequiredAgencyCount = requiredAgencyCount;
             RequiredUniversalTime = requiredUniversalTime;
             CelestialBodyName = celestialBodyName;
             RequiredSatelliteCount = requiredSatelliteCount;
         }
 
         public UnlockConditionType ConditionType { get; private set; }
-        public UnlockProgramScope ProgramScope { get; private set; }
-        public string MilestoneId { get; private set; }
-        public int RequiredProgramCount { get; private set; }
+        public UnlockAgencyScope AgencyScope { get; private set; }
+        public string ObjectiveId { get; private set; }
+        public int RequiredAgencyCount { get; private set; }
         public double RequiredUniversalTime { get; private set; }
         public string CelestialBodyName { get; private set; }
         public int RequiredSatelliteCount { get; private set; }
 
         /// <summary>
-        /// Creates an achievement condition satisfied by one qualifying agency.
+        /// Creates an objectiveCompletion condition satisfied by one qualifying agency.
         /// </summary>
-        public static UnlockConditionDefinition Achievement(
-            string milestoneId,
-            UnlockProgramScope programScope)
+        public static UnlockConditionDefinition ObjectiveCompletion(
+            string objectiveId,
+            UnlockAgencyScope agencyScope)
         {
-            return Achievement(milestoneId, programScope, 1);
+            return ObjectiveCompletion(objectiveId, agencyScope, 1);
         }
 
         /// <summary>
-        /// Creates an achievement condition requiring the supplied number of qualifying agencies.
+        /// Creates an objectiveCompletion condition requiring the supplied number of qualifying agencies.
         /// </summary>
-        public static UnlockConditionDefinition Achievement(
-            string milestoneId,
-            UnlockProgramScope programScope,
-            int requiredProgramCount)
+        public static UnlockConditionDefinition ObjectiveCompletion(
+            string objectiveId,
+            UnlockAgencyScope agencyScope,
+            int requiredAgencyCount)
         {
-            if (string.IsNullOrEmpty(milestoneId))
+            if (string.IsNullOrEmpty(objectiveId))
             {
-                throw new ArgumentException("An achievement unlock condition requires a milestone ID.", "milestoneId");
+                throw new ArgumentException("An objectiveCompletion unlock condition requires a objective ID.", "objectiveId");
             }
 
-            if (requiredProgramCount <= 0)
+            if (requiredAgencyCount <= 0)
             {
                 throw new ArgumentOutOfRangeException(
-                    "requiredProgramCount",
-                    "An achievement unlock condition must require at least one agency.");
+                    "requiredAgencyCount",
+                    "An objectiveCompletion unlock condition must require at least one agency.");
             }
 
             return new UnlockConditionDefinition(
-                UnlockConditionType.Achievement,
-                programScope,
-                milestoneId,
-                requiredProgramCount,
+                UnlockConditionType.ObjectiveCompletion,
+                agencyScope,
+                objectiveId,
+                requiredAgencyCount,
                 -1.0,
                 null,
                 0);
@@ -113,7 +113,7 @@ namespace TheRaceForSpace.Milestones
 
             return new UnlockConditionDefinition(
                 UnlockConditionType.UniversalTime,
-                UnlockProgramScope.AnyAgency,
+                UnlockAgencyScope.AnyAgency,
                 null,
                 0,
                 requiredUniversalTime,
@@ -122,7 +122,7 @@ namespace TheRaceForSpace.Milestones
         }
 
         /// <summary>
-        /// Creates a collective satellite-count condition across all race programs for one body.
+        /// Creates a collective satellite-count condition across all race agencies for one body.
         /// </summary>
         public static UnlockConditionDefinition SatelliteCount(
             string celestialBodyName,
@@ -144,7 +144,7 @@ namespace TheRaceForSpace.Milestones
 
             return new UnlockConditionDefinition(
                 UnlockConditionType.SatelliteCount,
-                UnlockProgramScope.AnyAgency,
+                UnlockAgencyScope.AnyAgency,
                 null,
                 0,
                 -1.0,
@@ -197,15 +197,15 @@ namespace TheRaceForSpace.Milestones
         }
 
         /// <summary>
-        /// Creates a simple one-condition rule where one achievement by any agency unlocks the target.
+        /// Creates a simple one-condition rule where one objectiveCompletion by any agency unlocks the target.
         /// </summary>
-        public static UnlockRuleDefinition AnyAgencyAchievement(string milestoneId)
+        public static UnlockRuleDefinition AnyAgencyObjectiveCompletion(string objectiveId)
         {
             return new UnlockRuleDefinition(
                 new UnlockPathDefinition(
-                    UnlockConditionDefinition.Achievement(
-                        milestoneId,
-                        UnlockProgramScope.AnyAgency)));
+                    UnlockConditionDefinition.ObjectiveCompletion(
+                        objectiveId,
+                        UnlockAgencyScope.AnyAgency)));
         }
     }
 }

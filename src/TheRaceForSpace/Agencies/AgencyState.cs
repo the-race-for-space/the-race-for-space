@@ -1,24 +1,24 @@
 using System;
 using System.Collections.Generic;
 
-namespace TheRaceForSpace.Programs
+namespace TheRaceForSpace.Agencies
 {
     /// <summary>
-    /// Campaign state for one player or rival space program.
+    /// Campaign state for one player or rival space agency.
     /// </summary>
-    public sealed class SpaceProgramState
+    public sealed class AgencyState
     {
-        private readonly Dictionary<string, double> _achievementTimesById =
+        private readonly Dictionary<string, double> _objectiveCompletionTimesById =
             new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, int> _satellitesByBody =
             new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 
-        public SpaceProgramState(string name, bool isPlayer)
+        public AgencyState(string name, bool isPlayer)
             : this(name, name, isPlayer)
         {
         }
 
-        public SpaceProgramState(string id, string name, bool isPlayer)
+        public AgencyState(string id, string name, bool isPlayer)
         {
             Id = string.IsNullOrEmpty(id) ? name : id;
             Name = name;
@@ -26,7 +26,7 @@ namespace TheRaceForSpace.Programs
         }
 
         /// <summary>
-        /// Stable program identity used by collection-driven race logic. Display names may change
+        /// Stable agency identity used by collection-driven race logic. Display names may change
         /// independently without changing which agency a piece of state belongs to.
         /// </summary>
         public string Id { get; private set; }
@@ -39,14 +39,14 @@ namespace TheRaceForSpace.Programs
 
         public string NextMissionTargetId { get; set; }
         public string NextMissionDisplayName { get; set; }
-        public int LaunchProgressPercent { get; set; }
-        public double NextLaunchProgressCheckUniversalTime { get; set; }
+        public int MissionProgressPercent { get; set; }
+        public double NextMissionProgressCheckUniversalTime { get; set; }
 
-        // Persistence enumerates these project-owned collections directly so future milestone IDs
-        // and celestial bodies do not require another fixed field on SpaceProgramState.
-        internal IEnumerable<KeyValuePair<string, double>> RecordedAchievements
+        // Persistence enumerates these project-owned collections directly so future objective IDs
+        // and celestial bodies do not require another fixed field on AgencyState.
+        internal IEnumerable<KeyValuePair<string, double>> ObjectiveCompletionTimes
         {
-            get { return _achievementTimesById; }
+            get { return _objectiveCompletionTimesById; }
         }
 
         internal IEnumerable<KeyValuePair<string, int>> SatelliteCountsByBody
@@ -54,9 +54,9 @@ namespace TheRaceForSpace.Programs
             get { return _satellitesByBody; }
         }
 
-        internal void ClearRecordedAchievements()
+        internal void ClearObjectiveCompletionTimes()
         {
-            _achievementTimesById.Clear();
+            _objectiveCompletionTimesById.Clear();
         }
 
         internal void ClearSatelliteCounts()
@@ -65,49 +65,49 @@ namespace TheRaceForSpace.Programs
         }
 
         /// <summary>
-        /// Returns whether this program has permanently recorded the milestone ID.
+        /// Returns whether this agency has permanently recorded the objective ID.
         /// </summary>
-        public bool HasAchievement(string milestoneId)
+        public bool HasCompletedObjective(string objectiveId)
         {
-            if (string.IsNullOrEmpty(milestoneId))
+            if (string.IsNullOrEmpty(objectiveId))
             {
                 return false;
             }
 
-            return _achievementTimesById.ContainsKey(milestoneId);
+            return _objectiveCompletionTimesById.ContainsKey(objectiveId);
         }
 
         /// <summary>
-        /// Returns the first recorded universal time for a milestone, or -1 when it has not been achieved.
+        /// Returns the first recorded universal time for a objective, or -1 when it has not been achieved.
         /// </summary>
-        public double GetAchievementUniversalTime(string milestoneId)
+        public double GetObjectiveCompletionTime(string objectiveId)
         {
-            if (string.IsNullOrEmpty(milestoneId))
+            if (string.IsNullOrEmpty(objectiveId))
             {
                 return -1.0;
             }
 
             double achievementUniversalTime;
-            return _achievementTimesById.TryGetValue(milestoneId, out achievementUniversalTime)
+            return _objectiveCompletionTimesById.TryGetValue(objectiveId, out achievementUniversalTime)
                 ? achievementUniversalTime
                 : -1.0;
         }
 
         /// <summary>
-        /// Permanently records the first observation of a milestone. Later observations do not
-        /// replace its timestamp because funding eligibility depends on the original achievement time.
+        /// Permanently records the first observation of a objective. Later observations do not
+        /// replace its timestamp because funding eligibility depends on the original objectiveCompletion time.
         /// </summary>
-        public bool RecordAchievement(string milestoneId, double universalTime)
+        public bool RecordObjectiveCompletion(string objectiveId, double universalTime)
         {
-            if (string.IsNullOrEmpty(milestoneId)
+            if (string.IsNullOrEmpty(objectiveId)
                 || double.IsNaN(universalTime)
                 || double.IsInfinity(universalTime)
-                || _achievementTimesById.ContainsKey(milestoneId))
+                || _objectiveCompletionTimesById.ContainsKey(objectiveId))
             {
                 return false;
             }
 
-            _achievementTimesById[milestoneId] = Math.Max(0.0, universalTime);
+            _objectiveCompletionTimesById[objectiveId] = Math.Max(0.0, universalTime);
             return true;
         }
 

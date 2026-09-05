@@ -18,25 +18,25 @@ namespace TheRaceForSpace.ControllerTests
                 "Unlock alternative path can satisfy rule",
                 UnlockRuleEvaluatorTests.AlternativePathCanUnlock);
             Run(
-                "Unlock program scopes are respected",
-                UnlockRuleEvaluatorTests.ProgramScopesAreRespected);
+                "Unlock agency scopes are respected",
+                UnlockRuleEvaluatorTests.AgencyScopesAreRespected);
             Run(
                 "Unlock required agency count must be met",
                 UnlockRuleEvaluatorTests.RequiredAgencyCountMustBeMet);
             Run(
-                "Unlock achievement timestamps respect evaluation time",
+                "Unlock objectiveCompletion timestamps respect evaluation time",
                 UnlockRuleEvaluatorTests.AchievementTimestampUsesEvaluationTime);
             Run(
                 "Unlock time condition uses exact boundary",
                 UnlockRuleEvaluatorTests.UniversalTimeConditionUsesExactBoundary);
             Run(
-                "Unlock satellite count uses collective program state",
+                "Unlock satellite count uses collective agency state",
                 UnlockRuleEvaluatorTests.SatelliteCountConditionUsesCollectiveProgramState);
             Run(
                 "Unlock condition progress matches rule evaluation",
                 UnlockRuleEvaluatorTests.ConditionProgressMatchesRuleEvaluation);
             Run(
-                "Unlock program progress respects scope and time",
+                "Unlock agency progress respects scope and time",
                 UnlockRuleEvaluatorTests.ProgramConditionProgressUsesScopeAndTime);
             Run(
                 "Unlock malformed rules fail closed",
@@ -50,31 +50,31 @@ namespace TheRaceForSpace.ControllerTests
 
             Run(
                 "Controller uses configured rival count and starting funds",
-                SatelliteRaceControllerTests.ConfiguredRivalCountAndStartingFundsAreUsed);
+                CampaignControllerTests.ConfiguredRivalCountAndStartingFundsAreUsed);
             Run(
                 "Controller uses configured funding interval",
-                SatelliteRaceControllerTests.ConfiguredFundingIntervalSetsNextBoundary);
+                CampaignControllerTests.ConfiguredFundingIntervalSetsNextBoundary);
             Run(
                 "Controller scheduled refresh can skip player vessel observation",
-                SatelliteRaceControllerTests.ScheduledRefreshCanSkipPlayerVesselObservation);
+                CampaignControllerTests.ScheduledRefreshCanSkipPlayerVesselObservation);
             Run(
                 "Controller probe observation unlocks funding flow",
-                SatelliteRaceControllerTests.ProbeObservationUnlocksFundingFlow);
+                CampaignControllerTests.ProbeObservationUnlocksFundingFlow);
             Run(
                 "Controller Kerbin network progress unlocks moon funding",
-                SatelliteRaceControllerTests.KerbinNetworkProgressUnlocksMoonFunding);
+                CampaignControllerTests.KerbinNetworkProgressUnlocksMoonFunding);
             Run(
                 "Controller existing state pays at shared funding boundary",
-                SatelliteRaceControllerTests.ExistingStatePaysAtSharedFundingBoundary);
+                CampaignControllerTests.ExistingStatePaysAtSharedFundingBoundary);
             Run(
                 "Controller restored overdue funding boundary is processed",
-                SatelliteRaceControllerTests.RestoredOverdueFundingBoundaryIsProcessed);
+                CampaignControllerTests.RestoredOverdueFundingBoundaryIsProcessed);
             Run(
                 "Controller boundary observation is not paid retroactively",
-                SatelliteRaceControllerTests.BoundaryObservationIsNotPaidRetroactively);
+                CampaignControllerTests.BoundaryObservationIsNotPaidRetroactively);
             Run(
                 "Controller projected payout cache rebuilds on refresh",
-                SatelliteRaceControllerTests.ProjectedPayoutCacheRebuildsOnRefresh);
+                CampaignControllerTests.ProjectedPayoutCacheRebuildsOnRefresh);
 
             Run(
                 "Active starter plan opens with four cached contracts and reuses stable refresh",
@@ -113,13 +113,13 @@ namespace TheRaceForSpace.ControllerTests
                 FundingOfferControllerTests.RivalStarterCompletionUnlocksNextLevelForSponsorReview);
             Run(
                 "All unlocked starter levels are offered at sponsor review",
-                FundingOfferControllerTests.UnlockedStarterLevelsJoinSponsorReview);
+                FundingOfferControllerTests.UnlockedPreOrbitLevelsJoinSponsorReview);
             Run(
-                "Starter offers do not consume the normal achievement limit",
+                "Starter offers do not consume the normal objectiveCompletion limit",
                 FundingOfferControllerTests.StarterOffersDoNotConsumeNormalAchievementLimit);
             Run(
                 "Any starter level five offers Probe Orbit",
-                FundingOfferControllerTests.AnyStarterLevelFiveOffersProbeOrbit);
+                FundingOfferControllerTests.AnyPreOrbitLevelFiveOffersProbeOrbit);
             Run(
                 "Funding offers wait for sponsor review",
                 FundingOfferControllerTests.UnlockedFundingWaitsForFundingReview);

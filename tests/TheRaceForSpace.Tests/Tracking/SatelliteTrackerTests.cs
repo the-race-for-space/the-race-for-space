@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
-using TheRaceForSpace.Milestones;
-using TheRaceForSpace.Programs;
+using TheRaceForSpace.Objectives;
+using TheRaceForSpace.Agencies;
 using TheRaceForSpace.Tracking;
 
 namespace TheRaceForSpace.Tests.Tracking
@@ -12,9 +12,9 @@ namespace TheRaceForSpace.Tests.Tracking
         {
             StarterFlightTrackerTests.RunAll();
 
-            var playerProgram = new SpaceProgramState("player", "Player", true);
-            playerProgram.RecordAchievement(PrototypeMilestones.DirectedPower5Id, 1200.0);
-            var programs = new List<SpaceProgramState> { playerProgram };
+            var playerAgency = new AgencyState("player", "Player", true);
+            playerAgency.RecordObjectiveCompletion(ObjectiveCatalogue.DirectedPower5Id, 1200.0);
+            var agencies = new List<AgencyState> { playerAgency };
             var vesselSnapshots = new List<VesselTrackingSnapshot>
             {
                 new VesselTrackingSnapshot("Kerbin", TrackedVesselType.Probe, 0),
@@ -24,81 +24,81 @@ namespace TheRaceForSpace.Tests.Tracking
             };
 
             SatelliteTracker.RefreshPlayerSatelliteCounts(
-                playerProgram,
-                programs,
-                PrototypeMilestones.All,
+                playerAgency,
+                agencies,
+                ObjectiveCatalogue.All,
                 vesselSnapshots,
                 1234.0);
 
-            RequireEqual(1, playerProgram.GetSatelliteCount("Kerbin"), "Probe should count as one Kerbin satellite.");
-            RequireEqual(1, playerProgram.GetSatelliteCount("Mun"), "Relay should count as one Mun satellite.");
-            RequireEqual(1, playerProgram.GetSatelliteCount("Eve"), "A body outside the milestone catalogue should still receive a satellite count.");
-            Require(playerProgram.HasAchievement(PrototypeMilestones.ProbeOrbitId), "Qualified uncrewed probe should satisfy Probe Orbit.");
-            Require(playerProgram.HasAchievement(PrototypeMilestones.CrewedOrbitId), "Crewed vessel should satisfy Crewed Orbit after Probe Orbit unlocks it in the same stable refresh.");
-            Require(playerProgram.HasAchievement(PrototypeMilestones.MunProbeOrbitId), "Mun relay should satisfy Mun Probe Orbit after its unlock rule becomes satisfied.");
+            RequireEqual(1, playerAgency.GetSatelliteCount("Kerbin"), "Probe should count as one Kerbin satellite.");
+            RequireEqual(1, playerAgency.GetSatelliteCount("Mun"), "Relay should count as one Mun satellite.");
+            RequireEqual(1, playerAgency.GetSatelliteCount("Eve"), "A body outside the objective catalogue should still receive a satellite count.");
+            Require(playerAgency.HasCompletedObjective(ObjectiveCatalogue.ProbeOrbitId), "Qualified uncrewed probe should satisfy Probe Orbit.");
+            Require(playerAgency.HasCompletedObjective(ObjectiveCatalogue.CrewedOrbitId), "Crewed vessel should satisfy Crewed Orbit after Probe Orbit unlocks it in the same stable refresh.");
+            Require(playerAgency.HasCompletedObjective(ObjectiveCatalogue.MunProbeOrbitId), "Mun relay should satisfy Mun Probe Orbit after its unlock rule becomes satisfied.");
             RequireEqual(
                 1234.0,
-                playerProgram.GetAchievementUniversalTime(PrototypeMilestones.MunProbeOrbitId),
-                "Milestones recorded from one snapshot refresh should use the supplied observation time.");
+                playerAgency.GetObjectiveCompletionTime(ObjectiveCatalogue.MunProbeOrbitId),
+                "Objectives recorded from one snapshot refresh should use the supplied observation time.");
 
             CurrentSnapshotSatelliteCountUnlocksMilestone();
         }
 
         public static void EmptySnapshotsResetTrackedBodyCounts()
         {
-            var playerProgram = new SpaceProgramState("player", "Player", true);
-            playerProgram.SetSatelliteCount("Kerbin", 3);
-            playerProgram.SetSatelliteCount("Mun", 2);
-            playerProgram.SetSatelliteCount("Eve", 1);
+            var playerAgency = new AgencyState("player", "Player", true);
+            playerAgency.SetSatelliteCount("Kerbin", 3);
+            playerAgency.SetSatelliteCount("Mun", 2);
+            playerAgency.SetSatelliteCount("Eve", 1);
 
             SatelliteTracker.RefreshPlayerSatelliteCounts(
-                playerProgram,
+                playerAgency,
                 null,
                 null,
                 new List<VesselTrackingSnapshot>(),
                 2000.0);
 
-            RequireEqual(0, playerProgram.GetSatelliteCount("Kerbin"), "Missing Kerbin snapshots should clear the previous count.");
-            RequireEqual(0, playerProgram.GetSatelliteCount("Mun"), "Missing Mun snapshots should clear the previous count.");
-            RequireEqual(0, playerProgram.GetSatelliteCount("Eve"), "Missing arbitrary-body snapshots should clear the previous count without milestone definitions.");
+            RequireEqual(0, playerAgency.GetSatelliteCount("Kerbin"), "Missing Kerbin snapshots should clear the previous count.");
+            RequireEqual(0, playerAgency.GetSatelliteCount("Mun"), "Missing Mun snapshots should clear the previous count.");
+            RequireEqual(0, playerAgency.GetSatelliteCount("Eve"), "Missing arbitrary-body snapshots should clear the previous count without objective definitions.");
         }
 
         public static void CrewedProbeCountsAsSatelliteButNotProbeMilestone()
         {
-            var playerProgram = new SpaceProgramState("player", "Player", true);
-            var programs = new List<SpaceProgramState> { playerProgram };
+            var playerAgency = new AgencyState("player", "Player", true);
+            var agencies = new List<AgencyState> { playerAgency };
             var vesselSnapshots = new List<VesselTrackingSnapshot>
             {
                 new VesselTrackingSnapshot("Kerbin", TrackedVesselType.Probe, 1)
             };
 
             SatelliteTracker.RefreshPlayerSatelliteCounts(
-                playerProgram,
-                programs,
-                PrototypeMilestones.All,
+                playerAgency,
+                agencies,
+                ObjectiveCatalogue.All,
                 vesselSnapshots,
                 3000.0);
 
-            RequireEqual(1, playerProgram.GetSatelliteCount("Kerbin"), "A crewed probe remains a qualifying satellite for network counts.");
-            Require(!playerProgram.HasAchievement(PrototypeMilestones.ProbeOrbitId), "A crewed probe should not satisfy the uncrewed Probe Orbit milestone.");
+            RequireEqual(1, playerAgency.GetSatelliteCount("Kerbin"), "A crewed probe remains a qualifying satellite for network counts.");
+            Require(!playerAgency.HasCompletedObjective(ObjectiveCatalogue.ProbeOrbitId), "A crewed probe should not satisfy the uncrewed Probe Orbit objective.");
             Require(
-                !playerProgram.HasAchievement(PrototypeMilestones.CrewedOrbitId),
+                !playerAgency.HasCompletedObjective(ObjectiveCatalogue.CrewedOrbitId),
                 "Crewed Orbit must stay locked when no agency has achieved Probe Orbit.");
 
-            playerProgram.RecordAchievement(PrototypeMilestones.ProbeOrbitId, 3001.0);
+            playerAgency.RecordObjectiveCompletion(ObjectiveCatalogue.ProbeOrbitId, 3001.0);
             SatelliteTracker.RefreshPlayerSatelliteCounts(
-                playerProgram,
-                programs,
-                PrototypeMilestones.All,
+                playerAgency,
+                agencies,
+                ObjectiveCatalogue.All,
                 vesselSnapshots,
                 3002.0);
 
             Require(
-                playerProgram.HasAchievement(PrototypeMilestones.CrewedOrbitId),
+                playerAgency.HasCompletedObjective(ObjectiveCatalogue.CrewedOrbitId),
                 "The same crewed-orbit observation should become eligible after Probe Orbit is achieved.");
             RequireEqual(
                 3002.0,
-                playerProgram.GetAchievementUniversalTime(PrototypeMilestones.CrewedOrbitId),
+                playerAgency.GetObjectiveCompletionTime(ObjectiveCatalogue.CrewedOrbitId),
                 "Crewed Orbit should record the later observation time after its Probe Orbit prerequisite is met.");
 
             NegativeCrewCountDoesNotQualifyAsUncrewed();
@@ -106,24 +106,24 @@ namespace TheRaceForSpace.Tests.Tracking
 
         public static void FlexibleUnlockRuleUsesRaceStateAndTime()
         {
-            var playerProgram = new SpaceProgramState("player", "Player", true);
-            var rivalProgram = new SpaceProgramState("rival", "Rival", false);
-            rivalProgram.RecordAchievement("rival-breakthrough", 500.0);
-            var programs = new List<SpaceProgramState> { playerProgram, rivalProgram };
-            var milestones = new List<MilestoneDefinition>
+            var playerAgency = new AgencyState("player", "Player", true);
+            var rivalProgram = new AgencyState("rival", "Rival", false);
+            rivalProgram.RecordObjectiveCompletion("rival-breakthrough", 500.0);
+            var agencies = new List<AgencyState> { playerAgency, rivalProgram };
+            var objectives = new List<ObjectiveDefinition>
             {
-                new MilestoneDefinition(
+                new ObjectiveDefinition(
                     "eve-response",
                     "Eve Response",
                     "Eve",
-                    MilestoneSituation.Orbit,
-                    MilestoneCrewRequirement.UncrewedProbe,
+                    ObjectiveSituation.Orbit,
+                    ObjectiveCrewRequirement.UncrewedProbe,
                     "Orbit Eve after the rival breakthrough and campaign time gate.",
                     new UnlockRuleDefinition(
                         new UnlockPathDefinition(
-                            UnlockConditionDefinition.Achievement(
+                            UnlockConditionDefinition.ObjectiveCompletion(
                                 "rival-breakthrough",
-                                UnlockProgramScope.AnyRival),
+                                UnlockAgencyScope.AnyRival),
                             UnlockConditionDefinition.AfterUniversalTime(600.0))))
             };
             var vesselSnapshots = new List<VesselTrackingSnapshot>
@@ -132,38 +132,38 @@ namespace TheRaceForSpace.Tests.Tracking
             };
 
             SatelliteTracker.RefreshPlayerSatelliteCounts(
-                playerProgram,
-                programs,
-                milestones,
+                playerAgency,
+                agencies,
+                objectives,
                 vesselSnapshots,
                 599.0);
             Require(
-                !playerProgram.HasAchievement("eve-response"),
-                "The tracker should keep a milestone locked until every condition in its path is satisfied.");
+                !playerAgency.HasCompletedObjective("eve-response"),
+                "The tracker should keep a objective locked until every condition in its path is satisfied.");
 
             SatelliteTracker.RefreshPlayerSatelliteCounts(
-                playerProgram,
-                programs,
-                milestones,
+                playerAgency,
+                agencies,
+                objectives,
                 vesselSnapshots,
                 600.0);
             Require(
-                playerProgram.HasAchievement("eve-response"),
+                playerAgency.HasCompletedObjective("eve-response"),
                 "The tracker should use rival state and exact universal time through the shared evaluator.");
         }
 
         private static void CurrentSnapshotSatelliteCountUnlocksMilestone()
         {
-            var playerProgram = new SpaceProgramState("player", "Player", true);
-            var programs = new List<SpaceProgramState> { playerProgram };
-            var milestones = new List<MilestoneDefinition>
+            var playerAgency = new AgencyState("player", "Player", true);
+            var agencies = new List<AgencyState> { playerAgency };
+            var objectives = new List<ObjectiveDefinition>
             {
-                new MilestoneDefinition(
+                new ObjectiveDefinition(
                     "kerbin-satellite-gate",
                     "Kerbin Satellite Gate",
                     "Kerbin",
-                    MilestoneSituation.Orbit,
-                    MilestoneCrewRequirement.UncrewedProbe,
+                    ObjectiveSituation.Orbit,
+                    ObjectiveCrewRequirement.UncrewedProbe,
                     "Orbit an uncrewed probe once one Kerbin satellite is present.",
                     new UnlockRuleDefinition(
                         new UnlockPathDefinition(
@@ -175,30 +175,30 @@ namespace TheRaceForSpace.Tests.Tracking
             };
 
             SatelliteTracker.RefreshPlayerSatelliteCounts(
-                playerProgram,
-                programs,
-                milestones,
+                playerAgency,
+                agencies,
+                objectives,
                 vesselSnapshots,
                 1500.0);
 
-            RequireEqual(1, playerProgram.GetSatelliteCount("Kerbin"),
+            RequireEqual(1, playerAgency.GetSatelliteCount("Kerbin"),
                 "The current scan should apply its Kerbin satellite count before unlock evaluation.");
-            Require(playerProgram.HasAchievement("kerbin-satellite-gate"),
+            Require(playerAgency.HasCompletedObjective("kerbin-satellite-gate"),
                 "A satellite-count prerequisite satisfied by the current scan should unlock in that same scan.");
         }
 
         private static void NegativeCrewCountDoesNotQualifyAsUncrewed()
         {
-            var playerProgram = new SpaceProgramState("player", "Player", true);
-            var programs = new List<SpaceProgramState> { playerProgram };
-            var milestones = new List<MilestoneDefinition>
+            var playerAgency = new AgencyState("player", "Player", true);
+            var agencies = new List<AgencyState> { playerAgency };
+            var objectives = new List<ObjectiveDefinition>
             {
-                new MilestoneDefinition(
+                new ObjectiveDefinition(
                     "invalid-crew-probe",
                     "Invalid Crew Probe",
                     "Kerbin",
-                    MilestoneSituation.Orbit,
-                    MilestoneCrewRequirement.UncrewedProbe,
+                    ObjectiveSituation.Orbit,
+                    ObjectiveCrewRequirement.UncrewedProbe,
                     "Orbit an uncrewed probe.",
                     null)
             };
@@ -208,15 +208,15 @@ namespace TheRaceForSpace.Tests.Tracking
             };
 
             SatelliteTracker.RefreshPlayerSatelliteCounts(
-                playerProgram,
-                programs,
-                milestones,
+                playerAgency,
+                agencies,
+                objectives,
                 vesselSnapshots,
                 3100.0);
 
-            RequireEqual(1, playerProgram.GetSatelliteCount("Kerbin"),
+            RequireEqual(1, playerAgency.GetSatelliteCount("Kerbin"),
                 "Crew metadata should not affect whether a Probe counts toward the satellite network.");
-            Require(!playerProgram.HasAchievement("invalid-crew-probe"),
+            Require(!playerAgency.HasCompletedObjective("invalid-crew-probe"),
                 "A malformed negative crew count must not be interpreted as a verified uncrewed probe.");
         }
 

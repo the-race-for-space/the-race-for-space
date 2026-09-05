@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
-using TheRaceForSpace.Milestones;
+using TheRaceForSpace.Objectives;
 using TheRaceForSpace.Persistence;
-using TheRaceForSpace.Programs;
+using TheRaceForSpace.Agencies;
 using TheRaceForSpace.Tracking;
 
 namespace TheRaceForSpace.Tests.Tracking
@@ -26,45 +26,45 @@ namespace TheRaceForSpace.Tests.Tracking
 
         private static void DirectedPowerRequiresImpactBelowCeiling()
         {
-            SpaceProgramState player = new SpaceProgramState("player", "Player", true);
+            AgencyState player = new AgencyState("player", "Player", true);
             var tracker = new StarterFlightTracker();
 
             tracker.RefreshPlayerMilestones(
                 player,
-                PrototypeMilestones.StarterContracts,
+                ObjectiveCatalogue.StarterContracts,
                 Snapshot("power-a", 0.0, 0.0, 100.0, 0.0, 0.1, 0, null, TrackedFlightSituation.Prelaunch));
             tracker.RefreshPlayerMilestones(
                 player,
-                PrototypeMilestones.StarterContracts,
+                ObjectiveCatalogue.StarterContracts,
                 Snapshot("power-a", 0.0, 10.0, 50000.0, 650.0, 0.1, 0, null, TrackedFlightSituation.Flying));
             tracker.RefreshPlayerMilestones(
                 player,
-                PrototypeMilestones.StarterContracts,
+                ObjectiveCatalogue.StarterContracts,
                 Snapshot("power-a", 0.0, 10.5, 0.0, 0.0, 0.1, 0, null, TrackedFlightSituation.Landed));
 
             Require(
-                !player.HasAchievement(PrototypeMilestones.DirectedPower1Id),
+                !player.HasCompletedObjective(ObjectiveCatalogue.DirectedPower1Id),
                 "Directed Power must not complete before the expendable impact occurs.");
             Require(
                 tracker.RecordSurfaceImpact(
                     player,
-                    PrototypeMilestones.StarterContracts,
+                    ObjectiveCatalogue.StarterContracts,
                     "power-a",
                     "Kerbin",
                     11.0),
                 "A qualifying flight history should still complete when KSP reports the crash after the vessel briefly enters a landed state.");
 
-            SpaceProgramState overCeilingPlayer = new SpaceProgramState("over", "Over", true);
+            AgencyState overCeilingPlayer = new AgencyState("over", "Over", true);
             var overCeilingTracker = new StarterFlightTracker();
             overCeilingTracker.RefreshPlayerMilestones(
                 overCeilingPlayer,
-                PrototypeMilestones.StarterContracts,
+                ObjectiveCatalogue.StarterContracts,
                 Snapshot("power-b", 20.0, 20.0, 70001.0, 700.0, 0.1, 0, null, TrackedFlightSituation.SubOrbital));
 
             Require(
                 !overCeilingTracker.RecordSurfaceImpact(
                     overCeilingPlayer,
-                    PrototypeMilestones.StarterContracts,
+                    ObjectiveCatalogue.StarterContracts,
                     "power-b",
                     "Kerbin",
                     21.0),
@@ -73,64 +73,64 @@ namespace TheRaceForSpace.Tests.Tracking
 
         private static void MassUsesRemainingMassAndLaunchDistance()
         {
-            SpaceProgramState player = new SpaceProgramState("player", "Player", true);
+            AgencyState player = new AgencyState("player", "Player", true);
             var tracker = new StarterFlightTracker();
 
             tracker.RefreshPlayerMilestones(
                 player,
-                PrototypeMilestones.StarterContracts,
+                ObjectiveCatalogue.StarterContracts,
                 Snapshot("mass-a", 100.0, 100.0, 100.0, 0.0, 2.0, 0, null, TrackedFlightSituation.Prelaunch, 0.0));
             tracker.RefreshPlayerMilestones(
                 player,
-                PrototypeMilestones.StarterContracts,
+                ObjectiveCatalogue.StarterContracts,
                 Snapshot("mass-a", 100.0, 110.0, 1000.0, 300.0, 1.1, 0, null, TrackedFlightSituation.Flying, 3.0));
 
-            Require(!player.HasAchievement(PrototypeMilestones.Mass1Id),
+            Require(!player.HasCompletedObjective(ObjectiveCatalogue.Mass1Id),
                 "Flying more than 25 km with enough mass must not complete Mass I before landing.");
 
             tracker.RefreshPlayerMilestones(
                 player,
-                PrototypeMilestones.StarterContracts,
+                ObjectiveCatalogue.StarterContracts,
                 Snapshot("mass-a", 100.0, 111.0, 0.0, 0.0, 1.1, 0, null, TrackedFlightSituation.Landed, 3.0));
-            Require(player.HasAchievement(PrototypeMilestones.Mass1Id),
+            Require(player.HasCompletedObjective(ObjectiveCatalogue.Mass1Id),
                 "A finished landed craft retaining at least 1 t more than 25 km from launch should complete Mass I.");
 
             tracker.RefreshPlayerMilestones(
                 player,
-                PrototypeMilestones.StarterContracts,
+                ObjectiveCatalogue.StarterContracts,
                 Snapshot("mass-a", 100.0, 120.0, 1000.0, 400.0, 3.0, 0, null, TrackedFlightSituation.Flying, 10.0));
-            Require(!player.HasAchievement(PrototypeMilestones.Mass2Id),
-                "One launch must not cascade through multiple Mass milestones.");
+            Require(!player.HasCompletedObjective(ObjectiveCatalogue.Mass2Id),
+                "One launch must not cascade through multiple Mass objectives.");
 
             tracker.RefreshPlayerMilestones(
                 player,
-                PrototypeMilestones.StarterContracts,
+                ObjectiveCatalogue.StarterContracts,
                 Snapshot("mass-b", 200.0, 200.0, 100.0, 0.0, 3.0, 0, null, TrackedFlightSituation.Prelaunch, 0.0));
             tracker.RefreshPlayerMilestones(
                 player,
-                PrototypeMilestones.StarterContracts,
+                ObjectiveCatalogue.StarterContracts,
                 Snapshot("mass-b", 200.0, 210.0, 1000.0, 400.0, 2.6, 0, null, TrackedFlightSituation.Flying, 8.0));
-            Require(!player.HasAchievement(PrototypeMilestones.Mass2Id),
+            Require(!player.HasCompletedObjective(ObjectiveCatalogue.Mass2Id),
                 "Mass II must wait for the qualifying 2.5 t craft to land beyond 75 km.");
 
             tracker.RefreshPlayerMilestones(
                 player,
-                PrototypeMilestones.StarterContracts,
+                ObjectiveCatalogue.StarterContracts,
                 Snapshot("mass-b", 200.0, 211.0, 0.0, 0.0, 2.6, 0, null, TrackedFlightSituation.Landed, 8.0));
-            Require(player.HasAchievement(PrototypeMilestones.Mass2Id),
+            Require(player.HasCompletedObjective(ObjectiveCatalogue.Mass2Id),
                 "A fresh landed craft retaining at least 2.5 t beyond 75 km should complete Mass II.");
         }
 
         private static void ControlRequiresContinuousCrewedHoldAndLanding()
         {
-            SpaceProgramState player = new SpaceProgramState("player", "Player", true);
+            AgencyState player = new AgencyState("player", "Player", true);
             var tracker = new StarterFlightTracker();
 
             for (int elapsedSeconds = 0; elapsedSeconds <= 30; elapsedSeconds += 5)
             {
                 tracker.RefreshPlayerMilestones(
                     player,
-                    PrototypeMilestones.StarterContracts,
+                    ObjectiveCatalogue.StarterContracts,
                     Snapshot(
                         "control-a",
                         300.0,
@@ -143,119 +143,119 @@ namespace TheRaceForSpace.Tests.Tracking
                         TrackedFlightSituation.Flying));
             }
 
-            Require(!player.HasAchievement(PrototypeMilestones.Control1Id),
+            Require(!player.HasCompletedObjective(ObjectiveCatalogue.Control1Id),
                 "Completing the altitude hold alone must not award Control I before landing.");
 
             tracker.RefreshPlayerMilestones(
                 player,
-                PrototypeMilestones.StarterContracts,
+                ObjectiveCatalogue.StarterContracts,
                 Snapshot("control-a", 300.0, 331.0, 80.0, 0.0, 1.0, 1, null, TrackedFlightSituation.Landed));
-            Require(player.HasAchievement(PrototypeMilestones.Control1Id),
-                "A qualified Control hold followed by a crewed Kerbin landing should complete the milestone.");
+            Require(player.HasCompletedObjective(ObjectiveCatalogue.Control1Id),
+                "A qualified Control hold followed by a crewed Kerbin landing should complete the objective.");
         }
 
         private static void UnobservedControlGapResetsHold()
         {
-            SpaceProgramState player = new SpaceProgramState("player", "Player", true);
+            AgencyState player = new AgencyState("player", "Player", true);
             var tracker = new StarterFlightTracker();
 
             tracker.RefreshPlayerMilestones(
                 player,
-                PrototypeMilestones.StarterContracts,
+                ObjectiveCatalogue.StarterContracts,
                 Snapshot("control-gap", 350.0, 350.0, 3000.0, 150.0, 1.0, 1, null, TrackedFlightSituation.Flying));
             tracker.RefreshPlayerMilestones(
                 player,
-                PrototypeMilestones.StarterContracts,
+                ObjectiveCatalogue.StarterContracts,
                 Snapshot("control-gap", 350.0, 354.0, 3000.0, 150.0, 1.0, 1, null, TrackedFlightSituation.Flying));
             RequireNear(
                 4.0,
-                tracker.GetControlHoldSeconds(PrototypeMilestones.Control1Id),
+                tracker.GetControlHoldSeconds(ObjectiveCatalogue.Control1Id),
                 "Closely spaced observed samples should accumulate Control hold time.");
 
             tracker.RefreshPlayerMilestones(
                 player,
-                PrototypeMilestones.StarterContracts,
+                ObjectiveCatalogue.StarterContracts,
                 Snapshot("control-gap", 350.0, 370.0, 3000.0, 150.0, 1.0, 1, null, TrackedFlightSituation.Flying));
 
             RequireNear(
                 0.0,
-                tracker.GetControlHoldSeconds(PrototypeMilestones.Control1Id),
+                tracker.GetControlHoldSeconds(ObjectiveCatalogue.Control1Id),
                 "A long unobserved gap must reset an unqualified continuous Control hold.");
             Require(
-                !tracker.IsControlMilestoneQualified(PrototypeMilestones.Control1Id),
+                !tracker.IsControlMilestoneQualified(ObjectiveCatalogue.Control1Id),
                 "A long unobserved gap must not qualify Control from missing flight time.");
-            Require(!player.HasAchievement(PrototypeMilestones.Control1Id),
+            Require(!player.HasCompletedObjective(ObjectiveCatalogue.Control1Id),
                 "An unobserved gap must not complete Control I.");
         }
 
         private static void BiomeAllowsOnlyOneLineMilestonePerLaunch()
         {
-            SpaceProgramState player = new SpaceProgramState("player", "Player", true);
+            AgencyState player = new AgencyState("player", "Player", true);
             var tracker = new StarterFlightTracker();
 
             tracker.RefreshPlayerMilestones(
                 player,
-                PrototypeMilestones.StarterContracts,
+                ObjectiveCatalogue.StarterContracts,
                 Snapshot("biome-a", 400.0, 400.0, 500.0, 50.0, 1.0, 0, "Shores", TrackedFlightSituation.Flying));
             tracker.RefreshPlayerMilestones(
                 player,
-                PrototypeMilestones.StarterContracts,
+                ObjectiveCatalogue.StarterContracts,
                 Snapshot("biome-a", 400.0, 410.0, 500.0, 50.0, 1.0, 0, "Grasslands", TrackedFlightSituation.Flying));
 
-            Require(!player.HasAchievement(PrototypeMilestones.Biome1Id),
+            Require(!player.HasCompletedObjective(ObjectiveCatalogue.Biome1Id),
                 "Flying over Grasslands must not complete Biome I.");
 
             tracker.RefreshPlayerMilestones(
                 player,
-                PrototypeMilestones.StarterContracts,
+                ObjectiveCatalogue.StarterContracts,
                 Snapshot("biome-a", 400.0, 411.0, 0.0, 0.0, 1.0, 0, "Grasslands", TrackedFlightSituation.Landed));
-            Require(player.HasAchievement(PrototypeMilestones.Biome1Id),
+            Require(player.HasCompletedObjective(ObjectiveCatalogue.Biome1Id),
                 "Landing in Grasslands should complete Biome I.");
 
             tracker.RefreshPlayerMilestones(
                 player,
-                PrototypeMilestones.StarterContracts,
+                ObjectiveCatalogue.StarterContracts,
                 Snapshot("biome-a", 400.0, 420.0, 500.0, 50.0, 1.0, 0, "Highlands", TrackedFlightSituation.Flying));
-            Require(!player.HasAchievement(PrototypeMilestones.Biome2Id),
+            Require(!player.HasCompletedObjective(ObjectiveCatalogue.Biome2Id),
                 "A single exploration launch must not complete two Biome line levels.");
 
             tracker.RefreshPlayerMilestones(
                 player,
-                PrototypeMilestones.StarterContracts,
+                ObjectiveCatalogue.StarterContracts,
                 Snapshot("biome-b", 500.0, 500.0, 100.0, 0.0, 1.0, 0, "Shores", TrackedFlightSituation.Prelaunch));
             tracker.RefreshPlayerMilestones(
                 player,
-                PrototypeMilestones.StarterContracts,
+                ObjectiveCatalogue.StarterContracts,
                 Snapshot("biome-b", 500.0, 510.0, 1000.0, 100.0, 1.0, 0, "Highlands", TrackedFlightSituation.Flying));
-            Require(!player.HasAchievement(PrototypeMilestones.Biome2Id),
+            Require(!player.HasCompletedObjective(ObjectiveCatalogue.Biome2Id),
                 "Flying over Highlands must not complete Biome II.");
 
             tracker.RefreshPlayerMilestones(
                 player,
-                PrototypeMilestones.StarterContracts,
+                ObjectiveCatalogue.StarterContracts,
                 Snapshot("biome-b", 500.0, 511.0, 0.0, 0.0, 1.0, 0, "Highlands", TrackedFlightSituation.Landed));
-            Require(player.HasAchievement(PrototypeMilestones.Biome2Id),
-                "A later launch landed in Highlands may complete the next unlocked Biome milestone.");
+            Require(player.HasCompletedObjective(ObjectiveCatalogue.Biome2Id),
+                "A later launch landed in Highlands may complete the next unlocked Biome objective.");
         }
 
         private static void StagingPreservesDirectedPowerAttempt()
         {
-            SpaceProgramState player = new SpaceProgramState("player", "Player", true);
+            AgencyState player = new AgencyState("player", "Player", true);
             var tracker = new StarterFlightTracker();
 
             tracker.RefreshPlayerMilestones(
                 player,
-                PrototypeMilestones.StarterContracts,
+                ObjectiveCatalogue.StarterContracts,
                 Snapshot("stage-a", 600.0, 600.0, 20000.0, 500.0, 1.0, 0, null, TrackedFlightSituation.Flying));
             tracker.RefreshPlayerMilestones(
                 player,
-                PrototypeMilestones.StarterContracts,
+                ObjectiveCatalogue.StarterContracts,
                 Snapshot("stage-b", 600.0, 605.0, 30000.0, 650.0, 0.5, 0, null, TrackedFlightSituation.Flying));
 
             Require(
                 tracker.RecordSurfaceImpact(
                     player,
-                    PrototypeMilestones.StarterContracts,
+                    ObjectiveCatalogue.StarterContracts,
                     "stage-b",
                     "Kerbin",
                     606.0),
@@ -264,14 +264,14 @@ namespace TheRaceForSpace.Tests.Tracking
 
         private static void PartialControlHoldSurvivesSaveLoad()
         {
-            SpaceProgramState player = new SpaceProgramState("player", "Player", true);
+            AgencyState player = new AgencyState("player", "Player", true);
             var sourceTracker = new StarterFlightTracker();
 
             for (int elapsedSeconds = 0; elapsedSeconds <= 15; elapsedSeconds += 5)
             {
                 sourceTracker.RefreshPlayerMilestones(
                     player,
-                    PrototypeMilestones.StarterContracts,
+                    ObjectiveCatalogue.StarterContracts,
                     Snapshot(
                         "save-a",
                         700.0,
@@ -298,7 +298,7 @@ namespace TheRaceForSpace.Tests.Tracking
             {
                 restoredTracker.RefreshPlayerMilestones(
                     player,
-                    PrototypeMilestones.StarterContracts,
+                    ObjectiveCatalogue.StarterContracts,
                     Snapshot(
                         "save-a",
                         700.0,
@@ -313,20 +313,20 @@ namespace TheRaceForSpace.Tests.Tracking
 
             restoredTracker.RefreshPlayerMilestones(
                 player,
-                PrototypeMilestones.StarterContracts,
+                ObjectiveCatalogue.StarterContracts,
                 Snapshot("save-a", 700.0, 731.0, 80.0, 0.0, 1.0, 1, null, TrackedFlightSituation.Landed));
 
-            Require(player.HasAchievement(PrototypeMilestones.Control1Id),
+            Require(player.HasCompletedObjective(ObjectiveCatalogue.Control1Id),
                 "A saved 15-second Control hold should resume and complete after another 15 seconds and landing.");
         }
 
         private static void MultipleControlStatesSurviveSaveLoad()
         {
-            SpaceProgramState player = new SpaceProgramState("player", "Player", true);
-            var activeControlContracts = new List<MilestoneDefinition>
+            AgencyState player = new AgencyState("player", "Player", true);
+            var activeControlContracts = new List<ObjectiveDefinition>
             {
-                PrototypeMilestones.FindById(PrototypeMilestones.Control1Id),
-                PrototypeMilestones.FindById(PrototypeMilestones.Control2Id)
+                ObjectiveCatalogue.FindById(ObjectiveCatalogue.Control1Id),
+                ObjectiveCatalogue.FindById(ObjectiveCatalogue.Control2Id)
             };
             var sourceTracker = new StarterFlightTracker();
 
@@ -347,7 +347,7 @@ namespace TheRaceForSpace.Tests.Tracking
                         TrackedFlightSituation.Flying));
             }
 
-            Require(sourceTracker.IsControlMilestoneQualified(PrototypeMilestones.Control1Id),
+            Require(sourceTracker.IsControlMilestoneQualified(ObjectiveCatalogue.Control1Id),
                 "Control I should be qualified before saving the multi-Control attempt.");
 
             for (int observationUniversalTime = 1035; observationUniversalTime <= 1050;
@@ -368,7 +368,7 @@ namespace TheRaceForSpace.Tests.Tracking
                         TrackedFlightSituation.Flying));
             }
 
-            RequireNear(15.0, sourceTracker.GetControlHoldSeconds(PrototypeMilestones.Control2Id),
+            RequireNear(15.0, sourceTracker.GetControlHoldSeconds(ObjectiveCatalogue.Control2Id),
                 "Control II should have independent partial progress before save.");
 
             var saveState = new ActiveContractProgressSaveState();
@@ -378,8 +378,8 @@ namespace TheRaceForSpace.Tests.Tracking
 
             Require(node.GetNodes("CONTROL_STATE").Length == 2,
                 "The current save format should write one CONTROL_STATE node per tracked Control contract.");
-            Require(node.GetValue("controlHoldMilestoneId") == null,
-                "The current save format should not write the removed single-Control milestone field.");
+            Require(node.GetValue("controlHoldObjectiveId") == null,
+                "The current save format should not write the removed single-Control objective field.");
             Require(node.GetValue("completedControl") == null,
                 "The current save format should not write obsolete per-line completion flags.");
 
@@ -388,11 +388,11 @@ namespace TheRaceForSpace.Tests.Tracking
             var restoredTracker = new StarterFlightTracker();
             loadedState.ApplyTo(restoredTracker);
 
-            Require(restoredTracker.IsControlMilestoneQualified(PrototypeMilestones.Control1Id),
+            Require(restoredTracker.IsControlMilestoneQualified(ObjectiveCatalogue.Control1Id),
                 "A qualified Control I state should survive save/load independently.");
-            RequireNear(15.0, restoredTracker.GetControlHoldSeconds(PrototypeMilestones.Control2Id),
+            RequireNear(15.0, restoredTracker.GetControlHoldSeconds(ObjectiveCatalogue.Control2Id),
                 "Partial Control II progress should survive save/load independently.");
-            Require(!restoredTracker.IsControlMilestoneQualified(PrototypeMilestones.Control2Id),
+            Require(!restoredTracker.IsControlMilestoneQualified(ObjectiveCatalogue.Control2Id),
                 "Partial Control II progress must not be promoted to qualified by persistence.");
 
             for (int observationUniversalTime = 1055; observationUniversalTime <= 1080;
@@ -413,7 +413,7 @@ namespace TheRaceForSpace.Tests.Tracking
                         TrackedFlightSituation.Flying));
             }
 
-            Require(restoredTracker.IsControlMilestoneQualified(PrototypeMilestones.Control2Id),
+            Require(restoredTracker.IsControlMilestoneQualified(ObjectiveCatalogue.Control2Id),
                 "Control II should continue from its saved partial hold and qualify normally.");
 
             bool recorded = restoredTracker.RefreshPlayerMilestones(
@@ -432,20 +432,20 @@ namespace TheRaceForSpace.Tests.Tracking
 
             Require(recorded,
                 "The restored landing should record the independently qualified Control contracts.");
-            Require(player.HasAchievement(PrototypeMilestones.Control1Id),
+            Require(player.HasCompletedObjective(ObjectiveCatalogue.Control1Id),
                 "Restored Control I qualification should complete on landing.");
-            Require(player.HasAchievement(PrototypeMilestones.Control2Id),
+            Require(player.HasCompletedObjective(ObjectiveCatalogue.Control2Id),
                 "Restored Control II qualification should complete on the same landing.");
         }
 
         private static void DirectedPowerDisqualificationSurvivesSaveLoad()
         {
-            SpaceProgramState player = new SpaceProgramState("player", "Player", true);
+            AgencyState player = new AgencyState("player", "Player", true);
             var sourceTracker = new StarterFlightTracker();
 
             sourceTracker.RefreshPlayerMilestones(
                 player,
-                PrototypeMilestones.StarterContracts,
+                ObjectiveCatalogue.StarterContracts,
                 Snapshot("save-power", 800.0, 800.0, 70010.0, 700.0, 1.0, 0, null, TrackedFlightSituation.SubOrbital));
 
             var saveState = new ActiveContractProgressSaveState();
@@ -460,7 +460,7 @@ namespace TheRaceForSpace.Tests.Tracking
             Require(
                 !restoredTracker.RecordSurfaceImpact(
                     player,
-                    PrototypeMilestones.StarterContracts,
+                    ObjectiveCatalogue.StarterContracts,
                     "save-power",
                     "Kerbin",
                     801.0),
@@ -469,16 +469,16 @@ namespace TheRaceForSpace.Tests.Tracking
 
         private static void LiveProgressReflectsLatestSample()
         {
-            SpaceProgramState player = new SpaceProgramState("player", "Player", true);
+            AgencyState player = new AgencyState("player", "Player", true);
             var tracker = new StarterFlightTracker();
 
             tracker.RefreshPlayerMilestones(
                 player,
-                PrototypeMilestones.StarterContracts,
+                ObjectiveCatalogue.StarterContracts,
                 Snapshot("progress", 900.0, 900.0, 100.0, 0.0, 4.0, 0, "Shores", TrackedFlightSituation.Prelaunch, 0.0));
             tracker.RefreshPlayerMilestones(
                 player,
-                PrototypeMilestones.StarterContracts,
+                ObjectiveCatalogue.StarterContracts,
                 Snapshot("progress", 900.0, 910.0, 3500.0, 525.0, 3.2, 1, "Grasslands", TrackedFlightSituation.Flying, 2.0));
 
             RequireNear(3500.0, tracker.CurrentAltitudeMeters, "Current altitude should follow the latest sample.");
@@ -504,7 +504,7 @@ namespace TheRaceForSpace.Tests.Tracking
             node.AddValue("maximumSurfaceSpeedMetersPerSecond", "650");
             node.AddValue("enteredOrbit", false);
             ConfigNode controlStateNode = node.AddNode("CONTROL_STATE");
-            controlStateNode.AddValue("milestoneId", PrototypeMilestones.Control1Id);
+            controlStateNode.AddValue("objectiveId", ObjectiveCatalogue.Control1Id);
             controlStateNode.AddValue("holdSeconds", "not-a-number");
             controlStateNode.AddValue("wasSampleInBand", true);
             controlStateNode.AddValue("qualified", false);

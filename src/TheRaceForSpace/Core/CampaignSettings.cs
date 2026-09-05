@@ -3,13 +3,13 @@ using System;
 namespace TheRaceForSpace.Core
 {
     /// <summary>
-    /// One balance tier shared by achievement rewards, rival mission costs, and network funding.
+    /// One balance tier shared by objectiveCompletion rewards, rival mission costs, and network funding.
     /// Values are initialized to the built-in defaults and may be replaced once at KSP startup
-    /// by the user-editable RaceSettings.cfg file.
+    /// by the user-editable CampaignSettings.cfg file.
     /// </summary>
-    internal sealed class RaceBodySettings
+    internal sealed class BodyBalanceSettings
     {
-        public RaceBodySettings(
+        public BodyBalanceSettings(
             double probeProgressCostFunds,
             double crewedProgressCostFunds,
             double probeRewardFunds,
@@ -38,19 +38,19 @@ namespace TheRaceForSpace.Core
 
     /// <summary>
     /// Current campaign-wide balance settings. Defaults match version 0.4 behaviour and are
-    /// replaced from GameData/TheRaceForSpace/Config/RaceSettings.cfg before controller creation.
+    /// replaced from GameData/TheRaceForSpace/Config/CampaignSettings.cfg before controller creation.
     /// </summary>
-    internal static class RaceSettings
+    internal static class CampaignSettings
     {
-        static RaceSettings()
+        static CampaignSettings()
         {
             ResetToDefaults();
         }
 
-        public static RaceBodySettings Kerbin { get; private set; }
-        public static RaceBodySettings KerbinMoons { get; private set; }
-        public static RaceBodySettings InterplanetaryPlanets { get; private set; }
-        public static RaceBodySettings InterplanetaryMoons { get; private set; }
+        public static BodyBalanceSettings Kerbin { get; private set; }
+        public static BodyBalanceSettings KerbinMoons { get; private set; }
+        public static BodyBalanceSettings InterplanetaryPlanets { get; private set; }
+        public static BodyBalanceSettings InterplanetaryMoons { get; private set; }
 
         public static double FundingIntervalDays { get; set; }
         public static double RivalStartingFunds { get; set; }
@@ -59,7 +59,7 @@ namespace TheRaceForSpace.Core
 
         public static void ResetToDefaults()
         {
-            Kerbin = new RaceBodySettings(
+            Kerbin = new BodyBalanceSettings(
                 20000.0,
                 40000.0,
                 75000.0,
@@ -67,7 +67,7 @@ namespace TheRaceForSpace.Core
                 20000.0,
                 10,
                 200000.0);
-            KerbinMoons = new RaceBodySettings(
+            KerbinMoons = new BodyBalanceSettings(
                 40000.0,
                 60000.0,
                 150000.0,
@@ -75,7 +75,7 @@ namespace TheRaceForSpace.Core
                 40000.0,
                 5,
                 100000.0);
-            InterplanetaryPlanets = new RaceBodySettings(
+            InterplanetaryPlanets = new BodyBalanceSettings(
                 60000.0,
                 100000.0,
                 300000.0,
@@ -83,7 +83,7 @@ namespace TheRaceForSpace.Core
                 80000.0,
                 10,
                 200000.0);
-            InterplanetaryMoons = new RaceBodySettings(
+            InterplanetaryMoons = new BodyBalanceSettings(
                 60000.0,
                 100000.0,
                 300000.0,
@@ -102,7 +102,7 @@ namespace TheRaceForSpace.Core
         /// Returns the stock-system balance tier for a funding target body. Unknown bodies fall
         /// back to the interplanetary-planet tier rather than receiving cheap Kerbin defaults.
         /// </summary>
-        public static RaceBodySettings GetBodySettings(string celestialBodyName)
+        public static BodyBalanceSettings GetBodySettings(string celestialBodyName)
         {
             if (string.Equals(celestialBodyName, "Kerbin", StringComparison.OrdinalIgnoreCase))
             {

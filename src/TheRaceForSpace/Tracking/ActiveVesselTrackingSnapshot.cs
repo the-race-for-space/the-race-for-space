@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using TheRaceForSpace.Milestones;
+using TheRaceForSpace.Objectives;
 
 namespace TheRaceForSpace.Tracking
 {
@@ -44,7 +44,7 @@ namespace TheRaceForSpace.Tracking
     public static class StarterTelemetryPlan
     {
         public static StarterTelemetryRequirement GetRequirements(
-            IList<MilestoneDefinition> activeStarterContracts)
+            IList<ObjectiveDefinition> activeStarterContracts)
         {
             StarterTelemetryRequirement requirements = StarterTelemetryRequirement.None;
             if (activeStarterContracts == null)
@@ -54,27 +54,27 @@ namespace TheRaceForSpace.Tracking
 
             for (int milestoneIndex = 0; milestoneIndex < activeStarterContracts.Count; milestoneIndex++)
             {
-                MilestoneDefinition milestone = activeStarterContracts[milestoneIndex];
-                if (milestone == null)
+                ObjectiveDefinition objective = activeStarterContracts[milestoneIndex];
+                if (objective == null)
                 {
                     continue;
                 }
 
-                switch (milestone.StarterLine)
+                switch (objective.PreOrbitLine)
                 {
-                    case StarterContractLine.DirectedPower:
+                    case PreOrbitContractLine.DirectedPower:
                         requirements |= StarterTelemetryRequirement.Altitude
                             | StarterTelemetryRequirement.SurfaceSpeed
                             | StarterTelemetryRequirement.SurfaceImpact;
                         break;
-                    case StarterContractLine.Mass:
+                    case PreOrbitContractLine.Mass:
                         requirements |= StarterTelemetryRequirement.Mass;
                         break;
-                    case StarterContractLine.Control:
+                    case PreOrbitContractLine.Control:
                         requirements |= StarterTelemetryRequirement.Altitude
                             | StarterTelemetryRequirement.Crew;
                         break;
-                    case StarterContractLine.Biome:
+                    case PreOrbitContractLine.Biome:
                         requirements |= StarterTelemetryRequirement.Biome;
                         break;
                 }

@@ -1,14 +1,14 @@
 using System;
-using TheRaceForSpace.Milestones;
+using TheRaceForSpace.Objectives;
 
 namespace TheRaceForSpace.Funding
 {
     /// <summary>
     /// One persistent satellite-network funding target with a fixed total payout pool.
     /// </summary>
-    public sealed class FundingProgramme
+    public sealed class SatelliteNetworkFundingContract
     {
-        public FundingProgramme(string id, string name, string celestialBodyName, int requiredSatellites, double rewardFunds)
+        public SatelliteNetworkFundingContract(string id, string name, string celestialBodyName, int requiredSatellites, double rewardFunds)
             : this(
                 id,
                 name,
@@ -21,7 +21,7 @@ namespace TheRaceForSpace.Funding
         {
         }
 
-        public FundingProgramme(
+        public SatelliteNetworkFundingContract(
             string id,
             string name,
             string celestialBodyName,
@@ -41,7 +41,7 @@ namespace TheRaceForSpace.Funding
         {
         }
 
-        public FundingProgramme(
+        public SatelliteNetworkFundingContract(
             string id,
             string name,
             string celestialBodyName,

@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
-using TheRaceForSpace.Milestones;
-using TheRaceForSpace.Programs;
+using TheRaceForSpace.Objectives;
+using TheRaceForSpace.Agencies;
 
 namespace TheRaceForSpace.Tracking
 {
@@ -54,16 +54,16 @@ namespace TheRaceForSpace.Tracking
 
         // Persistence captures this live key collection directly, avoiding a temporary list allocation
         // on the once-per-second starter-state capture path.
-        internal ICollection<string> ControlStateMilestoneIds { get { return _controlStates.Keys; } }
+        internal ICollection<string> ControlStateObjectiveIds { get { return _controlStates.Keys; } }
 
         /// <summary>
         /// Returns the accumulated continuous hold time for one active Control contract.
         /// </summary>
-        public double GetControlHoldSeconds(string milestoneId)
+        public double GetControlHoldSeconds(string objectiveId)
         {
             ControlContractState state;
-            return !string.IsNullOrEmpty(milestoneId)
-                && _controlStates.TryGetValue(milestoneId, out state)
+            return !string.IsNullOrEmpty(objectiveId)
+                && _controlStates.TryGetValue(objectiveId, out state)
                 ? state.HoldSeconds
                 : 0.0;
         }
@@ -72,22 +72,22 @@ namespace TheRaceForSpace.Tracking
         /// Returns whether one Control contract has completed its altitude hold and is waiting
         /// for the required crewed Kerbin landing.
         /// </summary>
-        public bool IsControlMilestoneQualified(string milestoneId)
+        public bool IsControlMilestoneQualified(string objectiveId)
         {
             ControlContractState state;
-            return !string.IsNullOrEmpty(milestoneId)
-                && _controlStates.TryGetValue(milestoneId, out state)
+            return !string.IsNullOrEmpty(objectiveId)
+                && _controlStates.TryGetValue(objectiveId, out state)
                 && state.IsQualified;
         }
 
         /// <summary>
         /// Returns whether the most recent observed sample was inside one Control contract's band.
         /// </summary>
-        public bool IsControlSampleInBand(string milestoneId)
+        public bool IsControlSampleInBand(string objectiveId)
         {
             ControlContractState state;
-            return !string.IsNullOrEmpty(milestoneId)
-                && _controlStates.TryGetValue(milestoneId, out state)
+            return !string.IsNullOrEmpty(objectiveId)
+                && _controlStates.TryGetValue(objectiveId, out state)
                 && state.WasSampleInBand;
         }
 
@@ -96,19 +96,19 @@ namespace TheRaceForSpace.Tracking
         /// restored. Invalid values are ignored so malformed save data cannot invent hold progress.
         /// </summary>
         internal void RestoreControlState(
-            string milestoneId,
+            string objectiveId,
             double holdSeconds,
             bool wasSampleInBand,
             bool isQualified)
         {
-            if (string.IsNullOrEmpty(milestoneId)
+            if (string.IsNullOrEmpty(objectiveId)
                 || !IsFinite(holdSeconds)
                 || holdSeconds < 0.0)
             {
                 return;
             }
 
-            ControlContractState state = GetOrCreateControlState(milestoneId);
+            ControlContractState state = GetOrCreateControlState(objectiveId);
             state.HoldSeconds = holdSeconds;
             state.WasSampleInBand = wasSampleInBand;
             state.IsQualified = isQualified;
@@ -120,11 +120,11 @@ namespace TheRaceForSpace.Tracking
         /// may satisfy multiple separately offered levels.
         /// </summary>
         public bool RefreshPlayerMilestones(
-            SpaceProgramState playerProgram,
-            IList<MilestoneDefinition> starterMilestones,
+            AgencyState playerAgency,
+            IList<ObjectiveDefinition> starterMilestones,
             ActiveVesselTrackingSnapshot snapshot)
         {
-            if (playerProgram == null
+            if (playerAgency == null
                 || starterMilestones == null
                 || snapshot == null
                 || string.IsNullOrEmpty(snapshot.VesselId)
@@ -191,43 +191,43 @@ namespace TheRaceForSpace.Tracking
                 // so earlier and later offered levels remain genuinely independent.
                 for (int milestoneIndex = 0; milestoneIndex < starterMilestones.Count; milestoneIndex++)
                 {
-                    MilestoneDefinition milestone = starterMilestones[milestoneIndex];
-                    if (milestone == null || playerProgram.HasAchievement(milestone.Id))
+                    ObjectiveDefinition objective = starterMilestones[milestoneIndex];
+                    if (objective == null || playerAgency.HasCompletedObjective(objective.Id))
                     {
                         continue;
                     }
 
-                    if (milestone.StarterLine == StarterContractLine.Mass
+                    if (objective.PreOrbitLine == PreOrbitContractLine.Mass
                         && snapshot.Situation == TrackedFlightSituation.Landed
-                        && snapshot.MassTonnes >= milestone.RequiredMassTonnes
-                        && _currentDistanceMeters >= milestone.RequiredDistanceMeters)
+                        && snapshot.MassTonnes >= objective.RequiredMassTonnes
+                        && _currentDistanceMeters >= objective.RequiredDistanceMeters)
                     {
                         // Mass represents delivery of a finished craft, so the final landed vessel
                         // must still meet both the mass and distance requirement for this contract.
-                        recordedAchievement |= playerProgram.RecordAchievement(
-                            milestone.Id,
+                        recordedAchievement |= playerAgency.RecordObjectiveCompletion(
+                            objective.Id,
                             snapshot.ObservationUniversalTime);
                         continue;
                     }
 
-                    if (milestone.StarterLine == StarterContractLine.Biome
+                    if (objective.PreOrbitLine == PreOrbitContractLine.Biome
                         && snapshot.Situation == TrackedFlightSituation.Landed
                         && !string.IsNullOrEmpty(snapshot.BiomeName)
                         && string.Equals(
                             snapshot.BiomeName,
-                            milestone.RequiredBiomeName,
+                            objective.RequiredBiomeName,
                             StringComparison.OrdinalIgnoreCase))
                     {
                         // Flying over a biome is not enough; this individual contract completes
                         // only when the active craft finishes landed in its requested biome.
-                        recordedAchievement |= playerProgram.RecordAchievement(
-                            milestone.Id,
+                        recordedAchievement |= playerAgency.RecordObjectiveCompletion(
+                            objective.Id,
                             snapshot.ObservationUniversalTime);
                     }
                 }
 
                 recordedAchievement |= EvaluateControlMilestones(
-                    playerProgram,
+                    playerAgency,
                     starterMilestones,
                     snapshot,
                     sampleDeltaSeconds);
@@ -247,13 +247,13 @@ namespace TheRaceForSpace.Tracking
         /// against the same completed flight history before the destroyed attempt is cleared.
         /// </summary>
         public bool RecordSurfaceImpact(
-            SpaceProgramState playerProgram,
-            IList<MilestoneDefinition> starterMilestones,
+            AgencyState playerAgency,
+            IList<ObjectiveDefinition> starterMilestones,
             string vesselId,
             string celestialBodyName,
             double impactUniversalTime)
         {
-            if (playerProgram == null
+            if (playerAgency == null
                 || starterMilestones == null
                 || !HasActiveAttempt
                 || string.IsNullOrEmpty(vesselId)
@@ -268,19 +268,19 @@ namespace TheRaceForSpace.Tracking
             {
                 for (int milestoneIndex = 0; milestoneIndex < starterMilestones.Count; milestoneIndex++)
                 {
-                    MilestoneDefinition milestone = starterMilestones[milestoneIndex];
-                    if (milestone == null
-                        || milestone.StarterLine != StarterContractLine.DirectedPower
-                        || playerProgram.HasAchievement(milestone.Id)
-                        || _maximumAltitudeMeters > milestone.MaximumAltitudeMeters
+                    ObjectiveDefinition objective = starterMilestones[milestoneIndex];
+                    if (objective == null
+                        || objective.PreOrbitLine != PreOrbitContractLine.DirectedPower
+                        || playerAgency.HasCompletedObjective(objective.Id)
+                        || _maximumAltitudeMeters > objective.MaximumAltitudeMeters
                         || _maximumSurfaceSpeedMetersPerSecond
-                            < milestone.RequiredSpeedMetersPerSecond)
+                            < objective.RequiredSpeedMetersPerSecond)
                     {
                         continue;
                     }
 
-                    recordedAchievement |= playerProgram.RecordAchievement(
-                        milestone.Id,
+                    recordedAchievement |= playerAgency.RecordObjectiveCompletion(
+                        objective.Id,
                         impactUniversalTime);
                 }
             }
@@ -367,8 +367,8 @@ namespace TheRaceForSpace.Tracking
         }
 
         private bool EvaluateControlMilestones(
-            SpaceProgramState playerProgram,
-            IList<MilestoneDefinition> starterMilestones,
+            AgencyState playerAgency,
+            IList<ObjectiveDefinition> starterMilestones,
             ActiveVesselTrackingSnapshot snapshot,
             double sampleDeltaSeconds)
         {
@@ -376,10 +376,10 @@ namespace TheRaceForSpace.Tracking
 
             for (int milestoneIndex = 0; milestoneIndex < starterMilestones.Count; milestoneIndex++)
             {
-                MilestoneDefinition controlMilestone = starterMilestones[milestoneIndex];
+                ObjectiveDefinition controlMilestone = starterMilestones[milestoneIndex];
                 if (controlMilestone == null
-                    || controlMilestone.StarterLine != StarterContractLine.Control
-                    || playerProgram.HasAchievement(controlMilestone.Id))
+                    || controlMilestone.PreOrbitLine != PreOrbitContractLine.Control
+                    || playerAgency.HasCompletedObjective(controlMilestone.Id))
                 {
                     continue;
                 }
@@ -389,7 +389,7 @@ namespace TheRaceForSpace.Tracking
                     && snapshot.Situation == TrackedFlightSituation.Landed
                     && snapshot.CrewCount > 0)
                 {
-                    recordedAchievement |= playerProgram.RecordAchievement(
+                    recordedAchievement |= playerAgency.RecordObjectiveCompletion(
                         controlMilestone.Id,
                         snapshot.ObservationUniversalTime);
                     continue;
@@ -423,16 +423,16 @@ namespace TheRaceForSpace.Tracking
             return recordedAchievement;
         }
 
-        private ControlContractState GetOrCreateControlState(string milestoneId)
+        private ControlContractState GetOrCreateControlState(string objectiveId)
         {
             ControlContractState state;
-            if (_controlStates.TryGetValue(milestoneId, out state))
+            if (_controlStates.TryGetValue(objectiveId, out state))
             {
                 return state;
             }
 
             state = new ControlContractState();
-            _controlStates.Add(milestoneId, state);
+            _controlStates.Add(objectiveId, state);
             return state;
         }
 

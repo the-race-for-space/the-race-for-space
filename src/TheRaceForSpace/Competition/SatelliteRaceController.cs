@@ -173,11 +173,6 @@ namespace TheRaceForSpace.Competition
             get { return GetKerbinYear(_nextFundingUniversalTime); }
         }
 
-        public int NextFundingDay
-        {
-            get { return GetKerbinDay(_nextFundingUniversalTime); }
-        }
-
         /// <summary>
         /// Whole Kerbin days remaining until the shared funding date, rounded upward so a
         /// partial final day remains visible until the funding boundary is actually reached.
@@ -282,18 +277,6 @@ namespace TheRaceForSpace.Competition
             return IsAchievementProgrammeAvailableAtTime(
                 achievementProgramme,
                 evaluationUniversalTime);
-        }
-
-        public int GetAchievementAgencyCount(AchievementFundingProgramme achievementProgramme)
-        {
-            if (achievementProgramme == null)
-            {
-                return 0;
-            }
-
-            return GetAchievementAgencyCountAtTime(
-                achievementProgramme.Id,
-                double.PositiveInfinity);
         }
 
         /// <summary>

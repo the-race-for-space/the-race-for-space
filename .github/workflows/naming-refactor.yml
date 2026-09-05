@@ -1,0 +1,28 @@
+name: Naming Refactor
+
+on:
+  push:
+    branches:
+      - Alpha/KerbalContracts-v0.5
+
+permissions:
+  contents: write
+
+jobs:
+  refactor:
+    if: github.event.head_commit.message == 'chore: run naming refactor'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out refactor trigger
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Apply approved naming refactor
+        run: python3 tools/refactor-naming.py

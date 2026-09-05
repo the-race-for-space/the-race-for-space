@@ -14,5 +14,5 @@ echo "Running KSP-independent prototype logic tests..."
 dotnet run --project "$domainTestProject" -c Release
 
 echo
-echo "Running race controller regression tests..."
+echo "Running campaign controller regression tests..."
 dotnet run --project "$controllerTestProject" -c Release

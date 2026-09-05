@@ -16,7 +16,7 @@ namespace TheRaceForSpace.UI
     /// <summary>
     /// Command center with four switchable views inside one interface window.
     /// Press F8 or use the stock KSP application launcher button to show or hide the interface.
-    /// Race progression and controller lifetime are owned by ModRuntime in the Core module.
+    /// Campaign progression and controller lifetime are owned by ModRuntime in the Core module.
     /// </summary>
     [KSPAddon(KSPAddon.Startup.EveryScene, false)]
     public sealed class CommandCenterWindow : MonoBehaviour
@@ -272,7 +272,7 @@ namespace TheRaceForSpace.UI
             }
 
             // Reuse a stock KSP probe icon for the prototype so the launcher integration does
-            // not require an additional image asset. A custom Race for Space icon can replace
+            // not require an additional image asset. A custom Campaign for Space icon can replace
             // this texture later without changing the launcher behaviour.
             Texture launcherIconTexture = GameDatabase.Instance != null
                 ? GameDatabase.Instance.GetTexture(LauncherIconTexturePath, false)
@@ -864,7 +864,7 @@ namespace TheRaceForSpace.UI
             GUILayout.Label("1. One off objectives");
             GUILayout.Space(4.0f);
             GUILayout.Label(
-                "Once any agency achieves this objectiveCompletion there are 10 payouts given. As interest in this objectiveCompletion is lost overtime each following payout is reduced by 10%. If multiple agencies complete the objectiveCompletion than the next payout is split between those agencies. Being the first to reach the objectiveCompletion will maximise your payout.");
+                "Once any agency completes this objective there are 10 payouts. As interest in the objective falls over time, each following payout is reduced by 10%. If multiple agencies complete the objective, the next payout is split between those agencies. Being first to complete the objective maximises your payout.");
 
             GUILayout.Space(8.0f);
             GUILayout.Label("2. Satellite Contracts");
@@ -875,7 +875,7 @@ namespace TheRaceForSpace.UI
             GUILayout.Space(8.0f);
             GUILayout.Label("PreOrbit Contracts", _boldLabelStyle);
             GUILayout.Label(
-                "The campaign begins with Directed Power I, Mass I, Control I and Biome I offered. The remaining sixteen pre-orbit contracts use the normal Offered, Unlocked, Locked and Expired states. Any agency, including a rival, completing a level unlocks the next level in that same line. Every pre-orbit contract that is Offered and unfinished for you is active independently, so one flight may satisfy more than one offered contract. Completing level five in any one line unlocks Probe Orbit for the race.");
+                "The campaign begins with Directed Power I, Mass I, Control I and Biome I offered. The remaining sixteen pre-orbit contracts use the normal Offered, Unlocked, Locked and Expired states. Any agency, including a rival, completing a level unlocks the next level in that same line. Every pre-orbit contract that is Offered and unfinished for you is active independently, so one flight may satisfy more than one offered contract. Completing level five in any one line unlocks Probe Orbit for the campaign.");
 
             GUILayout.Space(8.0f);
             GUILayout.Label("Unlocking New Funding Target", _boldLabelStyle);
@@ -1501,7 +1501,7 @@ namespace TheRaceForSpace.UI
                     break;
 
                 case UnlockAgencyScope.Player:
-                    _listTextBuilder.Append(" player objectiveCompletion count for ");
+                    _listTextBuilder.Append(" player completion count for ");
                     break;
 
                 case UnlockAgencyScope.AnyAgency:

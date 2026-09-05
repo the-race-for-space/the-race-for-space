@@ -183,7 +183,7 @@ namespace TheRaceForSpace.ControllerTests
                     controller,
                     ObjectiveCatalogue.ProbeOrbitId);
                 Require(probeOrbit.IsOffered,
-                    "Any agency completing any starter level-five objectiveCompletion should offer Probe Orbit immediately.");
+                    "Any agency completing any pre-orbit level-five objective completion should offer Probe Orbit immediately.");
             }
         }
 
@@ -217,7 +217,7 @@ namespace TheRaceForSpace.ControllerTests
                 FundingContractCatalogue.KerbinNetworkId);
 
             // This regression begins at the post-Probe-Orbit state. Offer the contract explicitly
-            // rather than depending on the starter Level V immediate-offer path.
+            // rather than depending on the pre-orbit Level V immediate-offer path.
             probeOrbit.Offer();
             controller.PlayerAgency.RecordObjectiveCompletion(ObjectiveCatalogue.ProbeOrbitId, 1.0);
             controller.PlayerAgency.SetSatelliteCount("Kerbin", 1);
@@ -231,7 +231,7 @@ namespace TheRaceForSpace.ControllerTests
             Require(controller.IsObjectiveFundingContractAvailable(minmusProbeOrbit), "Minmus Probe Orbit should be unlocked.");
             Require(kerbinNetwork.IsAvailable, "Kerbin network funding should be unlocked.");
             Require(!crewedOrbit.IsOffered && !munProbeOrbit.IsOffered && !minmusProbeOrbit.IsOffered,
-                "Unlocked normal objectiveCompletion funding must wait for a funding review.");
+                "Unlocked normal objective completion funding must wait for a funding review.");
             Require(!kerbinNetwork.IsOffered,
                 "Unlocked satellite funding must wait for a funding review.");
             Equal(0.0, controller.GetSatelliteCurrentPayout(controller.PlayerAgency, kerbinNetwork));
@@ -537,7 +537,7 @@ namespace TheRaceForSpace.ControllerTests
                 }
             }
 
-            throw new InvalidOperationException("Missing objectiveCompletion contract '" + contractId + "'.");
+            throw new InvalidOperationException("Missing objective completion contract '" + contractId + "'.");
         }
 
         private static SatelliteNetworkFundingContract FindFunding(

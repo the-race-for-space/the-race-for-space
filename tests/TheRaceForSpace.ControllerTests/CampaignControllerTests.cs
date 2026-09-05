@@ -80,7 +80,7 @@ namespace TheRaceForSpace.ControllerTests
                 !controller.PlayerAgency.HasCompletedObjective(ObjectiveCatalogue.ProbeOrbitId),
                 "Skipping the vessel observation must leave player Probe Orbit state unchanged.");
             Equal(1, ModPersistenceScenario.RivalCaptureCalls);
-            Equal(1, ModPersistenceScenario.RaceProgressCaptureCalls);
+            Equal(1, ModPersistenceScenario.CampaignProgressCaptureCalls);
 
             bool completedObservation = controller.Refresh(true);
 
@@ -139,13 +139,13 @@ namespace TheRaceForSpace.ControllerTests
                 "Probe Orbit should make the downstream Mun Probe Orbit contract available.");
             Require(
                 !munProbeOrbit.IsOffered,
-                "An unlocked one-off objectiveCompletion should wait for a funding-day sponsor review.");
+                "An unlocked one-off objective completion should wait for a funding-day sponsor review.");
             Require(
                 !munNetwork.IsAvailable,
                 "Mun satellite funding should remain locked until Mun Probe Orbit and Kerbin network progress are complete.");
             Equal(75000.0, controller.PlayerAgency.NextPayoutFunds);
             Equal(1, ModPersistenceScenario.RivalCaptureCalls);
-            Equal(1, ModPersistenceScenario.RaceProgressCaptureCalls);
+            Equal(1, ModPersistenceScenario.CampaignProgressCaptureCalls);
         }
 
         public static void KerbinNetworkProgressUnlocksMoonFunding()
@@ -185,10 +185,10 @@ namespace TheRaceForSpace.ControllerTests
                 "Six Kerbin probe satellites should record Probe Orbit once a pre-orbit line qualifies the contract.");
             Require(
                 !controller.PlayerAgency.HasCompletedObjective(ObjectiveCatalogue.MunProbeOrbitId),
-                "Mun Probe Orbit should still be incomplete before a Mun probe objectiveCompletion is recorded.");
+                "Mun Probe Orbit should still be incomplete before a Mun probe objective completion is recorded.");
             Require(
                 !controller.PlayerAgency.HasCompletedObjective(ObjectiveCatalogue.MinmusProbeOrbitId),
-                "Minmus Probe Orbit should still be incomplete before a Minmus probe objectiveCompletion is recorded.");
+                "Minmus Probe Orbit should still be incomplete before a Minmus probe objective completion is recorded.");
             Require(
                 !munNetwork.IsAvailable,
                 "Six collective Kerbin satellites alone must not unlock Mun satellite funding without Mun Probe Orbit.");
@@ -397,7 +397,7 @@ namespace TheRaceForSpace.ControllerTests
             }
 
             throw new InvalidOperationException(
-                "Missing objectiveCompletion funding contract '" + contractId + "'.");
+                "Missing objective completion funding contract '" + contractId + "'.");
         }
 
         private static SatelliteNetworkFundingContract FindSatelliteNetworkFundingContract(

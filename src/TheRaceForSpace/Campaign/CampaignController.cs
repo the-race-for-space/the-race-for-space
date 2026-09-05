@@ -11,7 +11,7 @@ using TheRaceForSpace.Tracking;
 namespace TheRaceForSpace.Campaign
 {
     /// <summary>
-    /// Coordinates the current race prototype without owning the code-defined funding catalogue.
+    /// Coordinates the current campaign prototype without owning the code-defined funding catalogue.
     /// </summary>
     public sealed class CampaignController
     {
@@ -130,7 +130,7 @@ namespace TheRaceForSpace.Campaign
 
         /// <summary>
         /// Marks the cached active flight-contract set dirty after the flight tracker records a player
-        /// pre-orbit objectiveCompletion. The following controller refresh rebuilds the set once after all
+        /// pre-orbit objective completion. The following controller refresh rebuilds the set once after all
         /// resulting unlock/offer/funding changes have been processed.
         /// </summary>
         internal void NotifyPlayerPreOrbitObjectiveCompleted()
@@ -261,7 +261,7 @@ namespace TheRaceForSpace.Campaign
         }
 
         /// <summary>
-        /// Returns whether an objectiveCompletion funding target is unlocked at the current campaign time.
+        /// Returns whether an objective completion funding target is unlocked at the current campaign time.
         /// Unlock state is intentionally separate from whether sponsors have offered the contract.
         /// </summary>
         public bool IsObjectiveFundingContractAvailable(ObjectiveFundingContract objectiveFundingContract)
@@ -310,7 +310,7 @@ namespace TheRaceForSpace.Campaign
         }
 
         /// <summary>
-        /// Returns this agency's projected share of the objectiveCompletion contract on the next global
+        /// Returns this agency's projected share of the objective completion contract on the next global
         /// funding date. After a completed refresh the value is served from the same payout snapshot
         /// used to build NextPayoutFunds, avoiding repeated agency-count calculations in the UI.
         /// </summary>
@@ -351,18 +351,18 @@ namespace TheRaceForSpace.Campaign
             double currentUniversalTime = Planetarium.GetUniversalTime();
 
             // Do not advance gameplay until the ScenarioModule has loaded the current save.
-            // A new game has no saved Race for Space data, so the constructor defaults remain in use.
+            // A new game has no saved Campaign for Space data, so the constructor defaults remain in use.
             if (!_hasRestoredPersistentState)
             {
                 bool restoredRivals = ModPersistenceScenario.TryRestoreRivalAgencyState(_rivalAgencies);
                 double restoredNextFundingUniversalTime;
-                bool restoredRaceProgress = ModPersistenceScenario.TryRestoreRaceProgress(
+                bool restoredCampaignProgress = ModPersistenceScenario.TryRestoreCampaignProgress(
                     PlayerAgency,
                     _satelliteNetworkFundingContracts,
                     _objectiveFundingContracts,
                     out restoredNextFundingUniversalTime);
 
-                if (!restoredRivals || !restoredRaceProgress)
+                if (!restoredRivals || !restoredCampaignProgress)
                 {
                     return false;
                 }
@@ -421,9 +421,9 @@ namespace TheRaceForSpace.Campaign
                 UpdateFundingAvailability(stateEvaluationUniversalTime);
             }
 
-            // Probe Orbit remains an immediate shared-race unlock once any pre-orbit line reaches
+            // Probe Orbit remains an immediate shared-campaign unlock once any pre-orbit line reaches
             // Level V. PreOrbit Levels II-V wait for the funding-day review, where every unlocked
-            // pre-orbit contract is offered without consuming normal one-off objectiveCompletion slots.
+            // pre-orbit contract is offered without consuming normal one-off objective completion slots.
             UpdateSpecialObjectiveOffers(stateEvaluationUniversalTime);
             UpdateSatelliteTargetReachedState();
             StartObjectiveFundingContracts(stateEvaluationUniversalTime);
@@ -431,7 +431,7 @@ namespace TheRaceForSpace.Campaign
             EvaluateSatelliteNetworkFundingContracts();
 
             ModPersistenceScenario.CaptureRivalAgencyState(_rivalAgencies);
-            ModPersistenceScenario.CaptureRaceProgress(
+            ModPersistenceScenario.CaptureCampaignProgress(
                 PlayerAgency,
                 _satelliteNetworkFundingContracts,
                 _objectiveFundingContracts,

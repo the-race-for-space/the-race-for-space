@@ -130,12 +130,12 @@ namespace TheRaceForSpace.Tests.Persistence
             Require(restoredObjectiveFundingContracts[0].IsOffered,
                 "ObjectiveCompletion offer state should round trip.");
             Require(restoredObjectiveFundingContracts[0].HasStarted,
-                "Started objectiveCompletion contracts should remain started.");
+                "Started objective completion contracts should remain started.");
             Equal(3, restoredObjectiveFundingContracts[0].PaymentsProcessed);
             Require(!restoredObjectiveFundingContracts[1].IsOffered,
-                "Unoffered objectiveCompletion contracts should be persisted explicitly.");
+                "Unoffered objective completion contracts should be persisted explicitly.");
             Require(!restoredObjectiveFundingContracts[1].HasStarted,
-                "Unstarted objectiveCompletion contracts should replace stale runtime values.");
+                "Unstarted objective completion contracts should replace stale runtime values.");
             Equal(0, restoredObjectiveFundingContracts[1].PaymentsProcessed);
             Equal(nextFundingUniversalTime, loaded.NextFundingUniversalTime);
         }
@@ -272,7 +272,7 @@ namespace TheRaceForSpace.Tests.Persistence
             contractsState.ApplyTo(player, satelliteContracts, objectiveFundingContracts);
 
             Require(!player.HasCompletedObjective("bad-time"),
-                "Non-finite objectiveCompletion times should be ignored.");
+                "Non-finite objective completion times should be ignored.");
             Equal(0.0, player.GetObjectiveCompletionTime("early-objective"));
             Require(satelliteContracts[0].IsAvailable,
                 "A valid satellite contract node should restore availability.");
@@ -284,7 +284,7 @@ namespace TheRaceForSpace.Tests.Persistence
             Require(objectiveFundingContracts[0].HasStarted,
                 "Processed payments should normalize the restored contract to started.");
             Require(objectiveFundingContracts[0].IsOffered,
-                "A valid objectiveCompletion contract node should restore offer state.");
+                "A valid objective completion contract node should restore offer state.");
             Require(!objectiveFundingContracts[1].HasStarted,
                 "Malformed contract state should fail closed instead of preserving stale runtime state.");
             Require(!objectiveFundingContracts[1].IsOffered,
@@ -345,9 +345,9 @@ namespace TheRaceForSpace.Tests.Persistence
             Require(!satelliteContracts[0].HasReachedSatelliteTarget,
                 "Missing satellite contract state should clear stale fulfilled state.");
             Require(!objectiveFundingContracts[0].HasStarted,
-                "Missing objectiveCompletion contract state should reset lifecycle state.");
+                "Missing objective completion contract state should reset lifecycle state.");
             Require(!objectiveFundingContracts[0].IsOffered,
-                "Missing objectiveCompletion contract state should clear stale offer state.");
+                "Missing objective completion contract state should clear stale offer state.");
             Equal(0, objectiveFundingContracts[0].PaymentsProcessed);
             Equal(-1.0, contractsState.NextFundingUniversalTime);
 
@@ -359,14 +359,14 @@ namespace TheRaceForSpace.Tests.Persistence
                 Funds = 100.0,
                 MissionProgressPercent = 80
             };
-            rival.RecordObjectiveCompletion("existing-rival-objectiveCompletion", 10.0);
+            rival.RecordObjectiveCompletion("existing-rival-objective-completion", 10.0);
             rival.SetSatelliteCount("Duna", 5);
             rivalState.ApplyTo(new List<AgencyState> { rival });
 
             Equal(100.0, rival.Funds);
             Equal("constructor-default", rival.NextMissionTargetId);
             Equal(80, rival.MissionProgressPercent);
-            Require(rival.HasCompletedObjective("existing-rival-objectiveCompletion"),
+            Require(rival.HasCompletedObjective("existing-rival-objective-completion"),
                 "An unsaved rival should retain constructor/current state rather than receive invented data.");
             Equal(5, rival.GetSatelliteCount("Duna"));
         }

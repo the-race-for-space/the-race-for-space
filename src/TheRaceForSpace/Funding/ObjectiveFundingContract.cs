@@ -4,7 +4,7 @@ using TheRaceForSpace.Objectives;
 namespace TheRaceForSpace.Funding
 {
     /// <summary>
-    /// Competitive objectiveCompletion contract paid on the shared funding calendar.
+    /// One-off objective funding contract paid on the shared funding calendar.
     /// The first eligible funding date pays 100%, then each later payment declines
     /// by 10 percentage points until the final 10% payment expires the contract.
     /// </summary>
@@ -99,7 +99,7 @@ namespace TheRaceForSpace.Funding
         }
 
         /// <summary>
-        /// Marks this contract as one of the sponsor offers active for all race agencies.
+        /// Marks this contract as one of the sponsor offers active for all campaign agencies.
         /// Once offered, a one-off contract remains offered until its normal payout lifecycle expires.
         /// </summary>
         public void Offer()

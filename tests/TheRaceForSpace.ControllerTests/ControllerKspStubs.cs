@@ -107,7 +107,7 @@ namespace TheRaceForSpace.KspIntegration
     {
         public static bool IsReady { get; set; }
         public static int RivalCaptureCalls { get; private set; }
-        public static int RaceProgressCaptureCalls { get; private set; }
+        public static int CampaignProgressCaptureCalls { get; private set; }
         public static double RestoredNextFundingUniversalTime { get; set; }
         public static double LastCapturedNextFundingUniversalTime { get; private set; }
 
@@ -116,7 +116,7 @@ namespace TheRaceForSpace.KspIntegration
             return IsReady && rivalAgencies != null;
         }
 
-        public static bool TryRestoreRaceProgress(
+        public static bool TryRestoreCampaignProgress(
             AgencyState playerAgency,
             IList<SatelliteNetworkFundingContract> satelliteNetworkFundingContracts,
             IList<ObjectiveFundingContract> objectiveFundingContracts,
@@ -137,7 +137,7 @@ namespace TheRaceForSpace.KspIntegration
             }
         }
 
-        public static void CaptureRaceProgress(
+        public static void CaptureCampaignProgress(
             AgencyState playerAgency,
             IList<SatelliteNetworkFundingContract> satelliteNetworkFundingContracts,
             IList<ObjectiveFundingContract> objectiveFundingContracts,
@@ -148,7 +148,7 @@ namespace TheRaceForSpace.KspIntegration
                 && satelliteNetworkFundingContracts != null
                 && objectiveFundingContracts != null)
             {
-                RaceProgressCaptureCalls++;
+                CampaignProgressCaptureCalls++;
                 LastCapturedNextFundingUniversalTime = nextFundingUniversalTime;
             }
         }
@@ -157,7 +157,7 @@ namespace TheRaceForSpace.KspIntegration
         {
             IsReady = true;
             RivalCaptureCalls = 0;
-            RaceProgressCaptureCalls = 0;
+            CampaignProgressCaptureCalls = 0;
             RestoredNextFundingUniversalTime = -1.0;
             LastCapturedNextFundingUniversalTime = -1.0;
         }

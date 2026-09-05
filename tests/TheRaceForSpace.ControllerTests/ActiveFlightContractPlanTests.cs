@@ -38,7 +38,7 @@ namespace TheRaceForSpace.ControllerTests
             controller.Refresh(false);
 
             Require(object.ReferenceEquals(initialPlan, controller.ActiveFlightContracts),
-                "A controller refresh with no relevant contract-state change should reuse the cached active starter plan.");
+                "A controller refresh with no relevant contract-state change should reuse the cached active pre-orbit plan.");
         }
 
         public static void RivalUnlockDoesNotChangePlanUntilSponsorOffersContract()
@@ -65,7 +65,7 @@ namespace TheRaceForSpace.ControllerTests
             Require(!mass2.IsOffered,
                 "Mass II should remain merely unlocked before the sponsor review.");
             Require(object.ReferenceEquals(openingPlan, controller.ActiveFlightContracts),
-                "Unlocking a contract without offering it must not rebuild the active starter plan.");
+                "Unlocking a contract without offering it must not rebuild the active pre-orbit plan.");
             Require(!Contains(controller.ActiveFlightContracts, ObjectiveCatalogue.Mass2Id),
                 "An unlocked-but-not-offered pre-orbit contract must not enter the active plan.");
 
@@ -75,7 +75,7 @@ namespace TheRaceForSpace.ControllerTests
             Require(mass2.IsOffered,
                 "The funding review should offer the unlocked Mass II contract.");
             Require(!object.ReferenceEquals(openingPlan, controller.ActiveFlightContracts),
-                "Offering Mass II should rebuild the active starter plan once the controller refresh settles.");
+                "Offering Mass II should rebuild the active pre-orbit plan once the controller refresh settles.");
             Equal(5, controller.ActiveFlightContracts.Count);
             Require(Contains(controller.ActiveFlightContracts, ObjectiveCatalogue.Mass1Id),
                 "Rival completion must not remove the player's unfinished Mass I offer from the active plan.");
@@ -95,13 +95,13 @@ namespace TheRaceForSpace.ControllerTests
             IList<ObjectiveDefinition> openingPlan = controller.ActiveFlightContracts;
 
             Require(controller.PlayerAgency.RecordObjectiveCompletion(ObjectiveCatalogue.Mass1Id, 10.0),
-                "Test setup should record the player's Mass I objectiveCompletion once.");
+                "Test setup should record the player's Mass I objective completion once.");
             controller.NotifyPlayerPreOrbitObjectiveCompleted();
             Planetarium.CurrentUniversalTime = 20.0;
             controller.Refresh(false);
 
             Require(!object.ReferenceEquals(openingPlan, controller.ActiveFlightContracts),
-                "A player starter completion should invalidate the cached active plan.");
+                "A player pre-orbit completion should invalidate the cached active plan.");
             Equal(3, controller.ActiveFlightContracts.Count);
             Require(!Contains(controller.ActiveFlightContracts, ObjectiveCatalogue.Mass1Id),
                 "A pre-orbit contract should leave the active plan after the player completes it.");
@@ -148,9 +148,9 @@ namespace TheRaceForSpace.ControllerTests
             Require(mass1.IsExpired,
                 "The tenth Mass I payout should expire the contract.");
             Require(!object.ReferenceEquals(beforeExpiry, controller.ActiveFlightContracts),
-                "PreOrbit expiry should invalidate the active plan even when no new starter offer is added.");
+                "PreOrbit expiry should invalidate the active plan even when no new pre-orbit offer is added.");
             Require(!Contains(controller.ActiveFlightContracts, ObjectiveCatalogue.Mass1Id),
-                "Expired Mass I should leave the active starter plan.");
+                "Expired Mass I should leave the active pre-orbit plan.");
             Require(Contains(controller.ActiveFlightContracts, ObjectiveCatalogue.Mass2Id),
                 "Mass II should remain active after Mass I expires.");
         }
@@ -187,7 +187,7 @@ namespace TheRaceForSpace.ControllerTests
                 }
             }
 
-            throw new InvalidOperationException("Missing objectiveCompletion contract '" + contractId + "'.");
+            throw new InvalidOperationException("Missing objective completion contract '" + contractId + "'.");
         }
 
         private static void ResetEnvironment()

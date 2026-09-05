@@ -454,7 +454,7 @@ namespace TheRaceForSpace.Tests.Rivals
 
             TestAssert.True(
                 aster.HasCompletedObjective(ObjectiveCatalogue.DunaProbeOrbitId),
-                "Duna objectiveCompletion completion should record the objective ID.");
+                "Duna objective completion should record the objective ID.");
             TestAssert.Equal(
                 completionUniversalTime,
                 aster.GetObjectiveCompletionTime(ObjectiveCatalogue.DunaProbeOrbitId));

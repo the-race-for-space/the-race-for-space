@@ -82,7 +82,7 @@ namespace TheRaceForSpace.Funding
         }
 
         /// <summary>
-        /// Marks this network as one of the sponsor offers active for all race agencies.
+        /// Marks this network as one of the sponsor offers active for all campaign agencies.
         /// Satellite funding remains offered permanently after sponsor selection.
         /// </summary>
         public void Offer()
@@ -91,7 +91,7 @@ namespace TheRaceForSpace.Funding
         }
 
         /// <summary>
-        /// Permanently records that the shared race network has reached this contract's full
+        /// Permanently records that the shared campaign network has reached this contract's full
         /// satellite target at least once. Live satellite counts still determine funding shares.
         /// </summary>
         public void MarkSatelliteTargetReached()

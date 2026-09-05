@@ -7,7 +7,7 @@ using TheRaceForSpace.Tracking;
 namespace TheRaceForSpace.KspIntegration
 {
     /// <summary>
-    /// Stores Race for Space campaign state inside the active KSP save through ScenarioModule.
+    /// Stores Campaign for Space campaign state inside the active KSP save through ScenarioModule.
     /// Static state is retained across normal gameplay scene changes for the same Game object,
     /// then replaced when KSP loads a different save.
     /// </summary>
@@ -122,10 +122,10 @@ namespace TheRaceForSpace.KspIntegration
         }
 
         /// <summary>
-        /// Restores player objectiveCompletion history, all funding-contract lifecycle state, and the next
+        /// Restores player objective completion history, all funding-contract lifecycle state, and the next
         /// shared funding boundary by stable persisted IDs.
         /// </summary>
-        public static bool TryRestoreRaceProgress(
+        public static bool TryRestoreCampaignProgress(
             AgencyState playerAgency,
             IList<SatelliteNetworkFundingContract> satelliteContracts,
             IList<ObjectiveFundingContract> objectiveFundingContracts,
@@ -180,10 +180,10 @@ namespace TheRaceForSpace.KspIntegration
         }
 
         /// <summary>
-        /// Captures player objectiveCompletion history, all funding-contract lifecycle state, and the next
+        /// Captures player objective completion history, all funding-contract lifecycle state, and the next
         /// shared funding boundary. Player satellite counts remain owned by live KSP vessel tracking.
         /// </summary>
-        public static void CaptureRaceProgress(
+        public static void CaptureCampaignProgress(
             AgencyState playerAgency,
             IList<SatelliteNetworkFundingContract> satelliteContracts,
             IList<ObjectiveFundingContract> objectiveFundingContracts,

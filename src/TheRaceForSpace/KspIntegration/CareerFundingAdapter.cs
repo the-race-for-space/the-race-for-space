@@ -1,7 +1,7 @@
 namespace TheRaceForSpace.KspIntegration
 {
     /// <summary>
-    /// Keeps direct KSP Career funding access out of the race and simulation logic.
+    /// Keeps direct KSP Career funding access out of the campaign and simulation logic.
     /// </summary>
     public static class CareerFundingAdapter
     {

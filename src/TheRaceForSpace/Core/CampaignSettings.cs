@@ -3,7 +3,7 @@ using System;
 namespace TheRaceForSpace.Core
 {
     /// <summary>
-    /// One balance tier shared by objectiveCompletion rewards, rival mission costs, and network funding.
+    /// One balance tier shared by objective completion rewards, rival mission costs, and network funding.
     /// Values are initialized to the built-in defaults and may be replaced once at KSP startup
     /// by the user-editable CampaignSettings.cfg file.
     /// </summary>

@@ -24,7 +24,7 @@ namespace TheRaceForSpace.ControllerTests
                 "Unlock required agency count must be met",
                 UnlockRuleEvaluatorTests.RequiredAgencyCountMustBeMet);
             Run(
-                "Unlock objectiveCompletion timestamps respect evaluation time",
+                "Unlock objective completion timestamps respect evaluation time",
                 UnlockRuleEvaluatorTests.ObjectiveCompletionTimestampUsesEvaluationTime);
             Run(
                 "Unlock time condition uses exact boundary",
@@ -77,16 +77,16 @@ namespace TheRaceForSpace.ControllerTests
                 CampaignControllerTests.ProjectedPayoutCacheRebuildsOnRefresh);
 
             Run(
-                "Active starter plan opens with four cached contracts and reuses stable refresh",
+                "Active pre-orbit plan opens with four cached contracts and reuses stable refresh",
                 ActiveFlightContractPlanTests.OpeningOffersBuildInitialPlanAndStableRefreshReusesIt);
             Run(
-                "Active starter plan waits for sponsor offer after rival unlock",
+                "Active pre-orbit plan waits for sponsor offer after rival unlock",
                 ActiveFlightContractPlanTests.RivalUnlockDoesNotChangePlanUntilSponsorOffersContract);
             Run(
-                "Active starter plan removes player-completed contract",
+                "Active pre-orbit plan removes player-completed contract",
                 ActiveFlightContractPlanTests.PlayerCompletionInvalidatesAndRemovesOnlyCompletedContract);
             Run(
-                "Active starter plan removes expired contract",
+                "Active pre-orbit plan removes expired contract",
                 ActiveFlightContractPlanTests.PreOrbitExpiryInvalidatesPlanWithoutAnotherPreOrbitOffer);
             Run(
                 "Active pre-orbit contract types request only needed telemetry",
@@ -109,16 +109,16 @@ namespace TheRaceForSpace.ControllerTests
                 "PreOrbit contracts open four offers and lock the remaining sixteen",
                 FundingOfferControllerTests.PreOrbitContractsOpenFourInitialOffersAndLockRemaining);
             Run(
-                "Rival starter completion unlocks the next level for sponsor review",
+                "Rival pre-orbit completion unlocks the next level for sponsor review",
                 FundingOfferControllerTests.RivalPreOrbitCompletionUnlocksNextLevelForSponsorReview);
             Run(
-                "All unlocked starter levels are offered at sponsor review",
+                "All unlocked pre-orbit levels are offered at sponsor review",
                 FundingOfferControllerTests.UnlockedPreOrbitLevelsJoinSponsorReview);
             Run(
-                "PreOrbit offers do not consume the normal objectiveCompletion limit",
+                "PreOrbit offers do not consume the normal objective completion limit",
                 FundingOfferControllerTests.PreOrbitOffersDoNotConsumeNormalObjectiveLimit);
             Run(
-                "Any starter level five offers Probe Orbit",
+                "Any pre-orbit level five offers Probe Orbit",
                 FundingOfferControllerTests.AnyPreOrbitLevelFiveOffersProbeOrbit);
             Run(
                 "Funding offers wait for sponsor review",

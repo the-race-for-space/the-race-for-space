@@ -7,8 +7,8 @@ using TheRaceForSpace.Agencies;
 namespace TheRaceForSpace.Persistence
 {
     /// <summary>
-    /// Persists the player's objectiveCompletion history and the lifecycle state of every configured
-    /// objectiveCompletion and satellite funding contract. Contract definitions remain code-owned; only
+    /// Persists the player's objective completion history and the lifecycle state of every configured
+    /// objective completion and satellite funding contract. Contract definitions remain code-owned; only
     /// mutable campaign state is stored by stable ID.
     /// </summary>
     public sealed class CampaignFundingSaveState

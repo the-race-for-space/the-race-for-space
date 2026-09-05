@@ -6,7 +6,7 @@ using UnityEngine;
 namespace TheRaceForSpace.KspIntegration
 {
     /// <summary>
-    /// Loads the user-editable race balance config once before the first race controller is created.
+    /// Loads the user-editable campaign balance config once before the first campaign controller is created.
     /// Missing or invalid values keep the built-in defaults from CampaignSettings.
     /// </summary>
     internal static class CampaignSettingsLoader

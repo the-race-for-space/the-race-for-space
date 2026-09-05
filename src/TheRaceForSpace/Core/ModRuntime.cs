@@ -8,7 +8,7 @@ using UnityEngine;
 namespace TheRaceForSpace.Core
 {
     /// <summary>
-    /// Owns the current race controller and advances race progression independently of the UI.
+    /// Owns the current campaign controller and advances campaign progression independently of the UI.
     /// </summary>
     [KSPAddon(KSPAddon.Startup.EveryScene, false)]
     public sealed class ModRuntime : MonoBehaviour
@@ -71,7 +71,7 @@ namespace TheRaceForSpace.Core
 
         public void Awake()
         {
-            // EveryScene also instantiates addons during loading and on the main menu. Race
+            // EveryScene also instantiates addons during loading and on the main menu. Campaign
             // progression only exists while KSP has an active saved game.
             if (!HighLogic.LoadedSceneIsGame || HighLogic.CurrentGame == null)
             {
@@ -80,7 +80,7 @@ namespace TheRaceForSpace.Core
             }
 
             // KSP can briefly create duplicate EveryScene addons while editor scenes and
-            // sub-scenes are loading. Only one runtime instance may advance the race at a time.
+            // sub-scenes are loading. Only one runtime instance may advance the campaign at a time.
             if (_activeInstance != null && _activeInstance != this)
             {
                 _isDuplicateInstance = true;
@@ -252,7 +252,7 @@ namespace TheRaceForSpace.Core
             CampaignSettingsLoader.EnsureLoaded();
 
             // Keep one controller and one active-flight tracker across scene changes inside a save,
-            // but never carry race, vessel-callback, or contract-attempt state into another save.
+            // but never carry campaign, vessel-callback, or contract-attempt state into another save.
             _campaignController = new CampaignController();
             _flightContractTracker = new FlightContractTracker();
             _controllerGame = HighLogic.CurrentGame;

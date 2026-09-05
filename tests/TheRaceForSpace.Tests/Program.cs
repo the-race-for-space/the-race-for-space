@@ -36,28 +36,28 @@ namespace TheRaceForSpace.Tests
             Run("Tracking snapshots update counts and objectives", OrbitalVesselTrackerTests.NormalizedSnapshotsUpdateCountsAndObjectives);
             Run("Tracking empty snapshots reset body counts", OrbitalVesselTrackerTests.EmptySnapshotsResetTrackedBodyCounts);
             Run("Tracking crewed probe keeps satellite classification", OrbitalVesselTrackerTests.CrewedProbeCountsAsSatelliteButNotProbeObjective);
-            Run("Tracking flexible unlock uses race state and time", OrbitalVesselTrackerTests.FlexibleUnlockRuleUsesRaceStateAndTime);
+            Run("Tracking flexible unlock uses campaign state and time", OrbitalVesselTrackerTests.FlexibleUnlockRuleUsesCampaignStateAndTime);
             Run("PreOrbit flight contracts and persistence", FlightContractTrackerTests.RunAll);
             Run("Surface impact eligibility", SurfaceImpactEvaluatorTests.RunAll);
-            Run("Generic objectiveCompletion state starts empty", GenericObjectiveCompletionStateStartsEmpty);
-            Run("Generic objectiveCompletion state records first timestamp", GenericObjectiveCompletionStateRecordsFirstTimestamp);
-            Run("Generic objectiveCompletion state preserves first timestamp", GenericObjectiveCompletionStatePreservesFirstTimestamp);
-            Run("Generic objectiveCompletion state accepts arbitrary ids", GenericObjectiveCompletionStateAcceptsArbitraryIds);
-            Run("Generic objectiveCompletion state validates timestamps", GenericObjectiveCompletionStateValidatesTimestamps);
+            Run("Generic objective completion state starts empty", GenericObjectiveCompletionStateStartsEmpty);
+            Run("Generic objective completion state records first timestamp", GenericObjectiveCompletionStateRecordsFirstTimestamp);
+            Run("Generic objective completion state preserves first timestamp", GenericObjectiveCompletionStatePreservesFirstTimestamp);
+            Run("Generic objective completion state accepts arbitrary ids", GenericObjectiveCompletionStateAcceptsArbitraryIds);
+            Run("Generic objective completion state validates timestamps", GenericObjectiveCompletionStateValidatesTimestamps);
             Run("Rival mission target ids map to display names", RivalMissionTargetIdsMapToDisplayNames);
             Run("Rival launch costs match target type", RivalLaunchCostsMatchTargetType);
-            Run("Rival starter completion does not create satellite", RivalPreOrbitCompletionDoesNotCreateSatellite);
+            Run("Rival pre-orbit completion does not create satellite", RivalPreOrbitCompletionDoesNotCreateSatellite);
             Run("Rival ETA detects unaffordable mission", RivalEtaDetectsUnaffordableMission);
             Run("Unavailable rival target is abandoned", UnavailableRivalTargetIsAbandoned);
             Run("Invalid rival target id is abandoned", InvalidRivalTargetIdIsAbandoned);
             Run("Rival selects the only offered target", RivalSelectsOnlyAvailableTarget);
             Run("Rival completion uses replay timestamp", RivalCompletionUsesReplayTimestamp);
-            Run("Rival collection selects offered objectiveCompletion", RivalSimulationCollectionTests.SelectsOnlyAvailableObjectiveFromCollection);
-            Run("Rival collection excludes locked objectiveCompletion", RivalSimulationCollectionTests.LockedObjectiveIsExcludedFromCollection);
+            Run("Rival collection selects offered objective completion", RivalSimulationCollectionTests.SelectsOnlyAvailableObjectiveFromCollection);
+            Run("Rival collection excludes locked objective completion", RivalSimulationCollectionTests.LockedObjectiveIsExcludedFromCollection);
             Run("Rival satellite contract remains repeatable", RivalSimulationCollectionTests.SatelliteNetworkContractRemainsRepeatable);
             Run("Rival completes arbitrary satellite contract", RivalSimulationCollectionTests.CompletesArbitrarySatelliteNetworkContract);
             Run("Rival collection cost uses contract body", RivalSimulationCollectionTests.CollectionCostUsesContractBody);
-            Run("Rival objectiveCompletion completion uses objective definition", RivalSimulationCollectionTests.ObjectiveCompletionUsesObjectiveDefinition);
+            Run("Rival objective completion uses objective definition", RivalSimulationCollectionTests.ObjectiveCompletionUsesObjectiveDefinition);
             Run("Funding contracts persist arbitrary ids", CollectionPersistenceTests.FundingContractsRoundTripArbitraryIds);
             Run("Rival persistence handles arbitrary body and target", CollectionPersistenceTests.RivalRoundTripsArbitraryBodyAndTargetId);
             Run("Malformed persistence nodes are safe", CollectionPersistenceTests.MalformedCollectionNodesAreHandledSafely);
@@ -167,7 +167,7 @@ namespace TheRaceForSpace.Tests
             AssertEqual("Display-only unlock text", contract.UnlockRequirement);
 
             var startAvailableContract = new ObjectiveFundingContract(
-                "start-objectiveCompletion",
+                "start-objective-completion",
                 "Start ObjectiveCompletion",
                 "Objective",
                 100000.0,
@@ -336,10 +336,10 @@ namespace TheRaceForSpace.Tests
 
             AssertTrue(!agency.RecordObjectiveCompletion(null, 10.0), "Null objective IDs should be ignored.");
             AssertTrue(!agency.RecordObjectiveCompletion(string.Empty, 10.0), "Empty objective IDs should be ignored.");
-            AssertTrue(!agency.RecordObjectiveCompletion("nan", double.NaN), "NaN objectiveCompletion times should be ignored.");
+            AssertTrue(!agency.RecordObjectiveCompletion("nan", double.NaN), "NaN objective completion times should be ignored.");
             AssertTrue(
                 !agency.RecordObjectiveCompletion("infinite", double.PositiveInfinity),
-                "Infinite objectiveCompletion times should be ignored.");
+                "Infinite objective completion times should be ignored.");
             AssertTrue(agency.RecordObjectiveCompletion("early", -10.0), "Finite negative times should be normalized.");
             AssertEqual(0.0, agency.GetObjectiveCompletionTime("early"));
         }
@@ -448,7 +448,7 @@ namespace TheRaceForSpace.Tests
 
             AssertTrue(
                 rival.HasCompletedObjective(ObjectiveCatalogue.DirectedPower1Id),
-                "Completed starter mission should record its objectiveCompletion.");
+                "Completed pre-orbit mission should record its objective completion.");
             AssertEqual(0, rival.GetSatelliteCount("Kerbin"));
         }
 
@@ -590,7 +590,7 @@ namespace TheRaceForSpace.Tests
 
             AssertTrue(
                 aster.HasCompletedObjective(ObjectiveCatalogue.ProbeOrbitId),
-                "Completed rival mission should record its objectiveCompletion.");
+                "Completed rival mission should record its objective completion.");
             AssertEqual(
                 replayUniversalTime,
                 aster.GetObjectiveCompletionTime(ObjectiveCatalogue.ProbeOrbitId));
@@ -629,7 +629,7 @@ namespace TheRaceForSpace.Tests
             AssertTrue(rule != null, "Expected a objective unlock rule.");
 
             // Probe Orbit uses four alternative AnyAgency objectives. Existing campaign rules use
-            // one path whose multiple objectiveCompletion conditions are all required.
+            // one path whose multiple objective completion conditions are all required.
             if (expectedObjectiveIds.Length == 4)
             {
                 AssertEqual(4, rule.Paths.Count);

@@ -78,8 +78,8 @@ namespace TheRaceForSpace.Objectives
         }
 
         /// <summary>
-        /// Counts agencies that satisfy an objectiveCompletion condition at the supplied time. Non-
-        /// objectiveCompletion or malformed conditions return zero.
+        /// Counts agencies that satisfy an objective completion condition at the supplied time. Non-
+        /// objective completion or malformed conditions return zero.
         /// </summary>
         public static int GetSatisfiedProgramCount(
             UnlockConditionDefinition condition,
@@ -144,7 +144,7 @@ namespace TheRaceForSpace.Objectives
 
         /// <summary>
         /// Returns whether one agency satisfies the scope, objective and historical-time parts of
-        /// an objectiveCompletion condition. This supports read-only UI attribution without duplicating rules.
+        /// an objective completion condition. This supports read-only UI attribution without duplicating rules.
         /// </summary>
         public static bool DoesAgencySatisfyObjectiveCompletionCondition(
             AgencyState agency,

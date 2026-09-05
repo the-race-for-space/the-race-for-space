@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace TheRaceForSpace.Objectives
 {
     /// <summary>
-    /// Defines the objectiveCompletion objectives used by the current prototype.
+    /// Defines the objectives used by the current prototype.
     /// </summary>
     public static class ObjectiveCatalogue
     {

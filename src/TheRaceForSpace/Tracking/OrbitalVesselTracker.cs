@@ -95,7 +95,7 @@ namespace TheRaceForSpace.Tracking
             IList<OrbitalObjectiveObservation> observations,
             double currentUniversalTime)
         {
-            // Repeat only when this refresh records a new objectiveCompletion. The player state in the
+            // Repeat only when this refresh records a new objective completion. The player state in the
             // shared agency collection changes immediately, so a newly satisfied unlock rule can
             // enable another objective from the same vessel snapshot without depending on ordering.
             bool recordedObjective;

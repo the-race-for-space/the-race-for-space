@@ -69,7 +69,7 @@ namespace TheRaceForSpace.Tests
             ObjectiveFundingContract probeOrbit = FindObjectiveFundingContract(
                 objectives,
                 ObjectiveCatalogue.ProbeOrbitId);
-            Require(probeOrbit != null, "Missing Probe Orbit objectiveCompletion funding contract.");
+            Require(probeOrbit != null, "Missing Probe Orbit objective completion funding contract.");
             Equal(75000.0, probeOrbit.BaseRewardFunds);
             AssertProbeOrbitUnlockRule(probeOrbit.UnlockRule);
             Equal(
@@ -361,17 +361,17 @@ namespace TheRaceForSpace.Tests
             ObjectiveFundingContract freshDirectedPower1 = FindObjectiveFundingContract(
                 secondObjectives,
                 ObjectiveCatalogue.DirectedPower1Id);
-            Require(!freshDirectedPower1.HasStarted, "A new catalogue build must not reuse objectiveCompletion campaign state.");
+            Require(!freshDirectedPower1.HasStarted, "A new catalogue build must not reuse objective completion campaign state.");
             Equal(0, freshDirectedPower1.PaymentsProcessed);
 
             Require(FindObjectiveFundingContract(secondObjectives, ObjectiveCatalogue.DirectedPower1Id).IsOffered,
-                "Directed Power I should be an opening starter offer.");
+                "Directed Power I should be an opening pre-orbit offer.");
             Require(FindObjectiveFundingContract(secondObjectives, ObjectiveCatalogue.Mass1Id).IsOffered,
-                "Mass I should be an opening starter offer.");
+                "Mass I should be an opening pre-orbit offer.");
             Require(FindObjectiveFundingContract(secondObjectives, ObjectiveCatalogue.Control1Id).IsOffered,
-                "Control I should be an opening starter offer.");
+                "Control I should be an opening pre-orbit offer.");
             Require(FindObjectiveFundingContract(secondObjectives, ObjectiveCatalogue.Biome1Id).IsOffered,
-                "Biome I should be an opening starter offer.");
+                "Biome I should be an opening pre-orbit offer.");
             Require(!FindObjectiveFundingContract(secondObjectives, ObjectiveCatalogue.DirectedPower2Id).IsOffered,
                 "Directed Power II should wait for Directed Power I.");
             Require(!FindObjectiveFundingContract(secondObjectives, ObjectiveCatalogue.ProbeOrbitId).IsOffered,
@@ -394,7 +394,7 @@ namespace TheRaceForSpace.Tests
                 ObjectiveFundingContract contract = FindObjectiveFundingContract(objectives, objectiveId);
 
                 Require(objective != null, "Missing pre-orbit objective '" + objectiveId + "'.");
-                Require(contract != null, "Missing starter funding contract '" + objectiveId + "'.");
+                Require(contract != null, "Missing pre-orbit funding contract '" + objectiveId + "'.");
                 Require(objective.IsPreOrbitContract, "PreOrbit objective should be marked special.");
                 Equal(preOrbitLine, objective.PreOrbitLine);
                 Equal(level, objective.PreOrbitLevel);
@@ -464,7 +464,7 @@ namespace TheRaceForSpace.Tests
 
         private static void AssertProbeOrbitUnlockRule(UnlockRuleDefinition rule)
         {
-            Require(rule != null, "Probe Orbit should have a starter-line unlock rule.");
+            Require(rule != null, "Probe Orbit should have a pre-orbit-line unlock rule.");
             Equal(4, rule.Paths.Count);
 
             string[] expectedObjectiveIds =
@@ -527,7 +527,7 @@ namespace TheRaceForSpace.Tests
             params string[] prerequisiteObjectiveIds)
         {
             ObjectiveFundingContract contract = FindObjectiveFundingContract(contracts, id);
-            Require(contract != null, "Missing objectiveCompletion funding contract '" + id + "'.");
+            Require(contract != null, "Missing objective completion funding contract '" + id + "'.");
             Equal(rewardFunds, contract.BaseRewardFunds);
             AssertAnyAgencyRule(contract.UnlockRule, prerequisiteObjectiveIds);
         }

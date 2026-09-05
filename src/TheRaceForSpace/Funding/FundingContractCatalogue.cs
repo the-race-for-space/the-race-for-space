@@ -7,7 +7,7 @@ namespace TheRaceForSpace.Funding
 {
     /// <summary>
     /// Defines the code-owned funding contract set for the current prototype.
-    /// Adding a new prototype funding target belongs here rather than in the race controller.
+    /// Adding a new prototype funding target belongs here rather than in the campaign controller.
     /// </summary>
     public static class FundingContractCatalogue
     {
@@ -31,7 +31,7 @@ namespace TheRaceForSpace.Funding
         private const double NetworkUnlockCompletionRatio = 0.60;
 
         /// <summary>
-        /// Creates fresh objectiveCompletion funding state for a new race controller from both the special
+        /// Creates fresh objective funding state for a new campaign controller from both the special
         /// pre-orbit catalogue and the normal orbital objective catalogue.
         /// </summary>
         public static IList<ObjectiveFundingContract> CreateObjectiveFundingContracts()
@@ -55,7 +55,7 @@ namespace TheRaceForSpace.Funding
         }
 
         /// <summary>
-        /// Creates fresh satellite-network funding state for a new race controller.
+        /// Creates fresh satellite-network funding state for a new campaign controller.
         /// </summary>
         public static IList<SatelliteNetworkFundingContract> CreateSatelliteNetworkFundingContracts()
         {
@@ -306,7 +306,7 @@ namespace TheRaceForSpace.Funding
             if (!IsSingleAgencyObjectiveCompletionCondition(firstCondition))
             {
                 throw new InvalidOperationException(
-                    "Funding unlock text requires an AnyAgency objectiveCompletion as its first condition.");
+                    "Funding unlock text requires an AnyAgency objective completion as its first condition.");
             }
 
             string unlockRequirement =

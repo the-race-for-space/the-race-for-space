@@ -34,7 +34,7 @@ namespace TheRaceForSpace.Objectives
     }
 
     /// <summary>
-    /// Special pre-orbit contract line. None identifies the normal space-race objective catalogue.
+    /// Special pre-orbit contract line. None identifies the normal space-campaign objective catalogue.
     /// </summary>
     public enum PreOrbitContractLine
     {
@@ -164,7 +164,7 @@ namespace TheRaceForSpace.Objectives
     }
 
     /// <summary>
-    /// Immutable definition of one race objective. Gameplay state remains owned by space agencies;
+    /// Immutable definition of one campaign objective. Gameplay state remains owned by space agencies;
     /// this type describes the objective, pre-orbit contract balance metadata, and campaign unlock rule.
     /// </summary>
     public sealed class ObjectiveDefinition

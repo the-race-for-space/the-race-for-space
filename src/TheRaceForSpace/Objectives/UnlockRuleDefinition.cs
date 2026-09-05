@@ -15,7 +15,7 @@ namespace TheRaceForSpace.Objectives
     }
 
     /// <summary>
-    /// Which space agencies may satisfy an objectiveCompletion-based unlock condition.
+    /// Which space agencies may satisfy an objective completion-based unlock condition.
     /// </summary>
     public enum UnlockAgencyScope
     {
@@ -58,7 +58,7 @@ namespace TheRaceForSpace.Objectives
         public int RequiredSatelliteCount { get; private set; }
 
         /// <summary>
-        /// Creates an objectiveCompletion condition satisfied by one qualifying agency.
+        /// Creates an objective completion condition satisfied by one qualifying agency.
         /// </summary>
         public static UnlockConditionDefinition ObjectiveCompletion(
             string objectiveId,
@@ -68,7 +68,7 @@ namespace TheRaceForSpace.Objectives
         }
 
         /// <summary>
-        /// Creates an objectiveCompletion condition requiring the supplied number of qualifying agencies.
+        /// Creates an objective completion condition requiring the supplied number of qualifying agencies.
         /// </summary>
         public static UnlockConditionDefinition ObjectiveCompletion(
             string objectiveId,
@@ -77,14 +77,14 @@ namespace TheRaceForSpace.Objectives
         {
             if (string.IsNullOrEmpty(objectiveId))
             {
-                throw new ArgumentException("An objectiveCompletion unlock condition requires a objective ID.", "objectiveId");
+                throw new ArgumentException("An objective completion unlock condition requires a objective ID.", "objectiveId");
             }
 
             if (requiredAgencyCount <= 0)
             {
                 throw new ArgumentOutOfRangeException(
                     "requiredAgencyCount",
-                    "An objectiveCompletion unlock condition must require at least one agency.");
+                    "An objective completion unlock condition must require at least one agency.");
             }
 
             return new UnlockConditionDefinition(
@@ -122,7 +122,7 @@ namespace TheRaceForSpace.Objectives
         }
 
         /// <summary>
-        /// Creates a collective satellite-count condition across all race agencies for one body.
+        /// Creates a collective satellite-count condition across all campaign agencies for one body.
         /// </summary>
         public static UnlockConditionDefinition SatelliteCount(
             string celestialBodyName,
@@ -197,7 +197,7 @@ namespace TheRaceForSpace.Objectives
         }
 
         /// <summary>
-        /// Creates a simple one-condition rule where one objectiveCompletion by any agency unlocks the target.
+        /// Creates a simple one-condition rule where one objective completion by any agency unlocks the target.
         /// </summary>
         public static UnlockRuleDefinition AnyAgencyObjectiveCompletion(string objectiveId)
         {

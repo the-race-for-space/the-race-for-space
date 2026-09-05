@@ -26,7 +26,7 @@ namespace TheRaceForSpace.Agencies
         }
 
         /// <summary>
-        /// Stable agency identity used by collection-driven race logic. Display names may change
+        /// Stable agency identity used by collection-driven campaign logic. Display names may change
         /// independently without changing which agency a piece of state belongs to.
         /// </summary>
         public string Id { get; private set; }
@@ -95,7 +95,7 @@ namespace TheRaceForSpace.Agencies
 
         /// <summary>
         /// Permanently records the first observation of a objective. Later observations do not
-        /// replace its timestamp because funding eligibility depends on the original objectiveCompletion time.
+        /// replace its timestamp because funding eligibility depends on the original objective completion time.
         /// </summary>
         public bool RecordObjectiveCompletion(string objectiveId, double universalTime)
         {

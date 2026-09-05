@@ -104,7 +104,7 @@ namespace TheRaceForSpace.Tests.Tracking
             NegativeCrewCountDoesNotQualifyAsUncrewed();
         }
 
-        public static void FlexibleUnlockRuleUsesRaceStateAndTime()
+        public static void FlexibleUnlockRuleUsesCampaignStateAndTime()
         {
             var playerAgency = new AgencyState("player", "Player", true);
             var rivalProgram = new AgencyState("rival", "Rival", false);

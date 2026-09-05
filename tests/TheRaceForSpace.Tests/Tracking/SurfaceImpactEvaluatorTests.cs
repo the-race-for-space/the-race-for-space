@@ -14,6 +14,7 @@ namespace TheRaceForSpace.Tests.Tracking
             LowSpeedDeletionIsRejected();
             NonFlightSampleIsRejected();
             DestructionTooFarFromSurfaceIsRejected();
+            InvalidNumericEvidenceIsRejected();
         }
 
         private static void RecentInFlightSurfaceImpactQualifies()
@@ -105,6 +106,37 @@ namespace TheRaceForSpace.Tests.Tracking
                     double.PositiveInfinity,
                     704.0),
                 "A destruction event must be near the surface or reachable from the last sample within the elapsed time.");
+        }
+
+        private static void InvalidNumericEvidenceIsRejected()
+        {
+            Require(
+                !SurfaceImpactEvaluator.IsEligible(
+                    TrackedFlightSituation.Flying,
+                    1000.0,
+                    double.PositiveInfinity,
+                    800.0,
+                    double.PositiveInfinity,
+                    801.0),
+                "Infinite speed must not make every surface clearance reachable.");
+            Require(
+                !SurfaceImpactEvaluator.IsEligible(
+                    TrackedFlightSituation.Flying,
+                    80.0,
+                    100.0,
+                    900.0,
+                    double.NaN,
+                    901.0),
+                "NaN destruction clearance must not be treated as valid impact evidence.");
+            Require(
+                !SurfaceImpactEvaluator.IsEligible(
+                    TrackedFlightSituation.Flying,
+                    double.NaN,
+                    100.0,
+                    1000.0,
+                    0.0,
+                    1001.0),
+                "NaN in-flight clearance must not be treated as valid impact evidence.");
         }
 
         private static void Require(bool condition, string message)

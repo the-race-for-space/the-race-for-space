@@ -681,15 +681,27 @@ namespace TheRaceForSpace.UI
                 return;
             }
 
+            GUILayout.Space(6.0f);
             StarterFlightTracker tracker = RaceRuntime.StarterFlightState;
-            if (tracker == null || !tracker.HasActiveAttempt)
+            if (tracker == null)
             {
+                GUILayout.Label("Live Flight", _boldLabelStyle);
+                GUILayout.Label("Live telemetry is not available yet.");
+                return;
+            }
+
+            if (!tracker.HasActiveAttempt)
+            {
+                GUILayout.Label("Live Flight", _boldLabelStyle);
+                GUILayout.Label(
+                    HighLogic.LoadedSceneIsFlight
+                        ? "Waiting for active vessel telemetry..."
+                        : "Live telemetry is available while flying a vessel.");
                 return;
             }
 
             // Funding Targets deliberately compares the active craft against every offered,
             // unfinished starter contract, even when a rival unlocked a later level first.
-            GUILayout.Space(6.0f);
             DrawStarterLiveProgress(milestone, tracker);
         }
 
@@ -940,70 +952,82 @@ namespace TheRaceForSpace.UI
             GUILayout.Space(4.0f);
             GUILayout.Label("Live Flight", _boldLabelStyle);
 
-            if (!string.Equals(
+            bool isKerbin = string.Equals(
                 tracker.CelestialBodyName,
                 "Kerbin",
-                StringComparison.OrdinalIgnoreCase))
+                StringComparison.OrdinalIgnoreCase);
+            if (!isKerbin)
             {
-                GUILayout.Label("Active vessel is not on Kerbin.");
-                return;
+                GUILayout.Label("Attempt status: INVALID - active vessel is not on Kerbin.");
             }
 
             if (tracker.EnteredOrbit)
             {
-                GUILayout.Label("Attempt invalid: vessel entered orbit.");
-                return;
+                GUILayout.Label("Attempt status: INVALID - vessel entered orbit.");
             }
 
             if (currentMilestone.StarterLine == StarterContractLine.DirectedPower)
             {
+                bool speedMet = tracker.MaximumSurfaceSpeedMetersPerSecond
+                    >= currentMilestone.RequiredSpeedMetersPerSecond;
+                bool altitudeValid = tracker.MaximumAltitudeMeters
+                    <= currentMilestone.MaximumAltitudeMeters;
+
+                GUILayout.Label(
+                    "Current Speed: "
+                    + tracker.CurrentSurfaceSpeedMetersPerSecond.ToString("N0")
+                    + " m/s");
                 GUILayout.Label(
                     "Max Speed: "
                     + tracker.MaximumSurfaceSpeedMetersPerSecond.ToString("N0")
                     + " / "
                     + currentMilestone.RequiredSpeedMetersPerSecond.ToString("N0")
-                    + " m/s");
+                    + " m/s - "
+                    + (speedMet ? "MET" : "PENDING"));
                 GUILayout.Label(
                     "Max Altitude: "
                     + (tracker.MaximumAltitudeMeters / 1000.0).ToString("N1")
                     + " / "
                     + (currentMilestone.MaximumAltitudeMeters / 1000.0).ToString("N0")
-                    + " km");
+                    + " km - "
+                    + (altitudeValid ? "VALID" : "INVALID"));
                 GUILayout.Label(
-                    tracker.MaximumAltitudeMeters > currentMilestone.MaximumAltitudeMeters
-                        ? "Attempt invalid: altitude ceiling exceeded."
-                        : "Finish by impacting Kerbin.");
+                    "Kerbin Impact: "
+                    + (isKerbin && !tracker.EnteredOrbit && speedMet && altitudeValid
+                        ? "READY - impact Kerbin to complete"
+                        : "PENDING"));
                 return;
             }
 
             if (currentMilestone.StarterLine == StarterContractLine.Mass)
             {
+                bool massMet = tracker.CurrentMassTonnes >= currentMilestone.RequiredMassTonnes;
+                bool distanceMet = tracker.CurrentDistanceMeters >= currentMilestone.RequiredDistanceMeters;
+                bool landed = tracker.CurrentSituation == TrackedFlightSituation.Landed;
+
                 GUILayout.Label(
                     "Mass: "
                     + tracker.CurrentMassTonnes.ToString("N1")
                     + " / "
                     + currentMilestone.RequiredMassTonnes.ToString("N1")
-                    + " t");
+                    + " t - "
+                    + (massMet ? "MET" : "PENDING"));
                 GUILayout.Label(
                     "Distance: "
                     + (tracker.CurrentDistanceMeters / 1000.0).ToString("N0")
                     + " / "
                     + (currentMilestone.RequiredDistanceMeters / 1000.0).ToString("N0")
-                    + " km");
-                GUILayout.Label(
-                    "Landed: "
-                    + (tracker.CurrentSituation == TrackedFlightSituation.Landed ? "YES" : "NO"));
+                    + " km - "
+                    + (distanceMet ? "MET" : "PENDING"));
+                GUILayout.Label("Landed: " + (landed ? "YES - MET" : "NO - PENDING"));
                 return;
             }
 
             if (currentMilestone.StarterLine == StarterContractLine.Control)
             {
                 bool holdQualified = tracker.IsControlMilestoneQualified(currentMilestone.Id);
-                if (holdQualified)
-                {
-                    GUILayout.Label("Altitude hold complete. Land safely on Kerbin with crew aboard.");
-                    return;
-                }
+                bool sampleInBand = tracker.IsControlSampleInBand(currentMilestone.Id);
+                bool hasCrew = tracker.CurrentCrewCount > 0;
 
                 GUILayout.Label(
                     "Altitude: "
@@ -1012,28 +1036,43 @@ namespace TheRaceForSpace.UI
                     + (currentMilestone.MinimumAltitudeMeters / 1000.0).ToString("N0")
                     + "-"
                     + (currentMilestone.MaximumAltitudeMeters / 1000.0).ToString("N0")
-                    + " km)");
+                    + " km) - "
+                    + (holdQualified ? "HOLD COMPLETE" : (sampleInBand ? "IN BAND" : "OUT OF BAND")));
                 GUILayout.Label(
                     "Hold: "
                     + tracker.GetControlHoldSeconds(currentMilestone.Id).ToString("N0")
                     + " / "
                     + currentMilestone.RequiredDurationSeconds.ToString("N0")
-                    + " s");
-                GUILayout.Label("Crew aboard: " + tracker.CurrentCrewCount);
+                    + " s - "
+                    + (holdQualified ? "MET" : "PENDING"));
+                GUILayout.Label(
+                    "Crew aboard: "
+                    + tracker.CurrentCrewCount
+                    + " - "
+                    + (hasCrew ? "MET" : "REQUIRED"));
+                GUILayout.Label(
+                    "Safe Kerbin landing: "
+                    + (holdQualified && hasCrew
+                        ? "READY - land safely to complete"
+                        : "PENDING"));
                 return;
             }
 
             if (currentMilestone.StarterLine == StarterContractLine.Biome)
             {
-                GUILayout.Label(
-                    "Current Biome: "
-                    + (string.IsNullOrEmpty(tracker.CurrentBiomeName)
-                        ? "Unknown"
-                        : tracker.CurrentBiomeName));
+                string currentBiome = string.IsNullOrEmpty(tracker.CurrentBiomeName)
+                    ? "Unknown"
+                    : tracker.CurrentBiomeName;
+                bool biomeMatched = string.Equals(
+                    currentBiome,
+                    currentMilestone.RequiredBiomeName,
+                    StringComparison.OrdinalIgnoreCase);
+                bool landed = tracker.CurrentSituation == TrackedFlightSituation.Landed;
+
+                GUILayout.Label("Current Biome: " + currentBiome);
                 GUILayout.Label("Target: " + currentMilestone.RequiredBiomeName);
-                GUILayout.Label(
-                    "Landed: "
-                    + (tracker.CurrentSituation == TrackedFlightSituation.Landed ? "YES" : "NO"));
+                GUILayout.Label("Biome Match: " + (biomeMatched ? "YES - MET" : "NO - PENDING"));
+                GUILayout.Label("Landed: " + (landed ? "YES - MET" : "NO - PENDING"));
             }
         }
 

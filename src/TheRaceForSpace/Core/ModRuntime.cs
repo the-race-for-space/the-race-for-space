@@ -79,13 +79,14 @@ namespace TheRaceForSpace.Core
                 return;
             }
 
-            // KSP can briefly create duplicate EveryScene addons while editor scenes and
-            // sub-scenes are loading. Only one runtime instance may advance the campaign at a time.
+            // KSP can create the next EveryScene addon before Unity has destroyed the previous
+            // scene's component. The new scene instance must take ownership immediately; otherwise
+            // destroying it as a duplicate can leave the static controller alive with no Update()
+            // owner to sample Flight Contract telemetry or advance campaign progression.
             if (_activeInstance != null && _activeInstance != this)
             {
-                _isDuplicateInstance = true;
-                Destroy(this);
-                return;
+                _activeInstance._isDuplicateInstance = true;
+                Destroy(_activeInstance);
             }
 
             _activeInstance = this;

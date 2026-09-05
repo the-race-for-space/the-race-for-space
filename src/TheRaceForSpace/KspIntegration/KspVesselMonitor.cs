@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using TheRaceForSpace.Tracking;
+using UnityEngine;
 
 namespace TheRaceForSpace.KspIntegration
 {
@@ -23,6 +24,7 @@ namespace TheRaceForSpace.KspIntegration
         private static string _pendingImpactVesselId;
         private static string _pendingImpactBodyName;
         private static double _pendingImpactUniversalTime = -1.0;
+        private static string _lastActiveVesselTelemetryStatus;
 
         /// <summary>
         /// Captures the orbiting vessels available in the current save together with the KSP
@@ -138,24 +140,57 @@ namespace TheRaceForSpace.KspIntegration
 
             if (telemetryRequirements == FlightTelemetryRequirement.None)
             {
+                LogActiveVesselTelemetryStatus("blocked because the active contract plan requests no telemetry fields");
                 DisableActiveVesselSurfaceImpactTracking();
                 return false;
             }
 
-            if (!HighLogic.LoadedSceneIsFlight
-                || FlightGlobals.ActiveVessel == null
-                || Planetarium.fetch == null)
+            if (!HighLogic.LoadedSceneIsFlight)
             {
+                LogActiveVesselTelemetryStatus("blocked because KSP is not reporting the Flight scene");
+                DisableActiveVesselSurfaceImpactTracking();
+                return false;
+            }
+
+            if (FlightGlobals.ActiveVessel == null)
+            {
+                LogActiveVesselTelemetryStatus("blocked because KSP has no active vessel");
+                DisableActiveVesselSurfaceImpactTracking();
+                return false;
+            }
+
+            if (Planetarium.fetch == null)
+            {
+                LogActiveVesselTelemetryStatus("blocked because KSP universal time is not ready");
                 DisableActiveVesselSurfaceImpactTracking();
                 return false;
             }
 
             Vessel vessel = FlightGlobals.ActiveVessel;
-            if (!vessel.loaded
-                || vessel.isEVA
-                || vessel.mainBody == null
-                || string.IsNullOrEmpty(vessel.mainBody.bodyName))
+            if (!vessel.loaded)
             {
+                LogActiveVesselTelemetryStatus("blocked because the active vessel is not loaded");
+                DisableActiveVesselSurfaceImpactTracking();
+                return false;
+            }
+
+            if (vessel.isEVA)
+            {
+                LogActiveVesselTelemetryStatus("blocked because the active vessel is an EVA Kerbal");
+                DisableActiveVesselSurfaceImpactTracking();
+                return false;
+            }
+
+            if (vessel.mainBody == null)
+            {
+                LogActiveVesselTelemetryStatus("blocked because the active vessel has no main body");
+                DisableActiveVesselSurfaceImpactTracking();
+                return false;
+            }
+
+            if (string.IsNullOrEmpty(vessel.mainBody.bodyName))
+            {
+                LogActiveVesselTelemetryStatus("blocked because the active vessel body name is unavailable");
                 DisableActiveVesselSurfaceImpactTracking();
                 return false;
             }
@@ -181,21 +216,53 @@ namespace TheRaceForSpace.KspIntegration
             // KSP normally supplies finite values, but scene transitions and damaged vessels can
             // expose transient invalid telemetry. Reject the whole sample rather than letting NaN
             // comparisons accidentally satisfy a contract or poison persisted attempt history.
-            if (!IsFinite(observationUniversalTime)
-                || observationUniversalTime < 0.0
-                || !IsFinite(latitudeDegrees)
-                || !IsFinite(longitudeDegrees)
-                || !IsFinite(launchUniversalTime)
-                || (needsAltitude && !IsFinite(altitudeMeters))
-                || (needsSurfaceSpeed
-                    && (!IsFinite(surfaceSpeedMetersPerSecond)
-                        || surfaceSpeedMetersPerSecond < 0.0))
-                || (needsMass
-                    && (!IsFinite(massTonnes)
-                        || massTonnes < 0.0
-                        || !IsFinite(bodyRadiusMeters)
-                        || bodyRadiusMeters <= 0.0)))
+            if (!IsFinite(observationUniversalTime) || observationUniversalTime < 0.0)
             {
+                LogActiveVesselTelemetryStatus("blocked because KSP returned invalid universal time");
+                DisableActiveVesselSurfaceImpactTracking();
+                return false;
+            }
+
+            if (!IsFinite(latitudeDegrees) || !IsFinite(longitudeDegrees))
+            {
+                LogActiveVesselTelemetryStatus("blocked because KSP returned invalid vessel coordinates");
+                DisableActiveVesselSurfaceImpactTracking();
+                return false;
+            }
+
+            if (!IsFinite(launchUniversalTime))
+            {
+                LogActiveVesselTelemetryStatus("blocked because KSP returned invalid vessel launch time");
+                DisableActiveVesselSurfaceImpactTracking();
+                return false;
+            }
+
+            if (needsAltitude && !IsFinite(altitudeMeters))
+            {
+                LogActiveVesselTelemetryStatus("blocked because KSP returned invalid vessel altitude");
+                DisableActiveVesselSurfaceImpactTracking();
+                return false;
+            }
+
+            if (needsSurfaceSpeed
+                && (!IsFinite(surfaceSpeedMetersPerSecond)
+                    || surfaceSpeedMetersPerSecond < 0.0))
+            {
+                LogActiveVesselTelemetryStatus("blocked because KSP returned invalid surface speed");
+                DisableActiveVesselSurfaceImpactTracking();
+                return false;
+            }
+
+            if (needsMass && (!IsFinite(massTonnes) || massTonnes < 0.0))
+            {
+                LogActiveVesselTelemetryStatus("blocked because KSP returned invalid vessel mass");
+                DisableActiveVesselSurfaceImpactTracking();
+                return false;
+            }
+
+            if (needsMass && (!IsFinite(bodyRadiusMeters) || bodyRadiusMeters <= 0.0))
+            {
+                LogActiveVesselTelemetryStatus("blocked because KSP returned an invalid body radius");
                 DisableActiveVesselSurfaceImpactTracking();
                 return false;
             }
@@ -238,6 +305,9 @@ namespace TheRaceForSpace.KspIntegration
                 needsCrew ? vessel.GetCrewCount() : 0,
                 launchUniversalTime,
                 observationUniversalTime);
+
+            LogActiveVesselTelemetryStatus(
+                "captured active vessel " + vessel.id.ToString("D") + " on " + vessel.mainBody.bodyName);
             return true;
         }
 
@@ -299,6 +369,7 @@ namespace TheRaceForSpace.KspIntegration
         {
             DisableActiveVesselSurfaceImpactTracking();
             _activeTrackingGame = null;
+            _lastActiveVesselTelemetryStatus = null;
         }
 
         private static void EnsureActiveTrackingGame()
@@ -310,6 +381,20 @@ namespace TheRaceForSpace.KspIntegration
 
             ResetActiveVesselTracking();
             _activeTrackingGame = HighLogic.CurrentGame;
+        }
+
+        private static void LogActiveVesselTelemetryStatus(string status)
+        {
+            if (string.Equals(
+                _lastActiveVesselTelemetryStatus,
+                status,
+                StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            _lastActiveVesselTelemetryStatus = status;
+            Debug.Log("[TheRaceForSpace] Flight telemetry: " + status + ".");
         }
 
         private static void EnsureVesselWillDestroySubscription()

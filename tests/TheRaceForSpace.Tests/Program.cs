@@ -504,7 +504,7 @@ namespace TheRaceForSpace.Tests
                 new List<FundingProgramme>());
 
             AssertEqual(null, aster.NextMissionTargetId);
-            AssertEqual(null, aster.NextLaunchBodyName);
+            AssertEqual(null, aster.NextMissionDisplayName);
             AssertEqual(0, aster.LaunchProgressPercent);
         }
 
@@ -514,7 +514,7 @@ namespace TheRaceForSpace.Tests
             SpaceProgramState aster = new SpaceProgramState("Aster", false)
             {
                 NextMissionTargetId = "not-a-target",
-                NextLaunchBodyName = "Mun",
+                NextMissionDisplayName = "Mun",
                 LaunchProgressPercent = 50
             };
             SpaceProgramState cobalt = new SpaceProgramState("Cobalt", false);
@@ -526,7 +526,7 @@ namespace TheRaceForSpace.Tests
                 new List<FundingProgramme>());
 
             AssertEqual(null, aster.NextMissionTargetId);
-            AssertEqual(null, aster.NextLaunchBodyName);
+            AssertEqual(null, aster.NextMissionDisplayName);
             AssertEqual(0, aster.LaunchProgressPercent);
         }
 
@@ -557,7 +557,7 @@ namespace TheRaceForSpace.Tests
                 new List<FundingProgramme>());
 
             AssertEqual(PrototypeMilestones.MinmusCrewedOrbitId, aster.NextMissionTargetId);
-            AssertEqual("Minmus Crewed Orbit", aster.NextLaunchBodyName);
+            AssertEqual("Minmus Crewed Orbit", aster.NextMissionDisplayName);
         }
 
         private static void RivalCompletionUsesReplayTimestamp()

@@ -10,11 +10,12 @@ Alpha/KerbalContracts-v0.5
 
 For the full gameplay acceptance checklist, use [`KERBAL_CONTRACTS_V0_5_TESTING.md`](KERBAL_CONTRACTS_V0_5_TESTING.md).
 
-## Daily test cycle
+## Daily test cycle - copy and paste this whole block
 
-From the repository root:
+This block is designed to work when Konsole opens in your home folder (`~`).
 
 ```bash
+cd /home/deck/Projects/the-race-for-space/
 export KSP_ROOT="$HOME/.local/share/Steam/steamapps/common/Kerbal Space Program"
 
 git fetch origin
@@ -25,9 +26,35 @@ bash tools/run-logic-tests.sh
 bash tools/test-prototype.sh Alpha/KerbalContracts-v0.5
 ```
 
+The first `cd` is required. The `git` commands and the scripts under `tools/` must be run from inside the repository.
+
 Do not deploy if the automated logic tests fail.
 
-## 1. Confirm the branch
+## 1. Open the repository
+
+If your prompt shows something like:
+
+```text
+(deck@steamdeck ~)$
+```
+
+you are in your home folder, not in the repository.
+
+Run:
+
+```bash
+cd /home/deck/Projects/the-race-for-space/
+```
+
+Confirm Git can see the repository:
+
+```bash
+git status --short
+```
+
+If this command works, you are in the correct folder. No output means the working tree is clean.
+
+## 2. Confirm the branch
 
 ```bash
 git branch --show-current
@@ -39,15 +66,15 @@ Expected:
 Alpha/KerbalContracts-v0.5
 ```
 
-Check the working tree:
+If needed, update the branch:
 
 ```bash
-git status --short
+git fetch origin
+git switch Alpha/KerbalContracts-v0.5
+git pull --ff-only
 ```
 
-No output means the tree is clean.
-
-## 2. Set `KSP_ROOT`
+## 3. Set `KSP_ROOT`
 
 Common Steam Deck / Linux location:
 
@@ -69,7 +96,9 @@ test -f "$KSP_ROOT/KSP_Data/Managed/Assembly-CSharp.dll" && echo "KSP references
 
 `KSP_ROOT` must point to the KSP installation folder, not directly to `GameData`.
 
-## 3. Run the automated tests
+## 4. Run the automated tests
+
+From the repository folder:
 
 ```bash
 bash tools/run-logic-tests.sh
@@ -87,7 +116,7 @@ The automated tests cover KSP-independent behaviour such as:
 - rival mission progress;
 - funding calculations;
 - persistence transformations;
-- CampaignController ordering.
+- `CampaignController` ordering.
 
 They cannot prove direct KSP API behaviour such as:
 
@@ -99,9 +128,9 @@ They cannot prove direct KSP API behaviour such as:
 
 Those require the in-game checks below.
 
-## 4. Build and deploy
+## 5. Build and deploy
 
-Recommended helper:
+From the repository folder, use:
 
 ```bash
 bash tools/test-prototype.sh Alpha/KerbalContracts-v0.5
@@ -123,7 +152,7 @@ ls -l "$KSP_ROOT/GameData/TheRaceForSpace/Config/CampaignSettings.cfg"
 
 A successful real KSP build is important after changes in `KspIntegration/`, because the standalone tests do not compile against the actual KSP API.
 
-## 5. Quick in-game smoke test
+## 6. Quick in-game smoke test
 
 Use a disposable Career save.
 
@@ -154,10 +183,10 @@ Launch a vessel and open **Funding Targets**.
 
 The four opening contracts should show the live values they need:
 
-- **Directed Power** — current speed, maximum speed, maximum altitude, and impact readiness/status.
-- **Mass** — current mass, distance from launch, and landed state.
-- **Control** — current altitude, hold progress, crew count, and safe-landing readiness.
-- **Biome** — current biome, target biome, match state, and landed state.
+- **Directed Power** - current speed, maximum speed, maximum altitude, and impact readiness/status.
+- **Mass** - current mass, distance from launch, and landed state.
+- **Control** - current altitude, hold progress, crew count, and safe-landing readiness.
+- **Biome** - current biome, target biome, match state, and landed state.
 
 The values should update about once per second rather than every frame.
 
@@ -180,7 +209,7 @@ Confirm:
 3. it does not become `Offered` until the next sponsor review;
 4. after the review, all currently unlocked Pre-Orbit contracts are offered, even if there are more than two.
 
-## 6. Quick contract checks
+## 7. Quick contract checks
 
 ### Directed Power
 
@@ -210,7 +239,7 @@ Confirm:
 - Land in the target biome and confirm completion.
 - Confirm splashdown does not count.
 
-## 7. Save/reload smoke test
+## 8. Save/reload smoke test
 
 Save during an active Flight Contract attempt, reload, and confirm:
 
@@ -220,7 +249,7 @@ Save during an active Flight Contract attempt, reload, and confirm:
 - Control hold/qualification state survives when relevant;
 - live values such as current altitude, mass, biome, and crew are refreshed from the vessel after load rather than copied from stale saved telemetry.
 
-## 8. Orbital vessel check
+## 9. Orbital vessel check
 
 Put a qualifying Probe or Relay into Kerbin orbit.
 
@@ -233,7 +262,7 @@ Confirm:
 
 This verifies the boundary between `KspVesselMonitor` and `OrbitalVesselTracker`.
 
-## 9. Check the KSP log
+## 10. Check the KSP log
 
 After testing:
 
@@ -250,6 +279,39 @@ Look for:
 
 Normal gameplay should not produce per-frame Flight Contract log spam.
 
+## Troubleshooting
+
+### `fatal: not a git repository`
+
+This means the terminal is not inside the cloned repository.
+
+Run:
+
+```bash
+cd /home/deck/Projects/the-race-for-space/
+```
+
+Then retry:
+
+```bash
+git status --short
+```
+
+Do not run `git fetch`, `git switch`, `git pull`, or `bash tools/...` from `~`.
+
+### `tools/run-logic-tests.sh: No such file or directory`
+
+This normally has the same cause: the terminal is outside the repository.
+
+Run:
+
+```bash
+cd /home/deck/Projects/the-race-for-space/
+ls tools
+```
+
+You should see the repository helper scripts.
+
 ## One-time Linux setup
 
 If this machine has not been prepared before:
@@ -258,7 +320,7 @@ If this machine has not been prepared before:
 mkdir -p "$HOME/Projects"
 cd "$HOME/Projects"
 git clone https://github.com/the-race-for-space/the-race-for-space.git
-cd the-race-for-space
+cd /home/deck/Projects/the-race-for-space/
 
 git fetch origin
 git switch --track origin/Alpha/KerbalContracts-v0.5

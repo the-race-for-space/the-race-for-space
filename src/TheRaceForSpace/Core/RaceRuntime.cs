@@ -205,7 +205,6 @@ namespace TheRaceForSpace.Core
                 {
                     recordedAchievement = _starterFlightTracker.RecordSurfaceImpact(
                         _raceController.PlayerProgram,
-                        _raceController.Programs,
                         activeStarterContracts,
                         impactVesselId,
                         impactBodyName,
@@ -220,7 +219,6 @@ namespace TheRaceForSpace.Core
             {
                 recordedAchievement |= _starterFlightTracker.RefreshPlayerMilestones(
                     _raceController.PlayerProgram,
-                    _raceController.Programs,
                     activeStarterContracts,
                     activeVesselSnapshot);
             }

@@ -26,10 +26,24 @@ namespace TheRaceForSpace.Tracking
             double destructionSurfaceClearanceMeters,
             double destructionUniversalTime)
         {
+            // Positive infinity is the deliberate "clearance unavailable" sentinel used by the
+            // KSP adapter, but NaN/negative clearances and non-finite speed/time values are invalid.
+            if (double.IsNaN(lastInFlightSurfaceClearanceMeters)
+                || lastInFlightSurfaceClearanceMeters < 0.0
+                || !IsFinite(lastInFlightSurfaceSpeedMetersPerSecond)
+                || !IsFinite(lastInFlightUniversalTime)
+                || lastInFlightUniversalTime < 0.0
+                || double.IsNaN(destructionSurfaceClearanceMeters)
+                || destructionSurfaceClearanceMeters < 0.0
+                || !IsFinite(destructionUniversalTime)
+                || destructionUniversalTime < 0.0)
+            {
+                return false;
+            }
+
             double flightSampleAgeSeconds =
                 destructionUniversalTime - lastInFlightUniversalTime;
-            bool hasRecentInFlightSample = lastInFlightUniversalTime >= 0.0
-                && flightSampleAgeSeconds >= 0.0
+            bool hasRecentInFlightSample = flightSampleAgeSeconds >= 0.0
                 && flightSampleAgeSeconds <= MaximumFlightSampleAgeSeconds;
             bool wasInFlight = lastInFlightSituation == TrackedFlightSituation.Flying
                 || lastInFlightSituation == TrackedFlightSituation.SubOrbital;
@@ -51,6 +65,11 @@ namespace TheRaceForSpace.Tracking
                 lastInFlightSurfaceClearanceMeters <= sampleTravelAllowanceMeters;
 
             return isNearSurfaceAtDestruction || couldReachSurfaceSinceLastSample;
+        }
+
+        private static bool IsFinite(double value)
+        {
+            return !double.IsNaN(value) && !double.IsInfinity(value);
         }
     }
 }

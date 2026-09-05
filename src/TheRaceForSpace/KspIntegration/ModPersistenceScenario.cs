@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using TheRaceForSpace.Funding;
 using TheRaceForSpace.Persistence;
@@ -8,7 +9,7 @@ namespace TheRaceForSpace.KspIntegration
 {
     /// <summary>
     /// Stores Campaign for Space campaign state inside the active KSP save through ScenarioModule.
-    /// Static state is retained across normal gameplay scene changes for the same Game object,
+    /// Static state is retained across normal gameplay scene changes for the same save folder,
     /// then replaced when KSP loads a different save.
     /// </summary>
     [KSPScenario(
@@ -26,15 +27,23 @@ namespace TheRaceForSpace.KspIntegration
         private static readonly RivalAgenciesSaveState RivalAgenciesState = new RivalAgenciesSaveState();
         private static readonly FlightContractProgressSaveState ActiveContractProgressState =
             new FlightContractProgressSaveState();
-        private static Game _loadedGame;
+        private static string _loadedSaveFolder;
         private static bool _commandCenterVisible;
         private static bool _stateReady;
 
         public override void OnLoad(ConfigNode node)
         {
-            // KSP can call ScenarioModule.OnLoad again during normal scene changes. Keep the
-            // newer in-memory state in that case; only deserialize when a different Game is loaded.
-            if (_loadedGame != HighLogic.CurrentGame)
+            string currentSaveFolder = HighLogic.SaveFolder;
+            if (string.IsNullOrEmpty(currentSaveFolder))
+            {
+                _stateReady = false;
+                return;
+            }
+
+            // KSP can replace HighLogic.CurrentGame during an ordinary scene transition while the
+            // player remains in the same save. SaveFolder is the stable campaign identity here, so
+            // keep newer in-memory state unless KSP actually loads another save folder.
+            if (!string.Equals(_loadedSaveFolder, currentSaveFolder, StringComparison.Ordinal))
             {
                 FundingContractsState.Load(
                     node == null ? null : node.GetNode(FundingContractsNodeName));
@@ -49,15 +58,15 @@ namespace TheRaceForSpace.KspIntegration
                         out parsedCommandCenterVisible)
                     && parsedCommandCenterVisible;
 
-                _loadedGame = HighLogic.CurrentGame;
+                _loadedSaveFolder = currentSaveFolder;
             }
 
-            _stateReady = _loadedGame != null;
+            _stateReady = true;
         }
 
         public override void OnSave(ConfigNode node)
         {
-            if (node == null || !_stateReady || _loadedGame != HighLogic.CurrentGame)
+            if (node == null || !IsCurrentSaveReady())
             {
                 return;
             }
@@ -83,7 +92,7 @@ namespace TheRaceForSpace.KspIntegration
         public static bool TryRestoreCommandCenterVisibility(out bool isVisible)
         {
             isVisible = false;
-            if (!_stateReady || _loadedGame == null || _loadedGame != HighLogic.CurrentGame)
+            if (!IsCurrentSaveReady())
             {
                 return false;
             }
@@ -94,7 +103,7 @@ namespace TheRaceForSpace.KspIntegration
 
         public static void CaptureCommandCenterVisibility(bool isVisible)
         {
-            if (!_stateReady || _loadedGame == null || _loadedGame != HighLogic.CurrentGame)
+            if (!IsCurrentSaveReady())
             {
                 return;
             }
@@ -109,10 +118,7 @@ namespace TheRaceForSpace.KspIntegration
         /// </summary>
         public static bool TryRestoreRivalAgencyState(IList<AgencyState> rivalAgencies)
         {
-            if (!_stateReady
-                || _loadedGame == null
-                || _loadedGame != HighLogic.CurrentGame
-                || rivalAgencies == null)
+            if (!IsCurrentSaveReady() || rivalAgencies == null)
             {
                 return false;
             }
@@ -132,10 +138,7 @@ namespace TheRaceForSpace.KspIntegration
             out double nextFundingUniversalTime)
         {
             nextFundingUniversalTime = -1.0;
-            if (!_stateReady
-                || _loadedGame == null
-                || _loadedGame != HighLogic.CurrentGame
-                || playerAgency == null)
+            if (!IsCurrentSaveReady() || playerAgency == null)
             {
                 return false;
             }
@@ -154,10 +157,7 @@ namespace TheRaceForSpace.KspIntegration
         /// </summary>
         public static bool TryRestoreFlightContractProgress(FlightContractTracker flightContractTracker)
         {
-            if (!_stateReady
-                || _loadedGame == null
-                || _loadedGame != HighLogic.CurrentGame
-                || flightContractTracker == null)
+            if (!IsCurrentSaveReady() || flightContractTracker == null)
             {
                 return false;
             }
@@ -168,10 +168,7 @@ namespace TheRaceForSpace.KspIntegration
 
         public static void CaptureRivalAgencyState(IList<AgencyState> rivalAgencies)
         {
-            if (!_stateReady
-                || _loadedGame == null
-                || _loadedGame != HighLogic.CurrentGame
-                || rivalAgencies == null)
+            if (!IsCurrentSaveReady() || rivalAgencies == null)
             {
                 return;
             }
@@ -189,7 +186,7 @@ namespace TheRaceForSpace.KspIntegration
             IList<ObjectiveFundingContract> objectiveFundingContracts,
             double nextFundingUniversalTime)
         {
-            if (!_stateReady || _loadedGame == null || _loadedGame != HighLogic.CurrentGame)
+            if (!IsCurrentSaveReady())
             {
                 return;
             }
@@ -207,15 +204,38 @@ namespace TheRaceForSpace.KspIntegration
         /// </summary>
         public static void CaptureFlightContractProgress(FlightContractTracker flightContractTracker)
         {
-            if (!_stateReady
-                || _loadedGame == null
-                || _loadedGame != HighLogic.CurrentGame
-                || flightContractTracker == null)
+            if (!IsCurrentSaveReady() || flightContractTracker == null)
             {
                 return;
             }
 
             ActiveContractProgressState.Capture(flightContractTracker);
+        }
+
+        /// <summary>
+        /// Clears static ScenarioModule state after the persistent runtime has actually returned to
+        /// KSP's main menu. This allows reloading the same save folder later to deserialize it again.
+        /// </summary>
+        internal static void ResetLoadedSaveState()
+        {
+            FundingContractsState.Load(null);
+            RivalAgenciesState.Load(null);
+            ActiveContractProgressState.Load(null);
+            _loadedSaveFolder = null;
+            _commandCenterVisible = false;
+            _stateReady = false;
+        }
+
+        private static bool IsCurrentSaveReady()
+        {
+            return _stateReady
+                && HighLogic.LoadedSceneIsGame
+                && HighLogic.CurrentGame != null
+                && !string.IsNullOrEmpty(_loadedSaveFolder)
+                && string.Equals(
+                    _loadedSaveFolder,
+                    HighLogic.SaveFolder,
+                    StringComparison.Ordinal);
         }
     }
 }

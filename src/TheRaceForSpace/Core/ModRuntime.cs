@@ -91,6 +91,7 @@ namespace TheRaceForSpace.Core
 
             _activeInstance = this;
             EnsureControllerForCurrentGame();
+            Debug.Log("[TheRaceForSpace] ModRuntime became active for the current saved-game scene.");
         }
 
         public void OnDestroy()
@@ -143,6 +144,7 @@ namespace TheRaceForSpace.Core
                 && ModPersistenceScenario.TryRestoreFlightContractProgress(_flightContractTracker))
             {
                 _hasRestoredActiveContractProgress = true;
+                Debug.Log("[TheRaceForSpace] Flight telemetry persistence gate is ready.");
 
                 // Scenario state may become ready between scheduled five-second controller ticks.
                 // Force the controller's normal non-vessel path once before active-flight evaluation
@@ -170,6 +172,16 @@ namespace TheRaceForSpace.Core
                 _flightTelemetryPlanSource = activeFlightContracts;
                 _flightTelemetryRequirements = FlightTelemetryPlan.GetRequirements(
                     activeFlightContracts);
+
+                int activeFlightContractCount = activeFlightContracts == null
+                    ? 0
+                    : activeFlightContracts.Count;
+                Debug.Log(
+                    "[TheRaceForSpace] Flight telemetry plan: "
+                    + activeFlightContractCount
+                    + " active contract(s); requirements "
+                    + _flightTelemetryRequirements
+                    + ".");
 
                 // Surface-impact callbacks are part of the telemetry plan, so remove them once when
                 // a new plan no longer contains Directed Power rather than repeating the same cleanup

@@ -1,4 +1,4 @@
-name: Naming Text Audit
+name: Polish Naming Text
 
 on:
   push:
@@ -6,19 +6,136 @@ on:
       - Alpha/KerbalContracts-v0.5
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  audit:
-    if: "github.event.head_commit.message == 'chore: audit naming text'"
+  polish:
+    if: "github.event.head_commit.message == 'chore: polish naming text'"
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
-      - name: Audit old wording
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Polish comments, messages and final naming
         run: |
-          echo '--- race wording outside root namespace ---'
-          grep -RInE --include='*.cs' 'Race|race' src/TheRaceForSpace | grep -v 'TheRaceForSpace' || true
-          echo '--- mechanically awkward objectiveCompletion wording ---'
-          grep -RIn --include='*.cs' 'objectiveCompletion' src tests || true
-          echo '--- old starter/programme/achievement/milestone wording ---'
-          grep -RInE --include='*.cs' 'Programme|programme|Achievement|achievement|Starter|starter|Milestone|milestone' src tests || true
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          files = []
+          for root in (Path('src'), Path('tests')):
+              files.extend(path for path in root.rglob('*.cs') if path.is_file())
+
+          exact = [
+              ('Competitive objectiveCompletion contract paid on the shared funding calendar.',
+               'One-off objective funding contract paid on the shared funding calendar.'),
+              ('Creates fresh objectiveCompletion funding state for a new race controller',
+               'Creates fresh objective funding state for a new campaign controller'),
+              ('Defines the objectiveCompletion objectives used by the current prototype.',
+               'Defines the objectives used by the current prototype.'),
+              ('Rival objectiveCompletion completion uses objective definition',
+               'Rival objective completion uses objective definition'),
+              ('Duna objectiveCompletion completion should record the objective ID.',
+               'Duna objective completion should record the objective ID.'),
+              (' player objectiveCompletion count for ', ' player completion count for '),
+              ('Once any agency achieves this objectiveCompletion there are 10 payouts given. As interest in this objectiveCompletion is lost overtime each following payout is reduced by 10%. If multiple agencies complete the objectiveCompletion than the next payout is split between those agencies. Being the first to reach the objectiveCompletion will maximise your payout.',
+               'Once any agency completes this objective there are 10 payouts. As interest in the objective falls over time, each following payout is reduced by 10%. If multiple agencies complete the objective, the next payout is split between those agencies. Being first to complete the objective maximises your payout.'),
+          ]
+
+          string_pattern = re.compile(r'"(?:\\.|[^"\\])*"')
+
+          def polish_text(text, is_test):
+              protected = text.replace('The Race for Space', '__MOD_TITLE__')
+              protected = protected.replace('-objectiveCompletion', '-objective-completion')
+              protected = protected.replace('objectiveCompletion', 'objective completion')
+              protected = re.sub(r'\brace\b', 'campaign', protected)
+              protected = re.sub(r'\bRace\b', 'Campaign', protected)
+              if is_test:
+                  protected = re.sub(r'\bstarter\b', 'pre-orbit', protected)
+                  protected = re.sub(r'\bStarter\b', 'Pre-Orbit', protected)
+              return protected.replace('__MOD_TITLE__', 'The Race for Space')
+
+          for path in files:
+              original = path.read_text(encoding='utf-8')
+              text = original
+              for old, new in exact:
+                  text = text.replace(old, new)
+
+              output = []
+              is_test = path.as_posix().startswith('tests/')
+              for line in text.splitlines(keepends=True):
+                  stripped = line.lstrip()
+                  if stripped.startswith('//'):
+                      line = polish_text(line, is_test)
+                  else:
+                      line = string_pattern.sub(
+                          lambda match: polish_text(match.group(0), is_test),
+                          line)
+                  output.append(line)
+
+              updated = ''.join(output)
+              if updated != original:
+                  path.write_text(updated, encoding='utf-8')
+          PY
+
+          git diff --check
+          bash tools/run-logic-tests.sh
+
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          string_pattern = re.compile(r'"(?:\\.|[^"\\])*"')
+          bad_text = []
+          bad_identifiers = []
+
+          for root in (Path('src'), Path('tests')):
+              for path in root.rglob('*.cs'):
+                  is_test = path.as_posix().startswith('tests/')
+                  for line_number, line in enumerate(path.read_text(encoding='utf-8').splitlines(), 1):
+                      stripped = line.lstrip()
+                      prose_parts = []
+                      if stripped.startswith('//'):
+                          prose_parts.append(line)
+                      else:
+                          prose_parts.extend(match.group(0) for match in string_pattern.finditer(line))
+
+                      for prose in prose_parts:
+                          check = prose.replace('The Race for Space', '')
+                          if 'objectiveCompletion' in check:
+                              bad_text.append(f'{path}:{line_number}: awkward objectiveCompletion prose')
+                          if re.search(r'\brace\b|\bRace\b', check):
+                              bad_text.append(f'{path}:{line_number}: old race wording')
+                          if is_test and re.search(r'\bstarter\b|\bStarter\b', check):
+                              bad_text.append(f'{path}:{line_number}: old starter wording')
+
+                      code = string_pattern.sub('', line)
+                      if '//' in code:
+                          code = code.split('//', 1)[0]
+                      code = code.replace('TheRaceForSpace', '')
+                      for token in re.findall(r'\b[A-Za-z_][A-Za-z0-9_]*\b', code):
+                          if 'Race' in token or 'race' in token:
+                              bad_identifiers.append(f'{path}:{line_number}: {token}')
+
+          if bad_text or bad_identifiers:
+              print('\n'.join((bad_text + bad_identifiers)[:100]))
+              raise SystemExit('Naming text audit failed.')
+          PY
+
+          if grep -RInE --include='*.cs' 'Programme|programme|Achievement|achievement|Starter|starter|Milestone|milestone|HasProgram|DoesProgram|CreatePrograms|programIndex|Programs\b|programs\b' src; then
+            echo 'Legacy production naming remains.' >&2
+            exit 1
+          fi
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm .github/workflows/naming-text-audit.yml
+          git add -A
+          git commit -m 'refactor: polish naming text'
+          git push origin HEAD:Alpha/KerbalContracts-v0.5

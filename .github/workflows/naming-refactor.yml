@@ -1,4 +1,4 @@
-name: Naming Refactor Audit
+name: Naming Terminology Cleanup
 
 on:
   push:
@@ -6,20 +6,214 @@ on:
       - Alpha/KerbalContracts-v0.5
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  audit:
-    if: "github.event.head_commit.message == 'chore: audit naming refactor'"
+  cleanup:
+    if: "github.event.head_commit.message == 'chore: finish naming cleanup'"
     runs-on: ubuntu-latest
 
     steps:
       - name: Check out renamed source
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Find legacy terminology
+      - name: Set up .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Finish terminology cleanup
         run: |
-          echo '--- filenames ---'
-          find src tests -type f | grep -E 'RaceRuntime|RaceSettings|SatelliteRace|Milestone|ProgramState|Starter|FundingProgramme|AchievementFunding|KspVesselDiscovery|SatelliteTracker|RaceWindow|SpaceRace' || true
-          echo '--- source/test references ---'
-          grep -RInE --include='*.cs' --include='*.csproj' 'Programme|programme|Achievement|achievement|Starter|starter|Milestone|milestone|SpaceRace|SatelliteRace|RaceRuntime|RaceSettings|SpaceProgramState|FundingProgramme|KspVesselDiscovery|SatelliteTracker|RaceWindow|ProgramId|programIndex|Programs\b|programs\b' src tests || true
+          python3 - <<'PY'
+          from pathlib import Path
+
+          roots = [Path('src'), Path('tests')]
+          files = []
+          for root in roots:
+              files.extend(path for path in root.rglob('*') if path.is_file() and path.suffix in {'.cs', '.csproj'})
+
+          replacements = [
+              ('CreateAchievementProgrammes', 'CreateObjectiveFundingContracts'),
+              ('CreateSatelliteProgrammes', 'CreateSatelliteNetworkFundingContracts'),
+              ('AddAchievementProgramme', 'AddObjectiveFundingContract'),
+              ('CreateSatelliteProgramme', 'CreateSatelliteNetworkFundingContract'),
+              ('IsSingleAgencyAchievementCondition', 'IsSingleAgencyObjectiveCompletionCondition'),
+              ('FindRequiredMilestone', 'FindRequiredObjective'),
+
+              ('MaximumUncompletedNormalAchievementOffers', 'MaximumUncompletedNormalObjectiveOffers'),
+              ('_achievementSatelliteNetworkFundingContractsView', '_objectiveFundingContractsView'),
+              ('_achievementSatelliteNetworkFundingContracts', '_objectiveFundingContracts'),
+              ('_achievementPayoutCache', '_objectivePayoutCache'),
+              ('NotifyPlayerPreOrbitAchievementRecorded', 'NotifyPlayerPreOrbitObjectiveCompleted'),
+              ('IsAchievementProgrammeAvailableAtTime', 'IsObjectiveFundingContractAvailableAtTime'),
+              ('IsAchievementProgrammeAvailable', 'IsObjectiveFundingContractAvailable'),
+              ('GetAchievementCurrentPayout', 'GetObjectiveCurrentPayout'),
+              ('CalculateAchievementCurrentPayout', 'CalculateObjectiveCurrentPayout'),
+              ('GetAchievementAgencyCountAtTime', 'GetObjectiveCompletionAgencyCountAtTime'),
+              ('UpdateSpecialAchievementOffers', 'UpdateSpecialObjectiveOffers'),
+              ('StartAchievementContracts', 'StartObjectiveFundingContracts'),
+              ('HasProgramAchieved', 'HasAgencyCompletedObjective'),
+
+              ('AchievementProgrammes', 'ObjectiveFundingContracts'),
+              ('achievementProgrammes', 'objectiveFundingContracts'),
+              ('FindAchievementProgramme', 'FindObjectiveFundingContract'),
+              ('FindAchievement', 'FindObjectiveFundingContract'),
+              ('achievementProgramme', 'objectiveFundingContract'),
+              ('normalAchievementCandidates', 'normalObjectiveCandidates'),
+              ('uncompletedNormalAchievementOfferCount', 'uncompletedNormalObjectiveOfferCount'),
+              ('achievementVacancies', 'objectiveVacancies'),
+              ('achievementFundingCount', 'objectiveFundingCount'),
+              ('newAchievementOffers', 'newObjectiveOffers'),
+              ('laterOfferedProgramme', 'laterOfferedContract'),
+              ('achievementUniversalTime', 'completionUniversalTime'),
+              ('recordedAchievement', 'recordedObjective'),
+
+              ('CalculateLaunchProgressCost', 'CalculateMissionProgressCost'),
+              ('GetRivalLaunchProgressCost', 'GetRivalMissionProgressCost'),
+              ('GetEstimatedRivalLaunchDays', 'GetEstimatedRivalMissionDays'),
+
+              ('RefreshPlayerMilestones', 'EvaluateActiveFlightContracts'),
+              ('IsControlMilestoneQualified', 'IsControlObjectiveQualified'),
+              ('EvaluateControlMilestones', 'EvaluateControlObjectives'),
+              ('starterMilestones', 'activeFlightContracts'),
+
+              ('DoesProgramSatisfyAchievementCondition', 'DoesAgencySatisfyObjectiveCompletionCondition'),
+              ('AppendAchievementConditionText', 'AppendObjectiveCompletionConditionText'),
+              ('RuleForAchievement', 'RuleForObjectiveCompletion'),
+              ('AchievementTimestampUsesEvaluationTime', 'ObjectiveCompletionTimestampUsesEvaluationTime'),
+              ('CreatePrograms', 'CreateAgencies'),
+
+              ('PlayerAchievementNodeName', 'PlayerObjectiveCompletionNodeName'),
+              ('AchievementContractNodeName', 'ObjectiveFundingContractNodeName'),
+              ('AchievementNodeName', 'ObjectiveCompletionNodeName'),
+              ('_playerAchievementTimesById', '_playerObjectiveCompletionTimesById'),
+              ('_achievementContractsById', '_objectiveFundingContractsById'),
+              ('SavedAchievementContract', 'SavedObjectiveFundingContract'),
+              ('StorePlayerAchievement', 'StorePlayerObjectiveCompletion'),
+              ('StoreAchievement', 'StoreObjectiveCompletion'),
+              ('achievementContracts', 'objectiveFundingContracts'),
+              ('restoredAchievementContracts', 'restoredObjectiveFundingContracts'),
+              ('achievementContractNodes', 'objectiveFundingContractNodes'),
+              ('achievementContractIds', 'objectiveFundingContractIds'),
+              ('achievementContract', 'objectiveFundingContract'),
+              ('achievementNodes', 'completionNodes'),
+              ('achievementNode', 'completionNode'),
+              ('achievementIds', 'objectiveIds'),
+              ('badAchievement', 'badCompletion'),
+              ('earlyAchievement', 'earlyCompletion'),
+
+              ('AchievementProgramme', 'ObjectiveFundingContract'),
+              ('SatelliteProgramme', 'SatelliteNetworkContract'),
+              ('IsAchievement', 'IsObjective'),
+              ('_contractCatalogueAchievementFundingCount', '_contractCatalogueObjectiveFundingCount'),
+              ('_selectedContractCatalogueFundingIsAchievement', '_selectedContractCatalogueFundingIsObjective'),
+              ('DrawAchievementFundingCard', 'DrawObjectiveFundingCard'),
+              ('DrawSatelliteFundingCard', 'DrawSatelliteNetworkFundingCard'),
+              ('CountOfferedPreOrbitAchievements', 'CountOfferedPreOrbitObjectives'),
+              ('CountLockedPreOrbitAchievements', 'CountLockedPreOrbitObjectives'),
+              ('CountOfferedNormalAchievements', 'CountOfferedNormalObjectives'),
+              ('OfferAndCompleteAllPreOrbitAchievements', 'OfferAndCompleteAllPreOrbitObjectives'),
+              ('IsPreOrbitAchievement', 'IsPreOrbitObjective'),
+              ('AssertAchievement', 'AssertObjectiveFundingContract'),
+
+              ('AchievementPayoutDeclinesAndExpires', 'ObjectiveFundingPayoutDeclinesAndExpires'),
+              ('AchievementRestoreNormalizesLifecycle', 'ObjectiveFundingRestoreNormalizesLifecycle'),
+              ('AchievementFundingStoresStructuredPrerequisite', 'ObjectiveFundingStoresStructuredPrerequisite'),
+              ('GenericAchievementStateStartsEmpty', 'GenericObjectiveCompletionStateStartsEmpty'),
+              ('GenericAchievementStateRecordsFirstTimestamp', 'GenericObjectiveCompletionStateRecordsFirstTimestamp'),
+              ('GenericAchievementStatePreservesFirstTimestamp', 'GenericObjectiveCompletionStatePreservesFirstTimestamp'),
+              ('GenericAchievementStateAcceptsArbitraryIds', 'GenericObjectiveCompletionStateAcceptsArbitraryIds'),
+              ('GenericAchievementStateValidatesTimestamps', 'GenericObjectiveCompletionStateValidatesTimestamps'),
+              ('SelectsOnlyAvailableAchievementFromCollection', 'SelectsOnlyAvailableObjectiveFromCollection'),
+              ('LockedAchievementIsExcludedFromCollection', 'LockedObjectiveIsExcludedFromCollection'),
+              ('SatelliteProgrammeRemainsRepeatable', 'SatelliteNetworkContractRemainsRepeatable'),
+              ('CompletesArbitrarySatelliteProgramme', 'CompletesArbitrarySatelliteNetworkContract'),
+              ('CollectionCostUsesProgrammeBody', 'CollectionCostUsesContractBody'),
+              ('AchievementCompletionUsesObjectiveDefinition', 'ObjectiveCompletionUsesObjectiveDefinition'),
+              ('PreOrbitOffersDoNotConsumeNormalAchievementLimit', 'PreOrbitOffersDoNotConsumeNormalObjectiveLimit'),
+              ('PrototypeMilestoneLookupUsesStableIds', 'ObjectiveLookupUsesStableIds'),
+              ('MilestoneEvaluationTests', 'ObjectiveEvaluationTests'),
+
+              ('malformedProgramme', 'malformedContract'),
+              ('starterMilestone', 'preOrbitObjective'),
+              ('starterProgramme', 'preOrbitContract'),
+              ('starterRival', 'preOrbitRival'),
+              ('starterEtaRival', 'preOrbitEtaRival'),
+              ('starterLine', 'preOrbitLine'),
+              ('starterLevel', 'preOrbitLevel'),
+              ('starterCriteria', 'preOrbitCriteria'),
+
+              ('fundingProgramme', 'networkContract'),
+              ('programmeIndex', 'contractIndex'),
+              ('programmeId', 'contractId'),
+              ('programmes', 'contracts'),
+              ('programme', 'contract'),
+
+              ('MilestonesById', 'ObjectivesById'),
+              ('CreateMilestoneIndex', 'CreateObjectiveIndex'),
+              ('milestonesById', 'objectivesById'),
+              ('milestoneDefinitions', 'objectiveDefinitions'),
+              ('EvaluateMilestones', 'EvaluateObjectives'),
+              ('milestoneIndex', 'objectiveIndex'),
+              ('currentMilestone', 'currentObjective'),
+              ('controlMilestone', 'controlObjective'),
+              ('expiredMilestone', 'expiredObjective'),
+              ('milestoneName', 'objectiveName'),
+              ('GetMilestoneDisplayName', 'GetObjectiveDisplayName'),
+              ('AssertMilestone', 'AssertObjective'),
+
+              ('unknownAchievementRule', 'unknownObjectiveRule'),
+              ('knownAchievementRule', 'knownObjectiveRule'),
+          ]
+
+          for path in files:
+              original = path.read_text(encoding='utf-8')
+              text = original
+              for old, new in replacements:
+                  text = text.replace(old, new)
+
+              # Remaining old domain words are safe to translate directly now that the
+              # semantically important compound identifiers above have been handled first.
+              text = text.replace('Programme', 'Contract')
+              text = text.replace('programme', 'contract')
+              text = text.replace('Milestone', 'Objective')
+              text = text.replace('milestone', 'objective')
+              text = text.replace('Achievement', 'Objective')
+              text = text.replace('achievement', 'objective')
+
+              # The current four Kerbin lines are the pre-orbit family. Generic active-vessel
+              # infrastructure deliberately uses FlightContract terminology instead.
+              if 'Tracking/' in path.as_posix() or 'Core/' in path.as_posix() or 'KspIntegration/' in path.as_posix():
+                  text = text.replace('starter-flight', 'flight-contract')
+                  text = text.replace('starter flight', 'flight contract')
+                  text = text.replace('starter-contract', 'flight-contract')
+                  text = text.replace('starter contract', 'flight contract')
+                  text = text.replace('starter-state', 'flight-contract')
+              else:
+                  text = text.replace('starter-contract', 'pre-orbit contract')
+                  text = text.replace('starter contract', 'pre-orbit contract')
+                  text = text.replace('starter objective', 'pre-orbit objective')
+                  text = text.replace('starter line', 'pre-orbit line')
+
+              if path.name == 'RivalAgenciesSaveState.cs':
+                  text = text.replace('"ACHIEVEMENT"', '"OBJECTIVE_COMPLETION"')
+
+              if text != original:
+                  path.write_text(text, encoding='utf-8')
+          PY
+
+          git diff --check
+          bash tools/run-logic-tests.sh
+
+          echo '--- remaining production legacy terms ---'
+          grep -RInE --include='*.cs' 'Programme|programme|Achievement|achievement|Starter|starter|Milestone|milestone|HasProgram|DoesProgram|CreatePrograms|programIndex|Programs\b|programs\b' src || true
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src tests
+          if ! git diff --cached --quiet; then
+            git commit -m 'refactor: finish terminology cleanup'
+            git push origin HEAD:Alpha/KerbalContracts-v0.5
+          fi

@@ -1,4 +1,4 @@
-name: Naming Refactor
+name: Naming Refactor Audit
 
 on:
   push:
@@ -6,39 +6,20 @@ on:
       - Alpha/KerbalContracts-v0.5
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  refactor:
-    if: "github.event.head_commit.message == 'chore: run naming refactor'"
+  audit:
+    if: "github.event.head_commit.message == 'chore: audit naming refactor'"
     runs-on: ubuntu-latest
 
     steps:
-      - name: Check out refactor trigger
+      - name: Check out renamed source
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      - name: Set up .NET 8
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: 8.0.x
-
-      - name: Apply approved naming refactor
+      - name: Find legacy terminology
         run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          path = Path('tools/refactor-naming.py')
-          text = path.read_text(encoding='utf-8')
-          text = text.replace('(r"\\bachievement\\b", "objective completion"),', '(r"\\bachievement\\b", "objectiveCompletion"),')
-          text = text.replace(
-              '        ("PlayerProgram", "PlayerAgency"),',
-              '        ("PlayerProgram", "PlayerAgency"),\n'
-              '        ("_programs", "_agencies"),\n'
-              '        ("Programs { get", "Agencies { get"),\n'
-              '        ("ProgramId", "AgencyId"),\n'
-              '        ("programIndex", "agencyIndex"),'
-          )
-          path.write_text(text, encoding='utf-8')
-          PY
-          python3 tools/refactor-naming.py
+          echo '--- filenames ---'
+          find src tests -type f | grep -E 'RaceRuntime|RaceSettings|SatelliteRace|Milestone|ProgramState|Starter|FundingProgramme|AchievementFunding|KspVesselDiscovery|SatelliteTracker|RaceWindow|SpaceRace' || true
+          echo '--- source/test references ---'
+          grep -RInE --include='*.cs' --include='*.csproj' 'Programme|programme|Achievement|achievement|Starter|starter|Milestone|milestone|SpaceRace|SatelliteRace|RaceRuntime|RaceSettings|SpaceProgramState|FundingProgramme|KspVesselDiscovery|SatelliteTracker|RaceWindow|ProgramId|programIndex|Programs\b|programs\b' src tests || true

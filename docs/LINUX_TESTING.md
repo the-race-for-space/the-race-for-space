@@ -8,7 +8,7 @@ The current development branch is:
 Alpha/KerbalContracts-v0.5
 ```
 
-For the complete in-game acceptance pass for the four starter contract lines, Probe Orbit convergence, funding, rivals, persistence, and UI behavior, also use [`docs/KERBAL_CONTRACTS_V0_5_TESTING.md`](KERBAL_CONTRACTS_V0_5_TESTING.md).
+For the complete in-game acceptance pass for the four pre-orbit contract lines, Probe Orbit convergence, funding, rivals, persistence, and UI behavior, also use [`docs/KERBAL_CONTRACTS_V0_5_TESTING.md`](KERBAL_CONTRACTS_V0_5_TESTING.md).
 
 ## Normal command sequence
 
@@ -93,7 +93,7 @@ All prototype logic tests passed.
 All controller and unlock rule regression tests passed.
 ```
 
-The automated suites cover the KSP-independent starter-contract rules, including landed-only Mass and Biome completion, persistence, four Level I starter offers plus sixteen initially locked successors, Any Agency rival/player line unlocking, all unlocked starter contracts being offered together at the next funding review without consuming the normal two achievement slots, rival participation, the separate two-offer satellite cap, and the four-way Level V to Probe Orbit unlock rule.
+The automated suites cover the KSP-independent starter-contract rules, including landed-only Mass and Biome completion, persistence, four Level I starter offers plus sixteen initially locked successors, Any Agency rival/player line unlocking, all unlocked pre-orbit contracts being offered together at the next funding review without consuming the normal two achievement slots, rival participation, the separate two-offer satellite cap, and the four-way Level V to Probe Orbit unlock rule.
 
 The live KSP API paths still require the in-game checks below. In particular, automated tests cannot prove the active-vessel destruction callbacks/global vessel-will-destroy fallback, stock biome reporting, actual Command Center layout, or loaded/unloaded vessel discovery inside KSP.
 
@@ -118,14 +118,14 @@ The deployed files are:
 
 ```text
 /home/deck/.local/share/Steam/steamapps/common/Kerbal Space Program/GameData/TheRaceForSpace/Plugins/TheRaceForSpace.dll
-/home/deck/.local/share/Steam/steamapps/common/Kerbal Space Program/GameData/TheRaceForSpace/Config/RaceSettings.cfg
+/home/deck/.local/share/Steam/steamapps/common/Kerbal Space Program/GameData/TheRaceForSpace/Config/CampaignSettings.cfg
 ```
 
 Confirm both exist with:
 
 ```bash
 ls -l "$KSP_ROOT/GameData/TheRaceForSpace/Plugins/TheRaceForSpace.dll"
-ls -l "$KSP_ROOT/GameData/TheRaceForSpace/Config/RaceSettings.cfg"
+ls -l "$KSP_ROOT/GameData/TheRaceForSpace/Config/CampaignSettings.cfg"
 ```
 
 The test helper performs these checks automatically and stops if either deployed file is missing.
@@ -138,36 +138,36 @@ Because Directed Power now uses KSP destruction events in addition to the vessel
 2. Load a disposable Career test save. A fresh save is preferred when verifying opening offers.
 3. Confirm the Race for Space Command Center opens from the stock launcher button and with `F8`.
 4. Confirm `F8` hides and reopens the same window without resetting race state.
-5. Open **Space Race** and confirm there is no separate `STARTER PROGRAMMES` four-card panel above the normal catalogue.
+5. Open **Contract Catalogue** and confirm there is no separate `STARTER PROGRAMMES` four-card panel above the normal catalogue.
 6. Expand **Offered** and confirm **Directed Power I**, **Mass I**, **Control I**, and **Biome I** are present.
-7. Expand **Locked** and confirm Levels II-V of all four starter lines are present: sixteen locked starter contracts in total.
-8. Open several starter contracts and confirm their objective, payout, state, and unlock requirements use the same contract details view as the existing achievement targets.
-9. Complete one Level I starter contract and confirm its Level II successor moves to **Unlocked**, not immediately to **Offered**.
-10. Before one funding boundary, unlock starter successors in several lines. Cross the funding boundary and confirm **every unlocked starter contract becomes Offered**, even when more than two are unlocked. Starter offers must not consume the normal two unfinished achievement slots.
+7. Expand **Locked** and confirm Levels II-V of all four starter lines are present: sixteen locked pre-orbit contracts in total.
+8. Open several pre-orbit contracts and confirm their objective, payout, state, and unlock requirements use the same contract details view as the existing achievement targets.
+9. Complete one Level I pre-orbit contract and confirm its Level II successor moves to **Unlocked**, not immediately to **Offered**.
+10. Before one funding boundary, unlock starter successors in several lines. Cross the funding boundary and confirm **every unlocked pre-orbit contract becomes Offered**, even when more than two are unlocked. Starter offers must not consume the normal two unfinished achievement slots.
 11. When Probe-or-later normal achievement candidates are available, confirm no more than two unfinished normal achievement offers are active from that pool, independently of the starter offers. Confirm satellite programmes still have their own separate two-unfulfilled-offer limit.
 12. Open **Funding Targets** during an active starter flight and confirm every offered unfinished starter funding card shows its own live flight values approximately once per second.
-13. Confirm **Overview** treats offered starter contracts like the other offered one-off achievements.
+13. Confirm **Overview** treats offered pre-orbit contracts like the other offered one-off achievements.
 14. Save and reload once before ending the smoke test and confirm the race state and Command Center visibility remain consistent.
 
 For a release candidate, continue with the full checklist in [`KERBAL_CONTRACTS_V0_5_TESTING.md`](KERBAL_CONTRACTS_V0_5_TESTING.md).
 
 ### 0.5 starter-flight runtime verification
 
-Use these checks after changes to `Core/RaceRuntime`, `Tracking/StarterFlightTracker`, `KspIntegration/KspVesselDiscovery`, starter persistence, or the Funding Targets UI.
+Use these checks after changes to `Core/ModRuntime`, `Tracking/FlightContractTracker`, `KspIntegration/KspVesselMonitor`, starter persistence, or the Funding Targets UI.
 
-1. Launch a vessel on Kerbin with one of the currently offered starter contracts and keep **Funding Targets** open on its funding card.
+1. Launch a vessel on Kerbin with one of the currently offered pre-orbit contracts and keep **Funding Targets** open on its funding card.
 2. Confirm live values update approximately once per second rather than every frame:
    - Directed Power: maximum surface speed and maximum altitude;
    - Mass: current remaining mass and distance from launch;
    - Control: current altitude, continuous hold time, and crew count;
    - Biome: current stock Kerbin biome.
-3. Confirm the Space Race catalogue does not show a second live-flight panel; it should remain focused on Offered/Unlocked/Locked/Expired state.
+3. Confirm the Contract Catalogue catalogue does not show a second live-flight panel; it should remain focused on Offered/Unlocked/Locked/Expired state.
 4. Stage once during flight and confirm the continuing controlled stage retains the same launch history rather than starting a fresh attempt.
 5. Enter orbit during a starter attempt and confirm the attempt is treated as invalid for starter completion.
 6. Switch to an unrelated vessel or launch a new vehicle and confirm old maxima, distance, and Control hold state are not inherited.
 7. Hide the Command Center with `F8`, continue flying for several seconds, reopen it, and confirm gameplay tracking continued while the UI was hidden.
 
-These checks verify that `RaceRuntime` owns the one-second starter observation cadence and that `RaceWindow` only reads tracker state for presentation.
+These checks verify that `ModRuntime` owns the one-second starter observation cadence and that `CommandCenterWindow` only reads tracker state for presentation.
 
 ### 0.5 quick contract checks
 
@@ -225,23 +225,23 @@ At least one end-to-end route should be completed before treating the build as a
 
 1. Complete Level V in one starter line.
 2. Confirm **Probe Orbit** is offered immediately without waiting for the next funding review.
-3. Confirm Probe Orbit appears under the normal **Offered** section in Space Race.
+3. Confirm Probe Orbit appears under the normal **Offered** section in Contract Catalogue.
 4. Launch a qualifying uncrewed Probe or Relay into stable Kerbin orbit and confirm the existing orbital tracker completes Probe Orbit.
 5. If practical, repeat in disposable saves using the other starter Level V routes to confirm Directed Power V, Mass V, Control V, and Biome V each independently satisfy the OR gate.
-6. If practical, let a rival complete a Level V starter contract first and confirm that also offers Probe Orbit to the whole race.
+6. If practical, let a rival complete a Level V pre-orbit contract first and confirm that also offers Probe Orbit to the whole race.
 
 ### 0.5 core runtime verification
 
 Use these checks after changes to race lifecycle or runtime ownership:
 
-1. Open the Command Center and note the current rival funds, mission progress, starter contract states, and next funding date.
+1. Open the Command Center and note the current rival funds, mission progress, pre-orbit contract states, and next funding date.
 2. Hide the Command Center with `F8` and continue playing or time-warping for more than one five-second runtime refresh.
 3. Reopen the Command Center and confirm the race state is still current.
 4. Move between normal KSP game scenes, for example Space Center and Flight or Tracking Station, and confirm rival funds/progress do not reset to new-game values.
 5. When practical, cross one shared funding boundary and confirm it is processed once and the next funding date advances normally.
 6. Save, return to the menu, reload the save, and confirm the persisted race state is restored.
 
-These checks verify that `Core/RaceRuntime` owns progression while `UI/RaceWindow` only displays the current controller and starter-flight state.
+These checks verify that `Core/ModRuntime` owns progression while `UI/CommandCenterWindow` only displays the current controller and starter-flight state.
 
 ### 0.5 vessel discovery verification
 
@@ -254,7 +254,7 @@ Use these checks after changes to vessel discovery or satellite tracking:
 5. Put a crewed vessel into Kerbin orbit and confirm Crewed Orbit is recognised. If the craft is a crewed Probe, it should still count toward the satellite network but should not qualify as the uncrewed Probe Orbit achievement by itself.
 6. If testing Mun, Minmus, or Duna, confirm an unloaded orbiting Probe or Relay remains counted after scene changes and save/reload.
 
-These checks verify the boundary between `KspIntegration/KspVesselDiscovery` and `Tracking/SatelliteTracker` while preserving loaded and unloaded vessel behaviour.
+These checks verify the boundary between `KspIntegration/KspVesselMonitor` and `Tracking/OrbitalVesselTracker` while preserving loaded and unloaded vessel behaviour.
 
 ### Logs
 
@@ -401,7 +401,7 @@ Verify both deployment files:
 
 ```bash
 ls -l "$KSP_ROOT/GameData/TheRaceForSpace/Plugins/TheRaceForSpace.dll"
-ls -l "$KSP_ROOT/GameData/TheRaceForSpace/Config/RaceSettings.cfg"
+ls -l "$KSP_ROOT/GameData/TheRaceForSpace/Config/CampaignSettings.cfg"
 ```
 
 After this succeeds, start KSP and perform the Part 1 smoke test. Future testing should normally use **Part 1** only.

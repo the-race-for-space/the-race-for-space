@@ -29,7 +29,7 @@ The helper:
 3. creates a local tracking branch when the requested branch only exists on GitHub;
 4. switches to the requested branch and pulls it with fast-forward-only behaviour;
 5. uses `KSP_ROOT` when already set, otherwise checks the standard Linux Steam KSP locations;
-6. builds the current prototype with `DeployToKsp=true`, which copies both the DLL and `RaceSettings.cfg`;
+6. builds the current prototype with `DeployToKsp=true`, which copies both the DLL and `CampaignSettings.cfg`;
 7. verifies that both deployed files exist in the KSP `GameData/TheRaceForSpace` folders.
 
 If no branch is supplied, the helper updates, builds and deploys the currently checked-out branch:
@@ -95,14 +95,14 @@ This deploys:
 
 ```text
 $KSP_ROOT/GameData/TheRaceForSpace/Plugins/TheRaceForSpace.dll
-$KSP_ROOT/GameData/TheRaceForSpace/Config/RaceSettings.cfg
+$KSP_ROOT/GameData/TheRaceForSpace/Config/CampaignSettings.cfg
 ```
 
 Confirm deployment with:
 
 ```bash
 test -f "$KSP_ROOT/GameData/TheRaceForSpace/Plugins/TheRaceForSpace.dll" && echo "DLL deployed"
-test -f "$KSP_ROOT/GameData/TheRaceForSpace/Config/RaceSettings.cfg" && echo "Config deployed"
+test -f "$KSP_ROOT/GameData/TheRaceForSpace/Config/CampaignSettings.cfg" && echo "Config deployed"
 ```
 
 ## Windows PowerShell
@@ -129,7 +129,7 @@ This deploys:
 
 ```text
 <KSP_ROOT>\GameData\TheRaceForSpace\Plugins\TheRaceForSpace.dll
-<KSP_ROOT>\GameData\TheRaceForSpace\Config\RaceSettings.cfg
+<KSP_ROOT>\GameData\TheRaceForSpace\Config\CampaignSettings.cfg
 ```
 
 The deploy action is opt-in so an ordinary build never modifies a KSP installation.

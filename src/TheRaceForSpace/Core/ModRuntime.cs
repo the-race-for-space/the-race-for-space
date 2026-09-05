@@ -162,8 +162,11 @@ namespace TheRaceForSpace.Core
             if (_hasRestoredActiveContractProgress
                 && currentRealtime >= _nextActiveVesselRefreshTime)
             {
-                RefreshFlightContractTrackingState();
+                // Advance the cadence before entering the KSP boundary. If a KSP API unexpectedly
+                // throws, Unity will still report it, but the runtime retries on the intended one-second
+                // interval instead of re-entering the failing path every render frame.
                 _nextActiveVesselRefreshTime = currentRealtime + ActiveVesselRefreshIntervalSeconds;
+                RefreshFlightContractTrackingState();
             }
         }
 

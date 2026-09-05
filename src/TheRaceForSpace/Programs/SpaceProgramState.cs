@@ -39,15 +39,6 @@ namespace TheRaceForSpace.Programs
 
         public string NextMissionTargetId { get; set; }
         public string NextMissionDisplayName { get; set; }
-
-        // In-assembly bridge for the remaining presentation/test call sites while the public API
-        // uses the clearer mission-display terminology. This is deliberately not public API.
-        internal string NextLaunchBodyName
-        {
-            get { return NextMissionDisplayName; }
-            set { NextMissionDisplayName = value; }
-        }
-
         public int LaunchProgressPercent { get; set; }
         public double NextLaunchProgressCheckUniversalTime { get; set; }
 

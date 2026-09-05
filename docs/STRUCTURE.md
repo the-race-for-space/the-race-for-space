@@ -1,34 +1,385 @@
-# Prototype Structure
+# Project Structure
 
-This scaffold mirrors the current design direction for **The Race for Space** without committing to gameplay implementation yet.
+This document defines **which module owns which responsibility** in the current 0.5 codebase.
+
+For a shorter introduction, read [`CODE_OVERVIEW.md`](CODE_OVERVIEW.md).
+
+## Architecture at a glance
+
+```text
+KSP / Unity
+    |
+    v
+KspIntegration
+    |
+    +--> live active-vessel snapshot
+    |        |
+    |        v
+    |    FlightContractTracker
+    |
+    +--> slower loaded/unloaded vessel snapshot
+             |
+             v
+         OrbitalVesselTracker
+
+Tracking results
+    |
+    v
+CampaignController
+    |
+    +--> Agencies
+    +--> Objectives
+    +--> Funding
+    +--> Rivals
+    |
+    +--> Persistence
+    +--> UI reads state
+
+ModRuntime schedules the work above.
+```
+
+The important rule is that **raw KSP objects stay at the integration boundary**. Gameplay logic should work with project-owned state and snapshots.
 
 ## Source modules
 
-- `Core/` — mod lifecycle, shared state and cross-module coordination. `ModRuntime` owns the current race controller, advances race/funding progression on the controlled five-second refresh cadence, requests the heavier player vessel observation path on a separate twenty-second cadence, and samples only the active loaded vessel once per second for starter-contract flight tracking. The one-second path receives the controller's cached Offered/unexpired/player-unfinished starter set rather than the full starter catalogue. Because the controller replaces that read-only set only after an offer/completion/expiry transition, `ModRuntime` also caches its derived telemetry requirement mask by active-set reference and recomputes it only when the plan changes. With no active pre-orbit contracts the one-second path skips active-vessel discovery/evaluation entirely apart from preserving the existing lightweight active-contract progress state. A newly recorded starter achievement marks the controller cache dirty before being fed back through the existing non-vessel refresh, so completion removal, line progression, Probe Orbit unlocking, rivals, and projected funding settle together. The runtime exposes the tracker read-only for UI presentation; UI code never advances it.
-- `Agencies/` — player and rival space-program models/state. Rival mission gameplay identity uses stable `NextMissionTargetId`; `NextMissionDisplayName` is presentation-only text derived from the live target catalogues.
-- `Tracking/` — KSP-independent vessel classification, body-presence tracking, starter-flight evaluation, normalized surface-impact eligibility, and starter telemetry planning. `FlightTelemetryPlan` converts the cached active starter-contract set into a compact flags mask: Directed Power requests altitude/surface speed/impact tracking, Mass requests mass, Control requests altitude/crew, and Biome requests biome. Common vessel identity, body, situation, launch time, coordinates, and observation time remain cheap attempt context. Probe/Relay counts are maintained for observed celestial bodies independently of objective definitions. Orbital objective recording evaluates each definition's `UnlockRule` against the full race-program collection at the vessel observation time. `FlightContractTracker` maintains one player launch attempt, including peak speed/altitude, launch position, latest active-vessel values, orbit disqualification, and staging continuity. Mass, Biome, Directed Power, and Control all evaluate the supplied active contracts independently: the same landing or impact may therefore complete multiple separately Offered levels when each contract's own criteria are met, while contracts absent from the active set are not evaluated even if the flight would satisfy them. Control hold/qualification state is keyed by stable objective ID, so multiple Offered Control levels can qualify sequentially in one flight and complete together on the same qualifying crewed landing. `SurfaceImpactEvaluator` owns the KSP-independent impact heuristic: a recent genuine `FLYING`/`SUBORBITAL` sample must meet the minimum speed and either be close enough to the surface or be able to reach it within the actual universal-time gap, capped at five seconds. Directed Power completes only after a qualifying Kerbin surface-impact signal; Mass completes only when the finished craft is `LANDED` at the required great-circle distance and still retains the required vessel mass; Control requires each contract's continuous crewed altitude hold followed by a crewed Kerbin landing; Biome completes only when the craft is `LANDED` in the required Kerbin biome.
-- `Objectives/` — achievement/goal definitions and evaluation. `ObjectiveCatalogue` keeps the normal orbital catalogue separate from the twenty special pre-orbit contracts. Each starter catalogue entry now supplies its measurable speed, mass/distance, altitude/time, or biome criteria explicitly; `ObjectiveDefinition` stores those values but no longer infers balance from `StarterLine` plus `StarterLevel`. Starter definitions also carry their line, level, reward and rival progress cost, while normal orbital definitions keep their body/situation/crew requirements. Each starter Level II-V uses an `AnyAgency` prerequisite on the previous level in the same line, so either the player or a rival may globally unlock the next contract. Flexible unlock definitions use immutable OR-of-AND rules with achievement scope/count, universal-time, and collective satellite-count conditions. `UnlockRuleEvaluator` is the single KSP-independent interpretation of those rules for objective tracking, funding unlock state, sponsor-offer eligibility, starter-line progression, and read-only UI condition progress.
-- `Campaign/` — first-to-achieve and comparative-coverage race logic. `CampaignController` consumes programme collections, does not construct or expose individual funding targets, and caches per-programme projected payouts when its controlled refresh evaluates funding. It also owns a read-only cached set of pre-orbit contracts that are currently Offered, unexpired, and not personally completed by the player. That active set is derived state rather than persisted state: it starts dirty after controller/save initialization, is invalidated when a starter offer is added, the player records a starter achievement, or a pre-orbit contract expires, and is rebuilt once after all state transitions in that controller refresh have settled. Ordinary five-second refreshes and rival unlock-only progress reuse the same cached set until sponsor offer state actually changes. The runtime can skip the player vessel-observation block on intermediate five-second refreshes while funding, rivals and persistence continue normally. Directed Power I, Mass I, Control I, and Biome I are bootstrap offers at campaign start. The remaining sixteen pre-orbit contracts use the Locked -> Unlocked -> Offered -> Expired lifecycle: completing the previous level by any agency makes the next level Unlocked, and the next funding-day sponsor review offers every unlocked pre-orbit contract. Starter offers do not consume or obey the two-uncompleted-offer limit; that two-slot achievement cap applies only to Probe Orbit and later normal one-off objectives. Probe Orbit remains a deliberate exception to review timing and is offered immediately once any starter line reaches level five, while still belonging to the normal post-starter achievement pool. Satellite targets retain their separate existing two-unfulfilled-offer limit and review rules.
-- `Funding/` — nation/corporation sponsors, offers and awards. `FundingContractCatalogue` owns the code-defined achievement and satellite-network target set. The twenty pre-orbit objectives use explicit level rewards of 10k/20k/30k/40k/50k and reuse the normal ten-payment 100% through 10% declining-interest lifecycle. The four Level I pre-orbit contracts are marked Offered when fresh campaign state is constructed; Levels II-V begin unoffered behind their same-line prerequisites. Normal orbital rewards, satellite requirements and network values continue to come from body-tier settings. Probe Orbit is no longer an opening offer: Directed Power V, Mass V, Control V, or Biome V may unlock it. Crewed Orbit still requires any agency to achieve Probe Orbit and then follows the normal sponsor-review flow.
-- `Rivals/` — lightweight rival-program simulation for prototype use. Rival progression consumes program and target collections, stable mission target IDs are authoritative, and only programmes already marked Offered are valid mission targets. Starter objectives advance by 20% on each successful rival progress check and use explicit 4k/6k/8k/10k/12k costs for Levels I-V. Five successful starter checks therefore retain the previous total development costs of 20k/30k/40k/50k/60k, while normal orbital and satellite missions continue to advance in 10% steps at their existing costs. Completing a starter objective never creates a satellite; only an actual uncrewed orbital objective does. Completed one-off objectives remain selectable by rivals that have not personally achieved them until the contract expires; satellite programmes remain repeatable after being offered.
-- `Persistence/` — three explicit save-state responsibilities for Race for Space values that must survive KSP save/load cycles. `CampaignFundingSaveState` owns the player's achievement timestamps, every configured achievement-contract lifecycle, every configured satellite funding-contract lifecycle, and the next shared funding boundary; current contracts are stored explicitly by stable ID rather than treating absence as a lifecycle state. `RivalAgenciesSaveState` owns all simulated rival state by stable program ID, with each individual rival represented by a private nested saved-state record rather than a separate public persistence class. `FlightContractProgressSaveState` owns only temporary progress needed to continue active condition evaluation across save/load: tracked flight identity/origin, Directed Power peak history and orbit invalidation, plus repeated per-contract `CONTROL_STATE` entries. Funding lifecycle state never lives in active-condition progress. Earlier development-save migration and fixed 0.3 persistence APIs are intentionally not maintained in v0.5; malformed current-format state fails closed or is skipped rather than inventing progress.
-- `KspIntegration/` — KSP API adapters, game events, ScenarioModule persistence hooks, vessel discovery, configuration loading, and stable celestial-body presentation ordering. `ModPersistenceScenario` is the single KSP save adapter and writes three clearly named Race for Space sections: `FUNDING_CONTRACTS`, `RIVALS`, and `ACTIVE_CONTRACT_PROGRESS`; the serializer classes remain KSP-independent project-owned state. `KspVesselMonitor` keeps the existing twenty-second loaded/unloaded orbital scan and adds a requirement-gated active-vessel snapshot for pre-orbit contracts. Identity, body, situation, launch time, coordinates, and observation time remain cheap common values; `GetTotalMass()` is called only while an active Mass contract exists, `ScienceUtil.GetExperimentBiome()` only while Biome is active, crew count only while Control is active, and altitude/surface speed only when required by Directed Power or Control. The snapshot supplies body radius only for Mass so the tracker bypasses Haversine distance work otherwise. Directed Power destruction callbacks and the global vessel-will-destroy subscription are enabled only while an active Directed Power contract requests surface-impact telemetry and are removed when that requirement disappears. When enabled, crash detection preserves the most recent genuine `FLYING`/`SUBORBITAL` clearance, speed, situation, and universal time through transient `LANDED`/`SPLASHED` breakup states, then delegates the normalized eligibility decision to `Tracking/SurfaceImpactEvaluator`. KSP-specific vessel identity, callback subscription, body naming, and terrain/altitude extraction remain in this module; raw KSP vessel objects never enter the evaluator or starter tracker.
-- `UI/` — race/funding presentation, Command Center visibility, and stock launcher interaction. UI code reads race state but does not own or advance gameplay progression. All twenty starter achievements now appear in the normal Contract Catalogue `Offered`, `Unlocked`, `Locked`, and `Expired` catalogue sections instead of using a separate four-card starter panel. The four opening Level I contracts appear under Offered and the other sixteen begin under Locked; an Any Agency predecessor completion moves the next same-line contract to Unlocked until the next funding review offers it. `Funding Targets` remains the detailed view for offered contracts and shows the once-per-second starter-flight telemetry against every offered unfinished pre-orbit contract card, including explicit landed state for Mass and Biome, while Contract Catalogue stays focused on catalogue state. Each Control card reads its own contract-ID hold/qualification state, so simultaneous Offered Control levels display independent progress and completing one level no longer suppresses the live display for another level in the same launch. The Contract Catalogue `Current Funding Info` area is fixed at 275 px, 25% taller than the previous 220 px layout. Overview treats offered starter achievements the same way as other offered one-off achievements.
+### `Core/`
 
-## Distribution layout
+Owns runtime scheduling and campaign-wide settings.
 
-`GameData/TheRaceForSpace/` is the installable KSP package layout. `Plugins/` holds the compiled assembly, `Config/CampaignSettings.cfg` exposes user-editable campaign balance defaults, while `Assets/` and `Localization/` remain placeholders. Config changes are read when KSP starts and do not add an in-game settings UI.
+Main classes:
+
+- `ModRuntime` — owns the live `CampaignController` for the current KSP game and schedules recurring work.
+- `CampaignSettings` — reads and exposes campaign balance settings.
+
+Current runtime cadences:
+
+- active Flight Contract telemetry: about once per second;
+- normal campaign/controller refresh: about every five seconds;
+- heavier orbital vessel scan: about every twenty seconds.
+
+The UI does not own these timers.
+
+### `Campaign/`
+
+Owns high-level campaign coordination.
+
+Main class:
+
+- `CampaignController`
+
+It coordinates:
+
+- agencies;
+- objective funding contracts;
+- satellite-network funding contracts;
+- sponsor reviews;
+- shared funding dates;
+- objective availability;
+- rival progress;
+- the cached set of currently active Flight Contracts.
+
+It does **not** query raw KSP vessels directly.
+
+### `Agencies/`
+
+Owns player and rival agency state.
+
+Main class:
+
+- `AgencyState`
+
+An agency stores mutable campaign information such as:
+
+- completed objective timestamps;
+- funds;
+- qualifying satellite counts;
+- current rival mission state where applicable.
+
+Stable agency IDs are gameplay identity. Display names are presentation.
+
+### `Objectives/`
+
+Owns objective definitions and unlock rules.
+
+Main classes:
+
+- `ObjectiveDefinition`
+- `ObjectiveCatalogue`
+- `UnlockRuleDefinition`
+- `UnlockRuleEvaluator`
+
+`ObjectiveCatalogue` contains:
+
+- the twenty current Pre-Orbit objectives;
+- orbital probe and crewed objectives for supported celestial bodies.
+
+Unlock rules use one shared evaluator. UI, campaign progression, rivals, and tracking should not invent separate interpretations of the same rule.
+
+### `Funding/`
+
+Owns funding-contract definitions and funding lifecycle state.
+
+Main classes:
+
+- `ObjectiveFundingContract`
+- `SatelliteNetworkFundingContract`
+- `FundingContractCatalogue`
+
+Two funding types exist:
+
+1. **Objective Funding Contracts** — one-off objectives with the declining ten-payment sequence.
+2. **Satellite Network Funding Contracts** — continuing network funding based on qualifying satellites.
+
+The controller coordinates these contracts, but the contract types own their own funding state and calculations.
+
+### `Rivals/`
+
+Owns simulated rival mission behaviour.
+
+Main class:
+
+- `RivalSimulation`
+
+It handles:
+
+- selecting valid offered targets;
+- mission progress;
+- rival spending;
+- completing simulated rival objectives;
+- creating simulated satellite-network progress when the mission type calls for it.
+
+Rival targets use stable IDs. Presentation text must never become gameplay identity.
+
+### `Tracking/`
+
+Owns KSP-independent vessel evaluation.
+
+There are two separate paths.
+
+#### Fast path: Flight Contracts
+
+Main classes:
+
+- `FlightContractTracker`
+- `FlightTelemetryPlan`
+- `ActiveVesselSnapshot`
+- `SurfaceImpactEvaluator`
+
+This path uses frequent telemetry from the actively controlled vessel.
+
+The current users are the four Pre-Orbit lines:
+
+- Directed Power;
+- Mass;
+- Control;
+- Biome.
+
+The infrastructure is intentionally generic. Future active-vessel contracts on Mun, Minmus, or other bodies should reuse this path rather than creating another tracker.
+
+#### Slow path: Orbital Vessel Tracking
+
+Main classes:
+
+- `OrbitalVesselTracker`
+- `OrbitingVesselSnapshot`
+
+This path inspects loaded and unloaded vessels and is used for:
+
+- orbital objective completion;
+- qualifying satellite counts by celestial body.
+
+### `Persistence/`
+
+Owns KSP-independent save-state models.
+
+Main classes:
+
+- `CampaignFundingSaveState`
+- `RivalAgenciesSaveState`
+- `FlightContractProgressSaveState`
+
+The persistence models store mutable project-owned state. They do not query KSP and they should not calculate gameplay progression.
+
+Current top-level ScenarioModule sections are:
+
+```text
+CAMPAIGN_FUNDING
+RIVAL_AGENCIES
+FLIGHT_CONTRACT_PROGRESS
+```
+
+Command Center visibility is stored separately as a value on the ScenarioModule node.
+
+### `KspIntegration/`
+
+Owns direct KSP and Unity interaction.
+
+Main classes include:
+
+- `KspVesselMonitor`
+- `ModPersistenceScenario`
+- config and launcher/event integration classes.
+
+Responsibilities include:
+
+- reading active and persistent vessel state;
+- handling loaded and unloaded vessels;
+- listening for KSP destruction events used by Directed Power;
+- converting KSP data into project-owned snapshots;
+- ScenarioModule save/load hooks;
+- loading `CampaignSettings.cfg`;
+- Career-funds integration.
+
+Raw `Vessel`, `ProtoVessel`, `HighLogic`, `FlightGlobals`, and similar KSP types should remain here where practical.
+
+### `UI/`
+
+Owns Command Center presentation.
+
+Main class:
+
+- `CommandCenterWindow`
+
+Current views:
+
+- Overview;
+- Funding Targets;
+- Rival Agencies;
+- Contract Catalogue.
+
+The UI reads state. It must not complete objectives, advance rivals, process funding, or sample KSP vessels directly.
+
+## Current Pre-Orbit progression
+
+Each line has five levels.
+
+```text
+Level I -> Level II -> Level III -> Level IV -> Level V
+                                      |
+                       any line Level V complete
+                                      |
+                                      v
+                                Probe Orbit offered
+```
+
+Rules:
+
+- Directed Power I, Mass I, Control I, and Biome I are offered at campaign start.
+- A later level unlocks when any agency completes the previous level in that line.
+- Unlocked Pre-Orbit contracts wait for the next sponsor review before becoming offered.
+- All unlocked Pre-Orbit contracts can be offered together; they do not consume the normal one-off objective offer limit.
+- Probe Orbit is the exception: completing Level V in any Pre-Orbit line offers Probe Orbit immediately.
+
+## How a Pre-Orbit contract is evaluated
+
+1. `ObjectiveCatalogue` defines the objective and its criteria.
+2. `FundingContractCatalogue` creates the related `ObjectiveFundingContract`.
+3. `CampaignController` decides whether that contract is offered.
+4. Offered, unfinished Pre-Orbit objectives become active Flight Contracts.
+5. `FlightTelemetryPlan` determines which live vessel values are needed.
+6. `KspVesselMonitor` captures only those required values.
+7. `FlightContractTracker` evaluates the snapshot against every active contract independently.
+8. `AgencyState` records each completed objective.
+9. `CampaignController` settles unlocks, offers, funding, and rival state on its normal refresh.
+10. Persistence stores the changed campaign state and the Command Center displays it.
+
+Multiple offered contracts may complete from the same flight if their own criteria are independently satisfied.
+
+## Pre-Orbit criteria
+
+### Directed Power
+
+- reach the contract's required surface speed;
+- never exceed 70 km during the attempt;
+- do not enter orbit;
+- impact Kerbin to complete.
+
+### Mass
+
+- retain the required final vessel mass;
+- travel the required great-circle distance from the tracked launch origin;
+- finish `LANDED` on Kerbin;
+- `SPLASHED` does not count.
+
+### Control
+
+- have crew aboard;
+- remain continuously inside the contract's altitude band for the required time;
+- after qualification, land safely on Kerbin with crew;
+- each offered Control contract keeps independent hold state.
+
+### Biome
+
+- reach the target Kerbin biome;
+- finish `LANDED` in that biome;
+- flying over a biome or splashing down does not count.
+
+## Tracking and performance rules
+
+The active-vessel path is requirement-gated.
+
+Examples:
+
+- mass is queried only while an active Mass contract needs it;
+- biome is queried only while an active Biome contract needs it;
+- crew count is queried only while Control needs it;
+- Directed Power destruction tracking is enabled only while Directed Power requires impact telemetry.
+
+When there are no active Flight Contracts, the fast path should avoid unnecessary active-vessel discovery and evaluation.
+
+The slower orbital scan remains separate because it must consider loaded and unloaded vessels.
+
+## Save-state ownership
+
+`CAMPAIGN_FUNDING` stores:
+
+- player objective-completion timestamps;
+- objective funding lifecycle state;
+- satellite-network funding lifecycle state;
+- next shared funding time.
+
+`RIVAL_AGENCIES` stores each rival by stable agency ID.
+
+`FLIGHT_CONTRACT_PROGRESS` stores temporary active-flight state needed for fair continuation after save/load, including:
+
+- tracked flight identity and launch origin;
+- Directed Power maximum speed/altitude and orbit invalidation;
+- independent `CONTROL_STATE` entries.
+
+Instantaneous live telemetry such as current altitude, current mass, current biome, and crew count is rebuilt from the next active-vessel sample instead of being treated as authoritative saved state.
 
 ## Tests
 
-- `tests/TheRaceForSpace.Tests/` mirrors logic-heavy modules so objective, simulation, tracking, funding, configuration-backed defaults, and persistence rules can be tested without requiring a live KSP scene. The executable test runner explicitly invokes the starter-flight and surface-impact regression suites. Persistence regressions exercise the three current responsibilities directly: `CampaignFundingSaveState` round-trips arbitrary stable contract IDs and explicit locked/unoffered state, `RivalAgenciesSaveState` restores multiple rivals by stable ID without a separate single-rival API, and `FlightContractProgressSaveState` preserves Directed Power history and independent Control progress while rejecting malformed active-condition state. The remaining regressions cover destructive surface/splash transitions, physics-warp elapsed-time reach, stale/low-speed/non-flight impact rejection, landed Mass completion with final mass/distance checks, continuous Control behavior, landed-only Biome completion, staging continuity, live progress values, global rival-driven line unlocking, and the starter-specific 20% rival progress pacing with unchanged total development costs.
-- `tests/TheRaceForSpace.ControllerTests/` compiles the real `CampaignController`, starter telemetry plan, and `FlightContractTracker` against small test-only stand-ins for the existing KSP integration boundaries. It covers cross-module controller ordering without adding KSP runtime dependencies, including four opening starter offers, sixteen initially locked pre-orbit contracts, active-starter cache reuse across unchanged and unlock-only refreshes, cache rebuilds after sponsor offers/player completion/expiry, the exact telemetry requirement masks for each starter condition family, rival-driven Any Agency prerequisite unlocking, all unlocked pre-orbit contracts being offered at the next funding review without consuming the normal two achievement slots, independent Mass/Directed Power/Biome/Control evaluation for simultaneously Offered levels, exclusion of inactive higher levels even when the same flight would satisfy them, multiple Control hold states qualifying sequentially before one shared safe landing, the separate normal and satellite offer caps, and the four-way Probe Orbit convergence alongside the existing funding/rival regressions.
-- `tools/run-logic-tests.sh` runs both standalone suites.
-- `.github/workflows/logic-tests.yml` runs the same script on Ubuntu with .NET 8 for pushes and pull requests.
-- `docs/KERBAL_CONTRACTS_V0_5_TESTING.md` records the required live-KSP acceptance pass for callbacks, biome reporting, requirement-gated active-vessel telemetry, contract-specific Control UI, the three-section persistence layout, save/load behavior, and the end-to-end four-line-to-Probe-Orbit flow.
+Two KSP-independent suites are run by:
 
-Live KSP API behavior such as active-vessel destruction callbacks, stock biome reporting, loaded/unloaded vessel discovery, actual Career-funds integration, direct `CampaignSettings.cfg` loading, and Command Center layout still requires in-game verification.
+```bash
+bash tools/run-logic-tests.sh
+```
 
-## Prototype rule
+- `tests/TheRaceForSpace.Tests/` — domain, tracking, funding, rivals, and persistence.
+- `tests/TheRaceForSpace.ControllerTests/` — real `CampaignController` orchestration against test-only KSP boundary stubs.
 
-Keep the first implementation narrow: normalize KSP state at the integration boundary, keep mission rules deterministic and testable outside KSP, avoid per-frame scans, persist only project-owned state that cannot be reconstructed safely, and reuse the existing funding/rival/unlock flow instead of creating parallel gameplay systems.
+`.github/workflows/logic-tests.yml` runs the same script in CI.
+
+Direct KSP API behaviour still requires an in-game test. See [`KERBAL_CONTRACTS_V0_5_TESTING.md`](KERBAL_CONTRACTS_V0_5_TESTING.md).
+
+## Where common changes belong
+
+| Change | Primary location |
+| --- | --- |
+| Add or change an objective | `Objectives/ObjectiveCatalogue.cs` |
+| Change unlock logic | `Objectives/UnlockRuleEvaluator.cs` |
+| Change active-vessel contract evaluation | `Tracking/FlightContractTracker.cs` |
+| Change live vessel values collected | `KspIntegration/KspVesselMonitor.cs` |
+| Change orbital vessel evaluation | `Tracking/OrbitalVesselTracker.cs` |
+| Change sponsor reviews or campaign coordination | `Campaign/CampaignController.cs` |
+| Change one-off funding | `Funding/ObjectiveFundingContract.cs` |
+| Change satellite-network funding | `Funding/SatelliteNetworkFundingContract.cs` |
+| Change rival behaviour | `Rivals/RivalSimulation.cs` |
+| Change save-state models | `Persistence/` |
+| Change KSP save hooks | `KspIntegration/ModPersistenceScenario.cs` |
+| Change Command Center presentation | `UI/CommandCenterWindow.cs` |
+
+## Structure rule
+
+Extend the existing modules before creating new ones. If a feature genuinely requires moving ownership, adding a major module, changing a public API, or breaking save/config compatibility, follow the structural-change gate in [`../AGENTS.md`](../AGENTS.md).

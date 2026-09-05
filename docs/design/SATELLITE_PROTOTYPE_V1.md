@@ -1,44 +1,94 @@
-# Satellite Race Prototype v1
+# Satellite Prototype v1 - Historical Design Record
 
-This vertical slice proves the first competitive gameplay loop without expanding the project architecture.
+> **Historical document.** This file describes the first playable vertical slice. It is not the current 0.5 design. Current terminology is used where possible so the document remains easy to compare with the modern codebase.
 
-## Included
+## Purpose
 
-- Two simulated rival agencies: Aster Aerospace Directorate and Cobalt Orbital Bureau.
-- Three first-to-achieve satellite funding programmes around Kerbin, Mun and Minmus.
-- Player satellite counts read from `ProtoVessel` data, including unloaded vessels.
-- Deterministic rival progress so test runs are reproducible.
-- A basic command-center window with Overview, Funding Programmes, Rival Agencies, Satellite Tracking and Milestones sections.
-- F8 toggles the prototype window.
+The first satellite prototype proved that a small competitive campaign loop could work before the project added flexible objectives, funding lifecycles, persistent rivals, or Pre-Orbit contracts.
 
-## Funding programmes
+The prototype deliberately stayed narrow.
 
-| Programme | Requirement | Prototype award |
+## Included systems
+
+- two simulated rival agencies:
+  - Aster Aerospace Directorate;
+  - Cobalt Orbital Bureau;
+- three satellite targets around Kerbin, Mun, and Minmus;
+- player satellite counting from KSP vessel data, including unloaded vessels;
+- deterministic rival progress for repeatable testing;
+- a basic Command Center;
+- F8 show/hide control.
+
+## Early satellite funding model
+
+The original prototype used a simple first-to-complete award model.
+
+| Target | Requirement | Award |
 | --- | --- | ---: |
 | Kerbin Orbital Network | 2 satellites orbiting Kerbin | 25,000 |
 | Mun Survey Network | 1 satellite orbiting Mun | 40,000 |
 | Minmus Relay Initiative | 1 satellite orbiting Minmus | 50,000 |
 
-The first program observed meeting a requirement claims it. Player awards are tracked inside the prototype state for now; stock Career-mode funds integration is intentionally deferred until the base loop is verified.
+The first agency observed meeting the requirement claimed the award.
 
-## Rival schedule
+This was later replaced by the shared funding systems used by newer versions.
 
-Aster reaches Kerbin after 3 Kerbin days, Mun after 20 days and Minmus after 45 days. Cobalt reaches Kerbin after 5 days, Mun after 15 days and Minmus after 35 days.
+## Early rival schedule
 
-## Manual verification
+Rival progress was deterministic rather than cost/probability driven.
 
-1. Build the mod against a KSP 1.12.x install and place the assembly in `GameData/TheRaceForSpace/Plugins/`.
-2. Start or load a game and confirm the command-center window appears; press F8 twice to verify hide/show.
-3. Launch a craft whose vessel type is Probe or Relay into Kerbin orbit.
-4. Return to another scene or leave the vessel unloaded and wait for the five-second refresh.
-5. Confirm Satellite Tracking still counts the unloaded vessel.
-6. Put a second satellite around Kerbin and confirm the Kerbin programme is awarded to the player if a rival has not already reached it.
-7. Repeat with Mun and Minmus.
-8. Time-warp through rival thresholds and confirm rival counts and programme winners update without per-frame scanning.
+Aster reached:
 
-## Known prototype limits
+- Kerbin after 3 Kerbin days;
+- Mun after 20 days;
+- Minmus after 45 days.
 
-- Race state is session-only; save persistence is the next implementation step.
-- Player funding awards are displayed by the mod but are not yet written into KSP Career funds.
-- Satellite classification is deliberately narrow: only orbiting `Probe` and `Relay` vessel types count.
-- Rival progress is deterministic and abstract rather than represented by physical vessels.
+Cobalt reached:
+
+- Kerbin after 5 Kerbin days;
+- Mun after 15 days;
+- Minmus after 35 days.
+
+## What this prototype proved
+
+The important technical result was that the mod could:
+
+- count qualifying Probe and Relay vessels;
+- continue counting unloaded vessels;
+- represent abstract rival agencies without physical rival craft;
+- update campaign information on a controlled refresh cadence rather than scanning every frame;
+- present the results in one Command Center.
+
+## Historical manual test
+
+The original test flow was:
+
+1. Build against KSP 1.12.x.
+2. Deploy the DLL to `GameData/TheRaceForSpace/Plugins/`.
+3. Open the Command Center and verify F8 hide/show.
+4. Put Probe or Relay vessels into orbit around Kerbin, Mun, and Minmus.
+5. Leave vessels unloaded and confirm they were still counted.
+6. Time-warp through rival thresholds and confirm rival progress updated.
+
+## Limitations at that time
+
+The first prototype did **not** yet have:
+
+- persistent campaign state;
+- real Career-funds integration;
+- flexible objective funding contracts;
+- sponsor reviews;
+- the current `CampaignController` / `ObjectiveCatalogue` model;
+- the current Pre-Orbit phase.
+
+Satellite qualification was intentionally narrow: only orbiting `Probe` and `Relay` vessel types counted.
+
+## Current equivalent
+
+The original vessel-counting idea now lives in the slower orbital path:
+
+```text
+KspVesselMonitor -> OrbitingVesselSnapshot -> OrbitalVesselTracker
+```
+
+Current satellite-network funding is represented by `SatelliteNetworkFundingContract`, and current campaign coordination is owned by `CampaignController`.

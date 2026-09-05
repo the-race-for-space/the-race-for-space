@@ -1,175 +1,216 @@
 # Building The Race for Space
 
-The prototype is built as a .NET Framework 4.7.2 class library against the assemblies shipped with Kerbal Space Program 1.12.x.
+The mod targets **Kerbal Space Program 1.12.x** and **.NET Framework 4.7.2**.
+
+The project file is:
+
+```text
+src/TheRaceForSpace/TheRaceForSpace.csproj
+```
+
+KSP and Unity assemblies are read from your local KSP installation. They are not stored in this repository.
 
 ## Prerequisites
 
-- Kerbal Space Program 1.12.x installed locally.
-- A .NET SDK capable of building SDK-style projects.
-- The environment variable `KSP_ROOT` set to the KSP installation folder containing the KSP executable and `GameData`, or a KSP installation in one of the standard Linux Steam locations detected by the test helper.
+You need:
 
-Do not copy KSP or Unity DLLs into this repository. The project references them directly from the local KSP installation.
+- Kerbal Space Program 1.12.x installed locally;
+- Git;
+- a .NET SDK capable of building SDK-style projects;
+- `KSP_ROOT` pointing to the KSP installation folder containing the KSP executable and `GameData`.
 
-## Quick Linux prototype test cycle
+Do not copy KSP, Unity, or .NET Framework DLLs into this repository.
 
-For repeated prototype testing, use `tools/test-prototype.sh` instead of manually fetching, switching, pulling, building and deploying each version.
+## Current development branch
 
-From anywhere inside the repository, run:
+The current 0.5 development branch is:
 
-```bash
-bash tools/test-prototype.sh Alpha/Cleanup-0.4
+```text
+Alpha/KerbalContracts-v0.5
 ```
 
-Replace the branch name with whichever prototype version you want to test.
+Do not create a new branch unless it has been explicitly approved.
 
-The helper:
+## Run the automated logic tests first
 
-1. refuses to switch versions if the working tree has uncommitted changes;
-2. fetches the latest branches from `origin`;
-3. creates a local tracking branch when the requested branch only exists on GitHub;
-4. switches to the requested branch and pulls it with fast-forward-only behaviour;
-5. uses `KSP_ROOT` when already set, otherwise checks the standard Linux Steam KSP locations;
-6. builds the current prototype with `DeployToKsp=true`, which copies both the DLL and `CampaignSettings.cfg`;
-7. verifies that both deployed files exist in the KSP `GameData/TheRaceForSpace` folders.
-
-If no branch is supplied, the helper updates, builds and deploys the currently checked-out branch:
+From the repository root:
 
 ```bash
-bash tools/test-prototype.sh
+bash tools/run-logic-tests.sh
 ```
 
-## Linux manual build
+This runs both KSP-independent suites:
 
-A typical Steam installation is found at one of these locations:
+- domain/tracking/funding/rival/persistence tests;
+- `CampaignController` and unlock-rule regression tests.
+
+These tests do not build the real KSP assembly because the CI environment does not contain KSP or Unity DLLs.
+
+## Linux build
+
+A common Steam installation is:
 
 ```text
 ~/.local/share/Steam/steamapps/common/Kerbal Space Program
+```
+
+Another common location is:
+
+```text
 ~/.steam/steam/steamapps/common/Kerbal Space Program
 ```
 
-Set `KSP_ROOT` to the location that exists on your machine:
+Set `KSP_ROOT` to the installation that exists on your machine:
 
 ```bash
 export KSP_ROOT="$HOME/.local/share/Steam/steamapps/common/Kerbal Space Program"
 ```
 
-Confirm the KSP assembly required by the build exists:
+Confirm the KSP assembly is available:
 
 ```bash
 test -f "$KSP_ROOT/KSP_Data/Managed/Assembly-CSharp.dll" && echo "KSP references found"
 ```
 
-You should see:
-
-```text
-KSP references found
-```
-
-Check the .NET SDK is installed:
-
-```bash
-dotnet --version
-```
-
-Build the prototype from the repository root:
+Build:
 
 ```bash
 dotnet build ./src/TheRaceForSpace/TheRaceForSpace.csproj -c Debug
 ```
 
-The compiled mod assembly will be written under:
+The output DLL is normally:
 
 ```text
 src/TheRaceForSpace/bin/Debug/net472/TheRaceForSpace.dll
 ```
 
-### Linux build and deploy into KSP
+## Windows build
 
-For local testing, build and copy the DLL and user-editable config directly into the KSP install:
-
-```bash
-dotnet build ./src/TheRaceForSpace/TheRaceForSpace.csproj -c Debug -p:DeployToKsp=true
-```
-
-This deploys:
-
-```text
-$KSP_ROOT/GameData/TheRaceForSpace/Plugins/TheRaceForSpace.dll
-$KSP_ROOT/GameData/TheRaceForSpace/Config/CampaignSettings.cfg
-```
-
-Confirm deployment with:
-
-```bash
-test -f "$KSP_ROOT/GameData/TheRaceForSpace/Plugins/TheRaceForSpace.dll" && echo "DLL deployed"
-test -f "$KSP_ROOT/GameData/TheRaceForSpace/Config/CampaignSettings.cfg" && echo "Config deployed"
-```
-
-## Windows PowerShell
+Example PowerShell setup:
 
 ```powershell
 $env:KSP_ROOT = "C:\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program"
 dotnet build .\src\TheRaceForSpace\TheRaceForSpace.csproj -c Debug
 ```
 
-The compiled mod assembly will be written under:
+The project reads KSP assemblies from:
 
 ```text
-src/TheRaceForSpace/bin/Debug/net472/TheRaceForSpace.dll
+<KSP_ROOT>\KSP_x64_Data\Managed\
 ```
 
-## Windows build and deploy into KSP
+## Build and deploy into KSP
+
+Deployment is opt-in.
+
+### Linux
+
+```bash
+dotnet build ./src/TheRaceForSpace/TheRaceForSpace.csproj -c Debug -p:DeployToKsp=true
+```
+
+### Windows PowerShell
 
 ```powershell
-$env:KSP_ROOT = "C:\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program"
 dotnet build .\src\TheRaceForSpace\TheRaceForSpace.csproj -c Debug -p:DeployToKsp=true
 ```
 
-This deploys:
+This copies:
 
 ```text
-<KSP_ROOT>\GameData\TheRaceForSpace\Plugins\TheRaceForSpace.dll
-<KSP_ROOT>\GameData\TheRaceForSpace\Config\CampaignSettings.cfg
+<KSP_ROOT>/GameData/TheRaceForSpace/Plugins/TheRaceForSpace.dll
+<KSP_ROOT>/GameData/TheRaceForSpace/Config/CampaignSettings.cfg
 ```
 
-The deploy action is opt-in so an ordinary build never modifies a KSP installation.
+An ordinary build without `DeployToKsp=true` never modifies your KSP installation.
+
+## Linux helper
+
+For the normal Linux / Steam Deck development cycle, use:
+
+```bash
+bash tools/test-prototype.sh Alpha/KerbalContracts-v0.5
+```
+
+The helper:
+
+1. refuses to switch branches if the working tree has uncommitted changes;
+2. fetches `origin`;
+3. switches to the requested existing branch;
+4. pulls with fast-forward-only behaviour;
+5. finds `KSP_ROOT` when possible;
+6. builds with `DeployToKsp=true`;
+7. verifies that the DLL and `CampaignSettings.cfg` were deployed.
+
+If you are already on the correct branch:
+
+```bash
+bash tools/test-prototype.sh
+```
+
+See [`LINUX_TESTING.md`](LINUX_TESTING.md) for the full Linux test cycle.
+
+## Campaign settings
+
+The editable config is:
+
+```text
+GameData/TheRaceForSpace/Config/CampaignSettings.cfg
+```
+
+The deploy target copies this file next to the built DLL in the KSP installation.
+
+Restart KSP after changing the config. The current implementation reads the campaign settings during startup rather than continuously reloading them.
 
 ## Troubleshooting
 
 ### `KSP_ROOT is not set`
 
-Set `KSP_ROOT` to the folder containing the KSP executable and `GameData`, not the `GameData` or `Managed` subfolder.
+Point `KSP_ROOT` at the KSP installation folder, not at `GameData` or the `Managed` folder.
+
+Correct shape:
+
+```text
+<KSP_ROOT>/KSP executable
+<KSP_ROOT>/GameData/
+<KSP_ROOT>/KSP_Data/Managed/        Linux
+<KSP_ROOT>/KSP_x64_Data/Managed/    Windows
+```
 
 ### `Could not find KSP managed assemblies`
 
-On Linux, confirm this file exists:
+Linux:
 
 ```text
 <KSP_ROOT>/KSP_Data/Managed/Assembly-CSharp.dll
 ```
 
-On Windows, confirm this file exists:
+Windows:
 
 ```text
 <KSP_ROOT>\KSP_x64_Data\Managed\Assembly-CSharp.dll
 ```
 
+Confirm that file exists and that the KSP installation is 1.12.x.
+
 ### Missing .NET Framework reference assemblies on Linux
 
-If `dotnet build` reports missing .NET Framework 4.7.2 reference assemblies on a Linux installation, install or configure compatible reference assemblies for the SDK and retry the build. Do not copy framework or KSP DLLs into the repository as a workaround.
+The project can use compatible Mono 4.7.2 reference assemblies when available.
+
+If the build reports missing .NET Framework 4.7.2 references, install/configure compatible Mono reference assemblies and retry. Do not solve this by copying framework DLLs into the repository.
 
 ### Missing .NET Framework reference assemblies on Windows
 
-Install the .NET Framework 4.7.2 Developer Pack / targeting pack, or build the project with an appropriate Visual Studio installation.
+Install the .NET Framework 4.7.2 Developer Pack / targeting pack, or build from a Visual Studio installation that includes it.
 
-## Prototype verification
+## After a successful build
 
-After deploying the DLL and config:
+Use a disposable KSP Career save and check:
 
-1. Start KSP 1.12.x.
-2. Load a disposable test save.
-3. Confirm the prototype window appears.
-4. Press F8 to hide/show it.
-5. Follow `docs/design/VERSION_0_4_SCOPE.md` for the current alpha baseline.
+1. the Command Center opens with F8 and the stock launcher button;
+2. the four opening Pre-Orbit contracts are offered;
+3. Funding Targets shows live Flight Contract telemetry during flight;
+4. rival and funding state continue while the Command Center is hidden;
+5. save/reload restores campaign state.
 
-Automated unit-test project setup is intentionally separate from this build/deploy helper. The existing `tests/TheRaceForSpace.Tests/` structure remains reserved for logic that can be tested without a live KSP installation.
+For the complete 0.5 in-game checklist, use [`KERBAL_CONTRACTS_V0_5_TESTING.md`](KERBAL_CONTRACTS_V0_5_TESTING.md).

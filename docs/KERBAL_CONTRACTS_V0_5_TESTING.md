@@ -1,168 +1,533 @@
-# Kerbal Contracts v0.5 - Live KSP Acceptance Checklist
+# Version 0.5 - Live KSP Acceptance Checklist
 
-This checklist covers behavior that the standalone logic/controller suites cannot prove without a real Kerbal Space Program 1.12.x installation. Run it against `Alpha/KerbalContracts-v0.5` after building/deploying the 0.5.0 assembly with `KSP_ROOT` pointing at the test installation.
+This checklist covers behaviour that the standalone automated tests cannot fully prove without a real Kerbal Space Program 1.12.x installation.
 
-## Build and baseline
+Run it against:
 
-1. Build the production project with the local KSP assemblies and confirm there are no C# or KSP API compile errors.
-2. Deploy the resulting assembly to a clean test copy of `GameData/TheRaceForSpace/Plugins` together with the current CampaignSettings config.
-3. Start a fresh Career save and confirm the KSP log contains no repeated Race for Space exceptions or per-frame starter-contract spam.
-4. Open the Command Center with F8 and the stock launcher button and confirm both controls still share the same persisted visibility state.
+```text
+Alpha/KerbalContracts-v0.5
+```
 
-## Fresh-campaign offers and UI
+Use a disposable Career save where possible.
 
-1. Confirm the initial starter offers are Directed Power I, Mass I, Control I, and Biome I.
-2. In Contract Catalogue, confirm those four contracts appear in the normal `Offered` section.
-3. Confirm Directed Power II-V, Mass II-V, Control II-V, and Biome II-V appear in the normal `Locked` section at campaign start: sixteen locked pre-orbit contracts in total.
-4. Confirm there is no separate `STARTER PROGRAMMES` four-card panel taking space above the catalogue.
-5. Open each pre-orbit contract from the normal Contract Catalogue catalogue and confirm its objective, payout, state, and unlock requirements use the same presentation as other achievement contracts.
-6. Complete one Level I contract with the player and confirm its Level II successor moves from `Locked` to `Unlocked` rather than immediately becoming `Offered`.
-7. In a disposable save, allow a rival to complete one Level I pre-orbit contract first and confirm the same Level II successor also moves from `Locked` to `Unlocked`; starter prerequisites are `Any Agency`.
-8. Unlock more than two starter successors before the same funding boundary and confirm **every unlocked pre-orbit contract becomes `Offered` at that funding review**. In particular, if all four Level II contracts are unlocked, all four must be offered together; pre-orbit contracts do not consume the normal two unfinished-achievement slots.
-9. Confirm the normal two-offer limit still applies to Probe Orbit and later one-off achievement contracts, and that satellite programmes still have their own independent two-unfulfilled-offer limit.
-10. Confirm Funding Targets shows live starter telemetry inside **every offered, unfinished pre-orbit contract card** during an active flight, so multiple offered starter thresholds can be compared against the same craft at once.
-11. Confirm Contract Catalogue itself does not duplicate that live-flight panel; it remains focused on `Offered`, `Unlocked`, `Locked`, and `Expired` catalogue state. Confirm its `Current Funding Info` area is visibly 25% taller than the previous 220 px layout (275 px).
-12. Confirm Overview treats offered pre-orbit contracts the same way as other offered one-off achievements.
-13. Confirm the Help guide explains the four opening starter offers, same-line progression, Any Agency unlocks, that every Offered unfinished pre-orbit contract is active independently, and the Level V to Probe Orbit convergence.
+## Before testing
 
-## Directed Power line
+1. Run the automated tests:
 
-Repeat the relevant threshold for each level: 600, 1,100, 1,400, 1,700, and 2,000 m/s.
+   ```bash
+   bash tools/run-logic-tests.sh
+   ```
 
-1. Launch a Kerbin vehicle with the relevant pre-orbit contract offered, reach the required surface speed while remaining at or below 70,000 m, and confirm its Funding Targets card updates maximum speed and maximum altitude approximately once per second.
-2. Land or recover a qualifying-speed vehicle without destroying it and confirm Directed Power does not complete.
-3. Crash the qualifying tracked vehicle into Kerbin and confirm the current Directed Power level completes even if KSP briefly reports the dying vessel as `LANDED` or zero surface speed during breakup.
-4. Repeat a qualifying crash at terrain rather than sea level and confirm the destruction is still recognised as a surface impact.
-5. Exceed 70,000 m at any point, later descend below 70,000 m and impact at sufficient speed, and confirm the attempt remains invalid.
-6. Enter `ORBITING`, then return and impact, and confirm the starter attempt remains invalid.
-7. Stage during a qualifying flight, keep control of the continuing stage, and confirm peak speed/altitude history follows the same launch and the final controlled stage may complete the impact.
-8. Save after exceeding the 70 km ceiling, reload, then impact; confirm the saved ceiling violation is not lost.
-9. Confirm ordinary vessel destruction well away from the surface does not falsely complete Directed Power.
-10. Confirm a low-speed vessel deletion/recovery near the ground does not incorrectly count as the required high-energy surface impact.
-11. Inspect `KSP.log` after the crash and confirm there are no repeated callback exceptions from either the vessel-local destruction callback or the global vessel-will-destroy fallback.
-12. Repeat a qualifying destructive impact while using physics warp (2x and 4x where practical) and confirm Directed Power still completes. The impact detector should use the actual universal-time gap since the last in-flight sample rather than assuming a fixed two-second travel interval.
-13. Create a state where Directed Power I and II are both `Offered` and unfinished for the player. Reach at least 1,100 m/s without exceeding 70 km and impact Kerbin; confirm **both** contracts complete from that one impact, while Directed Power III remains untouched if it has not separately become `Offered`.
+2. Build and deploy the real mod against KSP 1.12.x.
+3. Deploy both:
 
-## Mass line
+   ```text
+   GameData/TheRaceForSpace/Plugins/TheRaceForSpace.dll
+   GameData/TheRaceForSpace/Config/CampaignSettings.cfg
+   ```
 
-Required pairs are 1 t / 25 km, 2.5 t / 75 km, 5 t / 150 km, 10 t / 300 km, and 20 t / 600 km.
+4. Start KSP and confirm there are no repeated mod exceptions in `KSP.log`.
 
-1. Confirm every offered unfinished Mass contract card in Funding Targets displays current remaining vessel mass, distance from the launch origin, and live `Landed: YES/NO` state during flight.
-2. Fly beyond the required distance while retaining enough mass and confirm the contract does **not** complete while the craft is still flying.
-3. Reach the required distance but land with less than the required final vessel mass and confirm no completion.
-4. Keep sufficient mass but land short of the required distance and confirm no completion.
-5. Land on Kerbin beyond the required distance with the finished landed craft still retaining at least the required mass and confirm each active Mass contract whose own mass/distance requirements are met completes.
-6. Create a state where Mass I and Mass II are both `Offered` and unfinished. Land one craft with at least 2.5 t more than 75 km from launch and confirm **both Mass I and Mass II complete from the same landing**.
-7. In the same test, make the craft strong enough to satisfy Mass III as well but leave Mass III merely `Unlocked` or `Locked`; confirm Mass III does **not** complete until it is separately `Offered`.
-8. Confirm `SPLASHED` does not count as `LANDED` for the Mass delivery requirement.
-9. Confirm entering orbit invalidates the starter attempt.
-10. Note the current v0.5 rule: distance is measured from the tracked launch/start position. A normal KSC LaunchPad/Runway mission therefore behaves as distance from the Space Centre, while an alternate launch site uses that alternate origin. Record this explicitly if alternate launch sites are part of balance testing.
+## Quick release smoke test
 
-## Control line
+Before the detailed checks, verify the basic campaign loop:
 
-Required bands/times are 2-5 km / 30 s, 8-12 km / 45 s, 15-25 km / 60 s, 30-40 km / 75 s, and 50-65 km / 90 s.
+1. Create a fresh Career save.
+2. Open the Command Center with F8 and with the stock launcher button.
+3. Open **Contract Catalogue**.
+4. Confirm these four Level I Pre-Orbit contracts are `Offered`:
+   - Directed Power I
+   - Mass I
+   - Control I
+   - Biome I
+5. Confirm Levels II-V of all four lines are `Locked`.
+6. Launch a vessel and open **Funding Targets**.
+7. Confirm live Flight Contract telemetry appears for every offered, unfinished Pre-Orbit contract.
+8. Complete one Level I objective.
+9. Confirm the next level in that line becomes `Unlocked`.
+10. Cross a sponsor-review funding boundary and confirm the unlocked level becomes `Offered`.
+11. Save and reload once and confirm campaign state remains correct.
 
-1. Launch with at least one Kerbal and enter the required band. Confirm altitude, hold time, and crew count update in each offered unfinished Control contract card in Funding Targets against that contract's own thresholds. When more than one Control level is Offered, each card must show its own contract-specific hold/qualification state rather than a shared timer.
-2. Remain continuously inside the band for the required time and confirm the Funding Targets live status changes to the qualified state instructing the player to land safely.
-3. Land on Kerbin with crew aboard and confirm completion.
-4. Leave the altitude band before qualification and confirm the continuous timer resets.
-5. Remove/lose all crew before the hold completes and confirm no qualification.
-6. Complete the hold but splash down instead of entering `LANDED` and confirm the contract does not complete.
-7. Complete the hold but enter orbit before landing and confirm the starter attempt is invalid.
-8. Save halfway through a valid hold, reload, continue the remaining hold time and land; confirm accumulated hold time survives correctly when observations resume normally.
-9. Save after the hold has qualified but before landing, reload, land safely, and confirm completion still works.
-10. While an unqualified hold is in progress, create a long interval in which the active vessel is not observed (for example by leaving the flight scene and advancing time), then return to the same vessel. Confirm the missing interval is not credited and the unqualified continuous hold restarts rather than jumping forward.
-11. Create a state where Control I and Control II are both `Offered`. Qualify Control I at 2-5 km, then begin Control II at 8-12 km and save before its 45-second hold is complete. Before saving, confirm Funding Targets shows Control I as qualified while Control II shows its own partial hold rather than hiding Control II or asking for a new launch. Reload and confirm Control I remains qualified while Control II resumes from its own saved partial hold; finish Control II and land safely, then confirm **both contracts complete on the same landing**.
-12. In that multi-Control save, inspect `ACTIVE_CONTRACT_PROGRESS` and confirm each tracked Control contract has its own `CONTROL_STATE` child containing `objectiveId`, `holdSeconds`, `wasSampleInBand`, and `qualified`.
+If this basic loop fails, fix it before running the longer checklist.
 
-## Biome line
+---
 
-Targets are Grasslands, Highlands, Mountains, Deserts, and Ice Caps.
+# 1. Command Center and campaign state
 
-1. Confirm every offered unfinished Biome contract card in Funding Targets reports the active vessel's stock Kerbin biome, that contract's target biome, and live `Landed: YES/NO` state.
-2. Fly over or through the required biome without landing and confirm the Biome contract does **not** complete.
-3. Land the craft in the required Kerbin biome and confirm that offered Biome contract completes only once the vessel situation is `LANDED`.
-4. Splash down in or beside the target biome and confirm `SPLASHED` does not count as the required landing.
-5. Create a state where Biome I and Biome II are both `Offered`. Land in Grasslands to complete Biome I, then continue the **same launch attempt** and later land in Highlands; confirm Biome II can complete independently without requiring a new launch.
-6. Confirm a later Biome level that is not `Offered` does not complete even if the same mission eventually visits its target biome.
-7. Confirm biome reporting remains stable during low flight and after touchdown so the landed sample reports the correct stock biome.
-8. Confirm no Biome completion occurs away from Kerbin.
+## Fresh campaign
 
-## Active telemetry gating and idle path
+Confirm:
 
-1. With the four opening Level I contracts active, confirm Directed Power, Mass, Control, and Biome live telemetry all continue to update correctly; together those four lines require the full starter telemetry mask.
-2. In a disposable state, complete or expire Directed Power, Control, and Biome while leaving only a Mass contract Offered and unfinished. Confirm Mass telemetry and completion still work normally, and confirm no Directed Power destruction callback exceptions appear while no Directed Power contract is active.
-3. Repeat with only a Biome contract active and confirm biome/landing behavior still works without requiring a Mass or Control contract to remain active.
-4. Repeat with only a Control contract active and confirm altitude, crew, independent hold state, and landing completion still work normally.
-5. Reach a state with **zero Offered unfinished pre-orbit contracts** (for example after completing the currently Offered set before the next sponsor review), remain in flight for several one-second intervals, and confirm there are no starter-tracking exceptions, impact callback errors, or unexpected contract completions. The runtime should skip active-vessel starter discovery/evaluation until a later offer replaces the cached active set.
-6. While still in the same save, allow the next sponsor review to Offer a new pre-orbit contract and confirm its required live telemetry resumes on the next one-second observation without restarting the controller or reloading the save.
-7. If profiling the mod, compare a Mass-only, Biome-only, Control-only, and zero-active state. `GetTotalMass()` should only be present for Mass, `ScienceUtil.GetExperimentBiome()` only for Biome, crew collection only for Control, and Directed Power destruction tracking only while Directed Power is active.
+- **Overview**, **Funding Targets**, **Rival Agencies**, and **Contract Catalogue** are available.
+- Contract Catalogue uses `Offered`, `Unlocked`, `Locked`, and `Expired` sections.
+- there is no separate Pre-Orbit-only panel above the normal catalogue.
+- Directed Power I, Mass I, Control I, and Biome I are `Offered`.
+- the remaining sixteen Pre-Orbit contracts are `Locked`.
+- offered Pre-Orbit contracts appear in Overview like other offered one-off objective funding contracts.
 
-## Cross-line behavior
+## Any Agency progression
 
-1. Use one launch that legitimately satisfies conditions in two different lines, such as landing a sufficiently heavy craft in the required Biome at the required Mass distance, and confirm both active contracts may complete on that landing.
-2. Confirm Mass, Biome, Directed Power, and Control evaluate each **Offered, unfinished contract independently** rather than choosing one highest unlocked level. A qualifying flight may complete multiple Offered levels in the same line, but must not complete a merely Locked/Unlocked level that is absent from the active set.
-3. Confirm multiple Offered Control contracts retain separate hold/qualification state throughout the same launch and can complete together on one qualifying crewed landing.
-4. Confirm staging does not accidentally create a new attempt when launch time/body match the ongoing vehicle.
-5. Confirm switching to an unrelated vessel/launch begins a new tracked attempt rather than inheriting the previous vehicle's maxima or Control timers.
+Use the player in one save and a rival in another if practical.
 
-## Probe Orbit convergence
+Confirm:
 
-Test each Level V route independently in a disposable save or by restoring a backup.
+- completing a Pre-Orbit level unlocks the next level in that same line;
+- either the player or a rival can satisfy that prerequisite;
+- the newly unlocked level waits in `Unlocked` until the next sponsor review;
+- all unlocked Pre-Orbit contracts are offered at that review, even if more than two are waiting;
+- Pre-Orbit offers do not consume the normal two unfinished one-off objective offer slots;
+- satellite-network funding contracts keep their separate offer rules.
 
-1. Complete Directed Power V and confirm Probe Orbit is offered immediately without waiting for a funding review.
-2. Repeat with Mass V, Control V, and Biome V and confirm each one independently satisfies the OR gate.
-3. Allow a rival to complete a starter Level V first and confirm Probe Orbit is offered immediately to the whole race.
-4. Confirm Probe Orbit itself remains a normal uncrewed orbital objective and a qualifying player Probe/Relay can complete it through the existing orbital vessel tracker.
-5. Confirm completing a pre-orbit contract by a rival does not create a fake Kerbin satellite; only an actual uncrewed orbit objective may do so.
+---
 
-## Funding and rival balance
+# 2. Live Flight Contract telemetry
 
-1. Confirm Level I-V starter base payouts are 10,000 / 20,000 / 30,000 / 40,000 / 50,000.
-2. After first completion of a starter achievement, confirm its funding contract starts and follows the normal ten-payment sequence: 100%, 90%, 80%, 70%, 60%, 50%, 40%, 30%, 20%, 10%.
-3. Confirm multiple agencies completing the same starter achievement split later payouts using the same existing achievement rules.
-4. Confirm each successful rival progress check on a pre-orbit contract advances launch progress by 20%, following 0% -> 20% -> 40% -> 60% -> 80% -> 100%.
-5. Confirm the corresponding Level I-V starter progress-step costs are 4,000 / 6,000 / 8,000 / 10,000 / 12,000. Five successful steps should therefore preserve the previous full-development costs of 20,000 / 30,000 / 40,000 / 50,000 / 60,000.
-6. Confirm normal orbital and satellite rival missions still advance by 10% per successful progress check and retain their existing costs.
-7. Confirm the Rival Agencies ETA reflects five successful development steps from 0% for a starter mission rather than ten, while normal orbit/satellite ETA calculation still uses ten 10% steps.
-8. Confirm Levels II-V of the starter lines wait in `Unlocked` after their predecessor is completed by any agency, then **all currently unlocked pre-orbit contracts become `Offered` at the next funding review** with no starter offer limit.
-9. With several pre-orbit contracts still unfinished and offered, unlock at least three normal Probe-or-later achievement candidates and confirm only two normal achievement contracts are offered; starter offers must not consume those two normal slots. Confirm satellite offers remain governed by their separate two-unfulfilled-offer limit.
+During flight, Funding Targets should show live values about once per second.
 
-## Persistence and scene changes
+## Directed Power card
 
-1. Inspect a current v0.5 Race for Space scenario node and confirm persistence is divided into exactly three gameplay sections: `FUNDING_CONTRACTS`, `RIVALS`, and `ACTIVE_CONTRACT_PROGRESS` (plus the separate command-center visibility value).
-2. Inspect `FUNDING_CONTRACTS` and confirm player completion timestamps use `PLAYER_ACHIEVEMENT`, achievement funding contracts use `ACHIEVEMENT_CONTRACT`, and satellite funding contracts use `SATELLITE_CONTRACT`, all identified by stable `id` values. Confirm locked/unoffered contracts are represented explicitly rather than disappearing from the saved contract set.
-3. Save and reload with no active flight and confirm no active contract attempt is invented.
-4. Save and reload during a valid active attempt and confirm `ACTIVE_CONTRACT_PROGRESS` preserves the intended temporary condition state: maxima, launch origin, every per-contract Control hold/qualification state, and orbit invalidation.
-5. Confirm current telemetry such as instantaneous mass/altitude/biome is repopulated by the next live vessel sample rather than stale saved values.
-6. Move Flight -> Space Center -> Tracking Station -> Flight and confirm the controller, offers, completed achievements, rival state, and saved active-contract progress remain consistent.
-7. Load a different KSP save in the same process and confirm no funding-contract, rival, active-flight, or destruction-callback state leaks from the previous save.
-8. Inspect `ACTIVE_CONTRACT_PROGRESS` and confirm Control progress is represented by repeated `CONTROL_STATE` children. Confirm obsolete single-Control values such as `controlHoldMilestoneId` and per-line completion flags are no longer written.
-9. Corrupt one current-format `CONTROL_STATE` entry in a disposable save and confirm the malformed active attempt fails closed rather than creating invented hold progress.
-10. Confirm earlier development-only persistence nodes such as `RACE_PROGRESS` and `STARTER_FLIGHT` are not written by the current v0.5 format; compatibility with those pre-cleanup development saves is intentionally not required.
+Expect:
 
-## Regression and release acceptance
+- **Current Speed**
+- **Max Speed** compared with the required speed
+- **Max Altitude** compared with the 70 km ceiling
+- Kerbin impact readiness/status
 
-The v0.5 candidate is ready for merge/release only when:
+## Mass card
 
-- the GitHub `Logic Tests` workflow is green and its log explicitly includes `PASS: Starter flight contracts and persistence`;
-- the production assembly builds against the target KSP 1.12.x installation;
-- a fresh campaign shows exactly the four Level I starter offers and the other sixteen pre-orbit contracts locked in the normal Contract Catalogue catalogue;
-- player and rival starter completions both unlock the correct next same-line contract;
-- every unlocked pre-orbit contract is offered at the next funding review without consuming the normal two unfinished-achievement slots;
-- the normal Probe-and-later achievement pool still caps unfinished offers at two, independently of the satellite pool's own two-offer cap;
-- every offered unfinished pre-orbit contract shows its own live criteria values in Funding Targets without a separate Contract Catalogue starter panel blocking the catalogue;
-- simultaneous Control cards show their own hold/qualification state, and completing one offered Control level does not suppress another offered level's live progress;
-- Contract Catalogue keeps a usable 275 px Current Funding Info area above the catalogue;
-- Biome only completes on a landed craft in the target biome;
-- Mass only completes on a landed finished craft that still meets both final mass and distance requirements;
-- simultaneously Offered Mass/Biome/Directed Power/Control levels are evaluated independently, while an unoffered higher level is not checked even when the same flight would satisfy it;
-- simultaneous Control hold/qualification states survive current-format save/load independently;
-- persistence writes the three current sections `FUNDING_CONTRACTS`, `RIVALS`, and `ACTIVE_CONTRACT_PROGRESS`, with all funding contracts stored explicitly by stable ID and temporary condition progress kept separate from contract lifecycle state;
-- the active starter telemetry plan requests only the condition families currently represented by Offered unfinished pre-orbit contracts, and a zero-active plan bypasses active-vessel starter discovery/evaluation;
-- a real qualifying Directed Power surface crash reliably produces completion without turning normal recovery into a false crash;
-- all four starter lines can be completed end-to-end in KSP;
-- at least one Level V route has been followed through a real Probe Orbit completion;
-- saving/loading cannot erase Directed Power invalidation or manufacture Control progress;
-- Contract Catalogue, Overview, Funding Targets, and Rival Agencies remain usable without layout-breaking overlap or exceptions;
-- no repeated exceptions or obvious performance/log-spam regressions appear during normal flight.
+Expect:
+
+- current remaining vessel mass
+- distance from the tracked launch origin
+- landed state
+
+## Control card
+
+Expect:
+
+- current altitude and target altitude band
+- continuous hold progress
+- crew count
+- safe-landing readiness after qualification
+
+Each offered Control contract must display its own independent hold/qualification state.
+
+## Biome card
+
+Expect:
+
+- current biome
+- target biome
+- biome match state
+- landed state
+
+## Telemetry failure messages
+
+While in Flight with a normal active vessel, the UI should not remain stuck on:
+
+```text
+Waiting for active vessel telemetry...
+```
+
+If that message appears continuously, investigate the runtime/tracking path rather than only the UI layout.
+
+The Contract Catalogue should remain focused on contract state and should not duplicate the live telemetry panel.
+
+---
+
+# 3. Directed Power
+
+All levels use a **70 km maximum altitude** and require a Kerbin surface impact.
+
+| Level | Required surface speed |
+| --- | ---: |
+| I | 600 m/s |
+| II | 1,100 m/s |
+| III | 1,400 m/s |
+| IV | 1,700 m/s |
+| V | 2,000 m/s |
+
+For each level being tested:
+
+1. Reach the required speed without exceeding 70,000 m.
+2. Confirm Current Speed and Max Speed update in Funding Targets.
+3. Confirm normal landing or recovery does **not** complete the objective.
+4. Impact Kerbin with a qualifying vessel and confirm completion.
+5. Repeat against normal terrain, not only sea level.
+6. Exceed 70,000 m first, descend, then impact at sufficient speed. Confirm the attempt remains invalid.
+7. Enter orbit, return, and impact. Confirm the attempt remains invalid.
+8. Stage during flight and confirm the continuing controlled stage keeps the same attempt history.
+9. Save after violating the altitude ceiling, reload, then impact. Confirm the violation survives save/load.
+10. Destroy a vessel well above the surface and confirm that does not count as the required surface impact.
+11. Confirm low-speed deletion/recovery near the ground does not create a false completion.
+12. If practical, repeat a qualifying impact at 2x and 4x physics warp.
+13. Inspect `KSP.log` and confirm there are no repeated destruction-callback exceptions.
+
+## Multiple offered Directed Power levels
+
+Create a state where Directed Power I and II are both offered and unfinished.
+
+Reach at least 1,100 m/s, remain below 70 km, and impact Kerbin.
+
+Confirm:
+
+- Directed Power I completes;
+- Directed Power II completes;
+- a higher level that is only `Locked` or `Unlocked` does not complete.
+
+---
+
+# 4. Mass
+
+| Level | Required final mass | Required distance |
+| --- | ---: | ---: |
+| I | 1 t | 25 km |
+| II | 2.5 t | 75 km |
+| III | 5 t | 150 km |
+| IV | 10 t | 300 km |
+| V | 20 t | 600 km |
+
+For each level:
+
+1. Confirm the Funding Targets card shows current mass, distance, and landed state.
+2. Fly beyond the required distance with enough mass. Confirm no completion while still flying.
+3. Land beyond the required distance with too little final mass. Confirm no completion.
+4. Land with enough mass but short of the required distance. Confirm no completion.
+5. Land on Kerbin beyond the required distance with enough final mass. Confirm completion.
+6. Confirm `SPLASHED` does not count as `LANDED`.
+7. Enter orbit first and confirm the Pre-Orbit attempt is invalid.
+
+Distance is measured from the tracked launch origin. A KSC launch therefore behaves like distance from the Space Centre, while an alternate launch site uses that alternate origin.
+
+## Multiple offered Mass levels
+
+Create a state where Mass I and II are both offered.
+
+Land one craft at least 75 km from launch with at least 2.5 t remaining.
+
+Confirm both complete. A higher Mass level that is not offered must remain incomplete even if the craft also satisfies its numbers.
+
+---
+
+# 5. Control
+
+| Level | Altitude band | Required continuous hold |
+| --- | --- | ---: |
+| I | 2-5 km | 30 s |
+| II | 8-12 km | 45 s |
+| III | 15-25 km | 60 s |
+| IV | 30-40 km | 75 s |
+| V | 50-65 km | 90 s |
+
+Every Control objective requires crew and a safe Kerbin landing after qualification.
+
+For each level:
+
+1. Launch with at least one Kerbal.
+2. Enter the required altitude band.
+3. Confirm hold time increases only while the vessel remains continuously in band with crew.
+4. Leave the band before qualification and confirm the timer resets.
+5. Lose/remove all crew before qualification and confirm the hold cannot qualify.
+6. Complete the required hold and confirm the card changes to a qualified/landing-ready state.
+7. Land on Kerbin with crew and confirm completion.
+8. Splash down instead and confirm no completion.
+9. Enter orbit before landing and confirm the Pre-Orbit attempt is invalid.
+
+## Save/load Control state
+
+Test both cases:
+
+- save partway through a valid hold, reload, then continue;
+- save after qualification but before landing, reload, then land.
+
+Confirm state resumes correctly.
+
+If the vessel is not observed for a long interval before qualification, that missing time must not be credited as continuous hold time.
+
+## Multiple offered Control levels
+
+Create a state where Control I and II are both offered.
+
+1. Qualify Control I at 2-5 km.
+2. Move to the Control II band.
+3. Begin the Control II hold.
+4. Confirm Control I remains qualified while Control II shows separate progress.
+5. Save and reload during Control II progress.
+6. Finish Control II.
+7. Land safely with crew.
+
+Confirm both objectives complete on that same landing.
+
+---
+
+# 6. Biome
+
+| Level | Target biome |
+| --- | --- |
+| I | Grasslands |
+| II | Highlands |
+| III | Mountains |
+| IV | Deserts |
+| V | Ice Caps |
+
+For each level:
+
+1. Confirm Funding Targets displays the stock Kerbin biome and the contract target.
+2. Fly over the target biome. Confirm no completion.
+3. Land in the target biome and confirm completion only after KSP reports `LANDED`.
+4. Confirm `SPLASHED` does not count.
+5. Confirm no Biome completion occurs away from Kerbin.
+6. Confirm biome reporting remains correct at low altitude and after touchdown.
+
+## Multiple offered Biome levels
+
+Create a state where Biome I and II are both offered.
+
+Land in Grasslands, continue the same launch attempt, then later land in Highlands.
+
+Confirm each offered objective can complete independently. A higher level that is not offered must not complete.
+
+---
+
+# 7. Cross-line behaviour
+
+Use one launch that can satisfy more than one active contract.
+
+Examples:
+
+- a heavy craft lands at the required Mass distance inside the required Biome;
+- more than one offered threshold in the same line is satisfied;
+- more than one Control hold is qualified before one final landing.
+
+Confirm:
+
+- every offered, unfinished active contract is evaluated independently;
+- one valid landing or impact may complete several offered contracts;
+- `Locked` or merely `Unlocked` contracts are not evaluated as active Flight Contracts;
+- staging does not create a new attempt when the continuing vessel belongs to the same launch;
+- switching to an unrelated vessel does not inherit old maxima, origin, or Control timers.
+
+---
+
+# 8. Telemetry gating and idle behaviour
+
+The fast Flight Contract path should only collect data needed by active contracts.
+
+Test, if practical:
+
+- all four opening lines active;
+- Mass only;
+- Control only;
+- Biome only;
+- Directed Power only;
+- zero offered unfinished Pre-Orbit contracts.
+
+Confirm the remaining active contract still works in each reduced state.
+
+When no active Flight Contracts exist, confirm there are no unexpected completions, impact callback errors, or repeated tracking exceptions.
+
+After a later sponsor review offers a new Pre-Orbit contract, live telemetry should resume without restarting the save or controller.
+
+---
+
+# 9. Probe Orbit convergence
+
+Test each route independently where practical:
+
+- Directed Power V -> Probe Orbit
+- Mass V -> Probe Orbit
+- Control V -> Probe Orbit
+- Biome V -> Probe Orbit
+
+Confirm:
+
+1. completing any one Level V offers Probe Orbit immediately;
+2. the offer does not wait for the next sponsor review;
+3. a rival Level V completion can also trigger the campaign-wide offer;
+4. Probe Orbit remains a normal orbital objective;
+5. a qualifying uncrewed Probe or Relay can complete Probe Orbit through `OrbitalVesselTracker`;
+6. completing a Pre-Orbit objective by a rival does not invent a satellite.
+
+---
+
+# 10. Funding and rivals
+
+## Pre-Orbit reward values
+
+| Level | Base reward |
+| --- | ---: |
+| I | 10,000 |
+| II | 20,000 |
+| III | 30,000 |
+| IV | 40,000 |
+| V | 50,000 |
+
+After first completion of an objective funding contract, confirm the normal payment sequence is:
+
+```text
+100%, 90%, 80%, 70%, 60%, 50%, 40%, 30%, 20%, 10%
+```
+
+Confirm later qualifying agencies share later payments according to the normal funding rules and receive no retroactive share of earlier payments.
+
+## Rival Pre-Orbit progress
+
+A successful rival Pre-Orbit progress check advances by 20%:
+
+```text
+0 -> 20 -> 40 -> 60 -> 80 -> 100
+```
+
+| Level | Cost per successful 20% step | Full development cost |
+| --- | ---: | ---: |
+| I | 4,000 | 20,000 |
+| II | 6,000 | 30,000 |
+| III | 8,000 | 40,000 |
+| IV | 10,000 | 50,000 |
+| V | 12,000 | 60,000 |
+
+Confirm normal orbital and satellite-network rival missions still use 10% progress steps.
+
+Confirm the Rival Agencies ETA reflects five successful Pre-Orbit steps from 0%, not ten.
+
+---
+
+# 11. Persistence
+
+Current top-level ScenarioModule sections are:
+
+```text
+CAMPAIGN_FUNDING
+RIVAL_AGENCIES
+FLIGHT_CONTRACT_PROGRESS
+```
+
+Command Center visibility is stored separately.
+
+## `CAMPAIGN_FUNDING`
+
+Confirm current saves use:
+
+```text
+PLAYER_OBJECTIVE_COMPLETION
+OBJECTIVE_FUNDING_CONTRACT
+SATELLITE_NETWORK_FUNDING_CONTRACT
+```
+
+Each entry is identified by a stable `id` where applicable.
+
+Confirm locked/unoffered funding contracts are represented explicitly rather than disappearing from saved campaign state.
+
+## `RIVAL_AGENCIES`
+
+Confirm rivals are stored as repeated:
+
+```text
+RIVAL
+```
+
+entries keyed by stable agency identity.
+
+## `FLIGHT_CONTRACT_PROGRESS`
+
+Confirm it stores only temporary active-flight evaluation state, including:
+
+- active attempt identity;
+- launch time and origin;
+- maximum Directed Power altitude and speed history;
+- orbit invalidation;
+- repeated `CONTROL_STATE` children.
+
+Each `CONTROL_STATE` should contain:
+
+```text
+objectiveId
+holdSeconds
+wasSampleInBand
+qualified
+```
+
+Instantaneous telemetry such as current altitude, current mass, current biome, and current crew should be rebuilt from the next live sample after load.
+
+## Save/reload checks
+
+1. Save with no active attempt and confirm reload does not invent one.
+2. Save during a Directed Power attempt after exceeding 70 km; reload and confirm the invalidation remains.
+3. Save during a Control hold; reload and confirm valid saved progress resumes.
+4. Save after Control qualification but before landing; reload and confirm landing can still complete it.
+5. Move Flight -> Space Center -> Tracking Station -> Flight and confirm campaign state remains consistent.
+6. Load a different KSP save in the same process and confirm campaign, rival, tracking, and callback state does not leak across saves.
+7. Corrupt a current-format `CONTROL_STATE` in a disposable save and confirm malformed progress fails closed rather than inventing valid progress.
+
+---
+
+# 12. Orbital vessel tracking
+
+Use Probe/Relay and crewed vessels around Kerbin. Repeat around Mun, Minmus, or another supported body if relevant to the change being tested.
+
+Confirm:
+
+1. a newly orbiting loaded vessel is recognised;
+2. after leaving Flight, the unloaded/persistent vessel remains counted;
+3. Probe and Relay vessel types both count as qualifying satellites where appropriate;
+4. a crewed vessel can satisfy a crewed orbital objective;
+5. a crewed Probe can still count toward satellite-network presence while not satisfying an uncrewed Probe Orbit requirement by itself;
+6. scene changes and save/reload do not lose valid orbital vessel state.
+
+This verifies the boundary between `KspVesselMonitor` and `OrbitalVesselTracker`.
+
+---
+
+# 13. Runtime ownership
+
+Hide the Command Center with F8 and continue playing or time-warping.
+
+Confirm:
+
+- rival progress continues;
+- sponsor/funding timing continues;
+- active Flight Contract tracking continues during Flight;
+- reopening the UI shows current state rather than restarting progression;
+- moving between normal KSP scenes does not recreate campaign state for the same save.
+
+This verifies that `ModRuntime` owns progression and `CommandCenterWindow` is presentation-only.
+
+---
+
+# 14. Log check
+
+After a test session:
+
+```bash
+grep -i "Race for Space\|TheRaceForSpace\|Exception" "$KSP_ROOT/KSP.log" | tail -n 100
+```
+
+Look for:
+
+- repeated exceptions;
+- vessel-destruction callback errors;
+- save/load errors;
+- excessive per-frame logging.
+
+---
+
+# Release-candidate sign-off
+
+Before calling a 0.5 build ready for broader testing, confirm all of the following:
+
+- [ ] Real KSP build succeeds.
+- [ ] Automated logic suites pass.
+- [ ] Four opening Pre-Orbit offers are correct.
+- [ ] Live telemetry displays correctly.
+- [ ] Directed Power impact behaviour works.
+- [ ] Mass landing behaviour works.
+- [ ] Control hold + safe landing works.
+- [ ] Biome landing behaviour works.
+- [ ] Multiple simultaneously offered contracts evaluate independently.
+- [ ] Any Agency progression works.
+- [ ] Sponsor reviews offer all unlocked Pre-Orbit contracts.
+- [ ] Any Level V offers Probe Orbit immediately.
+- [ ] Objective funding and rival progress values are correct.
+- [ ] Save/reload and scene changes preserve the correct state.
+- [ ] Loaded and unloaded orbital vessels are handled correctly.
+- [ ] No repeated KSP log errors are present.

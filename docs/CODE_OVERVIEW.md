@@ -1,8 +1,12 @@
 # Code Overview
 
-This is the quickest map of how the mod is put together.
+This is the quickest guide to the current codebase.
 
-## Overall flow
+Use this when you want to understand **what happens where** without reading every class.
+
+For ownership rules, see [`STRUCTURE.md`](STRUCTURE.md).
+
+## Core flow
 
 ```text
 KSP / Unity
@@ -10,120 +14,287 @@ KSP / Unity
     v
 ModRuntime
     |
-    +--> KspIntegration reads KSP state
-    |
-    +--> FlightContractTracker checks contracts that need live active-vessel data
-    +--> OrbitalVesselTracker checks orbital objectives and satellite-network counts
+    +--> KspVesselMonitor
+    |       |
+    |       +--> FlightContractTracker
+    |       +--> OrbitalVesselTracker
     |
     v
 CampaignController
     |
-    +--> Agencies stores player and rival state
-    +--> Objectives defines what can be completed and how it unlocks
-    +--> Funding stores funding contracts and payouts
-    +--> Rivals advances rival agencies
+    +--> Agencies
+    +--> Objectives
+    +--> Funding
+    +--> Rivals
     |
-    +--> Persistence saves campaign and flight-progress state
-    +--> UI reads and displays the state
+    +--> Persistence
+    +--> CommandCenterWindow reads the result
 ```
 
-`ModRuntime` drives when work happens. `CampaignController` coordinates campaign state. The UI only reads state and never advances progression.
+`ModRuntime` decides **when** work happens.
 
-## Source folders
+`KspVesselMonitor` reads **KSP state**.
 
-| Folder | Purpose |
-| --- | --- |
-| `Core/` | Runtime scheduling and campaign-wide settings. |
-| `Campaign/` | Main campaign coordination: offers, unlocks, funding reviews and rival updates. |
-| `Agencies/` | State for the player agency and rival agencies. |
-| `Objectives/` | Objective definitions and unlock-rule evaluation. |
-| `Funding/` | One-off objective funding and recurring satellite-network funding. |
-| `Rivals/` | Rival mission selection, spending and progress. |
-| `Tracking/` | KSP-independent flight-contract and orbital-vessel evaluation. |
-| `Persistence/` | Saveable project-owned state. |
-| `KspIntegration/` | Direct KSP API access, vessel capture, events, config loading and ScenarioModule save hooks. |
-| `UI/` | Command Center presentation. |
+The trackers decide **what the vessel state means**.
+
+`CampaignController` coordinates **campaign progression**.
+
+The UI only **displays** the current state.
+
+## Main terms
+
+### Campaign
+
+The complete progression state for one KSP save.
+
+### Agency
+
+The player or a simulated rival.
+
+### Objective
+
+A gameplay goal that an agency can complete.
+
+Examples:
+
+- Directed Power I
+- Control III
+- Probe Orbit
+- Mun Crewed Orbit
+
+### Objective Funding Contract
+
+One-off funding attached to an objective. It uses the declining ten-payment funding sequence.
+
+### Satellite Network Funding Contract
+
+Continuing funding based on qualifying satellites around a celestial body.
+
+### Pre-Orbit Contract
+
+One of the current twenty Kerbin contracts in the Directed Power, Mass, Control, or Biome lines.
+
+### Flight Contract
+
+Generic active-vessel contract infrastructure. The current Pre-Orbit contracts use it, but future Mun, Minmus, or other active-vessel contracts can use it too.
 
 ## Main classes
 
 ### `ModRuntime`
-Runs the mod's timed work. It samples active-vessel flight contracts every second, refreshes campaign progression on the regular controller cadence, and performs the slower orbital vessel scan separately.
+
+Location: `Core/ModRuntime.cs`
+
+Owns the live campaign runtime for the current KSP game.
+
+It schedules:
+
+- frequent active-vessel Flight Contract samples;
+- normal campaign refreshes;
+- slower orbital vessel scans.
 
 ### `CampaignController`
-Coordinates the campaign. It owns the player/rival agency collections, funding-contract state, unlock progression, sponsor reviews, rival updates and the cached set of active flight contracts.
+
+Location: `Campaign/CampaignController.cs`
+
+Coordinates the campaign.
+
+It manages:
+
+- agencies;
+- funding-contract state;
+- unlock progression;
+- sponsor reviews;
+- shared funding dates;
+- rival updates;
+- the active Flight Contract list.
 
 ### `AgencyState`
-Stores the state of one player or rival agency: completed objectives, funds, qualifying satellite counts and rival mission progress.
+
+Location: `Agencies/AgencyState.cs`
+
+Stores mutable state for one agency.
+
+Examples:
+
+- completed objective times;
+- funds;
+- satellite counts;
+- rival mission progress.
 
 ### `ObjectiveDefinition`
-Defines one objective and the requirements for completing it. Examples include Directed Power I, Control III and Probe Orbit.
+
+Location: `Objectives/ObjectiveDefinition.cs`
+
+Defines one objective and its requirements.
 
 ### `ObjectiveCatalogue`
-Creates the current objective definitions and their stable IDs. The four current Kerbin lines are identified as pre-orbit objectives.
 
-### `FlightContractTracker`
-Evaluates contracts that require frequent data from the currently controlled vessel. The current users are the four pre-orbit Kerbin lines, but the tracking path is intentionally generic so future Mun, Minmus or other active-flight contracts can use the same one-second system.
+Location: `Objectives/ObjectiveCatalogue.cs`
 
-### `OrbitalVesselTracker`
-Uses the slower vessel scan to record orbital objectives and update qualifying satellite-network counts.
+Creates the current objective set and stable IDs.
 
-### `FundingContractCatalogue`
-Builds the funding-contract state associated with objectives and satellite networks.
+It includes the twenty Pre-Orbit objectives and the orbital objectives used by the wider campaign.
+
+### `UnlockRuleEvaluator`
+
+Location: `Objectives/UnlockRuleEvaluator.cs`
+
+Interprets objective unlock rules.
+
+The same rule logic is reused by campaign progression, rivals, tracking, and read-only UI progress.
 
 ### `ObjectiveFundingContract`
-Funding lifecycle for a one-off objective.
+
+Location: `Funding/ObjectiveFundingContract.cs`
+
+Stores the lifecycle of one one-off objective funding contract.
 
 ### `SatelliteNetworkFundingContract`
-Funding lifecycle for a repeatable satellite-network target.
 
-### `RivalSimulation`
-Chooses valid rival missions, spends rival funds and advances mission progress.
+Location: `Funding/SatelliteNetworkFundingContract.cs`
+
+Stores recurring network funding for one celestial body.
+
+### `FundingContractCatalogue`
+
+Location: `Funding/FundingContractCatalogue.cs`
+
+Creates the code-owned funding contract set.
+
+### `FlightContractTracker`
+
+Location: `Tracking/FlightContractTracker.cs`
+
+Evaluates frequent active-vessel telemetry.
+
+Current Pre-Orbit uses:
+
+- Directed Power — speed, altitude, and impact state;
+- Mass — final mass and distance;
+- Control — altitude-band hold, crew, and safe landing;
+- Biome — current biome and landing state.
+
+It can evaluate several offered contracts independently from the same flight.
+
+### `OrbitalVesselTracker`
+
+Location: `Tracking/OrbitalVesselTracker.cs`
+
+Uses the slower vessel scan for:
+
+- orbital objective completion;
+- satellite-network counts.
+
+It works with both loaded and unloaded vessel snapshots.
+
+### `KspVesselMonitor`
+
+Location: `KspIntegration/KspVesselMonitor.cs`
+
+Reads KSP vessel state and converts it into project-owned snapshots.
+
+This is where raw KSP vessel access belongs.
 
 ### `ModPersistenceScenario`
-Connects KSP save/load to `CampaignFundingSaveState`, `RivalAgenciesSaveState` and `FlightContractProgressSaveState`.
+
+Location: `KspIntegration/ModPersistenceScenario.cs`
+
+Connects the project-owned save-state classes to KSP's `ScenarioModule` save/load system.
+
+### `RivalSimulation`
+
+Location: `Rivals/RivalSimulation.cs`
+
+Selects rival targets, spends rival funds, advances mission progress, and records simulated completions.
 
 ### `CommandCenterWindow`
-Draws the Command Center and reads current campaign/flight state for display.
 
-## Two vessel-checking paths
+Location: `UI/CommandCenterWindow.cs`
 
-### Flight contracts - fast path
-Used when a contract depends on the currently controlled vessel and needs frequent telemetry. `KspVesselMonitor` captures only the fields requested by `FlightTelemetryPlan`, then `FlightContractTracker` evaluates them.
+Draws the Command Center.
 
-The current pre-orbit Directed Power, Mass, Control and Biome contracts use this path. Future active-flight contracts on Mun, Minmus or other bodies can use it too.
+It reads campaign and Flight Contract state but does not advance gameplay.
 
-### Orbital tracking - slower path
-Used to inspect loaded and unloaded vessels for orbital objectives and satellite-network counts. `KspVesselMonitor` creates `OrbitingVesselSnapshot` values and `OrbitalVesselTracker` evaluates them.
+## The two vessel paths
 
-## How a current pre-orbit contract completes
+### 1. Flight Contract path
 
-1. `ObjectiveCatalogue` defines the objective and its measurable requirements.
-2. `FundingContractCatalogue` creates its `ObjectiveFundingContract`.
-3. `CampaignController` decides whether the funding contract is currently offered.
-4. The offered objective becomes part of `ActiveFlightContracts`.
-5. `ModRuntime` asks `KspVesselMonitor` for the telemetry needed by those active contracts.
-6. `FlightContractTracker` evaluates the active vessel against the objective.
-7. `AgencyState.RecordObjectiveCompletion()` records completion for the player.
-8. `CampaignController` updates unlocks, funding and rival state on its normal refresh.
-9. Persistence saves the changed state and the Command Center displays it.
+Use this when a contract needs frequent information from the actively controlled vessel.
 
-## Where to make common changes
+```text
+Active KSP vessel
+    |
+    v
+KspVesselMonitor
+    |
+    v
+ActiveVesselSnapshot
+    |
+    v
+FlightContractTracker
+```
 
-- Add/change an objective: `Objectives/ObjectiveCatalogue.cs`.
-- Change a current active-flight completion rule: `Tracking/FlightContractTracker.cs`.
-- Change which live vessel values are collected: `KspIntegration/KspVesselMonitor.cs`.
-- Change unlock logic: `Objectives/UnlockRuleEvaluator.cs`.
-- Change offers, sponsor reviews or campaign coordination: `Campaign/CampaignController.cs`.
-- Change one-off objective funding: `Funding/ObjectiveFundingContract.cs`.
-- Change satellite-network funding: `Funding/SatelliteNetworkFundingContract.cs` and `FundingContractCatalogue.cs`.
-- Change rival behaviour: `Rivals/RivalSimulation.cs`.
-- Change the Command Center: `UI/CommandCenterWindow.cs`.
-- Change save/restore behaviour: `Persistence/` and `KspIntegration/ModPersistenceScenario.cs`.
+The telemetry request is requirement-gated. If only Mass is active, there is no reason to query biome or enable Directed Power impact callbacks.
 
-## Boundaries to keep
+### 2. Orbital Vessel path
 
-- Direct KSP API access stays in `KspIntegration/` where practical.
-- Tracking consumes project-owned snapshots rather than raw KSP vessel objects.
-- `CampaignController` coordinates gameplay state but does not query KSP vessels directly.
-- UI displays state but does not advance gameplay.
-- Flight-contract tracking is generic; `PreOrbit` names are reserved for the current Kerbin contract family.
+Use this when the mod needs to inspect the broader vessel population, including unloaded vessels.
+
+```text
+Loaded + unloaded KSP vessels
+    |
+    v
+KspVesselMonitor
+    |
+    v
+OrbitingVesselSnapshot list
+    |
+    v
+OrbitalVesselTracker
+```
+
+This is slower and runs less often.
+
+## Example: completing Mass II
+
+1. `ObjectiveCatalogue` defines Mass II.
+2. `FundingContractCatalogue` creates its objective funding contract.
+3. `CampaignController` offers it after the correct progression and sponsor-review rules are met.
+4. It becomes part of `ActiveFlightContracts`.
+5. `FlightTelemetryPlan` requests Mass telemetry.
+6. `KspVesselMonitor` captures active-vessel mass, launch position, current position, and situation.
+7. `FlightContractTracker` checks the Mass II requirements.
+8. On a valid Kerbin landing, `AgencyState.RecordObjectiveCompletion()` records the result.
+9. `CampaignController` updates unlocks and funding state.
+10. Persistence saves the change and the Command Center shows the updated state.
+
+## Example: completing Probe Orbit
+
+1. Probe Orbit is offered after any Pre-Orbit line reaches Level V.
+2. A qualifying uncrewed Probe or Relay enters Kerbin orbit.
+3. The slower vessel scan captures that vessel.
+4. `OrbitalVesselTracker` evaluates the orbital objective.
+5. The player's agency records Probe Orbit completion.
+6. Campaign progression and funding update on the normal controller path.
+
+## Where to make changes
+
+| You want to change... | Start here |
+| --- | --- |
+| Objective definitions or thresholds | `Objectives/ObjectiveCatalogue.cs` |
+| Unlock rules | `Objectives/UnlockRuleEvaluator.cs` |
+| Active-vessel contract behaviour | `Tracking/FlightContractTracker.cs` |
+| KSP telemetry collection | `KspIntegration/KspVesselMonitor.cs` |
+| Orbital tracking | `Tracking/OrbitalVesselTracker.cs` |
+| Sponsor review or campaign progression | `Campaign/CampaignController.cs` |
+| Funding calculations | `Funding/` |
+| Rival behaviour | `Rivals/RivalSimulation.cs` |
+| Save-state models | `Persistence/` |
+| KSP save/load hooks | `KspIntegration/ModPersistenceScenario.cs` |
+| Command Center | `UI/CommandCenterWindow.cs` |
+
+## Three rules to remember
+
+1. **KSP API access stays in `KspIntegration` where practical.**
+2. **Gameplay logic should use project-owned state and snapshots.**
+3. **The UI displays state; it does not advance the campaign.**

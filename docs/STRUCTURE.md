@@ -48,8 +48,10 @@ Owns runtime scheduling and campaign-wide settings.
 
 Main classes:
 
-- `ModRuntime` — owns the live `CampaignController` for the current KSP game and schedules recurring work.
+- `ModRuntime` — persistent KSP-session scheduler that owns the live `CampaignController` and `FlightContractTracker` for the current KSP game.
 - `CampaignSettings` — reads and exposes campaign balance settings.
+
+`ModRuntime` starts once for the KSP session and survives normal scene changes. Campaign state remains scoped to one `HighLogic.CurrentGame`: loading a different save replaces the controller/tracker and resets active-vessel callback state rather than carrying progress between saves.
 
 Current runtime cadences:
 

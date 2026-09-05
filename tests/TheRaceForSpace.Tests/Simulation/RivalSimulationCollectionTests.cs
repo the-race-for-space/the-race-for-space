@@ -41,7 +41,7 @@ namespace TheRaceForSpace.Tests.Simulation
                 new List<FundingProgramme>());
 
             TestAssert.Equal(PrototypeMilestones.MinmusCrewedOrbitId, aster.NextMissionTargetId);
-            TestAssert.Equal("Minmus Crewed Orbit", aster.NextLaunchBodyName);
+            TestAssert.Equal("Minmus Crewed Orbit", aster.NextMissionDisplayName);
             TestAssert.Equal(PrototypeMilestones.MinmusCrewedOrbitId, cobalt.NextMissionTargetId);
             TestAssert.Equal(5.0 * 21600.0, aster.NextLaunchProgressCheckUniversalTime);
         }
@@ -173,7 +173,7 @@ namespace TheRaceForSpace.Tests.Simulation
                 fundingProgrammes);
 
             TestAssert.Equal("duna-network", aster.NextMissionTargetId);
-            TestAssert.Equal("Duna", aster.NextLaunchBodyName);
+            TestAssert.Equal("Duna", aster.NextMissionDisplayName);
         }
 
         public static void CompletesArbitrarySatelliteProgramme()
@@ -242,11 +242,11 @@ namespace TheRaceForSpace.Tests.Simulation
             var aster = new SpaceProgramState("Aster", false)
             {
                 NextMissionTargetId = PrototypeFundingCatalogue.DunaNetworkId,
-                NextLaunchBodyName = "Stored presentation text"
+                NextMissionDisplayName = "Stored presentation text"
             };
             var presentationOnlyTarget = new SpaceProgramState("PresentationOnly", false)
             {
-                NextLaunchBodyName = "Duna Orbital Network"
+                NextMissionDisplayName = "Duna Orbital Network"
             };
             IList<FundingProgramme> fundingProgrammes =
                 PrototypeFundingCatalogue.CreateSatelliteProgrammes();
@@ -266,9 +266,9 @@ namespace TheRaceForSpace.Tests.Simulation
             TestAssert.Equal(20000.0, presentationOnlyCost);
             TestAssert.Equal(10, RivalSimulation.CalculateLaunchProgressIncrementPercent(aster));
             TestAssert.Equal(PrototypeFundingCatalogue.DunaNetworkId, aster.NextMissionTargetId);
-            TestAssert.Equal("Stored presentation text", aster.NextLaunchBodyName);
+            TestAssert.Equal("Stored presentation text", aster.NextMissionDisplayName);
             TestAssert.Equal(null, presentationOnlyTarget.NextMissionTargetId);
-            TestAssert.Equal("Duna Orbital Network", presentationOnlyTarget.NextLaunchBodyName);
+            TestAssert.Equal("Duna Orbital Network", presentationOnlyTarget.NextMissionDisplayName);
 
             aster.NextMissionTargetId = PrototypeMilestones.MunCrewedOrbitId;
             TestAssert.Equal(

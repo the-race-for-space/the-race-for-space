@@ -103,8 +103,7 @@ namespace TheRaceForSpace.Tracking
             string biomeName,
             int crewCount,
             double launchUniversalTime,
-            double observationUniversalTime,
-            StarterTelemetryRequirement telemetryRequirements = StarterTelemetryRequirement.All)
+            double observationUniversalTime)
         {
             VesselId = vesselId;
             CelestialBodyName = celestialBodyName;
@@ -119,7 +118,6 @@ namespace TheRaceForSpace.Tracking
             CrewCount = Math.Max(0, crewCount);
             LaunchUniversalTime = launchUniversalTime;
             ObservationUniversalTime = observationUniversalTime;
-            TelemetryRequirements = telemetryRequirements;
         }
 
         public string VesselId { get; private set; }
@@ -135,6 +133,5 @@ namespace TheRaceForSpace.Tracking
         public int CrewCount { get; private set; }
         public double LaunchUniversalTime { get; private set; }
         public double ObservationUniversalTime { get; private set; }
-        public StarterTelemetryRequirement TelemetryRequirements { get; private set; }
     }
 }

@@ -31,6 +31,14 @@ jobs:
           path = Path('tools/refactor-naming.py')
           text = path.read_text(encoding='utf-8')
           text = text.replace('(r"\\bachievement\\b", "objective completion"),', '(r"\\bachievement\\b", "objectiveCompletion"),')
+          text = text.replace(
+              '        ("PlayerProgram", "PlayerAgency"),',
+              '        ("PlayerProgram", "PlayerAgency"),\n'
+              '        ("_programs", "_agencies"),\n'
+              '        ("Programs { get", "Agencies { get"),\n'
+              '        ("ProgramId", "AgencyId"),\n'
+              '        ("programIndex", "agencyIndex"),'
+          )
           path.write_text(text, encoding='utf-8')
           PY
           python3 tools/refactor-naming.py

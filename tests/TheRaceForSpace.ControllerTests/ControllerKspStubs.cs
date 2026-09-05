@@ -103,7 +103,7 @@ namespace TheRaceForSpace.KspIntegration
     /// Test-only ScenarioModule boundary. It models readiness and records whether the controller
     /// reached the persistence capture point without serializing KSP ConfigNodes.
     /// </summary>
-    public static class RacePersistenceScenario
+    public static class ModPersistenceScenario
     {
         public static bool IsReady { get; set; }
         public static int RivalCaptureCalls { get; private set; }
@@ -111,7 +111,7 @@ namespace TheRaceForSpace.KspIntegration
         public static double RestoredNextFundingUniversalTime { get; set; }
         public static double LastCapturedNextFundingUniversalTime { get; private set; }
 
-        public static bool TryRestoreRivalState(IList<AgencyState> rivalAgencies)
+        public static bool TryRestoreRivalAgencyState(IList<AgencyState> rivalAgencies)
         {
             return IsReady && rivalAgencies != null;
         }
@@ -129,7 +129,7 @@ namespace TheRaceForSpace.KspIntegration
                 && achievementProgrammes != null;
         }
 
-        public static void CaptureRivalState(IList<AgencyState> rivalAgencies)
+        public static void CaptureRivalAgencyState(IList<AgencyState> rivalAgencies)
         {
             if (IsReady && rivalAgencies != null)
             {

@@ -79,8 +79,8 @@ namespace TheRaceForSpace.ControllerTests
             Require(
                 !controller.PlayerAgency.HasCompletedObjective(ObjectiveCatalogue.ProbeOrbitId),
                 "Skipping the vessel observation must leave player Probe Orbit state unchanged.");
-            Equal(1, RacePersistenceScenario.RivalCaptureCalls);
-            Equal(1, RacePersistenceScenario.RaceProgressCaptureCalls);
+            Equal(1, ModPersistenceScenario.RivalCaptureCalls);
+            Equal(1, ModPersistenceScenario.RaceProgressCaptureCalls);
 
             bool completedObservation = controller.Refresh(true);
 
@@ -144,8 +144,8 @@ namespace TheRaceForSpace.ControllerTests
                 !munNetwork.IsAvailable,
                 "Mun satellite funding should remain locked until Mun Probe Orbit and Kerbin network progress are complete.");
             Equal(75000.0, controller.PlayerAgency.NextPayoutFunds);
-            Equal(1, RacePersistenceScenario.RivalCaptureCalls);
-            Equal(1, RacePersistenceScenario.RaceProgressCaptureCalls);
+            Equal(1, ModPersistenceScenario.RivalCaptureCalls);
+            Equal(1, ModPersistenceScenario.RaceProgressCaptureCalls);
         }
 
         public static void KerbinNetworkProgressUnlocksMoonFunding()
@@ -259,7 +259,7 @@ namespace TheRaceForSpace.ControllerTests
         {
             ResetEnvironment();
             Planetarium.CurrentUniversalTime = FundingIntervalSeconds + 1.0;
-            RacePersistenceScenario.RestoredNextFundingUniversalTime = FundingIntervalSeconds;
+            ModPersistenceScenario.RestoredNextFundingUniversalTime = FundingIntervalSeconds;
             KspVesselMonitor.SetUnavailable();
 
             var controller = new CampaignController();
@@ -277,7 +277,7 @@ namespace TheRaceForSpace.ControllerTests
             Equal(FundingIntervalSeconds * 2.0, controller.NextFundingUniversalTime);
             Equal(
                 FundingIntervalSeconds * 2.0,
-                RacePersistenceScenario.LastCapturedNextFundingUniversalTime);
+                ModPersistenceScenario.LastCapturedNextFundingUniversalTime);
         }
 
         public static void BoundaryObservationIsNotPaidRetroactively()
@@ -424,7 +424,7 @@ namespace TheRaceForSpace.ControllerTests
             Planetarium.Reset();
             CareerFundingAdapter.Reset();
             KspVesselMonitor.Reset();
-            RacePersistenceScenario.Reset();
+            ModPersistenceScenario.Reset();
         }
 
         private static void Require(bool condition, string message)

@@ -14,18 +14,18 @@ namespace TheRaceForSpace.KspIntegration
     [KSPScenario(
         ScenarioCreationOptions.AddToAllGames,
         new[] { GameScenes.SPACECENTER, GameScenes.TRACKSTATION, GameScenes.FLIGHT, GameScenes.EDITOR })]
-    public sealed class RacePersistenceScenario : ScenarioModule
+    public sealed class ModPersistenceScenario : ScenarioModule
     {
-        private const string FundingContractsNodeName = "FUNDING_CONTRACTS";
-        private const string RivalAgenciesNodeName = "RIVALS";
-        private const string ActiveContractProgressNodeName = "ACTIVE_CONTRACT_PROGRESS";
+        private const string FundingContractsNodeName = "CAMPAIGN_FUNDING";
+        private const string RivalAgenciesNodeName = "RIVAL_AGENCIES";
+        private const string ActiveContractProgressNodeName = "FLIGHT_CONTRACT_PROGRESS";
         private const string CommandCenterVisibleValueName = "commandCenterVisible";
 
-        private static readonly FundingContractsSaveState FundingContractsState =
-            new FundingContractsSaveState();
+        private static readonly CampaignFundingSaveState FundingContractsState =
+            new CampaignFundingSaveState();
         private static readonly RivalAgenciesSaveState RivalAgenciesState = new RivalAgenciesSaveState();
-        private static readonly ActiveContractProgressSaveState ActiveContractProgressState =
-            new ActiveContractProgressSaveState();
+        private static readonly FlightContractProgressSaveState ActiveContractProgressState =
+            new FlightContractProgressSaveState();
         private static Game _loadedGame;
         private static bool _commandCenterVisible;
         private static bool _stateReady;
@@ -107,7 +107,7 @@ namespace TheRaceForSpace.KspIntegration
         /// Rivals with no matching saved state keep their constructor defaults, allowing newly added
         /// rivals to enter an existing save created with the current collection format.
         /// </summary>
-        public static bool TryRestoreRivalState(IList<AgencyState> rivalAgencies)
+        public static bool TryRestoreRivalAgencyState(IList<AgencyState> rivalAgencies)
         {
             if (!_stateReady
                 || _loadedGame == null
@@ -152,7 +152,7 @@ namespace TheRaceForSpace.KspIntegration
         /// Restores temporary progress used to continue evaluating active contract conditions,
         /// including the tracked flight history and independent Control contract hold state.
         /// </summary>
-        public static bool TryRestoreActiveContractProgress(FlightContractTracker flightContractTracker)
+        public static bool TryRestoreFlightContractProgress(FlightContractTracker flightContractTracker)
         {
             if (!_stateReady
                 || _loadedGame == null
@@ -166,7 +166,7 @@ namespace TheRaceForSpace.KspIntegration
             return true;
         }
 
-        public static void CaptureRivalState(IList<AgencyState> rivalAgencies)
+        public static void CaptureRivalAgencyState(IList<AgencyState> rivalAgencies)
         {
             if (!_stateReady
                 || _loadedGame == null
@@ -205,7 +205,7 @@ namespace TheRaceForSpace.KspIntegration
         /// Captures temporary active-condition progress. This only updates ScenarioModule state;
         /// KSP writes it to disk during the normal save path.
         /// </summary>
-        public static void CaptureActiveContractProgress(FlightContractTracker flightContractTracker)
+        public static void CaptureFlightContractProgress(FlightContractTracker flightContractTracker)
         {
             if (!_stateReady
                 || _loadedGame == null

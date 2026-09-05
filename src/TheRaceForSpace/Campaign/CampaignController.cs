@@ -354,9 +354,9 @@ namespace TheRaceForSpace.Campaign
             // A new game has no saved Race for Space data, so the constructor defaults remain in use.
             if (!_hasRestoredPersistentState)
             {
-                bool restoredRivals = RacePersistenceScenario.TryRestoreRivalState(_rivalAgencies);
+                bool restoredRivals = ModPersistenceScenario.TryRestoreRivalAgencyState(_rivalAgencies);
                 double restoredNextFundingUniversalTime;
-                bool restoredRaceProgress = RacePersistenceScenario.TryRestoreRaceProgress(
+                bool restoredRaceProgress = ModPersistenceScenario.TryRestoreRaceProgress(
                     PlayerAgency,
                     _satelliteNetworkFundingContracts,
                     _achievementSatelliteNetworkFundingContracts,
@@ -430,8 +430,8 @@ namespace TheRaceForSpace.Campaign
             RebuildActiveFlightContractPlanIfNeeded();
             EvaluateSatelliteNetworkFundingContracts();
 
-            RacePersistenceScenario.CaptureRivalState(_rivalAgencies);
-            RacePersistenceScenario.CaptureRaceProgress(
+            ModPersistenceScenario.CaptureRivalAgencyState(_rivalAgencies);
+            ModPersistenceScenario.CaptureRaceProgress(
                 PlayerAgency,
                 _satelliteNetworkFundingContracts,
                 _achievementSatelliteNetworkFundingContracts,

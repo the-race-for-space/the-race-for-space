@@ -18,7 +18,7 @@ namespace TheRaceForSpace.Core
         private const float PlayerVesselRefreshIntervalSeconds = 20.0f;
 
         private static ModRuntime _activeInstance;
-        private static CampaignController _raceController;
+        private static CampaignController _campaignController;
         private static FlightContractTracker _flightContractTracker;
         private static Game _controllerGame;
 
@@ -46,7 +46,7 @@ namespace TheRaceForSpace.Core
                     return null;
                 }
 
-                return _raceController;
+                return _campaignController;
             }
         }
 
@@ -115,7 +115,7 @@ namespace TheRaceForSpace.Core
                 EnsureControllerForCurrentGame();
             }
 
-            if (_raceController == null || _flightContractTracker == null)
+            if (_campaignController == null || _flightContractTracker == null)
             {
                 return;
             }
@@ -125,7 +125,7 @@ namespace TheRaceForSpace.Core
             if (currentRealtime >= _nextRefreshTime)
             {
                 bool shouldRefreshPlayerVessels = currentRealtime >= _nextPlayerVesselRefreshTime;
-                bool didRefreshPlayerVessels = _raceController.Refresh(shouldRefreshPlayerVessels);
+                bool didRefreshPlayerVessels = _campaignController.Refresh(shouldRefreshPlayerVessels);
 
                 // Full KSP vessel discovery is the most expensive recurring operation and does not
                 // need five-second responsiveness. Only start the 20-second interval after a successful
@@ -139,14 +139,14 @@ namespace TheRaceForSpace.Core
             }
 
             if (!_hasRestoredActiveContractProgress
-                && RacePersistenceScenario.TryRestoreActiveContractProgress(_flightContractTracker))
+                && ModPersistenceScenario.TryRestoreFlightContractProgress(_flightContractTracker))
             {
                 _hasRestoredActiveContractProgress = true;
 
                 // Scenario state may become ready between scheduled five-second controller ticks.
                 // Force the controller's normal non-vessel path once before active-flight evaluation
                 // so persisted achievements are restored before a new starter result can be recorded.
-                _raceController.Refresh(false);
+                _campaignController.Refresh(false);
             }
 
             if (_hasRestoredActiveContractProgress
@@ -159,7 +159,7 @@ namespace TheRaceForSpace.Core
 
         private void RefreshFlightContractTrackingState()
         {
-            IList<ObjectiveDefinition> activeFlightContracts = _raceController.ActiveFlightContracts;
+            IList<ObjectiveDefinition> activeFlightContracts = _campaignController.ActiveFlightContracts;
 
             // The controller replaces its read-only active list only after an offer/completion/expiry
             // transition. Recompute telemetry needs only when that exact cached plan instance changes,
@@ -204,7 +204,7 @@ namespace TheRaceForSpace.Core
                     out impactUniversalTime))
                 {
                     recordedAchievement = _flightContractTracker.RecordSurfaceImpact(
-                        _raceController.PlayerAgency,
+                        _campaignController.PlayerAgency,
                         activeFlightContracts,
                         impactVesselId,
                         impactBodyName,
@@ -218,7 +218,7 @@ namespace TheRaceForSpace.Core
                 out activeVesselSnapshot))
             {
                 recordedAchievement |= _flightContractTracker.RefreshPlayerMilestones(
-                    _raceController.PlayerAgency,
+                    _campaignController.PlayerAgency,
                     activeFlightContracts,
                     activeVesselSnapshot);
             }
@@ -228,11 +228,11 @@ namespace TheRaceForSpace.Core
                 // PreOrbit achievements can immediately unlock the next line level or Probe Orbit.
                 // Mark the active-contract cache dirty before reusing the controller's normal
                 // non-vessel refresh so completion and any resulting offer changes settle together.
-                _raceController.NotifyPlayerPreOrbitAchievementRecorded();
-                _raceController.Refresh(false);
+                _campaignController.NotifyPlayerPreOrbitAchievementRecorded();
+                _campaignController.Refresh(false);
             }
 
-            RacePersistenceScenario.CaptureActiveContractProgress(_flightContractTracker);
+            ModPersistenceScenario.CaptureFlightContractProgress(_flightContractTracker);
         }
 
         private void EnsureControllerForCurrentGame()
@@ -242,7 +242,7 @@ namespace TheRaceForSpace.Core
                 return;
             }
 
-            if (_raceController != null && _controllerGame == HighLogic.CurrentGame)
+            if (_campaignController != null && _controllerGame == HighLogic.CurrentGame)
             {
                 return;
             }
@@ -253,7 +253,7 @@ namespace TheRaceForSpace.Core
 
             // Keep one controller and one active-flight tracker across scene changes inside a save,
             // but never carry race, vessel-callback, or contract-attempt state into another save.
-            _raceController = new CampaignController();
+            _campaignController = new CampaignController();
             _flightContractTracker = new FlightContractTracker();
             _controllerGame = HighLogic.CurrentGame;
             KspVesselMonitor.ResetActiveVesselTracking();

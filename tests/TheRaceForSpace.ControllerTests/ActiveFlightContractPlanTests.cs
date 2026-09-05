@@ -196,7 +196,7 @@ namespace TheRaceForSpace.ControllerTests
             Planetarium.Reset();
             CareerFundingAdapter.Reset();
             KspVesselMonitor.Reset();
-            RacePersistenceScenario.Reset();
+            ModPersistenceScenario.Reset();
         }
 
         private static void Require(bool condition, string message)

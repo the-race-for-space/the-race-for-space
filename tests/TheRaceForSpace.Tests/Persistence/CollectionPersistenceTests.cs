@@ -54,7 +54,7 @@ namespace TheRaceForSpace.Tests.Persistence
             achievementContracts[0].AdvancePayout();
             achievementContracts[0].AdvancePayout();
 
-            var saved = new FundingContractsSaveState();
+            var saved = new CampaignFundingSaveState();
             saved.Capture(
                 player,
                 satelliteContracts,
@@ -63,11 +63,11 @@ namespace TheRaceForSpace.Tests.Persistence
             var node = new ConfigNode();
             saved.Save(node);
 
-            Equal(1, node.GetNodes("PLAYER_ACHIEVEMENT").Length);
-            Equal(2, node.GetNodes("ACHIEVEMENT_CONTRACT").Length);
-            Equal(2, node.GetNodes("SATELLITE_CONTRACT").Length);
+            Equal(1, node.GetNodes("PLAYER_OBJECTIVE_COMPLETION").Length);
+            Equal(2, node.GetNodes("OBJECTIVE_FUNDING_CONTRACT").Length);
+            Equal(2, node.GetNodes("SATELLITE_NETWORK_FUNDING_CONTRACT").Length);
 
-            var loaded = new FundingContractsSaveState();
+            var loaded = new CampaignFundingSaveState();
             loaded.Load(node);
             var restoredPlayer = new AgencyState("Player", true);
             var restoredSatelliteContracts = new List<SatelliteNetworkFundingContract>
@@ -214,32 +214,32 @@ namespace TheRaceForSpace.Tests.Persistence
             var contractsNode = new ConfigNode();
             contractsNode.AddValue("nextFundingUniversalTime", "NaN");
 
-            ConfigNode badAchievement = contractsNode.AddNode("PLAYER_ACHIEVEMENT");
+            ConfigNode badAchievement = contractsNode.AddNode("PLAYER_OBJECTIVE_COMPLETION");
             badAchievement.AddValue("id", "bad-time");
             badAchievement.AddValue("universalTime", "NaN");
-            ConfigNode earlyAchievement = contractsNode.AddNode("PLAYER_ACHIEVEMENT");
+            ConfigNode earlyAchievement = contractsNode.AddNode("PLAYER_OBJECTIVE_COMPLETION");
             earlyAchievement.AddValue("id", "early-objective");
             earlyAchievement.AddValue("universalTime", "-12");
 
-            ConfigNode satelliteContract = contractsNode.AddNode("SATELLITE_CONTRACT");
+            ConfigNode satelliteContract = contractsNode.AddNode("SATELLITE_NETWORK_FUNDING_CONTRACT");
             satelliteContract.AddValue("id", "future-network");
             satelliteContract.AddValue("available", true);
             satelliteContract.AddValue("offered", true);
             satelliteContract.AddValue("targetReached", false);
 
-            ConfigNode achievementContract = contractsNode.AddNode("ACHIEVEMENT_CONTRACT");
+            ConfigNode achievementContract = contractsNode.AddNode("OBJECTIVE_FUNDING_CONTRACT");
             achievementContract.AddValue("id", "future-contract");
             achievementContract.AddValue("offered", true);
             achievementContract.AddValue("started", false);
             achievementContract.AddValue("paymentsProcessed", "99");
 
-            ConfigNode malformedContract = contractsNode.AddNode("ACHIEVEMENT_CONTRACT");
+            ConfigNode malformedContract = contractsNode.AddNode("OBJECTIVE_FUNDING_CONTRACT");
             malformedContract.AddValue("id", "malformed-contract");
             malformedContract.AddValue("offered", "not-a-bool");
             malformedContract.AddValue("started", false);
             malformedContract.AddValue("paymentsProcessed", "1");
 
-            var contractsState = new FundingContractsSaveState();
+            var contractsState = new CampaignFundingSaveState();
             contractsState.Load(contractsNode);
             var player = new AgencyState("Player", true);
             var satelliteContracts = new List<SatelliteNetworkFundingContract>
@@ -316,7 +316,7 @@ namespace TheRaceForSpace.Tests.Persistence
 
         public static void EmptyCollectionNodesRestoreWithoutInventingState()
         {
-            var contractsState = new FundingContractsSaveState();
+            var contractsState = new CampaignFundingSaveState();
             contractsState.Load(new ConfigNode());
             var player = new AgencyState("Player", true);
             player.RecordObjectiveCompletion("stale-objective", 55.0);

@@ -9,7 +9,7 @@ namespace TheRaceForSpace.Persistence
     /// The current implementation stores one tracked flight attempt plus independent Control
     /// contract hold/qualification state; funding contract lifecycle is persisted separately.
     /// </summary>
-    public sealed class ActiveContractProgressSaveState
+    public sealed class FlightContractProgressSaveState
     {
         private const string ActiveValueName = "active";
         private const string VesselIdValueName = "vesselId";

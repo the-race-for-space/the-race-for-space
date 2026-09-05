@@ -32,8 +32,8 @@
     <Compile Include="../../src/TheRaceForSpace/Tracking/OrbitalVesselTracker.cs" Link="Production/Tracking/OrbitalVesselTracker.cs" />
     <Compile Include="../../src/TheRaceForSpace/Tracking/FlightContractTracker.cs" Link="Production/Tracking/FlightContractTracker.cs" />
     <Compile Include="../../src/TheRaceForSpace/Tracking/SurfaceImpactEvaluator.cs" Link="Production/Tracking/SurfaceImpactEvaluator.cs" />
-    <Compile Include="../../src/TheRaceForSpace/Persistence/FundingContractsSaveState.cs" Link="Production/Persistence/FundingContractsSaveState.cs" />
+    <Compile Include="../../src/TheRaceForSpace/Persistence/CampaignFundingSaveState.cs" Link="Production/Persistence/CampaignFundingSaveState.cs" />
     <Compile Include="../../src/TheRaceForSpace/Persistence/RivalAgenciesSaveState.cs" Link="Production/Persistence/RivalAgenciesSaveState.cs" />
-    <Compile Include="../../src/TheRaceForSpace/Persistence/ActiveContractProgressSaveState.cs" Link="Production/Persistence/ActiveContractProgressSaveState.cs" />
+    <Compile Include="../../src/TheRaceForSpace/Persistence/FlightContractProgressSaveState.cs" Link="Production/Persistence/FlightContractProgressSaveState.cs" />
   </ItemGroup>
 </Project>

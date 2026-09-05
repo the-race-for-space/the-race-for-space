@@ -11,11 +11,11 @@ namespace TheRaceForSpace.Persistence
     /// objectiveCompletion and satellite funding contract. Contract definitions remain code-owned; only
     /// mutable campaign state is stored by stable ID.
     /// </summary>
-    public sealed class FundingContractsSaveState
+    public sealed class CampaignFundingSaveState
     {
-        private const string PlayerAchievementNodeName = "PLAYER_ACHIEVEMENT";
-        private const string AchievementContractNodeName = "ACHIEVEMENT_CONTRACT";
-        private const string SatelliteContractNodeName = "SATELLITE_CONTRACT";
+        private const string PlayerAchievementNodeName = "PLAYER_OBJECTIVE_COMPLETION";
+        private const string AchievementContractNodeName = "OBJECTIVE_FUNDING_CONTRACT";
+        private const string SatelliteContractNodeName = "SATELLITE_NETWORK_FUNDING_CONTRACT";
         private const string IdValueName = "id";
         private const string UniversalTimeValueName = "universalTime";
         private const string AvailableValueName = "available";

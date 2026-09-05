@@ -121,12 +121,10 @@ namespace TheRaceForSpace.Tracking
         /// </summary>
         public bool RefreshPlayerMilestones(
             SpaceProgramState playerProgram,
-            IList<SpaceProgramState> programs,
             IList<MilestoneDefinition> starterMilestones,
             ActiveVesselTrackingSnapshot snapshot)
         {
             if (playerProgram == null
-                || programs == null
                 || starterMilestones == null
                 || snapshot == null
                 || string.IsNullOrEmpty(snapshot.VesselId)
@@ -250,14 +248,12 @@ namespace TheRaceForSpace.Tracking
         /// </summary>
         public bool RecordSurfaceImpact(
             SpaceProgramState playerProgram,
-            IList<SpaceProgramState> programs,
             IList<MilestoneDefinition> starterMilestones,
             string vesselId,
             string celestialBodyName,
             double impactUniversalTime)
         {
             if (playerProgram == null
-                || programs == null
                 || starterMilestones == null
                 || !HasActiveAttempt
                 || string.IsNullOrEmpty(vesselId)

@@ -12,7 +12,10 @@ namespace TheRaceForSpace.Tests.Simulation
         public static void SelectsOnlyAvailableAchievementFromCollection()
         {
             var player = new SpaceProgramState("player", "Player", true);
-            var aster = new SpaceProgramState("aster", "Aster", false);
+            var aster = new SpaceProgramState("aster", "Aster", false)
+            {
+                NextLaunchProgressCheckUniversalTime = double.NaN
+            };
             var cobalt = new SpaceProgramState("cobalt", "Cobalt", false);
             var delta = new SpaceProgramState("delta", "Delta", false);
             delta.RecordAchievement(PrototypeMilestones.CrewedOrbitId, 1.0);
@@ -40,6 +43,7 @@ namespace TheRaceForSpace.Tests.Simulation
             TestAssert.Equal(PrototypeMilestones.MinmusCrewedOrbitId, aster.NextMissionTargetId);
             TestAssert.Equal("Minmus Crewed Orbit", aster.NextLaunchBodyName);
             TestAssert.Equal(PrototypeMilestones.MinmusCrewedOrbitId, cobalt.NextMissionTargetId);
+            TestAssert.Equal(5.0 * 21600.0, aster.NextLaunchProgressCheckUniversalTime);
         }
 
         public static void LockedAchievementIsExcludedFromCollection()
@@ -68,6 +72,27 @@ namespace TheRaceForSpace.Tests.Simulation
                 new List<FundingProgramme>());
 
             TestAssert.Equal(null, aster.NextMissionTargetId);
+
+            var malformedRival = new SpaceProgramState("malformed", "Malformed", false)
+            {
+                NextMissionTargetId = "missing-milestone",
+                LaunchProgressPercent = 100
+            };
+            var malformedProgramme = new AchievementFundingProgramme(
+                "missing-milestone",
+                "Missing Milestone",
+                "This target has no milestone definition.",
+                1000.0);
+            malformedProgramme.Offer();
+
+            RivalSimulation.Refresh(
+                new List<SpaceProgramState> { player, malformedRival },
+                1.0,
+                new List<AchievementFundingProgramme> { malformedProgramme },
+                new List<FundingProgramme>());
+
+            TestAssert.Equal(null, malformedRival.NextMissionTargetId);
+            TestAssert.Equal(0, malformedRival.LaunchProgressPercent);
         }
 
         public static void FlexibleRuleUsesRivalScopeCountAndHistoricalTime()
@@ -185,6 +210,31 @@ namespace TheRaceForSpace.Tests.Simulation
             TestAssert.Equal(1, delta.GetSatelliteCount("Duna"));
             TestAssert.Equal(0, delta.LaunchProgressPercent);
             TestAssert.Equal("duna-network", delta.NextMissionTargetId);
+
+            var malformedRival = new SpaceProgramState("broken", "Broken", false)
+            {
+                NextMissionTargetId = "broken-network",
+                LaunchProgressPercent = 100
+            };
+            var malformedFundingProgramme = new FundingProgramme(
+                "broken-network",
+                "Broken Network",
+                string.Empty,
+                5,
+                1000.0,
+                true,
+                null,
+                (UnlockRuleDefinition)null);
+            malformedFundingProgramme.Offer();
+
+            RivalSimulation.Refresh(
+                new List<SpaceProgramState> { player, malformedRival },
+                1235.0,
+                new List<AchievementFundingProgramme>(),
+                new List<FundingProgramme> { malformedFundingProgramme });
+
+            TestAssert.Equal(null, malformedRival.NextMissionTargetId);
+            TestAssert.Equal(0, malformedRival.LaunchProgressPercent);
         }
 
         public static void CollectionCostUsesProgrammeBody()
@@ -321,6 +371,35 @@ namespace TheRaceForSpace.Tests.Simulation
                         90.0 * 21600.0,
                         achievementProgrammes,
                         fundingProgrammes));
+                TestAssert.Equal(
+                    null,
+                    RivalSimulation.CalculateEstimatedLaunchDays(
+                        starterEtaRival,
+                        double.NaN,
+                        90.0 * 21600.0,
+                        90.0 * 21600.0,
+                        achievementProgrammes,
+                        fundingProgrammes));
+                TestAssert.Equal(
+                    null,
+                    RivalSimulation.CalculateEstimatedLaunchDays(
+                        starterEtaRival,
+                        0.0,
+                        90.0 * 21600.0,
+                        double.PositiveInfinity,
+                        achievementProgrammes,
+                        fundingProgrammes));
+
+                RaceSettings.RivalProgressChance = double.Epsilon;
+                TestAssert.Equal(
+                    null,
+                    RivalSimulation.CalculateEstimatedLaunchDays(
+                        starterEtaRival,
+                        0.0,
+                        90.0 * 21600.0,
+                        90.0 * 21600.0,
+                        achievementProgrammes,
+                        fundingProgrammes));
             }
             finally
             {
@@ -354,6 +433,18 @@ namespace TheRaceForSpace.Tests.Simulation
                     milestone.UnlockRule)
             };
             achievementProgrammes[0].Offer();
+
+            RivalSimulation.Refresh(
+                new List<SpaceProgramState> { player, aster, cobalt },
+                double.NaN,
+                achievementProgrammes,
+                new List<FundingProgramme>());
+
+            TestAssert.True(
+                !aster.HasAchievement(PrototypeMilestones.DunaProbeOrbitId),
+                "Invalid simulation time must not complete a rival mission.");
+            TestAssert.Equal(100, aster.LaunchProgressPercent);
+            TestAssert.Equal(PrototypeMilestones.DunaProbeOrbitId, aster.NextMissionTargetId);
 
             RivalSimulation.Refresh(
                 new List<SpaceProgramState> { player, aster, cobalt },

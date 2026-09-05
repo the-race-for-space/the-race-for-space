@@ -125,15 +125,6 @@ namespace TheRaceForSpace.KspIntegration
         }
 
         /// <summary>
-        /// Captures the full active-vessel starter snapshot for compatibility with callers that do
-        /// not provide an active-contract telemetry plan.
-        /// </summary>
-        public static bool TryCaptureActiveVessel(out ActiveVesselTrackingSnapshot vesselSnapshot)
-        {
-            return TryCaptureActiveVessel(StarterTelemetryRequirement.All, out vesselSnapshot);
-        }
-
-        /// <summary>
         /// Captures only the currently controlled loaded vessel for the frequent starter-contract
         /// path. Condition-specific KSP calls are made only when the cached active-contract plan
         /// requests them; identity, situation, launch data, and coordinates remain cheap common context.
@@ -246,8 +237,7 @@ namespace TheRaceForSpace.KspIntegration
                 biomeName,
                 needsCrew ? vessel.GetCrewCount() : 0,
                 launchUniversalTime,
-                observationUniversalTime,
-                telemetryRequirements);
+                observationUniversalTime);
             return true;
         }
 

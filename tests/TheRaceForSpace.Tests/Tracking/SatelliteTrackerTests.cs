@@ -40,6 +40,8 @@ namespace TheRaceForSpace.Tests.Tracking
                 1234.0,
                 playerProgram.GetAchievementUniversalTime(PrototypeMilestones.MunProbeOrbitId),
                 "Milestones recorded from one snapshot refresh should use the supplied observation time.");
+
+            CurrentSnapshotSatelliteCountUnlocksMilestone();
         }
 
         public static void EmptySnapshotsResetTrackedBodyCounts()
@@ -98,6 +100,8 @@ namespace TheRaceForSpace.Tests.Tracking
                 3002.0,
                 playerProgram.GetAchievementUniversalTime(PrototypeMilestones.CrewedOrbitId),
                 "Crewed Orbit should record the later observation time after its Probe Orbit prerequisite is met.");
+
+            NegativeCrewCountDoesNotQualifyAsUncrewed();
         }
 
         public static void FlexibleUnlockRuleUsesRaceStateAndTime()
@@ -146,6 +150,74 @@ namespace TheRaceForSpace.Tests.Tracking
             Require(
                 playerProgram.HasAchievement("eve-response"),
                 "The tracker should use rival state and exact universal time through the shared evaluator.");
+        }
+
+        private static void CurrentSnapshotSatelliteCountUnlocksMilestone()
+        {
+            var playerProgram = new SpaceProgramState("player", "Player", true);
+            var programs = new List<SpaceProgramState> { playerProgram };
+            var milestones = new List<MilestoneDefinition>
+            {
+                new MilestoneDefinition(
+                    "kerbin-satellite-gate",
+                    "Kerbin Satellite Gate",
+                    "Kerbin",
+                    MilestoneSituation.Orbit,
+                    MilestoneCrewRequirement.UncrewedProbe,
+                    "Orbit an uncrewed probe once one Kerbin satellite is present.",
+                    new UnlockRuleDefinition(
+                        new UnlockPathDefinition(
+                            UnlockConditionDefinition.SatelliteCount("Kerbin", 1))))
+            };
+            var vesselSnapshots = new List<VesselTrackingSnapshot>
+            {
+                new VesselTrackingSnapshot("Kerbin", TrackedVesselType.Probe, 0)
+            };
+
+            SatelliteTracker.RefreshPlayerSatelliteCounts(
+                playerProgram,
+                programs,
+                milestones,
+                vesselSnapshots,
+                1500.0);
+
+            RequireEqual(1, playerProgram.GetSatelliteCount("Kerbin"),
+                "The current scan should apply its Kerbin satellite count before unlock evaluation.");
+            Require(playerProgram.HasAchievement("kerbin-satellite-gate"),
+                "A satellite-count prerequisite satisfied by the current scan should unlock in that same scan.");
+        }
+
+        private static void NegativeCrewCountDoesNotQualifyAsUncrewed()
+        {
+            var playerProgram = new SpaceProgramState("player", "Player", true);
+            var programs = new List<SpaceProgramState> { playerProgram };
+            var milestones = new List<MilestoneDefinition>
+            {
+                new MilestoneDefinition(
+                    "invalid-crew-probe",
+                    "Invalid Crew Probe",
+                    "Kerbin",
+                    MilestoneSituation.Orbit,
+                    MilestoneCrewRequirement.UncrewedProbe,
+                    "Orbit an uncrewed probe.",
+                    null)
+            };
+            var vesselSnapshots = new List<VesselTrackingSnapshot>
+            {
+                new VesselTrackingSnapshot("Kerbin", TrackedVesselType.Probe, -1)
+            };
+
+            SatelliteTracker.RefreshPlayerSatelliteCounts(
+                playerProgram,
+                programs,
+                milestones,
+                vesselSnapshots,
+                3100.0);
+
+            RequireEqual(1, playerProgram.GetSatelliteCount("Kerbin"),
+                "Crew metadata should not affect whether a Probe counts toward the satellite network.");
+            Require(!playerProgram.HasAchievement("invalid-crew-probe"),
+                "A malformed negative crew count must not be interpreted as a verified uncrewed probe.");
         }
 
         private static void Require(bool condition, string message)

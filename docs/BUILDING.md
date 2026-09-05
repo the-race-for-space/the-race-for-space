@@ -31,13 +31,34 @@ Alpha/KerbalContracts-v0.5
 
 Do not create a new branch unless it has been explicitly approved.
 
-## Run the automated logic tests first
+## Steam Deck / Linux quick build and test
 
-From the repository root:
+This block is safe to paste into a new Konsole window that starts in `~`:
 
 ```bash
+cd /home/deck/Projects/the-race-for-space/
+export KSP_ROOT="$HOME/.local/share/Steam/steamapps/common/Kerbal Space Program"
+
+git fetch origin
+git switch Alpha/KerbalContracts-v0.5
+git pull --ff-only
+
+bash tools/run-logic-tests.sh
+bash tools/test-prototype.sh Alpha/KerbalContracts-v0.5
+```
+
+The first `cd` matters. All Git commands, project-relative build commands, and `tools/...` scripts must be run from inside the repository.
+
+## Run the automated logic tests
+
+From a new Steam Deck / Linux terminal:
+
+```bash
+cd /home/deck/Projects/the-race-for-space/
 bash tools/run-logic-tests.sh
 ```
+
+On another machine, change the `cd` path to the location where the repository is cloned.
 
 This runs both KSP-independent suites:
 
@@ -60,9 +81,10 @@ Another common location is:
 ~/.steam/steam/steamapps/common/Kerbal Space Program
 ```
 
-Set `KSP_ROOT` to the installation that exists on your machine:
+Open the repository and set `KSP_ROOT`:
 
 ```bash
+cd /home/deck/Projects/the-race-for-space/
 export KSP_ROOT="$HOME/.local/share/Steam/steamapps/common/Kerbal Space Program"
 ```
 
@@ -105,7 +127,10 @@ Deployment is opt-in.
 
 ### Linux
 
+From the repository:
+
 ```bash
+cd /home/deck/Projects/the-race-for-space/
 dotnet build ./src/TheRaceForSpace/TheRaceForSpace.csproj -c Debug -p:DeployToKsp=true
 ```
 
@@ -129,6 +154,7 @@ An ordinary build without `DeployToKsp=true` never modifies your KSP installatio
 For the normal Linux / Steam Deck development cycle, use:
 
 ```bash
+cd /home/deck/Projects/the-race-for-space/
 bash tools/test-prototype.sh Alpha/KerbalContracts-v0.5
 ```
 
@@ -145,6 +171,7 @@ The helper:
 If you are already on the correct branch:
 
 ```bash
+cd /home/deck/Projects/the-race-for-space/
 bash tools/test-prototype.sh
 ```
 
@@ -163,6 +190,28 @@ The deploy target copies this file next to the built DLL in the KSP installation
 Restart KSP after changing the config. The current implementation reads the campaign settings during startup rather than continuously reloading them.
 
 ## Troubleshooting
+
+### `fatal: not a git repository`
+
+The terminal is outside the cloned repository. On the Steam Deck development machine, run:
+
+```bash
+cd /home/deck/Projects/the-race-for-space/
+git status --short
+```
+
+Then retry the Git/build command.
+
+### `tools/...: No such file or directory`
+
+The `tools` paths are relative to the repository. Run:
+
+```bash
+cd /home/deck/Projects/the-race-for-space/
+ls tools
+```
+
+before running a helper script.
 
 ### `KSP_ROOT is not set`
 

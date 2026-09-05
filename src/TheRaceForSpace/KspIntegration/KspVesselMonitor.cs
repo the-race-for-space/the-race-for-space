@@ -354,7 +354,14 @@ namespace TheRaceForSpace.KspIntegration
             DetachDestructionCallback();
             if (_isVesselWillDestroySubscribed)
             {
-                GameEvents.onVesselWillDestroy.Remove(OnVesselWillDestroy);
+                // KSP can tear down the static event object before our persistent runtime leaves
+                // the scene. The subscription flag still belongs to us, so clear it even when the
+                // event itself is temporarily unavailable.
+                if (GameEvents.onVesselWillDestroy != null)
+                {
+                    GameEvents.onVesselWillDestroy.Remove(OnVesselWillDestroy);
+                }
+
                 _isVesselWillDestroySubscribed = false;
             }
 
@@ -414,6 +421,14 @@ namespace TheRaceForSpace.KspIntegration
         private static void EnsureVesselWillDestroySubscription()
         {
             if (_isVesselWillDestroySubscribed || string.IsNullOrEmpty(_activeTrackingSaveFolder))
+            {
+                return;
+            }
+
+            // KSP can expose the active vessel before every global GameEvents object has finished
+            // initializing for Flight. The vessel-specific destruction callback below is sufficient
+            // for normal tracking, so defer this additional fallback instead of blocking telemetry.
+            if (GameEvents.onVesselWillDestroy == null)
             {
                 return;
             }

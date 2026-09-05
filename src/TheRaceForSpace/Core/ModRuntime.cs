@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using TheRaceForSpace.Campaign;
 using TheRaceForSpace.KspIntegration;
@@ -21,7 +22,7 @@ namespace TheRaceForSpace.Core
         private static ModRuntime _activeInstance;
         private static CampaignController _campaignController;
         private static FlightContractTracker _flightContractTracker;
-        private static Game _controllerGame;
+        private static string _controllerSaveFolder;
 
         private bool _hasRestoredActiveContractProgress;
         private float _nextRefreshTime;
@@ -32,22 +33,12 @@ namespace TheRaceForSpace.Core
             FlightTelemetryRequirement.None;
 
         /// <summary>
-        /// Returns the controller owned by the runtime for the current game, or null while the
+        /// Returns the controller owned by the runtime for the current save, or null while the
         /// runtime is not ready or KSP is not in a saved-game scene.
         /// </summary>
         public static CampaignController Controller
         {
-            get
-            {
-                if (!HighLogic.LoadedSceneIsGame
-                    || HighLogic.CurrentGame == null
-                    || _controllerGame != HighLogic.CurrentGame)
-                {
-                    return null;
-                }
-
-                return _campaignController;
-            }
+            get { return IsControllerForCurrentSave() ? _campaignController : null; }
         }
 
         /// <summary>
@@ -56,17 +47,7 @@ namespace TheRaceForSpace.Core
         /// </summary>
         public static FlightContractTracker FlightContractTrackingState
         {
-            get
-            {
-                if (!HighLogic.LoadedSceneIsGame
-                    || HighLogic.CurrentGame == null
-                    || _controllerGame != HighLogic.CurrentGame)
-                {
-                    return null;
-                }
-
-                return _flightContractTracker;
-            }
+            get { return IsControllerForCurrentSave() ? _flightContractTracker : null; }
         }
 
         public void Awake()
@@ -112,14 +93,33 @@ namespace TheRaceForSpace.Core
 
         public void Update()
         {
-            if (_activeInstance != this
-                || !HighLogic.LoadedSceneIsGame
-                || HighLogic.CurrentGame == null)
+            if (_activeInstance != this)
             {
                 return;
             }
 
-            if (_controllerGame != HighLogic.CurrentGame)
+            // The runtime survives the whole KSP process, so reaching the main menu is the reliable
+            // boundary that ends one loaded-save session. Do not use transient CurrentGame objects
+            // for this decision because KSP can replace them during ordinary scene changes.
+            if (HighLogic.LoadedScene == GameScenes.MAINMENU)
+            {
+                ReleaseCurrentSaveState();
+                return;
+            }
+
+            if (!HighLogic.LoadedSceneIsGame
+                || HighLogic.CurrentGame == null
+                || string.IsNullOrEmpty(HighLogic.SaveFolder))
+            {
+                return;
+            }
+
+            if (_campaignController == null
+                || _flightContractTracker == null
+                || !string.Equals(
+                    _controllerSaveFolder,
+                    HighLogic.SaveFolder,
+                    StringComparison.Ordinal))
             {
                 EnsureControllerForCurrentGame();
             }
@@ -257,12 +257,20 @@ namespace TheRaceForSpace.Core
 
         private void EnsureControllerForCurrentGame()
         {
-            if (!HighLogic.LoadedSceneIsGame || HighLogic.CurrentGame == null)
+            string currentSaveFolder = HighLogic.SaveFolder;
+            if (!HighLogic.LoadedSceneIsGame
+                || HighLogic.CurrentGame == null
+                || string.IsNullOrEmpty(currentSaveFolder))
             {
                 return;
             }
 
-            if (_campaignController != null && _controllerGame == HighLogic.CurrentGame)
+            if (_campaignController != null
+                && _flightContractTracker != null
+                && string.Equals(
+                    _controllerSaveFolder,
+                    currentSaveFolder,
+                    StringComparison.Ordinal))
             {
                 return;
             }
@@ -271,12 +279,12 @@ namespace TheRaceForSpace.Core
             // is read once here before any controller-owned funding or rival state is constructed.
             CampaignSettingsLoader.EnsureLoaded();
 
-            // The runtime persists across scenes, but controller/tracker state belongs to exactly one
-            // KSP Game. Replace both when another save becomes current and clear KSP callback state so
-            // one campaign can never inherit another save's active-vessel attempt.
+            // HighLogic.CurrentGame is not a stable save identity: KSP can replace that object during
+            // ordinary scene changes. SaveFolder remains stable for one campaign and changes only when
+            // another save becomes current, which is the boundary that should replace runtime state.
             _campaignController = new CampaignController();
             _flightContractTracker = new FlightContractTracker();
-            _controllerGame = HighLogic.CurrentGame;
+            _controllerSaveFolder = currentSaveFolder;
             KspVesselMonitor.ResetActiveVesselTracking();
             _hasRestoredActiveContractProgress = false;
             _nextRefreshTime = 0.0f;
@@ -285,7 +293,46 @@ namespace TheRaceForSpace.Core
             _flightTelemetryPlanSource = null;
             _flightTelemetryRequirements = FlightTelemetryRequirement.None;
 
-            Debug.Log("[TheRaceForSpace] ModRuntime initialized campaign state for the current save.");
+            Debug.Log(
+                "[TheRaceForSpace] ModRuntime initialized campaign state for save folder '"
+                + currentSaveFolder
+                + "'.");
+        }
+
+        private void ReleaseCurrentSaveState()
+        {
+            if (_campaignController == null
+                && _flightContractTracker == null
+                && string.IsNullOrEmpty(_controllerSaveFolder))
+            {
+                return;
+            }
+
+            _campaignController = null;
+            _flightContractTracker = null;
+            _controllerSaveFolder = null;
+            _hasRestoredActiveContractProgress = false;
+            _nextRefreshTime = 0.0f;
+            _nextActiveVesselRefreshTime = 0.0f;
+            _nextPlayerVesselRefreshTime = 0.0f;
+            _flightTelemetryPlanSource = null;
+            _flightTelemetryRequirements = FlightTelemetryRequirement.None;
+
+            KspVesselMonitor.ResetActiveVesselTracking();
+            ModPersistenceScenario.ResetLoadedSaveState();
+            Debug.Log("[TheRaceForSpace] ModRuntime released current-save state at the main menu.");
+        }
+
+        private static bool IsControllerForCurrentSave()
+        {
+            return HighLogic.LoadedSceneIsGame
+                && HighLogic.CurrentGame != null
+                && !string.IsNullOrEmpty(_controllerSaveFolder)
+                && !string.IsNullOrEmpty(HighLogic.SaveFolder)
+                && string.Equals(
+                    _controllerSaveFolder,
+                    HighLogic.SaveFolder,
+                    StringComparison.Ordinal);
         }
     }
 }

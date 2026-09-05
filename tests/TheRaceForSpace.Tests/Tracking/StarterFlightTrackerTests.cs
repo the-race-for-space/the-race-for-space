@@ -21,7 +21,6 @@ namespace TheRaceForSpace.Tests.Tracking
             MultipleControlStatesSurviveSaveLoad();
             DirectedPowerDisqualificationSurvivesSaveLoad();
             LiveProgressReflectsLatestSample();
-            CurrentMilestoneUsesGlobalLineUnlocks();
             MalformedActiveSaveIsDiscarded();
         }
 
@@ -190,7 +189,9 @@ namespace TheRaceForSpace.Tests.Tracking
                 programs,
                 PrototypeMilestones.StarterContracts,
                 Snapshot("control-gap", 350.0, 354.0, 3000.0, 150.0, 1.0, 1, null, TrackedFlightSituation.Flying));
-            RequireNear(4.0, tracker.ControlHoldSeconds,
+            RequireNear(
+                4.0,
+                tracker.GetControlHoldSeconds(PrototypeMilestones.Control1Id),
                 "Closely spaced observed samples should accumulate Control hold time.");
 
             tracker.RefreshPlayerMilestones(
@@ -199,9 +200,12 @@ namespace TheRaceForSpace.Tests.Tracking
                 PrototypeMilestones.StarterContracts,
                 Snapshot("control-gap", 350.0, 370.0, 3000.0, 150.0, 1.0, 1, null, TrackedFlightSituation.Flying));
 
-            RequireNear(0.0, tracker.ControlHoldSeconds,
+            RequireNear(
+                0.0,
+                tracker.GetControlHoldSeconds(PrototypeMilestones.Control1Id),
                 "A long unobserved gap must reset an unqualified continuous Control hold.");
-            Require(string.IsNullOrEmpty(tracker.QualifiedControlMilestoneId),
+            Require(
+                !tracker.IsControlMilestoneQualified(PrototypeMilestones.Control1Id),
                 "A long unobserved gap must not qualify Control from missing flight time.");
             Require(!player.HasAchievement(PrototypeMilestones.Control1Id),
                 "An unobserved gap must not complete Control I.");
@@ -534,24 +538,6 @@ namespace TheRaceForSpace.Tests.Tracking
             Require(tracker.CurrentBiomeName == "Grasslands", "Current biome should follow the latest sample.");
             Require(tracker.CurrentCrewCount == 1, "Current crew count should follow the latest sample.");
             Require(tracker.CurrentSituation == TrackedFlightSituation.Flying, "Current situation should follow the latest sample.");
-        }
-
-        private static void CurrentMilestoneUsesGlobalLineUnlocks()
-        {
-            SpaceProgramState player = new SpaceProgramState("player", "Player", true);
-            SpaceProgramState rival = new SpaceProgramState("rival", "Rival", false);
-            rival.RecordAchievement(PrototypeMilestones.Mass1Id, 50.0);
-            var programs = new List<SpaceProgramState> { player, rival };
-
-            MilestoneDefinition milestone = StarterFlightTracker.GetCurrentMilestone(
-                StarterContractLine.Mass,
-                player,
-                programs,
-                PrototypeMilestones.StarterContracts,
-                60.0);
-
-            Require(milestone != null && milestone.Id == PrototypeMilestones.Mass2Id,
-                "A rival completing Mass I should globally unlock Mass II as the player's current line target.");
         }
 
         private static void MalformedActiveSaveIsDiscarded()

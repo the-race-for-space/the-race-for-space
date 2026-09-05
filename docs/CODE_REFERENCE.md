@@ -8,62 +8,74 @@
 
 ## How to read this guide
 
-The main reason for the **Production refs** column is to help find code that may be unused, left over from an older version, or only present as a future placeholder.
+The main reason for the **Code refs** column is to help find code that may be unused, left over from an older version, or only present as a future placeholder.
 
 - **File lines** = total lines in the source file.
 - **Member lines** = approximate size of the function/property itself. Comments above it are not counted.
-- **Production refs** = direct use by the real mod source under `src/TheRaceForSpace/`. Use in the **same file counts**. The member's own declaration does not count.
-- Tests, documentation and config files do **not** count as production references.
-- **0** = no direct production-code use was found. This is the important value when looking for possible dead code.
-- **1+** = at least one direct production use exists, including use inside the same file.
+- **Code refs** = direct use anywhere in repository C# code. Use in the **same file counts**. Test code also counts. The member's own declaration does not count.
+- Documentation and config files do **not** count as code references.
+- **0** = no C# use was found anywhere in the repository. This is the strongest signal for possible dead code.
+- **1+** = at least one C# use exists somewhere in production code or tests.
 - **KSP/Unity** = KSP or Unity calls this member automatically. A normal C# call does not need to exist.
 - **CLR** = .NET calls this automatically when the type is first used.
 
 ### Why positive references are shown as `1+`
 
-The connected GitHub source view can reliably prove that a member has **no** production reference, which is what matters most for this unused-code audit. It does not provide compiler-level semantic reference counting. Exact positive totals can be misleading for overloaded methods and common property names such as `Id`, `Name` or `IsOffered`.
+The connected GitHub source view can reliably prove that a member has **no** repository reference, which is what matters most for this unused-code audit. It does not provide compiler-level semantic reference counting. Exact positive totals can be misleading for overloaded methods and common property names such as `Id`, `Name` or `IsOffered`.
 
-For that reason this document deliberately avoids false precision:
+For that reason this document avoids false precision:
 
-- `0` means a verified zero direct production references;
-- `1+` means the member is definitely used by production code;
+- `0` means a verified zero C# references outside the declaration;
+- `1+` means the member is definitely used somewhere in repository C# code;
 - framework entry points are marked separately.
 
-If exact positive totals are ever required, they should be generated from a local compiler/Roslyn reference scan. The zero-reference audit below is the useful part for deciding what may be obsolete.
+If exact positive totals are ever required, they should be generated from a local compiler/Roslyn reference scan. For cleanup work, the important difference is normally **zero versus non-zero**.
 
 ### Usage labels
 
 - **USED** = part of the current running mod.
-- **UNUSED CANDIDATE** = no production caller/reader was found. Review before deleting.
-- **WRITE-ONLY / REVIEW** = code stores a value, but current production code never reads it.
-- **FUTURE HOOK** = not used by the current campaign, but clearly supports a planned/general feature.
+- **TEST-ONLY** = current tests use it, but production runtime code does not.
+- **UNUSED CANDIDATE** = no production or test caller/reader was found. Review before deleting.
+- **WRITE-ONLY / REVIEW** = code stores a value, but current production code never reads the result.
+- **FUTURE HOOK** = not used by the current campaign, but clearly supports a planned/general feature and is covered by tests.
 - **FRAMEWORK** = KSP, Unity or .NET calls it automatically.
 
-A public member with zero internal references could theoretically be used by another mod. This repository does not currently define a supported external API, so zero-reference public members are listed as candidates rather than automatically declared safe to delete.
+A public member with zero internal references could theoretically be used by another mod. This repository does not currently define a supported external API, so zero-reference public members are reviewed carefully before removal.
 
 ---
 
 # 1. Unused-code audit
 
-These are the most important findings from the current production source.
+The previous audit mixed together two different ideas: **unused by the running mod** and **unused by the repository as a whole**. This section now separates them.
 
-## Strong unused candidates
+## Removed after verification
 
-| Member | File | Production refs | Why it looks unused |
+These three members had no production caller, no test caller, no framework/reflection role, and no save-format role. They were removed after review.
+
+| Removed member | File | Code refs before removal | Why removal was safe |
 | --- | --- | ---: | --- |
-| `NextFundingDay` | `Competition/SatelliteRaceController.cs` | **0** | Nothing in production reads it. The UI uses `NextFundingUniversalTime` and `GetKerbinDay()` instead. |
-| `FindProgramById()` | `Competition/SatelliteRaceController.cs` | **0** | Production code does not call it. Tests use it as a convenient lookup helper. |
-| `GetAchievementAgencyCount()` | `Competition/SatelliteRaceController.cs` | **0** | Production code uses the time-aware private `GetAchievementAgencyCountAtTime()` instead. |
-| `Refresh()` with no arguments | `Competition/SatelliteRaceController.cs` | **0** | The real runtime calls `Refresh(bool)`. The no-argument wrapper is useful mainly to tests. |
-| Basic `AchievementFundingProgramme(...)` constructor | `Funding/AchievementFundingProgramme.cs` | **0** | Production creates achievement contracts with the full constructor. |
-| Text-only `AchievementFundingProgramme(...)` constructor | `Funding/AchievementFundingProgramme.cs` | **0** | Production creates achievement contracts with the full constructor. |
-| Basic `FundingProgramme(...)` constructor | `Funding/FundingProgramme.cs` | **0** | Production creates satellite contracts with the full constructor. |
-| Text-only `FundingProgramme(...)` constructor | `Funding/FundingProgramme.cs` | **0** | Production creates satellite contracts with the full constructor. |
-| Three-argument `FundingContractsSaveState.Capture(...)` | `Persistence/FundingContractsSaveState.cs` | **0** | Production uses the four-argument version because it also saves the next funding date. |
-| `SpaceProgramState(name, isPlayer)` | `Programs/SpaceProgramState.cs` | **0** | Production creates programs with a separate stable ID using the three-argument constructor. |
-| `CurrentSurfaceSpeedMetersPerSecond` | `Tracking/StarterFlightTracker.cs` | **0** | The public property is never read by production code. Directed Power uses maximum speed instead. |
+| `NextFundingDay` | `Competition/SatelliteRaceController.cs` | **0** | Nothing read it. The UI already uses `NextFundingUniversalTime` with `GetKerbinDay()`. |
+| `GetAchievementAgencyCount()` | `Competition/SatelliteRaceController.cs` | **0** | Nothing called it. Current code uses the time-aware private `GetAchievementAgencyCountAtTime()` instead. |
+| Three-argument `FundingContractsSaveState.Capture(...)` | `Persistence/FundingContractsSaveState.cs` | **0** | Nothing called it. Production and tests use the four-argument form that also stores the next funding date. |
 
-These are the first members to review if the aim is to remove old prototype helpers.
+The logic test workflow passed after these removals.
+
+## Retained because current tests use them
+
+These members have no production-runtime caller, but they are **not unused by the repository**. Current tests call or read them, so they were not deleted in this pass.
+
+| Member | File | Code refs | Status | Why it remains |
+| --- | --- | ---: | --- | --- |
+| `FindProgramById()` | `Competition/SatelliteRaceController.cs` | 1+ | TEST-ONLY | Controller tests use it to find Aster/Cobalt by stable ID. |
+| `Refresh()` with no arguments | `Competition/SatelliteRaceController.cs` | 1+ | TEST-ONLY | Controller tests use the full-refresh convenience wrapper. |
+| Basic `AchievementFundingProgramme(...)` constructor | `Funding/AchievementFundingProgramme.cs` | 1+ | TEST-ONLY | Funding and persistence tests build simple test contracts with it. |
+| Text-only `AchievementFundingProgramme(...)` constructor | `Funding/AchievementFundingProgramme.cs` | 1+ | TEST-ONLY | Tests use it to check text-only/default unlock behaviour. |
+| Basic `FundingProgramme(...)` constructor | `Funding/FundingProgramme.cs` | 1+ | TEST-ONLY | Funding tests build simple network contracts with it. |
+| Text-only `FundingProgramme(...)` constructor | `Funding/FundingProgramme.cs` | 1+ | TEST-ONLY | Tests use it to exercise unlock-text/default-rule behaviour. |
+| `SpaceProgramState(name, isPlayer)` | `Programs/SpaceProgramState.cs` | 1+ | TEST-ONLY | Many standalone tests use the short constructor for simple agencies. |
+| `CurrentSurfaceSpeedMetersPerSecond` | `Tracking/StarterFlightTracker.cs` | 1+ | TEST-ONLY / REVIEW | Starter-flight tests directly verify that the latest speed sample is stored. The current UI does not display this value. |
+
+These can still be reviewed later if the aim is to reduce the public/test convenience API, but they are not repository-wide dead code.
 
 ## Write-only / probably obsolete chain
 
@@ -77,21 +89,15 @@ The current UI displays unlock rules directly from `UnlockRule`. It no longer re
 | `PrototypeFundingCatalogue.IsSingleAgencyAchievementCondition()` | Helps build the old text. | Its useful effect exists only through `CreateUnlockRequirementText()`. |
 | `PrototypeFundingCatalogue.FindRequiredMilestone()` | Helps build the old text. | Its useful effect exists only through `CreateUnlockRequirementText()`. |
 
-This group is more important than a simple zero-reference search because the functions **are called**, but their final result appears to have no effect on the running mod. Do not remove them without a normal compile/test pass, but they are strong cleanup candidates.
+This group is more important than a simple zero-reference search because the functions **are called**, but their final result appears to have no effect on the running mod. It should be reviewed as a separate cleanup task with tests.
 
 ## Dormant future feature, not necessarily obsolete
 
-`UnlockConditionDefinition.AfterUniversalTime()` has **0 production callers**. The evaluator and UI already understand a `UniversalTime` condition, but the current milestone/funding catalogue does not create one.
+`UnlockConditionDefinition.AfterUniversalTime()` has no current production caller, but several tests use it and the evaluator/UI fully support it.
 
-This looks like a deliberate future extension point for date/era-based unlocks. It should be treated differently from accidental dead code.
+This looks like a deliberate future extension point for date/era-based unlocks. It should not be treated as dead code simply because the current catalogue does not create a date rule.
 
 The `Player` and `AnyRival` unlock scopes are also supported by the evaluator/UI even though the current catalogue mainly creates `AnyAgency` rules. They are dormant flexibility rather than obviously obsolete code.
-
-## Redundant live state to review
-
-`StarterFlightTracker` keeps `_currentSurfaceSpeedMetersPerSecond`, writes/reset it, and exposes `CurrentSurfaceSpeedMetersPerSecond`. Current production code does not read that property. The player-facing Directed Power display uses `MaximumSurfaceSpeedMetersPerSecond`.
-
-This means the property is a zero-reference candidate and the backing field/assignments may also be removable if no future live-speed display is wanted.
 
 ---
 
@@ -111,7 +117,7 @@ The UI does not decide race progress. It only displays it.
 
 | File | File lines | Simple purpose |
 | --- | ---: | --- |
-| `Competition/SatelliteRaceController.cs` | 961 | Main race coordinator. Handles funding dates, offers, rivals and shared race progress. |
+| `Competition/SatelliteRaceController.cs` | 944 | Main race coordinator. Handles funding dates, offers, rivals and shared race progress. |
 | `Core/RaceRuntime.cs` | 268 | Keeps the race running and decides how often checks happen. |
 | `Core/RaceSettings.cs` | 132 | Stores built-in balance settings. |
 | `Funding/AchievementFundingProgramme.cs` | 175 | Stores one achievement contract and its declining payouts. |
@@ -127,7 +133,7 @@ The UI does not decide race progress. It only displays it.
 | `Milestones/UnlockRuleDefinition.cs` | 211 | Describes how unlock requirements are represented. |
 | `Milestones/UnlockRuleEvaluator.cs` | 223 | Checks whether unlock requirements are complete. |
 | `Persistence/ActiveContractProgressSaveState.cs` | 299 | Saves temporary starter-flight progress. |
-| `Persistence/FundingContractsSaveState.cs` | 392 | Saves player achievements and funding contracts. |
+| `Persistence/FundingContractsSaveState.cs` | 384 | Saves player achievements and funding contracts. |
 | `Persistence/RivalProgramsSaveState.cs` | 382 | Saves rival agencies. |
 | `Programs/SpaceProgramState.cs` | 141 | Stores the current state of one agency. |
 | `Simulation/RivalSimulation.cs` | 573 | Simulates rival mission planning and progress. |
@@ -147,7 +153,7 @@ The UI does not decide race progress. It only displays it.
 
 **Purpose:** Main coordinator for the race. It joins funding, rivals, milestones, vessel tracking and saving together.
 
-| Member | Kind | Member lines | Production refs | Status | Simple purpose |
+| Member | Kind | Member lines | Code refs | Status | Simple purpose |
 | --- | --- | ---: | ---: | --- | --- |
 | `SatelliteRaceController()` | Constructor | ~73 | 1+ | USED | Creates the player, rivals and funding contracts. |
 | `PlayerProgram` | Property | 1 | 1+ | USED | Gives access to the player's race state. |
@@ -159,20 +165,18 @@ The UI does not decide race progress. It only displays it.
 | `RivalBaseIncomePerFundingPeriod` | Property | 1 | 1+ | USED | Shows the guaranteed rival income per funding date. |
 | `NextFundingUniversalTime` | Property | 1 | 1+ | USED | Exact KSP time of the next funding date. |
 | `NextFundingYear` | Property | ~4 | 1+ | USED | Kerbin year of the next funding date. |
-| `NextFundingDay` | Property | ~4 | **0** | UNUSED CANDIDATE | Kerbin day number of the next funding date. Current UI does not use it. |
 | `DaysUntilNextFunding` | Property | ~16 | 1+ | USED | Days remaining until funding. |
 | `NotifyPlayerStarterAchievementRecorded()` | Function | ~4 | 1+ | USED | Says the active starter list must be rebuilt. |
-| `FindProgramById()` | Function | ~21 | **0** | UNUSED CANDIDATE | Finds an agency by stable ID. Production does not call it. |
+| `FindProgramById()` | Function | ~21 | 1+ | TEST-ONLY | Finds an agency by stable ID. Current controller tests use it. |
 | `GetKerbinYear()` | Function | ~11 | 1+ | USED | Converts KSP time to Kerbin year. |
 | `GetKerbinDay()` | Function | ~11 | 1+ | USED | Converts KSP time to Kerbin day. |
 | `GetRivalLaunchProgressCost()` | Function | ~14 | 1+ | USED | Gets the next rival development cost. |
 | `GetEstimatedRivalLaunchDays()` | Function | ~16 | 1+ | USED | Estimates rival mission completion time. |
 | `HasProgramAchieved()` | Function | ~9 | 1+ | USED | Checks whether an agency completed an achievement. |
 | `IsAchievementProgrammeAvailable()` | Function | ~16 | 1+ | USED | Checks whether an achievement is unlocked now. |
-| `GetAchievementAgencyCount()` | Function | ~12 | **0** | UNUSED CANDIDATE | Counts agencies with an achievement. Production uses the time-aware helper instead. |
 | `GetSatelliteCurrentPayout()` | Function | ~28 | 1+ | USED | Gets an agency's expected satellite payout. |
 | `GetAchievementCurrentPayout()` | Function | ~26 | 1+ | USED | Gets an agency's expected achievement payout. |
-| `Refresh()` | Function | ~4 | **0** | UNUSED CANDIDATE | Convenience full refresh. Real runtime uses `Refresh(bool)`. |
+| `Refresh()` | Function | ~4 | 1+ | TEST-ONLY | Convenience full refresh. Current controller tests use it. |
 | `Refresh(bool)` | Function | ~112 | 1+ | USED | Main race update. Can skip the expensive vessel scan. |
 | `RefreshRivals()` | Function | ~8 | 1+ | USED | Advances rival simulation. |
 | `UpdateFundingAvailability()` | Function | ~22 | 1+ | USED | Unlocks satellite funding targets. |
@@ -198,7 +202,7 @@ The UI does not decide race progress. It only displays it.
 
 **Purpose:** Keeps the race running across KSP scenes. It schedules the 1-second, 5-second and 20-second work.
 
-| Member | Kind | Lines | Production refs | Status | Simple purpose |
+| Member | Kind | Lines | Code refs | Status | Simple purpose |
 | --- | --- | ---: | ---: | --- | --- |
 | `Controller` | Property | ~18 | 1+ | USED | Gives the UI the current controller. |
 | `StarterFlightState` | Property | ~18 | 1+ | USED | Gives the UI current starter-flight progress. |
@@ -216,7 +220,7 @@ The UI does not decide race progress. It only displays it.
 
 ### `RaceBodySettings`
 
-| Member | Kind | Lines | Production refs | Status | Simple purpose |
+| Member | Kind | Lines | Code refs | Status | Simple purpose |
 | --- | --- | ---: | ---: | --- | --- |
 | `RaceBodySettings(...)` | Constructor | ~18 | 1+ | USED | Creates one body balance group. |
 | `ProbeProgressCostFunds` | Property | 1 | 1+ | USED | Rival probe development cost. |
@@ -229,7 +233,7 @@ The UI does not decide race progress. It only displays it.
 
 ### `RaceSettings`
 
-| Member | Kind | Lines | Production refs | Status | Simple purpose |
+| Member | Kind | Lines | Code refs | Status | Simple purpose |
 | --- | --- | ---: | ---: | --- | --- |
 | `RaceSettings()` | Static constructor | ~4 | CLR | FRAMEWORK | Loads defaults when the type is first used. |
 | `Kerbin` | Property | 1 | 1+ | USED | Kerbin balance group. |
@@ -249,10 +253,10 @@ The UI does not decide race progress. It only displays it.
 
 **Purpose:** Represents one one-off achievement contract and its ten declining payments.
 
-| Member | Kind | Lines | Production refs | Status | Simple purpose |
+| Member | Kind | Lines | Code refs | Status | Simple purpose |
 | --- | --- | ---: | ---: | --- | --- |
-| Basic constructor | Constructor | ~18 | **0** | UNUSED CANDIDATE | Creates a contract with default unlock text. |
-| Text-only constructor | Constructor | ~19 | **0** | UNUSED CANDIDATE | Creates a contract with custom text but no rule. |
+| Basic constructor | Constructor | ~18 | 1+ | TEST-ONLY | Creates a simple test contract with default unlock text. |
+| Text-only constructor | Constructor | ~19 | 1+ | TEST-ONLY | Creates a test contract with custom text but no structured rule. |
 | Full constructor | Constructor | ~20 | 1+ | USED | Creates the real current contract including unlock rule. |
 | `Id` | Property | 1 | 1+ | USED | Stable contract ID. |
 | `Name` | Property | 1 | 1+ | USED | Player-facing name. |
@@ -279,10 +283,10 @@ The UI does not decide race progress. It only displays it.
 
 **Purpose:** Represents one satellite-network funding target.
 
-| Member | Kind | Lines | Production refs | Status | Simple purpose |
+| Member | Kind | Lines | Code refs | Status | Simple purpose |
 | --- | --- | ---: | ---: | --- | --- |
-| Basic constructor | Constructor | ~20 | **0** | UNUSED CANDIDATE | Creates a simple network contract. |
-| Text-only constructor | Constructor | ~22 | **0** | UNUSED CANDIDATE | Creates a network contract with text but no rule. |
+| Basic constructor | Constructor | ~20 | 1+ | TEST-ONLY | Creates a simple network contract for tests. |
+| Text-only constructor | Constructor | ~22 | 1+ | TEST-ONLY | Creates a test network contract with text but no structured rule. |
 | Full constructor | Constructor | ~20 | 1+ | USED | Creates the current network contract including unlock rule. |
 | `Id` | Property | 1 | 1+ | USED | Stable contract ID. |
 | `Name` | Property | 1 | 1+ | USED | Player-facing name. |
@@ -307,7 +311,7 @@ The UI does not decide race progress. It only displays it.
 
 **Purpose:** Builds the achievement and satellite funding targets used by v0.5.
 
-| Member | Kind | Lines | Production refs | Status | Simple purpose |
+| Member | Kind | Lines | Code refs | Status | Simple purpose |
 | --- | --- | ---: | ---: | --- | --- |
 | `CreateAchievementProgrammes()` | Function | ~28 | 1+ | USED | Builds achievement contracts. |
 | `CreateSatelliteProgrammes()` | Function | ~140 | 1+ | USED | Builds satellite contracts. |
@@ -327,7 +331,7 @@ The UI does not decide race progress. It only displays it.
 
 **Purpose:** Small bridge from race funding to KSP Career money.
 
-| Member | Kind | Lines | Production refs | Status | Simple purpose |
+| Member | Kind | Lines | Code refs | Status | Simple purpose |
 | --- | --- | ---: | ---: | --- | --- |
 | `TryAddFunds()` | Function | ~18 | 1+ | USED | Adds a positive reward to Career funds. |
 
@@ -337,7 +341,7 @@ The UI does not decide race progress. It only displays it.
 
 **Purpose:** Gives celestial bodies a stable distance from Kerbin for UI sorting.
 
-| Member | Kind | Lines | Production refs | Status | Simple purpose |
+| Member | Kind | Lines | Code refs | Status | Simple purpose |
 | --- | --- | ---: | ---: | --- | --- |
 | `GetSortDistanceFromKerbin()` | Function | ~76 | 1+ | USED | Gets sort distance. |
 | `CreatePathToRoot()` | Function | ~27 | 1+ | USED | Builds body-parent path. |
@@ -352,7 +356,7 @@ The UI does not decide race progress. It only displays it.
 
 **Purpose:** Reads real KSP vessel objects and converts them into project-owned snapshots.
 
-| Member | Kind | Lines | Production refs | Status | Simple purpose |
+| Member | Kind | Lines | Code refs | Status | Simple purpose |
 | --- | --- | ---: | ---: | --- | --- |
 | `TryCaptureOrbitingVessels()` | Function | ~100 | 1+ | USED | Reads all orbiting vessels. |
 | `TryCaptureActiveVessel()` | Function | ~105 | 1+ | USED | Reads the currently controlled vessel. |
@@ -378,7 +382,7 @@ The UI does not decide race progress. It only displays it.
 
 **Purpose:** KSP save/load bridge.
 
-| Member | Kind | Lines | Production refs | Status | Simple purpose |
+| Member | Kind | Lines | Code refs | Status | Simple purpose |
 | --- | --- | ---: | ---: | --- | --- |
 | `OnLoad()` | Function | ~37 | KSP/Unity | FRAMEWORK | Reads mod save nodes. |
 | `OnSave()` | Function | ~31 | KSP/Unity | FRAMEWORK | Writes mod save nodes. |
@@ -397,7 +401,7 @@ The UI does not decide race progress. It only displays it.
 
 **Purpose:** Reads user-editable balance config once.
 
-| Member | Kind | Lines | Production refs | Status | Simple purpose |
+| Member | Kind | Lines | Code refs | Status | Simple purpose |
 | --- | --- | ---: | ---: | --- | --- |
 | `EnsureLoaded()` | Function | ~74 | 1+ | USED | Loads config once. |
 | `ApplyBodySettings()` | Function | ~32 | 1+ | USED | Applies one body settings section. |
@@ -413,7 +417,7 @@ The UI does not decide race progress. It only displays it.
 
 ### `StarterContractCriteria`
 
-| Member | Kind | Lines | Production refs | Status | Simple purpose |
+| Member | Kind | Lines | Code refs | Status | Simple purpose |
 | --- | --- | ---: | ---: | --- | --- |
 | Private constructor | Constructor | ~25 | 1+ | USED | Stores one set of starter target values. |
 | `RequiredSpeedMetersPerSecond` | Property | 1 | 1+ | USED | Directed Power speed. |
@@ -430,7 +434,7 @@ The UI does not decide race progress. It only displays it.
 
 ### `MilestoneVesselObservation`
 
-| Member | Kind | Lines | Production refs | Status | Simple purpose |
+| Member | Kind | Lines | Code refs | Status | Simple purpose |
 | --- | --- | ---: | ---: | --- | --- |
 | Constructor | Constructor | ~10 | 1+ | USED | Creates a simple orbital observation. |
 | `CelestialBodyName` | Property | 1 | 1+ | USED | Body being orbited. |
@@ -439,7 +443,7 @@ The UI does not decide race progress. It only displays it.
 
 ### `MilestoneDefinition`
 
-| Member | Kind | Lines | Production refs | Status | Simple purpose |
+| Member | Kind | Lines | Code refs | Status | Simple purpose |
 | --- | --- | ---: | ---: | --- | --- |
 | Orbital constructor | Constructor | ~27 | 1+ | USED | Creates normal orbital milestone. |
 | Extended constructor | Constructor | ~29 | 1+ | USED | Constructor chain used by orbital milestones. |
@@ -473,7 +477,7 @@ The UI does not decide race progress. It only displays it.
 
 **Purpose:** Contains the current milestone catalogue.
 
-| Member | Kind | Lines | Production refs | Status | Simple purpose |
+| Member | Kind | Lines | Code refs | Status | Simple purpose |
 | --- | --- | ---: | ---: | --- | --- |
 | `All` | Property | ~4 | 1+ | USED | Normal orbital milestones. |
 | `StarterContracts` | Property | ~4 | 1+ | USED | Twenty starter milestones. |
@@ -492,7 +496,7 @@ The UI does not decide race progress. It only displays it.
 
 ### `UnlockConditionDefinition`
 
-| Member | Kind | Lines | Production refs | Status | Simple purpose |
+| Member | Kind | Lines | Code refs | Status | Simple purpose |
 | --- | --- | ---: | ---: | --- | --- |
 | Private constructor | Constructor | ~20 | 1+ | USED | Stores one condition. |
 | `ConditionType` | Property | 1 | 1+ | USED | Achievement/date/satellite type. |
@@ -504,19 +508,19 @@ The UI does not decide race progress. It only displays it.
 | `RequiredSatelliteCount` | Property | 1 | 1+ | USED | Required satellites. |
 | `Achievement()` simple | Function | ~5 | 1+ | USED | Makes one-agency achievement condition. |
 | `Achievement()` count | Function | ~31 | 1+ | USED | Makes achievement condition with count. |
-| `AfterUniversalTime()` | Function | ~24 | **0** | FUTURE HOOK | Date-based condition factory. Current catalogue does not call it. |
+| `AfterUniversalTime()` | Function | ~24 | 1+ | FUTURE HOOK | Tests use it; current production catalogue does not. |
 | `SatelliteCount()` | Function | ~28 | 1+ | USED | Makes satellite-count condition. |
 
 ### `UnlockPathDefinition`
 
-| Member | Kind | Lines | Production refs | Status | Simple purpose |
+| Member | Kind | Lines | Code refs | Status | Simple purpose |
 | --- | --- | ---: | ---: | --- | --- |
 | Constructor | Constructor | ~8 | 1+ | USED | Creates one AND path. |
 | `Conditions` | Property | ~4 | 1+ | USED | Conditions inside path. |
 
 ### `UnlockRuleDefinition`
 
-| Member | Kind | Lines | Production refs | Status | Simple purpose |
+| Member | Kind | Lines | Code refs | Status | Simple purpose |
 | --- | --- | ---: | ---: | --- | --- |
 | Constructor | Constructor | ~8 | 1+ | USED | Creates an OR-of-AND rule. |
 | `Paths` | Property | ~4 | 1+ | USED | Possible unlock paths. |
@@ -528,7 +532,7 @@ The UI does not decide race progress. It only displays it.
 
 **Purpose:** Decides whether an unlock rule is complete.
 
-| Member | Kind | Lines | Production refs | Status | Simple purpose |
+| Member | Kind | Lines | Code refs | Status | Simple purpose |
 | --- | --- | ---: | ---: | --- | --- |
 | `IsSatisfied()` | Function | ~30 | 1+ | USED | Checks whole rule. |
 | `IsConditionSatisfied()` | Function | ~29 | 1+ | USED | Checks one condition. |
@@ -545,7 +549,7 @@ The UI does not decide race progress. It only displays it.
 
 **Purpose:** Saves temporary starter-flight state.
 
-| Member | Kind | Lines | Production refs | Status | Simple purpose |
+| Member | Kind | Lines | Code refs | Status | Simple purpose |
 | --- | --- | ---: | ---: | --- | --- |
 | `HasData` | Property | 1 | 1+ | USED | Says whether anything needs saving. |
 | `Capture()` | Function | ~42 | 1+ | USED | Copies tracker progress. |
@@ -560,7 +564,7 @@ The UI does not decide race progress. It only displays it.
 
 ### Private `SavedControlContractProgress`
 
-| Member | Kind | Lines | Production refs | Status | Simple purpose |
+| Member | Kind | Lines | Code refs | Status | Simple purpose |
 | --- | --- | ---: | ---: | --- | --- |
 | Constructor | Constructor | ~10 | 1+ | USED | Creates saved Control record. |
 | `MilestoneId` | Property | 1 | 1+ | USED | Control contract ID. |
@@ -574,12 +578,11 @@ The UI does not decide race progress. It only displays it.
 
 **Purpose:** Saves player achievements, funding lifecycles and next funding date.
 
-| Member | Kind | Lines | Production refs | Status | Simple purpose |
+| Member | Kind | Lines | Code refs | Status | Simple purpose |
 | --- | --- | ---: | ---: | --- | --- |
 | `HasData` | Property | 1 | 1+ | USED | Says whether funding data exists. |
 | `NextFundingUniversalTime` | Property | 1 | 1+ | USED | Saved next funding date. |
-| `Capture()` three-argument | Function | ~4 | **0** | UNUSED CANDIDATE | Older/convenience capture without funding date. |
-| `Capture()` four-argument | Function | ~61 | 1+ | USED | Current production capture. |
+| `Capture()` four-argument | Function | ~61 | 1+ | USED | Captures current funding state including next funding date. |
 | `ApplyTo()` | Function | ~67 | 1+ | USED | Restores runtime state. |
 | `Load()` | Function | ~78 | 1+ | USED | Reads save nodes. |
 | `Save()` | Function | ~72 | 1+ | USED | Writes save nodes. |
@@ -592,7 +595,7 @@ The UI does not decide race progress. It only displays it.
 
 ### Private saved contract records
 
-All constructors/properties in `SavedAchievementContract` and `SavedSatelliteContract` have **1+** same-file production references. They are actively used by capture/load/save/restore and are not dead code.
+All constructors/properties in `SavedAchievementContract` and `SavedSatelliteContract` have **1+ code references**. They are actively used by capture/load/save/restore and are not dead code.
 
 ---
 
@@ -600,7 +603,7 @@ All constructors/properties in `SavedAchievementContract` and `SavedSatelliteCon
 
 **Purpose:** Saves all simulated rivals by stable ID.
 
-| Member | Kind | Lines | Production refs | Status | Simple purpose |
+| Member | Kind | Lines | Code refs | Status | Simple purpose |
 | --- | --- | ---: | ---: | --- | --- |
 | `HasData` | Property | ~4 | 1+ | USED | Says whether rival data exists. |
 | `Capture()` | Function | ~29 | 1+ | USED | Captures all rivals. |
@@ -610,7 +613,7 @@ All constructors/properties in `SavedAchievementContract` and `SavedSatelliteCon
 
 ### Private `SavedRivalProgram`
 
-| Member | Kind | Lines | Production refs | Status | Simple purpose |
+| Member | Kind | Lines | Code refs | Status | Simple purpose |
 | --- | --- | ---: | ---: | --- | --- |
 | `HasData` | Property | 1 | 1+ | USED | Valid saved record. |
 | `ProgramId` | Property | 1 | 1+ | USED | Rival stable ID. |
@@ -633,9 +636,9 @@ All constructors/properties in `SavedAchievementContract` and `SavedSatelliteCon
 
 **Purpose:** Stores state for one player or rival agency.
 
-| Member | Kind | Lines | Production refs | Status | Simple purpose |
+| Member | Kind | Lines | Code refs | Status | Simple purpose |
 | --- | --- | ---: | ---: | --- | --- |
-| `SpaceProgramState(name, isPlayer)` | Constructor | ~4 | **0** | UNUSED CANDIDATE | Convenience constructor that uses name as ID. Production does not use it. |
+| `SpaceProgramState(name, isPlayer)` | Constructor | ~4 | 1+ | TEST-ONLY | Convenience constructor used by standalone tests. |
 | `SpaceProgramState(id, name, isPlayer)` | Constructor | ~7 | 1+ | USED | Current production constructor with stable ID. |
 | `Id` | Property | 1 | 1+ | USED | Stable agency ID. |
 | `Name` | Property | 1 | 1+ | USED | Display name. |
@@ -668,7 +671,7 @@ Its constructor and fields are used inside this same file. It is active internal
 
 ### Functions
 
-| Member | Kind | Lines | Production refs | Status | Simple purpose |
+| Member | Kind | Lines | Code refs | Status | Simple purpose |
 | --- | --- | ---: | ---: | --- | --- |
 | `Refresh()` | Function | ~31 | 1+ | USED | Advances all rivals. |
 | `GetMissionTargetDisplayName()` | Function | ~20 | 1+ | USED | Converts target ID into readable text. |
@@ -694,13 +697,13 @@ Its constructor and fields are used inside this same file. It is active internal
 
 ### `StarterTelemetryPlan`
 
-| Member | Kind | Lines | Production refs | Status | Simple purpose |
+| Member | Kind | Lines | Code refs | Status | Simple purpose |
 | --- | --- | ---: | ---: | --- | --- |
 | `GetRequirements()` | Function | ~39 | 1+ | USED | Requests only telemetry needed by active starter contracts. |
 
 ### `ActiveVesselTrackingSnapshot`
 
-The constructor and all thirteen data properties (`VesselId`, `CelestialBodyName`, `Situation`, `AltitudeMeters`, `SurfaceSpeedMetersPerSecond`, `MassTonnes`, `LatitudeDegrees`, `LongitudeDegrees`, `BodyRadiusMeters`, `BiomeName`, `CrewCount`, `LaunchUniversalTime`, `ObservationUniversalTime`) have **1+ production references**. The KSP adapter fills them and `StarterFlightTracker` reads them.
+The constructor and all thirteen data properties (`VesselId`, `CelestialBodyName`, `Situation`, `AltitudeMeters`, `SurfaceSpeedMetersPerSecond`, `MassTonnes`, `LatitudeDegrees`, `LongitudeDegrees`, `BodyRadiusMeters`, `BiomeName`, `CrewCount`, `LaunchUniversalTime`, `ObservationUniversalTime`) have **1+ code references**. The KSP adapter fills them and `StarterFlightTracker` reads them.
 
 ---
 
@@ -708,7 +711,7 @@ The constructor and all thirteen data properties (`VesselId`, `CelestialBodyName
 
 **Purpose:** Small record used by the slower orbital scan.
 
-| Member | Kind | Lines | Production refs | Status | Simple purpose |
+| Member | Kind | Lines | Code refs | Status | Simple purpose |
 | --- | --- | ---: | ---: | --- | --- |
 | Constructor | Constructor | ~9 | 1+ | USED | Creates orbital snapshot. |
 | `CelestialBodyName` | Property | 1 | 1+ | USED | Body being orbited. |
@@ -721,7 +724,7 @@ The constructor and all thirteen data properties (`VesselId`, `CelestialBodyName
 
 **Purpose:** Rebuilds player satellite counts and records normal orbital milestones.
 
-| Member | Kind | Lines | Production refs | Status | Simple purpose |
+| Member | Kind | Lines | Code refs | Status | Simple purpose |
 | --- | --- | ---: | ---: | --- | --- |
 | `RefreshPlayerSatelliteCounts()` | Function | ~73 | 1+ | USED | Main orbital vessel evaluation. |
 | `EvaluateMilestones()` | Function | ~54 | 1+ | USED | Repeats checks so one snapshot can unlock chained achievements. |
@@ -734,7 +737,7 @@ The constructor and all thirteen data properties (`VesselId`, `CelestialBodyName
 
 ### Properties
 
-| Member | Lines | Production refs | Status | Simple purpose |
+| Member | Lines | Code refs | Status | Simple purpose |
 | --- | ---: | ---: | --- | --- |
 | `HasActiveAttempt` | 1 | 1+ | USED | Whether a starter attempt exists. |
 | `VesselId` | 1 | 1+ | USED | Tracked vessel ID. |
@@ -746,7 +749,7 @@ The constructor and all thirteen data properties (`VesselId`, `CelestialBodyName
 | `MaximumAltitudeMeters` | 1 | 1+ | USED | Highest altitude. |
 | `MaximumSurfaceSpeedMetersPerSecond` | 1 | 1+ | USED | Highest speed. |
 | `CurrentAltitudeMeters` | 1 | 1+ | USED | Current altitude for UI. |
-| `CurrentSurfaceSpeedMetersPerSecond` | 1 | **0** | UNUSED CANDIDATE | Current speed property is not read by production. |
+| `CurrentSurfaceSpeedMetersPerSecond` | 1 | 1+ | TEST-ONLY / REVIEW | Tests verify latest speed storage. Current production UI does not read it. |
 | `CurrentMassTonnes` | 1 | 1+ | USED | Current mass for UI. |
 | `CurrentDistanceMeters` | 1 | 1+ | USED | Current launch distance. |
 | `CurrentBiomeName` | 1 | 1+ | USED | Current biome. |
@@ -757,7 +760,7 @@ The constructor and all thirteen data properties (`VesselId`, `CelestialBodyName
 
 ### Functions
 
-| Member | Lines | Production refs | Status | Simple purpose |
+| Member | Lines | Code refs | Status | Simple purpose |
 | --- | ---: | ---: | --- | --- |
 | `GetControlHoldSeconds()` | ~9 | 1+ | USED | Gets Control hold time. |
 | `IsControlMilestoneQualified()` | ~9 | 1+ | USED | Says Control hold is complete. |
@@ -781,7 +784,7 @@ The constructor and all thirteen data properties (`VesselId`, `CelestialBodyName
 
 **Purpose:** Uses recent flight data to decide whether destruction was a real surface impact.
 
-| Member | Kind | Lines | Production refs | Status | Simple purpose |
+| Member | Kind | Lines | Code refs | Status | Simple purpose |
 | --- | --- | ---: | ---: | --- | --- |
 | `IsEligible()` | Function | ~55 | 1+ | USED | Checks impact evidence. |
 | `IsFinite()` | Function | ~4 | 1+ | USED | Rejects invalid numbers. |
@@ -794,11 +797,11 @@ The constructor and all thirteen data properties (`VesselId`, `CelestialBodyName
 
 ### `SpaceRaceFundingEntry`
 
-The constructor and properties `AchievementProgramme`, `SatelliteProgramme`, `CelestialBodyName`, `BodySortDistance`, `CatalogueOrder`, `IsAchievement`, `Id` and `Name` all have **1+ references inside `RaceWindow.cs`**. They were incorrectly shown as zero in the earlier document only because the old count ignored same-file references.
+The constructor and properties `AchievementProgramme`, `SatelliteProgramme`, `CelestialBodyName`, `BodySortDistance`, `CatalogueOrder`, `IsAchievement`, `Id` and `Name` all have **1+ references inside `RaceWindow.cs`**.
 
 ### Main UI functions
 
-| Member | Lines | Production refs | Status | Simple purpose |
+| Member | Lines | Code refs | Status | Simple purpose |
 | --- | ---: | ---: | --- | --- |
 | `Awake()` | ~39 | KSP/Unity | FRAMEWORK | Sets up window. |
 | `OnDestroy()` | ~21 | KSP/Unity | FRAMEWORK | Removes launcher button/clears references. |
@@ -860,16 +863,21 @@ Runs the same logic tests on GitHub Actions.
 
 # 6. Tests and reference counting
 
-Tests are deliberately **not counted** in Production refs. This is important because a helper can be heavily used by tests but still be unused by the actual mod.
+Tests now **do count** in the `Code refs` column. This is deliberate because the current audit is trying to answer: “Does any C# code in this repository still use this member?”
 
-That is currently true for some of the zero-reference convenience APIs, especially `SatelliteRaceController.FindProgramById()` and the parameterless `Refresh()` wrapper.
+The `Status` column then separates the meaning:
+
+- **USED** = production runtime uses it;
+- **TEST-ONLY** = tests use it but runtime production code does not;
+- **FUTURE HOOK** = tests cover it and the design deliberately supports it, but the current campaign does not create it;
+- **UNUSED CANDIDATE** = no production or test use was found.
 
 The two test projects are:
 
 - `tests/TheRaceForSpace.Tests/` - funding, milestones, persistence, rival simulation and tracking logic;
 - `tests/TheRaceForSpace.ControllerTests/` - controller ordering, offers, starter telemetry and cross-module behaviour.
 
-A zero-production-reference member may therefore still be useful to tests. That does not make it production code; it means removal would require deciding whether the tests should call a different existing API.
+This distinction prevents useful test helpers from being mistaken for completely dead repository code.
 
 ---
 
@@ -913,14 +921,20 @@ Still hardcoded:
 
 ---
 
-# 9. Cleanup priority suggested by this audit
+# 9. Cleanup priority after this verification pass
 
-If a cleanup pass is wanted later, review in this order:
+Completed in this pass:
 
-1. **Write-only unlock text chain** - likely the clearest obsolete code because the UI now renders `UnlockRule` live.
-2. **`CurrentSurfaceSpeedMetersPerSecond` and its backing field** - appears redundant with no production reader.
-3. **Zero-reference controller wrappers/properties** - `NextFundingDay`, `FindProgramById()`, `GetAchievementAgencyCount()`, parameterless `Refresh()`.
-4. **Zero-reference convenience constructors/overloads** in funding, save state and `SpaceProgramState`.
-5. **Keep `AfterUniversalTime()` unless the date-based unlock idea is deliberately abandoned.** It is unused now but clearly matches the planned extensible unlock system.
+1. Removed `NextFundingDay`.
+2. Removed `GetAchievementAgencyCount()`.
+3. Removed the unused three-argument `FundingContractsSaveState.Capture(...)` overload.
+4. Ran the logic test workflow successfully after the removals.
 
-This document does **not** remove any of that code. It only identifies candidates so cleanup can be reviewed deliberately and tested separately.
+Good candidates for a separate future cleanup review:
+
+1. **Write-only unlock text chain** - likely the clearest obsolete runtime code because the UI now renders `UnlockRule` live.
+2. **`CurrentSurfaceSpeedMetersPerSecond`** - currently test-read but not production-read. Decide whether the live-speed state is intentionally useful before removing it and changing its test.
+3. **Test-only convenience APIs** - `FindProgramById()`, parameterless `Refresh()`, short funding constructors and `SpaceProgramState(name, isPlayer)`. These are not dead repository code, but they could be removed if tests are deliberately rewritten to use the production-facing APIs.
+4. **Keep `AfterUniversalTime()` unless the date-based unlock idea is deliberately abandoned.** It is test-covered and matches the extensible unlock design even though the current campaign catalogue does not use it.
+
+The next strongest runtime-obsolescence candidate is the **write-only unlock text chain**, not the test-only helpers.

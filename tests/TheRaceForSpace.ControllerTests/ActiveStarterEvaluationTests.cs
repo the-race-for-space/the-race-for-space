@@ -27,14 +27,12 @@ namespace TheRaceForSpace.ControllerTests
 
             tracker.RefreshPlayerMilestones(
                 controller.PlayerProgram,
-                controller.Programs,
                 controller.ActiveStarterContracts,
                 Snapshot("mass-independent", 100.0, 100.0, 100.0, 0.0, 6.0, 0, null,
                     TrackedFlightSituation.Prelaunch, 0.0));
 
             bool recorded = tracker.RefreshPlayerMilestones(
                 controller.PlayerProgram,
-                controller.Programs,
                 controller.ActiveStarterContracts,
                 Snapshot("mass-independent", 100.0, 110.0, 0.0, 0.0, 6.0, 0, null,
                     TrackedFlightSituation.Landed, 20.0));
@@ -57,20 +55,17 @@ namespace TheRaceForSpace.ControllerTests
 
             tracker.RefreshPlayerMilestones(
                 controller.PlayerProgram,
-                controller.Programs,
                 controller.ActiveStarterContracts,
                 Snapshot("power-independent", 200.0, 200.0, 100.0, 0.0, 1.0, 0, null,
                     TrackedFlightSituation.Prelaunch));
             tracker.RefreshPlayerMilestones(
                 controller.PlayerProgram,
-                controller.Programs,
                 controller.ActiveStarterContracts,
                 Snapshot("power-independent", 200.0, 210.0, 50000.0, 1200.0, 1.0, 0, null,
                     TrackedFlightSituation.Flying));
 
             bool recorded = tracker.RecordSurfaceImpact(
                 controller.PlayerProgram,
-                controller.Programs,
                 controller.ActiveStarterContracts,
                 "power-independent",
                 "Kerbin",
@@ -94,14 +89,12 @@ namespace TheRaceForSpace.ControllerTests
 
             tracker.RefreshPlayerMilestones(
                 controller.PlayerProgram,
-                controller.Programs,
                 controller.ActiveStarterContracts,
                 Snapshot("biome-independent", 300.0, 300.0, 100.0, 0.0, 1.0, 0, "Shores",
                     TrackedFlightSituation.Prelaunch));
 
             Require(tracker.RefreshPlayerMilestones(
                     controller.PlayerProgram,
-                    controller.Programs,
                     controller.ActiveStarterContracts,
                     Snapshot("biome-independent", 300.0, 310.0, 0.0, 0.0, 1.0, 0, "Grasslands",
                         TrackedFlightSituation.Landed)),
@@ -124,13 +117,11 @@ namespace TheRaceForSpace.ControllerTests
 
             tracker.RefreshPlayerMilestones(
                 controller.PlayerProgram,
-                controller.Programs,
                 controller.ActiveStarterContracts,
                 Snapshot("biome-independent", 300.0, 320.0, 1000.0, 100.0, 1.0, 0, "Highlands",
                     TrackedFlightSituation.Flying));
             Require(tracker.RefreshPlayerMilestones(
                     controller.PlayerProgram,
-                    controller.Programs,
                     controller.ActiveStarterContracts,
                     Snapshot("biome-independent", 300.0, 321.0, 0.0, 0.0, 1.0, 0, "Highlands",
                         TrackedFlightSituation.Landed)),
@@ -158,7 +149,6 @@ namespace TheRaceForSpace.ControllerTests
             {
                 tracker.RefreshPlayerMilestones(
                     controller.PlayerProgram,
-                    controller.Programs,
                     controller.ActiveStarterContracts,
                     Snapshot(
                         "control-independent",
@@ -182,7 +172,6 @@ namespace TheRaceForSpace.ControllerTests
             {
                 tracker.RefreshPlayerMilestones(
                     controller.PlayerProgram,
-                    controller.Programs,
                     controller.ActiveStarterContracts,
                     Snapshot(
                         "control-independent",
@@ -207,7 +196,6 @@ namespace TheRaceForSpace.ControllerTests
 
             bool recorded = tracker.RefreshPlayerMilestones(
                 controller.PlayerProgram,
-                controller.Programs,
                 controller.ActiveStarterContracts,
                 Snapshot(
                     "control-independent",

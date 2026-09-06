@@ -12,6 +12,8 @@ namespace TheRaceForSpace.Tracking
         private readonly Dictionary<string, ControlContractState> _controlStates =
             new Dictionary<string, ControlContractState>(StringComparer.OrdinalIgnoreCase);
         private readonly HashSet<uint> _partPersistentIds = new HashSet<uint>();
+        private readonly HashSet<uint> _attachedPartPersistentIds = new HashSet<uint>();
+        private bool _hasObservedAttachedPartTopology;
 
         internal FlightAttemptState()
         {
@@ -20,6 +22,7 @@ namespace TheRaceForSpace.Tracking
 
         internal bool HasActiveAttempt { get { return !string.IsNullOrEmpty(VesselId); } }
         internal bool HasPartLineage { get { return _partPersistentIds.Count > 0; } }
+        internal bool HasAttachedParts { get { return _attachedPartPersistentIds.Count > 0; } }
         internal IEnumerable<uint> PartPersistentIds { get { return _partPersistentIds; } }
         internal string VesselId { get; set; }
         internal string CelestialBodyName { get; set; }
@@ -127,6 +130,61 @@ namespace TheRaceForSpace.Tracking
             }
         }
 
+        /// <summary>
+        /// Observes parts currently attached to the selected attempt but not owned by its lineage.
+        /// The first usable observation only establishes a baseline, which lets a saved partial
+        /// Control hold resume after load without inventing a topology change. Later additions or
+        /// removals represent docking, undocking, construction, or another external attachment change.
+        /// </summary>
+        internal bool ObserveAttachedPartTopology(IReadOnlyList<uint> vesselPartPersistentIds)
+        {
+            if (!HasPartLineage
+                || vesselPartPersistentIds == null
+                || vesselPartPersistentIds.Count == 0)
+            {
+                _attachedPartPersistentIds.Clear();
+                _hasObservedAttachedPartTopology = false;
+                return false;
+            }
+
+            int attachedPartCount = 0;
+            bool topologyChanged = false;
+            for (int partIndex = 0; partIndex < vesselPartPersistentIds.Count; partIndex++)
+            {
+                uint partPersistentId = vesselPartPersistentIds[partIndex];
+                if (partPersistentId == 0u || _partPersistentIds.Contains(partPersistentId))
+                {
+                    continue;
+                }
+
+                attachedPartCount++;
+                if (!_attachedPartPersistentIds.Contains(partPersistentId))
+                {
+                    topologyChanged = true;
+                }
+            }
+
+            if (attachedPartCount != _attachedPartPersistentIds.Count)
+            {
+                topologyChanged = true;
+            }
+
+            bool didTopologyChange = _hasObservedAttachedPartTopology && topologyChanged;
+
+            _attachedPartPersistentIds.Clear();
+            for (int partIndex = 0; partIndex < vesselPartPersistentIds.Count; partIndex++)
+            {
+                uint partPersistentId = vesselPartPersistentIds[partIndex];
+                if (partPersistentId != 0u && !_partPersistentIds.Contains(partPersistentId))
+                {
+                    _attachedPartPersistentIds.Add(partPersistentId);
+                }
+            }
+
+            _hasObservedAttachedPartTopology = true;
+            return didTopologyChange;
+        }
+
         internal double GetControlHoldSeconds(string objectiveId)
         {
             ControlContractState state;
@@ -211,6 +269,8 @@ namespace TheRaceForSpace.Tracking
             CurrentSituation = FlightSituation.Other;
             EnteredOrbit = false;
             _partPersistentIds.Clear();
+            _attachedPartPersistentIds.Clear();
+            _hasObservedAttachedPartTopology = false;
             _controlStates.Clear();
         }
 

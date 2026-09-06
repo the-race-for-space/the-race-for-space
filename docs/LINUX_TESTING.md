@@ -124,7 +124,8 @@ They cannot prove direct KSP API behaviour such as:
 - stock biome reporting;
 - loaded/unloaded vessel discovery inside a real KSP save;
 - Career-funds integration;
-- actual Command Center or FlightActiveUI layout and launcher lifecycle.
+- actual Command Center or FlightActiveUI layout and launcher lifecycle;
+- stock `MessageSystem` funding-completion notifications.
 
 Those require the in-game checks below.
 
@@ -218,7 +219,7 @@ Waiting for vessel telemetry...
 
 while a normal vessel is actively being flown for more than the initial loading moment, treat that as a runtime/tracking problem rather than a UI-layout problem.
 
-### One progression check
+### One progression and notification check
 
 Complete one Level I Pre-Orbit objective.
 
@@ -226,9 +227,21 @@ Confirm:
 
 1. the completed contract no longer behaves as an active unfinished Flight Contract;
 2. in FlightActiveUI, an Offered contract completed by the player moves to the bottom and is marked `Complete` with no `+` / `-` control;
-3. the next level in that line becomes `Unlocked`;
-4. it does not become `Offered` until the next sponsor review;
-5. after the review, all currently unlocked Pre-Orbit contracts are offered, even if there are more than two.
+3. KSP's stock message system receives one green message for the player completion;
+4. the message title uses `Funding Target Completed — <Contract Name>`;
+5. the message body uses `<Contract Name> has been achieved. Your agency is now eligible for a share of the remaining contract funding.`;
+6. the next level in that line becomes `Unlocked`;
+7. it does not become `Offered` until the next sponsor review;
+8. after the review, all currently unlocked Pre-Orbit contracts are offered, even if there are more than two.
+
+For example, completing Control II should produce:
+
+```text
+Funding Target Completed — Control II
+Control II has been achieved. Your agency is now eligible for a share of the remaining contract funding.
+```
+
+The notification is for player Objective Funding Contract completions only. Rival completions must not create a player inbox message.
 
 ## 7. Quick contract checks
 
@@ -272,6 +285,8 @@ Save during an active Flight Contract attempt, reload, and confirm:
 
 FlightActiveUI expansion state and visibility are temporary UI state and do not need to survive a scene/save reload.
 
+After completing an Objective Funding Contract and receiving its stock funding-completion notification, save and reload. Confirm the historical completion is restored **without** generating the same notification again. Notification history itself is not persisted; saved objective completion state is restored through the silent path instead.
+
 ## 9. Orbital vessel check
 
 Put a qualifying Probe or Relay into Kerbin orbit.
@@ -282,6 +297,8 @@ Confirm:
 2. it remains counted after returning to Space Center or Tracking Station;
 3. the same vessel is not double-counted;
 4. a crewed Probe can still count toward a satellite network while not satisfying an uncrewed Probe Orbit requirement by itself.
+
+If Probe Orbit is currently Offered and this action newly completes it for the player, the same stock funding-completion notification should appear for Probe Orbit.
 
 This verifies the boundary between `KspVesselMonitor` and `OrbitalVesselTracker`.
 
@@ -297,11 +314,12 @@ Look for:
 
 - repeated exceptions;
 - `FlightActiveUI` exceptions or duplicate launcher behaviour;
+- `FundingNotificationUI` or `MessageSystem` errors;
 - Directed Power destruction-callback errors;
 - excessive repeated output;
 - save/load errors.
 
-Normal gameplay should not produce per-frame Flight Contract log spam.
+A successful completion notification should produce one diagnostic line for that objective ID, not repeated per-frame output. Normal gameplay should not produce per-frame Flight Contract log spam.
 
 ## Troubleshooting
 
@@ -372,4 +390,5 @@ Before treating a build as a 0.5 release candidate, complete [`KERBAL_CONTRACTS_
 - save format and scene changes;
 - loaded/unloaded orbital vessel tracking;
 - Command Center presentation;
-- FlightActiveUI launcher lifecycle, ordering, expansion, and live requirement presentation.
+- FlightActiveUI launcher lifecycle, ordering, expansion, and live requirement presentation;
+- player funding-completion inbox notifications and no replay after save/reload.

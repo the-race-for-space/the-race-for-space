@@ -434,12 +434,13 @@ Test each route independently where practical:
 
 Confirm:
 
-1. completing any one Level V offers Probe Orbit immediately;
-2. the offer does not wait for the next sponsor review;
-3. a rival Level V completion can also trigger the campaign-wide offer;
-4. Probe Orbit remains a normal orbital objective;
-5. a qualifying uncrewed Probe or Relay can complete Probe Orbit through `OrbitalVesselTracker`;
-6. completing a Pre-Orbit objective by a rival does not invent a satellite.
+1. completing any one Level V unlocks Probe Orbit;
+2. Probe Orbit appears in `Unlocked` and does not become `Offered` before the next sponsor review;
+3. the next sponsor review moves Probe Orbit to `Offered` through the normal objective offer flow;
+4. a rival Level V completion can also trigger the campaign-wide unlock;
+5. Probe Orbit remains a normal orbital objective;
+6. a qualifying uncrewed Probe or Relay can complete Probe Orbit through `OrbitalVesselTracker`;
+7. completing a Pre-Orbit objective by a rival does not invent a satellite.
 
 ---
 
@@ -695,7 +696,7 @@ Before calling a 0.5 build ready for broader testing, confirm all of the followi
 - [ ] Vessel display name and telemetry freshness remain live presentation state rather than new save-format fields.
 - [ ] Any Agency progression works.
 - [ ] Sponsor reviews offer all unlocked Pre-Orbit contracts.
-- [ ] Any Level V offers Probe Orbit immediately.
+- [ ] Any Level V unlocks Probe Orbit, which waits for the next sponsor review before being offered.
 - [ ] Objective funding and rival progress values are correct.
 - [ ] Save/reload and scene changes preserve the correct state.
 - [ ] Loaded and unloaded orbital vessels are handled correctly.

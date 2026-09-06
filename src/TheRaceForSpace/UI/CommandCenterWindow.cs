@@ -8,7 +8,6 @@ using TheRaceForSpace.Funding;
 using TheRaceForSpace.KspIntegration;
 using TheRaceForSpace.Objectives;
 using TheRaceForSpace.Agencies;
-using TheRaceForSpace.Tracking;
 using UnityEngine;
 
 namespace TheRaceForSpace.UI
@@ -587,7 +586,6 @@ namespace TheRaceForSpace.UI
             string stateLabel = null,
             double? unlockEvaluationUniversalTime = null,
             string stateMessage = null,
-            bool showPreOrbitLiveProgress = false,
             bool showFundingLifecycleDetails = true)
         {
             _listTextBuilder.Length = 0;
@@ -660,49 +658,7 @@ namespace TheRaceForSpace.UI
             GUILayout.EndVertical();
 
             GUILayout.EndHorizontal();
-
-            if (showPreOrbitLiveProgress)
-            {
-                DrawFlightContractLiveProgress(contract);
-            }
-
             GUILayout.EndVertical();
-        }
-
-        private void DrawFlightContractLiveProgress(ObjectiveFundingContract contract)
-        {
-            ObjectiveDefinition objective = contract == null
-                ? null
-                : ObjectiveCatalogue.FindById(contract.Id);
-            if (objective == null
-                || !objective.IsPreOrbitContract
-                || _campaignController.HasAgencyCompletedObjective(_campaignController.PlayerAgency, contract))
-            {
-                return;
-            }
-
-            GUILayout.Space(6.0f);
-            FlightContractTracker tracker = ModRuntime.FlightContractTrackingState;
-            if (tracker == null)
-            {
-                GUILayout.Label("Live Flight", _boldLabelStyle);
-                GUILayout.Label("Live telemetry is not available yet.");
-                return;
-            }
-
-            if (!tracker.HasActiveAttempt)
-            {
-                GUILayout.Label("Live Flight", _boldLabelStyle);
-                GUILayout.Label(
-                    HighLogic.LoadedSceneIsFlight
-                        ? "Waiting for active vessel telemetry..."
-                        : "Live telemetry is available while flying a vessel.");
-                return;
-            }
-
-            // Funding Targets deliberately compares the active craft against every offered,
-            // unfinished pre-orbit contract, even when a rival unlocked a later level first.
-            DrawFlightContractProgress(objective, tracker);
         }
 
         private void DrawSatelliteNetworkFundingCard(
@@ -943,137 +899,6 @@ namespace TheRaceForSpace.UI
                 ref _contractCatalogueExpiredExpanded);
 
             GUILayout.EndScrollView();
-        }
-
-        private void DrawFlightContractProgress(
-            ObjectiveDefinition currentObjective,
-            FlightContractTracker tracker)
-        {
-            GUILayout.Space(4.0f);
-            GUILayout.Label("Live Flight", _boldLabelStyle);
-
-            bool isKerbin = string.Equals(
-                tracker.CelestialBodyName,
-                "Kerbin",
-                StringComparison.OrdinalIgnoreCase);
-            if (!isKerbin)
-            {
-                GUILayout.Label("Attempt status: INVALID - active vessel is not on Kerbin.");
-            }
-
-            if (tracker.EnteredOrbit)
-            {
-                GUILayout.Label("Attempt status: INVALID - vessel entered orbit.");
-            }
-
-            if (currentObjective.PreOrbitLine == PreOrbitContractLine.DirectedPower)
-            {
-                bool speedMet = tracker.MaximumSurfaceSpeedMetersPerSecond
-                    >= currentObjective.RequiredSpeedMetersPerSecond;
-                bool altitudeValid = tracker.MaximumAltitudeMeters
-                    <= currentObjective.MaximumAltitudeMeters;
-
-                GUILayout.Label(
-                    "Current Speed: "
-                    + tracker.CurrentSurfaceSpeedMetersPerSecond.ToString("N0")
-                    + " m/s");
-                GUILayout.Label(
-                    "Max Speed: "
-                    + tracker.MaximumSurfaceSpeedMetersPerSecond.ToString("N0")
-                    + " / "
-                    + currentObjective.RequiredSpeedMetersPerSecond.ToString("N0")
-                    + " m/s - "
-                    + (speedMet ? "MET" : "PENDING"));
-                GUILayout.Label(
-                    "Max Altitude: "
-                    + (tracker.MaximumAltitudeMeters / 1000.0).ToString("N1")
-                    + " / "
-                    + (currentObjective.MaximumAltitudeMeters / 1000.0).ToString("N0")
-                    + " km - "
-                    + (altitudeValid ? "VALID" : "INVALID"));
-                GUILayout.Label(
-                    "Kerbin Impact: "
-                    + (isKerbin && !tracker.EnteredOrbit && speedMet && altitudeValid
-                        ? "READY - impact Kerbin to complete"
-                        : "PENDING"));
-                return;
-            }
-
-            if (currentObjective.PreOrbitLine == PreOrbitContractLine.Mass)
-            {
-                bool massMet = tracker.CurrentMassTonnes >= currentObjective.RequiredMassTonnes;
-                bool distanceMet = tracker.CurrentDistanceMeters >= currentObjective.RequiredDistanceMeters;
-                bool landed = tracker.CurrentSituation == FlightSituation.Landed;
-
-                GUILayout.Label(
-                    "Mass: "
-                    + tracker.CurrentMassTonnes.ToString("N1")
-                    + " / "
-                    + currentObjective.RequiredMassTonnes.ToString("N1")
-                    + " t - "
-                    + (massMet ? "MET" : "PENDING"));
-                GUILayout.Label(
-                    "Distance: "
-                    + (tracker.CurrentDistanceMeters / 1000.0).ToString("N0")
-                    + " / "
-                    + (currentObjective.RequiredDistanceMeters / 1000.0).ToString("N0")
-                    + " km - "
-                    + (distanceMet ? "MET" : "PENDING"));
-                GUILayout.Label("Landed: " + (landed ? "YES - MET" : "NO - PENDING"));
-                return;
-            }
-
-            if (currentObjective.PreOrbitLine == PreOrbitContractLine.Control)
-            {
-                bool holdQualified = tracker.IsControlObjectiveQualified(currentObjective.Id);
-                bool sampleInBand = tracker.IsControlSampleInBand(currentObjective.Id);
-                bool hasCrew = tracker.CurrentCrewCount > 0;
-
-                GUILayout.Label(
-                    "Altitude: "
-                    + (tracker.CurrentAltitudeMeters / 1000.0).ToString("N1")
-                    + " km ("
-                    + (currentObjective.MinimumAltitudeMeters / 1000.0).ToString("N0")
-                    + "-"
-                    + (currentObjective.MaximumAltitudeMeters / 1000.0).ToString("N0")
-                    + " km) - "
-                    + (holdQualified ? "HOLD COMPLETE" : (sampleInBand ? "IN BAND" : "OUT OF BAND")));
-                GUILayout.Label(
-                    "Hold: "
-                    + tracker.GetControlHoldSeconds(currentObjective.Id).ToString("N0")
-                    + " / "
-                    + currentObjective.RequiredDurationSeconds.ToString("N0")
-                    + " s - "
-                    + (holdQualified ? "MET" : "PENDING"));
-                GUILayout.Label(
-                    "Crew aboard: "
-                    + tracker.CurrentCrewCount
-                    + " - "
-                    + (hasCrew ? "MET" : "REQUIRED"));
-                GUILayout.Label(
-                    "Safe Kerbin landing: "
-                    + (holdQualified && hasCrew
-                        ? "READY - land safely to complete"
-                        : "PENDING"));
-                return;
-            }
-
-            if (currentObjective.PreOrbitLine == PreOrbitContractLine.Biome)
-            {
-                string currentBiome = string.IsNullOrEmpty(tracker.CurrentBiomeName)
-                    ? "Unknown"
-                    : tracker.CurrentBiomeName;
-                bool biomeMatched = string.Equals(
-                    currentBiome,
-                    currentObjective.RequiredBiomeName,
-                    StringComparison.OrdinalIgnoreCase);
-                bool landed = tracker.CurrentSituation == FlightSituation.Landed;
-
-                GUILayout.Label("Current Biome: " + currentBiome);
-                GUILayout.Label("Target: " + currentObjective.RequiredBiomeName);
-                GUILayout.Label("Biome Match: " + (biomeMatched ? "YES - MET" : "NO - PENDING"));
-                GUILayout.Label("Landed: " + (landed ? "YES - MET" : "NO - PENDING"));
-            }
         }
 
         private void DrawSelectedContractCatalogueFundingEntry(

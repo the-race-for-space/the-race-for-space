@@ -129,8 +129,10 @@ namespace TheRaceForSpace.Tests
             var contract = new ObjectiveFundingContract("probe", "Probe", "Orbit", 100000.0);
             contract.Start();
 
+            AssertEqual(10, contract.PaymentsRemaining);
             AssertEqual(50000.0, contract.CalculateCurrentPayout(true, 2));
             contract.AdvancePayout();
+            AssertEqual(9, contract.PaymentsRemaining);
             AssertEqual(90, contract.CurrentInterestPercent);
             AssertEqual(45000.0, contract.CalculateCurrentPayout(true, 2));
 
@@ -140,6 +142,7 @@ namespace TheRaceForSpace.Tests
             }
 
             AssertTrue(contract.IsExpired, "Contract should expire after ten payments.");
+            AssertEqual(0, contract.PaymentsRemaining);
             AssertEqual(0.0, contract.CalculateCurrentPayout(true, 1));
         }
 
@@ -150,6 +153,7 @@ namespace TheRaceForSpace.Tests
 
             AssertTrue(contract.HasStarted, "Processed payments imply a started contract.");
             AssertEqual(4, contract.PaymentsProcessed);
+            AssertEqual(6, contract.PaymentsRemaining);
             AssertEqual(60, contract.CurrentInterestPercent);
         }
 

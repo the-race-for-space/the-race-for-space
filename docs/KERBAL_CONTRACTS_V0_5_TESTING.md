@@ -41,8 +41,8 @@ Before the detailed checks, verify the basic campaign loop:
    - Control I
    - Biome I
 5. Confirm Levels II-V of all four lines are `Locked`.
-6. Launch a vessel and open **Funding Targets**.
-7. Confirm live Flight Contract telemetry appears for every offered, unfinished Pre-Orbit contract.
+6. Launch a vessel and open the Flight-only **Offered Contracts** window.
+7. Confirm live Flight Contract telemetry appears for every offered, unfinished Pre-Orbit contract you expand.
 8. Complete one Level I objective.
 9. Confirm the next level in that line becomes `Unlocked`.
 10. Cross a sponsor-review funding boundary and confirm the unlocked level becomes `Offered`.
@@ -82,7 +82,7 @@ Confirm:
 
 # 2. Live Flight Contract telemetry
 
-During flight, Funding Targets should show live values about once per second.
+During flight, the Flight-only **Offered Contracts** window should show live values about once per second for expanded Pre-Orbit contracts.
 
 ## Directed Power card
 
@@ -99,7 +99,7 @@ Expect:
 
 - current remaining vessel mass
 - distance from the tracked launch origin
-- landed state
+- landed/splashed state
 
 ## Control card
 
@@ -108,7 +108,7 @@ Expect:
 - current altitude and target altitude band
 - continuous hold progress
 - crew count
-- safe-landing readiness after qualification
+- safe-recovery readiness after qualification
 
 Each offered Control contract must display its own independent hold/qualification state.
 
@@ -119,19 +119,19 @@ Expect:
 - current biome
 - target biome
 - biome match state
-- landed state
+- landed/splashed state
 
 ## Telemetry failure messages
 
 While in Flight with a normal active vessel, the UI should not remain stuck on:
 
 ```text
-Waiting for active vessel telemetry...
+Waiting for vessel telemetry...
 ```
 
 If that message appears continuously, investigate the runtime/tracking path rather than only the UI layout.
 
-The Contract Catalogue should remain focused on contract state and should not duplicate the live telemetry panel.
+Funding Targets and Contract Catalogue should remain focused on funding/contract state and should not duplicate the live telemetry panel.
 
 ---
 
@@ -150,7 +150,7 @@ All levels use a **70 km maximum altitude** and require a Kerbin surface impact.
 For each level being tested:
 
 1. Reach the required speed without exceeding 70,000 m.
-2. Confirm Current Speed and Max Speed update in Funding Targets.
+2. Confirm Current Speed and Max Speed update in **Offered Contracts**.
 3. Confirm normal landing or recovery does **not** complete the objective.
 4. Impact Kerbin with a qualifying vessel and confirm completion.
 5. Repeat against normal terrain, not only sea level.
@@ -189,12 +189,12 @@ Confirm:
 
 For each level:
 
-1. Confirm the Funding Targets card shows current mass, distance, and landed state.
+1. Confirm **Offered Contracts** shows current mass, distance, and landed/splashed state.
 2. Fly beyond the required distance with enough mass. Confirm no completion while still flying.
-3. Land beyond the required distance with too little final mass. Confirm no completion.
-4. Land with enough mass but short of the required distance. Confirm no completion.
+3. Finish landed or splashed beyond the required distance with too little final mass. Confirm no completion.
+4. Finish landed or splashed with enough mass but short of the required distance. Confirm no completion.
 5. Land on Kerbin beyond the required distance with enough final mass. Confirm completion.
-6. Confirm `SPLASHED` does not count as `LANDED`.
+6. Splash down on Kerbin beyond the required distance with enough final mass. Confirm completion.
 7. Enter orbit first and confirm the Pre-Orbit attempt is invalid.
 
 Distance is measured from the tracked launch origin. A KSC launch therefore behaves like distance from the Space Centre, while an alternate launch site uses that alternate origin.
@@ -203,7 +203,7 @@ Distance is measured from the tracked launch origin. A KSC launch therefore beha
 
 Create a state where Mass I and II are both offered.
 
-Land one craft at least 75 km from launch with at least 2.5 t remaining.
+Land or splash down one craft at least 75 km from launch with at least 2.5 t remaining.
 
 Confirm both complete. A higher Mass level that is not offered must remain incomplete even if the craft also satisfies its numbers.
 
@@ -219,7 +219,7 @@ Confirm both complete. A higher Mass level that is not offered must remain incom
 | IV | 30-40 km | 75 s |
 | V | 50-65 km | 90 s |
 
-Every Control objective requires crew and a safe Kerbin landing after qualification.
+Every Control objective requires crew and a safe Kerbin landing or splashdown after qualification.
 
 For each level:
 
@@ -228,17 +228,17 @@ For each level:
 3. Confirm hold time increases only while the vessel remains continuously in band with crew.
 4. Leave the band before qualification and confirm the timer resets.
 5. Lose/remove all crew before qualification and confirm the hold cannot qualify.
-6. Complete the required hold and confirm the card changes to a qualified/landing-ready state.
+6. Complete the required hold and confirm the card changes to a qualified/recovery-ready state.
 7. Land on Kerbin with crew and confirm completion.
-8. Splash down instead and confirm no completion.
-9. Enter orbit before landing and confirm the Pre-Orbit attempt is invalid.
+8. Splash down on Kerbin with crew and confirm completion.
+9. Enter orbit before recovery and confirm the Pre-Orbit attempt is invalid.
 
 ## Save/load Control state
 
 Test both cases:
 
 - save partway through a valid hold, reload, then continue;
-- save after qualification but before landing, reload, then land.
+- save after qualification but before recovery, reload, then land or splash down.
 
 Confirm state resumes correctly.
 
@@ -254,9 +254,9 @@ Create a state where Control I and II are both offered.
 4. Confirm Control I remains qualified while Control II shows separate progress.
 5. Save and reload during Control II progress.
 6. Finish Control II.
-7. Land safely with crew.
+7. Land or splash down safely with crew.
 
-Confirm both objectives complete on that same landing.
+Confirm both objectives complete on that same recovery.
 
 ---
 
@@ -272,18 +272,18 @@ Confirm both objectives complete on that same landing.
 
 For each level:
 
-1. Confirm Funding Targets displays the stock Kerbin biome and the contract target.
+1. Confirm **Offered Contracts** displays the stock Kerbin biome and the contract target.
 2. Fly over the target biome. Confirm no completion.
-3. Land in the target biome and confirm completion only after KSP reports `LANDED`.
-4. Confirm `SPLASHED` does not count.
+3. Land in the target biome and confirm completion after KSP reports `LANDED`.
+4. Where KSP can report the same target biome while `SPLASHED`, splash down there and confirm completion as well.
 5. Confirm no Biome completion occurs away from Kerbin.
-6. Confirm biome reporting remains correct at low altitude and after touchdown.
+6. Confirm biome reporting remains correct at low altitude and after touchdown/splashdown.
 
 ## Multiple offered Biome levels
 
 Create a state where Biome I and II are both offered.
 
-Land in Grasslands, continue the same launch attempt, then later land in Highlands.
+Finish landed or splashed in Grasslands, continue the same launch attempt, then later finish landed or splashed in Highlands where practical.
 
 Confirm each offered objective can complete independently. A higher level that is not offered must not complete.
 
@@ -295,14 +295,14 @@ Use one launch that can satisfy more than one active contract.
 
 Examples:
 
-- a heavy craft lands at the required Mass distance inside the required Biome;
+- a heavy craft finishes landed or splashed at the required Mass distance inside the required Biome;
 - more than one offered threshold in the same line is satisfied;
-- more than one Control hold is qualified before one final landing.
+- more than one Control hold is qualified before one final recovery.
 
 Confirm:
 
 - every offered, unfinished active contract is evaluated independently;
-- one valid landing or impact may complete several offered contracts;
+- one valid landed/splashed recovery or impact may complete several offered contracts;
 - `Locked` or merely `Unlocked` contracts are not evaluated as active Flight Contracts;
 - staging does not create a new attempt when the continuing vessel belongs to the same launch;
 - switching to an unrelated vessel does not inherit old maxima, origin, or Control timers.
@@ -454,7 +454,7 @@ Instantaneous telemetry such as current altitude, current mass, current biome, a
 1. Save with no active attempt and confirm reload does not invent one.
 2. Save during a Directed Power attempt after exceeding 70 km; reload and confirm the invalidation remains.
 3. Save during a Control hold; reload and confirm valid saved progress resumes.
-4. Save after Control qualification but before landing; reload and confirm landing can still complete it.
+4. Save after Control qualification but before recovery; reload and confirm either a landing or splashdown can still complete it.
 5. Move Flight -> Space Center -> Tracking Station -> Flight and confirm campaign state remains consistent.
 6. Load a different KSP save in the same process and confirm campaign, rival, tracking, and callback state does not leak across saves.
 7. Corrupt a current-format `CONTROL_STATE` in a disposable save and confirm malformed progress fails closed rather than inventing valid progress.
@@ -518,11 +518,11 @@ Before calling a 0.5 build ready for broader testing, confirm all of the followi
 - [ ] Real KSP build succeeds.
 - [ ] Automated logic suites pass.
 - [ ] Four opening Pre-Orbit offers are correct.
-- [ ] Live telemetry displays correctly.
+- [ ] Live telemetry displays correctly in FlightActiveUI.
 - [ ] Directed Power impact behaviour works.
-- [ ] Mass landing behaviour works.
-- [ ] Control hold + safe landing works.
-- [ ] Biome landing behaviour works.
+- [ ] Mass landed/splashed recovery behaviour works.
+- [ ] Control hold + safe landing/splashdown works.
+- [ ] Biome landed/splashed completion behaviour works where the target biome is reported.
 - [ ] Multiple simultaneously offered contracts evaluate independently.
 - [ ] Any Agency progression works.
 - [ ] Sponsor reviews offer all unlocked Pre-Orbit contracts.

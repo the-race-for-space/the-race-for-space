@@ -245,7 +245,7 @@ Main classes:
 
 `FlightActiveUI` owns its own Flight-only stock launcher button and window visibility. It lists player-uncompleted Offered objective contracts first, allows each unfinished contract to expand independently by stable contract ID, and places Offered contracts already completed by the player at the bottom marked `Complete` with no expansion control. Expanded Pre-Orbit contracts display the current requirement state from `ModRuntime.FlightContractTrackingState`; other objective types fall back to their normal objective description.
 
-Both UI classes are read-only consumers. They must not complete objectives, advance rivals, process funding, sample KSP vessels, or create another telemetry cadence. During the current transition the Funding Targets view and `FlightActiveUI` can both display the same tracker state, but the underlying active-vessel sampling remains the single `ModRuntime` path.
+Both UI classes are read-only consumers. They must not complete objectives, advance rivals, process funding, sample KSP vessels, or create another telemetry cadence. `CommandCenterWindow` now keeps Funding Targets focused on funding and contract-lifecycle information, while `FlightActiveUI` is the dedicated live Flight Contract presentation. Active-vessel sampling remains the single `ModRuntime` path.
 
 ## Current Pre-Orbit progression
 
@@ -325,7 +325,7 @@ Examples:
 
 When there are no active Flight Contracts, the fast path should avoid unnecessary active-vessel discovery and evaluation.
 
-UI visibility does not own or change the telemetry sampling frequency. `CommandCenterWindow` and `FlightActiveUI` read the same existing tracker state rather than requesting separate active-vessel samples.
+UI visibility does not own or change the telemetry sampling frequency. `FlightActiveUI` reads the existing tracker state maintained by `ModRuntime`; `CommandCenterWindow` no longer draws live Flight Contract requirement telemetry.
 
 The slower orbital scan remains separate because it must consider loaded and unloaded vessels.
 

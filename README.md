@@ -61,7 +61,7 @@ The main source modules are:
 - `Tracking/` — KSP-independent flight-contract and orbital-vessel evaluation.
 - `Persistence/` — project-owned save state.
 - `KspIntegration/` — direct KSP API access and ScenarioModule integration.
-- `UI/` — Command Center presentation only.
+- `UI/` — full Command Center and compact Flight-only contract presentation.
 
 See [`docs/STRUCTURE.md`](docs/STRUCTURE.md) for the ownership rules and [`docs/CODE_OVERVIEW.md`](docs/CODE_OVERVIEW.md) for a simple walkthrough.
 
@@ -107,9 +107,9 @@ Normal orbital and satellite-network rival missions continue to use 10% progress
 
 Restart KSP after changing `CampaignSettings.cfg`.
 
-## Command Center
+## Interfaces
 
-The mod uses one Command Center window with four main views:
+The mod uses one full Command Center window with four main views:
 
 - **Overview**
 - **Funding Targets**
@@ -118,10 +118,14 @@ The mod uses one Command Center window with four main views:
 
 The Contract Catalogue shows `Offered`, `Unlocked`, `Locked`, and `Expired` objective funding contracts.
 
-Funding Targets shows detailed funding information. During flight it also shows live telemetry for every offered, unfinished Pre-Orbit contract that applies to the active vessel.
+Funding Targets shows detailed funding information. During the current transition it also still shows live telemetry for offered, unfinished Pre-Orbit contracts.
+
+Flight mode also has a separate compact **Offered Contracts** window implemented by `FlightActiveUI`. It has its own Flight-only launcher button so the player can track contract requirements without opening the full Command Center. Unfinished Offered objective contracts appear first and can be expanded independently. Offered contracts already completed by the player sit at the bottom marked `Complete` with no expansion control.
+
+Expanded Pre-Orbit contracts show the current Directed Power, Mass, Control, or Biome requirement state from the existing `FlightContractTracker`. The Flight window does not sample vessels or advance gameplay; it reads the same runtime state already maintained by `ModRuntime`.
 
 The UI reads campaign and tracking state. It does not advance gameplay.
 
 ## Architecture in one sentence
 
-`ModRuntime` schedules work, `KspIntegration` reads KSP, `Tracking` evaluates project-owned snapshots, `CampaignController` coordinates campaign state, and the Command Center displays the result.
+`ModRuntime` schedules work, `KspIntegration` reads KSP, `Tracking` evaluates project-owned snapshots, `CampaignController` coordinates campaign state, and the Command Center plus FlightActiveUI display the result.

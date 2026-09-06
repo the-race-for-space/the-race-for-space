@@ -41,31 +41,42 @@ namespace TheRaceForSpace.Tracking
         // on the once-per-second flight-contract capture path.
         internal ICollection<string> ControlStateObjectiveIds { get { return _controlStates.Keys; } }
 
+        internal bool ContainsPartPersistentId(uint partPersistentId)
+        {
+            return partPersistentId != 0u && _partPersistentIds.Contains(partPersistentId);
+        }
+
         internal bool SharesPartLineage(IReadOnlyList<uint> partPersistentIds)
+        {
+            return CountSharedPartLineage(partPersistentIds) > 0;
+        }
+
+        internal int CountSharedPartLineage(IReadOnlyList<uint> partPersistentIds)
         {
             if (_partPersistentIds.Count == 0
                 || partPersistentIds == null
                 || partPersistentIds.Count == 0)
             {
-                return false;
+                return 0;
             }
 
+            int sharedPartCount = 0;
             for (int partIndex = 0; partIndex < partPersistentIds.Count; partIndex++)
             {
                 uint partPersistentId = partPersistentIds[partIndex];
                 if (partPersistentId != 0u && _partPersistentIds.Contains(partPersistentId))
                 {
-                    return true;
+                    sharedPartCount++;
                 }
             }
 
-            return false;
+            return sharedPartCount;
         }
 
         /// <summary>
         /// Seeds a new attempt from its first persistent-part set, then narrows that lineage when
-        /// staging removes parts. Newly attached parts are deliberately not absorbed here; docking
-        /// and constructed-part ownership need their own explicit rules in later topology steps.
+        /// staging removes parts. Newly attached parts are deliberately not absorbed: docking keeps
+        /// each remembered Flight Attempt separate even while several lineages share one KSP vessel.
         /// </summary>
         internal void ReconcilePartLineage(IReadOnlyList<uint> partPersistentIds)
         {

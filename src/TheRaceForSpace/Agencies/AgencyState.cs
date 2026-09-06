@@ -13,6 +13,8 @@ namespace TheRaceForSpace.Agencies
         private readonly Dictionary<string, int> _satellitesByBody =
             new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 
+        internal static event Action<AgencyState, string> ObjectiveCompletionRecorded;
+
         public AgencyState(string name, bool isPlayer)
             : this(name, name, isPlayer)
         {
@@ -65,6 +67,15 @@ namespace TheRaceForSpace.Agencies
         }
 
         /// <summary>
+        /// Restores a saved objective completion without raising the live completion signal used by
+        /// presentation. Loading an old achievement must not look like a new achievement to the player.
+        /// </summary>
+        internal bool RestoreObjectiveCompletion(string objectiveId, double universalTime)
+        {
+            return TryStoreObjectiveCompletion(objectiveId, universalTime);
+        }
+
+        /// <summary>
         /// Returns whether this agency has permanently recorded the objective ID.
         /// </summary>
         public bool HasCompletedObjective(string objectiveId)
@@ -99,15 +110,19 @@ namespace TheRaceForSpace.Agencies
         /// </summary>
         public bool RecordObjectiveCompletion(string objectiveId, double universalTime)
         {
-            if (string.IsNullOrEmpty(objectiveId)
-                || double.IsNaN(universalTime)
-                || double.IsInfinity(universalTime)
-                || _objectiveCompletionTimesById.ContainsKey(objectiveId))
+            if (!TryStoreObjectiveCompletion(objectiveId, universalTime))
             {
                 return false;
             }
 
-            _objectiveCompletionTimesById[objectiveId] = Math.Max(0.0, universalTime);
+            // This signal represents a genuinely new gameplay completion. Persistence restoration uses
+            // RestoreObjectiveCompletion so loading a save cannot replay old completion notifications.
+            Action<AgencyState, string> completionRecorded = ObjectiveCompletionRecorded;
+            if (completionRecorded != null)
+            {
+                completionRecorded(this, objectiveId);
+            }
+
             return true;
         }
 
@@ -136,6 +151,20 @@ namespace TheRaceForSpace.Agencies
             }
 
             _satellitesByBody[celestialBodyName] = count;
+        }
+
+        private bool TryStoreObjectiveCompletion(string objectiveId, double universalTime)
+        {
+            if (string.IsNullOrEmpty(objectiveId)
+                || double.IsNaN(universalTime)
+                || double.IsInfinity(universalTime)
+                || _objectiveCompletionTimesById.ContainsKey(objectiveId))
+            {
+                return false;
+            }
+
+            _objectiveCompletionTimesById[objectiveId] = Math.Max(0.0, universalTime);
+            return true;
         }
     }
 }

@@ -20,6 +20,7 @@ namespace TheRaceForSpace.Tracking
 
         internal bool HasActiveAttempt { get { return !string.IsNullOrEmpty(VesselId); } }
         internal bool HasPartLineage { get { return _partPersistentIds.Count > 0; } }
+        internal IEnumerable<uint> PartPersistentIds { get { return _partPersistentIds; } }
         internal string VesselId { get; set; }
         internal string CelestialBodyName { get; set; }
         internal double LaunchUniversalTime { get; set; }

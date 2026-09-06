@@ -15,6 +15,10 @@ namespace TheRaceForSpace.Tests.Tracking
             NonFlightSampleIsRejected();
             DestructionTooFarFromSurfaceIsRejected();
             InvalidNumericEvidenceIsRejected();
+
+            // Keep the console runner unchanged while closing the remaining KSP-independent Flight
+            // Attempt lifecycle gaps in the same tracking-regression group.
+            FlightAttemptFinalRegressionTests.RunAll();
         }
 
         private static void RecentInFlightSurfaceImpactQualifies()

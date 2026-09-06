@@ -106,7 +106,8 @@ namespace TheRaceForSpace.Tracking
             int crewCount,
             double launchUniversalTime,
             double observationUniversalTime,
-            IList<uint> partPersistentIds = null)
+            IList<uint> partPersistentIds = null,
+            uint referencePartPersistentId = 0u)
         {
             VesselId = vesselId;
             CelestialBodyName = celestialBodyName;
@@ -121,6 +122,7 @@ namespace TheRaceForSpace.Tracking
             CrewCount = Math.Max(0, crewCount);
             LaunchUniversalTime = launchUniversalTime;
             ObservationUniversalTime = observationUniversalTime;
+            ReferencePartPersistentId = referencePartPersistentId;
 
             if (partPersistentIds == null || partPersistentIds.Count == 0)
             {
@@ -154,9 +156,16 @@ namespace TheRaceForSpace.Tracking
 
         /// <summary>
         /// KSP persistent part IDs present on the controlled vessel when this snapshot was captured.
-        /// These project-owned primitive values allow later lineage matching without exposing Part
-        /// objects outside KspIntegration.
+        /// These project-owned primitive values allow lineage matching without exposing Part objects
+        /// outside KspIntegration.
         /// </summary>
         public IReadOnlyList<uint> PartPersistentIds { get; private set; }
+
+        /// <summary>
+        /// Persistent ID of KSP's current reference/control part. A docked vessel can contain several
+        /// remembered lineages; this identifies which lineage is currently controlling the assembly.
+        /// Zero means KSP did not provide a usable reference-part identity.
+        /// </summary>
+        public uint ReferencePartPersistentId { get; private set; }
     }
 }

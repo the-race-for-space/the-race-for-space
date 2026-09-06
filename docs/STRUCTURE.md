@@ -33,7 +33,7 @@ CampaignController
     +--> Rivals
     |
     +--> Persistence
-    +--> UI reads state
+    +--> UI reads state / publishes stock KSP notifications
 
 ModRuntime schedules the work above.
 ```
@@ -96,6 +96,8 @@ An agency stores mutable campaign information such as:
 - funds;
 - qualifying satellite counts;
 - current rival mission state where applicable.
+
+`AgencyState.RecordObjectiveCompletion` raises an internal completion signal only when gameplay records a genuinely new objective. Persistence uses the separate silent restore path so historical achievements do not look like new completions after loading a save. UI code may observe that signal, but it must not record objectives itself.
 
 Stable agency IDs are gameplay identity. Display names are presentation.
 
@@ -210,7 +212,7 @@ RIVAL_AGENCIES
 FLIGHT_CONTRACT_PROGRESS
 ```
 
-Command Center visibility is stored separately as a value on the ScenarioModule node.
+Command Center visibility is stored separately as a value on the ScenarioModule node. Funding-completion notifications do not add another save section; restored objective completions are applied silently and only new gameplay completions generate notifications.
 
 ### `KspIntegration/`
 
@@ -236,16 +238,24 @@ Raw `Vessel`, `ProtoVessel`, `HighLogic`, `FlightGlobals`, and similar KSP types
 
 ### `UI/`
 
-Owns presentation for the full Command Center and the compact Flight-only contract tracker.
+Owns presentation for the full Command Center, the compact Flight-only contract tracker, and stock KSP completion notices.
 
 Main classes:
 
 - `CommandCenterWindow` — the full campaign interface with Overview, Funding Targets, Rival Agencies, and Contract Catalogue views.
 - `FlightActiveUI` — a separate Flight-scene window for quickly checking Offered objective requirements while controlling a vessel.
+- `FundingNotificationUI` — a session-level presentation subscriber that publishes stock KSP inbox messages for newly completed player funding targets.
 
 `FlightActiveUI` owns its own Flight-only stock launcher button and window visibility. It lists player-uncompleted Offered objective contracts first, allows each unfinished contract to expand independently by stable contract ID, and places Offered contracts already completed by the player at the bottom marked `Complete` with no expansion control. Expanded Pre-Orbit contracts display the current requirement state from `ModRuntime.FlightContractTrackingState`; other objective types fall back to their normal objective description.
 
-Both UI classes are read-only consumers. They must not complete objectives, advance rivals, process funding, sample KSP vessels, or create another telemetry cadence. `CommandCenterWindow` now keeps Funding Targets focused on funding and contract-lifecycle information, while `FlightActiveUI` is the dedicated live Flight Contract presentation. Active-vessel sampling remains the single `ModRuntime` path.
+`FundingNotificationUI` listens to the internal `AgencyState` completion signal, queues the stable objective ID until KSP's `MessageSystem` is available, resolves the matching `ObjectiveFundingContract`, and sends a green stock message only when that contract is currently Offered and unexpired. Rival completions are ignored. The approved message format is:
+
+```text
+Funding Target Completed — Control II
+Control II has been achieved. Your agency is now eligible for a share of the remaining contract funding.
+```
+
+All three UI classes are presentation-only consumers. They must not complete objectives, advance rivals, process funding, sample KSP vessels, or create another telemetry cadence. `CommandCenterWindow` keeps Funding Targets focused on funding and contract-lifecycle information, `FlightActiveUI` is the dedicated live Flight Contract presentation, and `FundingNotificationUI` reports new player completions through the stock inbox. Active-vessel sampling remains the single `ModRuntime` path.
 
 ## Current Pre-Orbit progression
 
@@ -277,9 +287,10 @@ Rules:
 5. `FlightTelemetryPlan` determines which live vessel values are needed.
 6. `KspVesselMonitor` captures only those required values.
 7. `FlightContractTracker` evaluates the snapshot against every active contract independently.
-8. `AgencyState` records each completed objective.
-9. `CampaignController` settles unlocks, offers, funding, and rival state on its normal refresh.
-10. Persistence stores the changed campaign state; the UI reads the controller and tracker state for presentation.
+8. `AgencyState` records each completed objective and emits the new-completion signal.
+9. `FundingNotificationUI` may publish the stock funding-completion notice for the player.
+10. `CampaignController` settles unlocks, offers, funding, and rival state on its normal refresh.
+11. Persistence stores the changed campaign state; the UI reads the controller and tracker state for presentation.
 
 Multiple offered contracts may complete from the same flight if their own criteria are independently satisfied.
 
@@ -325,7 +336,7 @@ Examples:
 
 When there are no active Flight Contracts, the fast path should avoid unnecessary active-vessel discovery and evaluation.
 
-UI visibility does not own or change the telemetry sampling frequency. `FlightActiveUI` reads the existing tracker state maintained by `ModRuntime`; `CommandCenterWindow` no longer draws live Flight Contract requirement telemetry.
+UI visibility does not own or change the telemetry sampling frequency. `FlightActiveUI` reads the existing tracker state maintained by `ModRuntime`; `CommandCenterWindow` no longer draws live Flight Contract requirement telemetry. `FundingNotificationUI` is event-driven and does not add another vessel or contract-evaluation loop.
 
 The slower orbital scan remains separate because it must consider loaded and unloaded vessels.
 
@@ -380,6 +391,7 @@ Direct KSP API behaviour still requires an in-game test. See [`KERBAL_CONTRACTS_
 | Change KSP save hooks | `KspIntegration/ModPersistenceScenario.cs` |
 | Change Command Center presentation | `UI/CommandCenterWindow.cs` |
 | Change compact Flight contract presentation | `UI/FlightActiveUI.cs` |
+| Change stock funding-completion notifications | `UI/FundingNotificationUI.cs` |
 
 ## Structure rule
 

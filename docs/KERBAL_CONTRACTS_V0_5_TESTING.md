@@ -42,11 +42,11 @@ Before the detailed checks, verify the basic campaign loop:
    - Biome I
 5. Confirm Levels II-V of all four lines are `Locked`.
 6. Launch a vessel and open the Flight-only **Offered Contracts** window.
-7. Confirm live Flight Contract telemetry appears for every offered, unfinished Pre-Orbit contract you expand.
+7. Confirm the Active Flight Attempt header resolves to the current vessel after the first successful sample, and live Flight Contract telemetry appears for every offered, unfinished Pre-Orbit contract you expand.
 8. Complete one Level I objective.
 9. Confirm the next level in that line becomes `Unlocked`.
 10. Cross a sponsor-review funding boundary and confirm the unlocked level becomes `Offered`.
-11. Save and reload once and confirm campaign state remains correct.
+11. Save and reload once and confirm campaign state remains correct and the Flight UI waits for a fresh active-vessel sample before presenting restored attempt history as current.
 
 If this basic loop fails, fix it before running the longer checklist.
 
@@ -83,6 +83,23 @@ Confirm:
 # 2. Live Flight Contract telemetry
 
 During flight, the Flight-only **Offered Contracts** window should show live values about once per second for expanded Pre-Orbit contracts.
+
+## Active Flight Attempt header
+
+When at least one unfinished Pre-Orbit Flight Contract is active, expect one header above the contract list:
+
+```text
+Active Flight Attempt: <vessel name> (launch UT <time> s)
+```
+
+Confirm:
+
+- the vessel name matches the KSP vessel from the same successful active-vessel sample that updated the tracker;
+- the launch UT belongs to the selected remembered Flight Attempt and remains its original launch time through ordinary staging;
+- switching between independently launched Craft A and Craft B changes the displayed attempt to the selected craft's history;
+- while A and B are docked, **Control From Here** can change the selected remembered lineage. The stock vessel display name may stay the same for the combined assembly, so the launch UT should change when the selected lineage came from a different launch;
+- immediately after save/load or a Flight scene transition, a short `Active Flight Attempt: Waiting for vessel telemetry...` state is valid until the first successful active-vessel sample;
+- while that waiting state is present, expanded Pre-Orbit rows also wait rather than showing restored historical values as current telemetry.
 
 ## Directed Power card
 
@@ -123,11 +140,13 @@ Expect:
 
 ## Telemetry failure messages
 
-While in Flight with a normal active vessel, the UI should not remain stuck on:
+While in Flight with a normal active vessel, neither the header nor an expanded objective should remain stuck on:
 
 ```text
 Waiting for vessel telemetry...
 ```
+
+beyond the normal initial loading/capture moment.
 
 If that message appears continuously, investigate the runtime/tracking path rather than only the UI layout.
 
@@ -335,15 +354,30 @@ Confirm:
 - every offered, unfinished active contract is evaluated independently;
 - one valid landed/splashed recovery or impact may complete several offered contracts;
 - `Locked` or merely `Unlocked` contracts are not evaluated as active Flight Contracts;
+- the Active Flight Attempt header follows the lineage selected by the latest successful sample and shows that attempt's original launch UT;
 - staging does not create a new attempt when the continuing branch retains the remembered lineage;
 - a detached same-launch branch does not clone the continuing branch's historical progress;
 - switching from Craft A to unrelated Craft B does not transfer A's maxima, origin, or Control state to B;
 - returning to Craft A restores A's previous remembered history;
 - docking A and B keeps both histories separate;
-- KSP's **Control From Here** can select the remembered lineage belonging to the new reference/control part;
+- KSP's **Control From Here** can select the remembered lineage belonging to the new reference/control part, with the header/history changing after the next sample;
 - Mass cannot use a second attached lineage to satisfy its final mass requirement;
 - docking or undocking an external lineage resets an unfinished Control hold but preserves qualified Control state;
-- after undocking, each branch recovers its own history from its surviving persistent parts.
+- after undocking, each branch recovers its own history from its surviving persistent parts;
+- a constructed or replacement craft with wholly unrelated persistent parts starts fresh even if KSP reuses or transforms a vessel ID.
+
+## Constructed or replacement craft identity
+
+This check is most useful with a construction/topology mod that can substantially rebuild or create vessels in flight. Skip it in a stock-only acceptance pass if no practical reproduction exists; the KSP-independent suite still covers the identity rule.
+
+1. Establish a recognizable history on Craft A, such as a Directed Power maximum speed.
+2. Create or switch to a constructed/replacement craft whose persistent-part lineage has no overlap with A.
+3. If the construction process reuses or transforms KSP vessel identity, confirm that does **not** cause the new craft to inherit A's historical maximum, launch origin, orbit invalidation, or Control progress.
+4. Confirm the new craft begins its own Flight Attempt from its own live telemetry.
+5. If A's original persistent parts still exist elsewhere, return to A and confirm A's old history remains independently recoverable.
+6. Confirm the Active Flight Attempt header follows the currently selected lineage rather than acting as identity itself.
+
+The authoritative identity is persistent-part lineage. KSP vessel ID and display name are presentation/cache information, not permanent Flight Attempt identity.
 
 ## Flight Attempt lifecycle pruning
 
@@ -381,11 +415,11 @@ Test, if practical:
 
 Confirm the remaining active contract still works in each reduced state.
 
-When no active Flight Contracts exist, confirm there are no unexpected completions, impact callback errors, or repeated tracking exceptions.
+When no active Flight Contracts exist, confirm there are no unexpected completions, impact callback errors, or repeated tracking exceptions. The Active Flight Attempt live header should not imply there is current Flight Contract telemetry when no active Pre-Orbit contract requires sampling.
 
-After a later sponsor review offers a new Pre-Orbit contract, live telemetry should resume without restarting the save or controller.
+After a later sponsor review offers a new Pre-Orbit contract, live telemetry and the active-attempt presentation should resume without restarting the save or controller.
 
-Mass anti-combination and Control topology detection must reuse the persistent IDs already captured by the normal active-vessel snapshot; they should not introduce another vessel scan or faster telemetry cadence. Lifecycle pruning must likewise reuse the existing slower broad loaded/unloaded vessel refresh rather than add another global scan.
+Mass anti-combination and Control topology detection must reuse the persistent IDs already captured by the normal active-vessel snapshot; they should not introduce another vessel scan or faster telemetry cadence. Active-attempt presentation reuses the same snapshot's vessel name and adds no scan. Lifecycle pruning must likewise reuse the existing slower broad loaded/unloaded vessel refresh rather than add another global scan.
 
 ---
 
@@ -540,26 +574,28 @@ Confirm:
 - at most one `ATTEMPT` is marked `selected = true`;
 - two histories that were docked may legitimately contain the same last `vesselId` without being merged;
 - their `PART_LINEAGE` IDs remain independent;
+- vessel display name and runtime telemetry freshness are **not** added as persisted attempt fields;
 - the old root-level `active`, `vesselId`, and root-level `CONTROL_STATE` layout is not written by the current build.
 
-Instantaneous telemetry such as current altitude, current mass, current biome, current crew, current reference part, and the transient external-attachment topology should be rebuilt from the next live sample after load.
+Instantaneous telemetry such as current altitude, current mass, current biome, current crew, current vessel display name, current reference part, runtime presentation freshness, and the transient external-attachment topology should be rebuilt from the next live sample after load.
 
 ## Multi-attempt save/reload check
 
 Use two controllable craft with clearly different Directed Power maximum speeds because that history is easy to see in FlightActiveUI:
 
-1. Fly Craft A and record a recognizable maximum speed.
-2. Switch to Craft B and record a different maximum speed.
+1. Fly Craft A and record a recognizable maximum speed and its launch UT.
+2. Switch to Craft B and record a different maximum speed and launch UT.
 3. Return to A and confirm its old maximum is still present.
 4. Optionally dock A and B, then use **Control From Here** on B so both lineages share one KSP vessel while B is selected.
 5. Save the game while B is selected.
-6. Reload the save and confirm B's saved maximum is restored immediately.
-7. Switch to A, or undock and switch to A if the save was made docked.
-8. Confirm A's previous independent maximum is restored by its saved persistent-part lineage rather than starting at the post-load live value.
-9. Switch back to B and confirm B retains its own history.
-10. If practical, save again after undocking, reload, and reconfirm both histories.
+6. Reload the save and open FlightActiveUI immediately. Confirm restored history is not presented as current while the runtime still says it is waiting for fresh vessel telemetry.
+7. After the first successful sample, confirm B's saved maximum and launch UT are restored for the current selected lineage.
+8. Switch to A, or undock and switch to A if the save was made docked.
+9. Confirm A's previous independent maximum and launch UT are restored by its saved persistent-part lineage rather than starting at the post-load live value.
+10. Switch back to B and confirm B retains its own history.
+11. If practical, save again after undocking, reload, and reconfirm both histories.
 
-The key result is **A -> B -> save while B -> reload -> A still remembers A**.
+The key result is **A -> B -> save while B -> reload -> fresh sample resolves current lineage -> A still remembers A**.
 
 ## Other save/reload checks
 
@@ -569,10 +605,11 @@ The key result is **A -> B -> save while B -> reload -> A still remembers A**.
 4. After reloading a partial Control hold, confirm the first live topology observation does not by itself reset that progress; then perform a real docking/undocking change and confirm the unfinished hold does reset.
 5. Save after Control qualification but before recovery; reload and confirm either a landing or splashdown can still complete it.
 6. Recover or terminate a remembered craft, allow a successful broad vessel refresh, save, reload, and confirm the pruned attempt does not return.
-7. Move Flight -> Space Center -> Tracking Station -> Flight and confirm campaign state remains consistent.
-8. Load a different KSP save in the same process and confirm campaign, rival, tracking, pruning, and callback state does not leak across saves.
-9. Corrupt a current-format `CONTROL_STATE` inside one `ATTEMPT` in a disposable save and confirm malformed Flight Contract progress fails closed rather than inventing valid progress.
-10. If practical, duplicate one `partPersistentId` across two `ATTEMPT` nodes in a disposable save and confirm the ambiguous Flight Contract progress is rejected rather than merging histories.
+7. Confirm the Active Flight Attempt vessel name/freshness is rebuilt from live KSP state after reload and is not recovered from the save node.
+8. Move Flight -> Space Center -> Tracking Station -> Flight and confirm campaign state remains consistent; on re-entering Flight the active-attempt presentation should wait for the new scene's fresh sample before showing live values.
+9. Load a different KSP save in the same process and confirm campaign, rival, tracking, pruning, presentation freshness, and callback state does not leak across saves.
+10. Corrupt a current-format `CONTROL_STATE` inside one `ATTEMPT` in a disposable save and confirm malformed Flight Contract progress fails closed rather than inventing valid progress.
+11. If practical, duplicate one `partPersistentId` across two `ATTEMPT` nodes in a disposable save and confirm the ambiguous Flight Contract progress is rejected rather than merging histories.
 
 The current format intentionally does not migrate the earlier development single-attempt root layout.
 
@@ -605,10 +642,10 @@ Confirm:
 - sponsor/funding timing continues;
 - active Flight Contract tracking continues during Flight;
 - lifecycle pruning can still occur after the normal broad vessel refresh even while the Flight UI is hidden;
-- reopening the UI shows current state rather than restarting progression;
+- reopening FlightActiveUI shows the current sample/attempt rather than restarting tracking or exposing stale restored presentation;
 - moving between normal KSP scenes does not recreate campaign state for the same save.
 
-This verifies that `ModRuntime` owns progression and `CommandCenterWindow` is presentation-only.
+This verifies that `ModRuntime` owns progression/tracking and the windows remain presentation-only.
 
 ---
 
@@ -623,8 +660,10 @@ grep -i "Race for Space\|TheRaceForSpace\|Exception" "$KSP_ROOT/KSP.log" | tail 
 Look for:
 
 - repeated exceptions;
+- `FlightActiveUI` active-attempt header or launcher errors;
 - vessel-destruction callback errors;
 - Flight Attempt save/load errors or histories unexpectedly resetting after reload;
+- constructed/replacement craft inheriting an unrelated remembered history;
 - repeated pruning of the same already-removed attempt;
 - excessive per-frame logging.
 
@@ -640,17 +679,20 @@ Before calling a 0.5 build ready for broader testing, confirm all of the followi
 - [ ] Automated logic suites pass.
 - [ ] Four opening Pre-Orbit offers are correct.
 - [ ] Live telemetry displays correctly in FlightActiveUI.
+- [ ] Active Flight Attempt vessel-name/launch-UT presentation follows the latest successful selected lineage and waits for fresh telemetry after load/scene entry.
 - [ ] Directed Power impact behaviour works.
 - [ ] Mass landed/splashed recovery and docked-lineage rejection work.
 - [ ] Control hold, topology resets, qualification preservation, and safe landing/splashdown work.
 - [ ] Biome landed/splashed completion behaviour works where the target biome is reported.
 - [ ] Multiple simultaneously offered contracts evaluate independently.
 - [ ] Staging, vessel switching, docking, and undocking preserve independent Flight Attempt histories.
+- [ ] A constructed/replacement craft with unrelated persistent parts does not inherit history merely because KSP vessel identity is reused or transformed.
 - [ ] Unrelated docked parts cannot be combined to satisfy Mass.
 - [ ] Docking/undocking resets unfinished Control holds but does not erase qualified Control state.
 - [ ] Multiple Flight Attempts and their part lineages survive save/reload.
 - [ ] Dead/recovered Flight Attempts are pruned only after their lineage disappears, while inactive surviving craft are retained.
 - [ ] Pruned Flight Attempts do not reappear in later saves.
+- [ ] Vessel display name and telemetry freshness remain live presentation state rather than new save-format fields.
 - [ ] Any Agency progression works.
 - [ ] Sponsor reviews offer all unlocked Pre-Orbit contracts.
 - [ ] Any Level V offers Probe Orbit immediately.

@@ -154,7 +154,7 @@ namespace TheRaceForSpace.ControllerTests
             Equal(2, CountOfferedNormalObjectives(controller));
         }
 
-        public static void AnyPreOrbitLevelFiveOffersProbeOrbit()
+        public static void AnyPreOrbitLevelFiveUnlocksProbeOrbitForSponsorReview()
         {
             string[] levelFiveIds =
             {
@@ -182,8 +182,16 @@ namespace TheRaceForSpace.ControllerTests
                 ObjectiveFundingContract probeOrbit = FindObjectiveFundingContract(
                     controller,
                     ObjectiveCatalogue.ProbeOrbitId);
+                Require(controller.IsObjectiveFundingContractAvailable(probeOrbit),
+                    "Any agency completing any pre-orbit level-five objective should unlock Probe Orbit.");
+                Require(!probeOrbit.IsOffered,
+                    "Unlocked Probe Orbit should wait for the next sponsor review before becoming Offered.");
+
+                Planetarium.CurrentUniversalTime = FundingIntervalSeconds;
+                controller.Refresh(false);
+
                 Require(probeOrbit.IsOffered,
-                    "Any agency completing any pre-orbit level-five objective completion should offer Probe Orbit immediately.");
+                    "The next sponsor review should offer unlocked Probe Orbit through the normal objective flow.");
             }
         }
 
@@ -216,8 +224,8 @@ namespace TheRaceForSpace.ControllerTests
                 controller,
                 FundingContractCatalogue.KerbinNetworkId);
 
-            // This regression begins at the post-Probe-Orbit state. Offer the contract explicitly
-            // rather than depending on the pre-orbit Level V immediate-offer path.
+            // This regression begins at the post-Probe-Orbit state, so offer Probe Orbit explicitly
+            // to isolate the later normal objective and satellite unlock flow.
             probeOrbit.Offer();
             controller.PlayerAgency.RecordObjectiveCompletion(ObjectiveCatalogue.ProbeOrbitId, 1.0);
             controller.PlayerAgency.SetSatelliteCount("Kerbin", 1);

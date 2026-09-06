@@ -307,21 +307,20 @@ Multiple offered contracts may complete from the same flight if their own criter
 
 - retain the required final vessel mass;
 - travel the required great-circle distance from the tracked launch origin;
-- finish `LANDED` on Kerbin;
-- `SPLASHED` does not count.
+- finish either `LANDED` or `SPLASHED` on Kerbin.
 
 ### Control
 
 - have crew aboard;
 - remain continuously inside the contract's altitude band for the required time;
-- after qualification, land safely on Kerbin with crew;
+- after qualification, finish either landed or splashed safely on Kerbin with crew;
 - each offered Control contract keeps independent hold state.
 
 ### Biome
 
 - reach the target Kerbin biome;
-- finish `LANDED` in that biome;
-- flying over a biome or splashing down does not count.
+- finish either `LANDED` or `SPLASHED` while KSP still reports that target biome;
+- flying over a biome without finishing there does not count.
 
 ## Tracking and performance rules
 

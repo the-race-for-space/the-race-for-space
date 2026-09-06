@@ -563,7 +563,7 @@ namespace TheRaceForSpace.UI
                     continue;
                 }
 
-                DrawObjectiveFundingCard(contract, showPreOrbitLiveProgress: true);
+                DrawObjectiveFundingCard(contract);
                 GUILayout.Space(8.0f);
             }
 

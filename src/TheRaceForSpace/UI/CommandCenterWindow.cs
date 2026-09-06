@@ -78,6 +78,7 @@ namespace TheRaceForSpace.UI
         private const float WindowBackgroundOpacity = 0.82f;
         private const float WindowWidth = 900.0f;
         private const float WindowHeight = 720.0f;
+        private const float OverviewMaximumHeight = 520.0f;
         private const float ContractCatalogueFundingInfoHeight = 275.0f;
         private const int HighlightedCardTitleFontSize = 16;
         private const int ContractCatalogueFundingButtonsPerRow = 4;
@@ -89,6 +90,8 @@ namespace TheRaceForSpace.UI
         private static readonly GUILayoutOption[] TabButtonOptions = { GUILayout.Height(40.0f) };
         private static readonly GUILayoutOption[] HelpButtonOptions =
             { GUILayout.Width(36.0f), GUILayout.Height(40.0f) };
+        private static readonly GUILayoutOption[] OverviewScrollOptions =
+            { GUILayout.MaxHeight(OverviewMaximumHeight) };
         private static readonly GUILayoutOption[] OverviewObjectivesOptions = { GUILayout.Width(350.0f) };
         private static readonly GUILayoutOption[] FundingLabelOptions = { GUILayout.Width(245.0f) };
         private static readonly GUILayoutOption[] FundingAmountOptions = { GUILayout.Width(100.0f) };
@@ -118,6 +121,7 @@ namespace TheRaceForSpace.UI
         private readonly StringBuilder _listTextBuilder = new StringBuilder(128);
         private readonly List<ContractCatalogueFundingEntry> _contractCatalogueFundingEntries =
             new List<ContractCatalogueFundingEntry>();
+        private Vector2 _overviewScrollPosition;
         private Vector2 _fundingScrollPosition;
         private Vector2 _rivalsScrollPosition;
         private Vector2 _contractCatalogueScrollPosition;
@@ -433,6 +437,12 @@ namespace TheRaceForSpace.UI
         {
             AgencyState player = _campaignController.PlayerAgency;
 
+            // Keep the tab row and F8 hint fixed while allowing long objective/funding summaries
+            // to remain inside the existing Command Center window instead of expanding vertically.
+            _overviewScrollPosition = GUILayout.BeginScrollView(
+                _overviewScrollPosition,
+                OverviewScrollOptions);
+
             GUILayout.BeginHorizontal();
             GUILayout.BeginVertical(OverviewObjectivesOptions);
             GUILayout.Label("Your Objectives", _boldLabelStyle);
@@ -582,6 +592,7 @@ namespace TheRaceForSpace.UI
 
             GUILayout.EndVertical();
             GUILayout.EndHorizontal();
+            GUILayout.EndScrollView();
         }
 
         private void DrawFundingTargets()

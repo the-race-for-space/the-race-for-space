@@ -353,7 +353,7 @@ namespace TheRaceForSpace.UI
                 GUILayout.Label(
                     "Kerbin Impact: "
                     + (isKerbin && !tracker.EnteredOrbit && speedMet && altitudeValid
-                        ? "Ready - impact Kerbin to complete"
+                        ? "Not Completed"
                         : "Pending"));
                 return;
             }

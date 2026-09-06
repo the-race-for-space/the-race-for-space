@@ -114,7 +114,14 @@ namespace TheRaceForSpace.Tracking
             CelestialBodyName = celestialBodyName;
             Situation = situation;
             AltitudeMeters = altitudeMeters;
-            SurfaceSpeedMetersPerSecond = surfaceSpeedMetersPerSecond;
+
+            // KSP can briefly expose the body's rotational velocity while a launchpad craft is still
+            // PRELAUNCH. Flight Contract speed should start at rest, otherwise that one transitional
+            // sample permanently seeds the attempt's maximum speed at roughly Kerbin's rotation speed.
+            SurfaceSpeedMetersPerSecond = situation == FlightSituation.Prelaunch
+                ? 0.0
+                : surfaceSpeedMetersPerSecond;
+
             MassTonnes = Math.Max(0.0, massTonnes);
             LatitudeDegrees = latitudeDegrees;
             LongitudeDegrees = longitudeDegrees;

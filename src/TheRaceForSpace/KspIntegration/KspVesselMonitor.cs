@@ -128,7 +128,8 @@ namespace TheRaceForSpace.KspIntegration
         /// <summary>
         /// Captures only the currently controlled loaded vessel for the frequent flight-contract
         /// path. Condition-specific KSP calls are made only when the cached active-contract plan
-        /// requests them; identity, situation, launch data, and coordinates remain cheap common context.
+        /// requests them; identity, situation, launch data, coordinates, and persistent part lineage
+        /// remain common context needed to identify the continuing flight.
         /// </summary>
         public static bool TryCaptureActiveVesselSnapshot(
             FlightTelemetryRequirement telemetryRequirements,
@@ -299,6 +300,24 @@ namespace TheRaceForSpace.KspIntegration
                     longitudeDegrees);
             }
 
+            // KSP persistent part IDs survive ordinary vessel-ID changes and are also maintained
+            // for unloaded ProtoPartSnapshots. Capture primitive IDs only; raw Part objects remain
+            // inside KspIntegration. Step 4 will use this lineage to select continuing attempts.
+            var partPersistentIds = new List<uint>(vessel.parts == null ? 0 : vessel.parts.Count);
+            if (vessel.parts != null)
+            {
+                for (int partIndex = 0; partIndex < vessel.parts.Count; partIndex++)
+                {
+                    Part part = vessel.parts[partIndex];
+                    if (part == null || part.persistentId == 0u)
+                    {
+                        continue;
+                    }
+
+                    partPersistentIds.Add(part.persistentId);
+                }
+            }
+
             vesselSnapshot = new ActiveVesselSnapshot(
                 vessel.id.ToString("D"),
                 vessel.mainBody.bodyName,
@@ -312,10 +331,17 @@ namespace TheRaceForSpace.KspIntegration
                 biomeName,
                 needsCrew ? vessel.GetCrewCount() : 0,
                 launchUniversalTime,
-                observationUniversalTime);
+                observationUniversalTime,
+                partPersistentIds);
 
             LogActiveVesselTelemetryStatus(
-                "captured active vessel " + vessel.id.ToString("D") + " on " + vessel.mainBody.bodyName);
+                "captured active vessel "
+                + vessel.id.ToString("D")
+                + " on "
+                + vessel.mainBody.bodyName
+                + " with "
+                + partPersistentIds.Count
+                + " persistent part IDs");
             return true;
         }
 

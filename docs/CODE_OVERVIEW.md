@@ -28,7 +28,7 @@ CampaignController
     +--> Rivals
     |
     +--> Persistence
-    +--> CommandCenterWindow reads the result
+    +--> CommandCenterWindow reads campaign/funding state
     +--> FlightActiveUI reads offered/live Flight Contract state
 ```
 
@@ -214,7 +214,7 @@ Location: `UI/CommandCenterWindow.cs`
 
 Draws the full Command Center with Overview, Funding Targets, Rival Agencies, and Contract Catalogue views.
 
-It reads campaign and Flight Contract state but does not advance gameplay.
+It reads campaign and funding state but does not advance gameplay. Live Flight Contract requirement telemetry is deliberately left to `FlightActiveUI`.
 
 ### `FlightActiveUI`
 

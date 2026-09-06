@@ -518,6 +518,31 @@ namespace TheRaceForSpace.UI
                 GUILayout.Space(2.0f);
                 GUILayout.Label(nextPayout.ToString("N0"), FundingAmountOptions);
                 GUILayout.EndHorizontal();
+
+                int eligibleAgencyCount = 0;
+                for (int agencyIndex = 0; agencyIndex < _campaignController.Agencies.Count; agencyIndex++)
+                {
+                    if (_campaignController.GetObjectiveCurrentPayout(
+                            _campaignController.Agencies[agencyIndex],
+                            contract) > 0.0)
+                    {
+                        eligibleAgencyCount++;
+                    }
+                }
+
+                _listTextBuilder.Length = 0;
+                _listTextBuilder.Append(contract.PaymentsRemaining);
+                _listTextBuilder.Append(contract.PaymentsRemaining == 1
+                    ? " payment remaining"
+                    : " payments remaining");
+                if (eligibleAgencyCount > 1)
+                {
+                    _listTextBuilder.Append(" (split between ");
+                    _listTextBuilder.Append(eligibleAgencyCount);
+                    _listTextBuilder.Append(" agencies)");
+                }
+
+                GUILayout.Label(_listTextBuilder.ToString());
             }
 
             for (int contractIndex = 0;

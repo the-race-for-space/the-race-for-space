@@ -124,7 +124,7 @@ They cannot prove direct KSP API behaviour such as:
 - stock biome reporting;
 - loaded/unloaded vessel discovery inside a real KSP save;
 - Career-funds integration;
-- actual Command Center layout.
+- actual Command Center or FlightActiveUI layout and launcher lifecycle.
 
 Those require the in-game checks below.
 
@@ -150,7 +150,7 @@ ls -l "$KSP_ROOT/GameData/TheRaceForSpace/Plugins/TheRaceForSpace.dll"
 ls -l "$KSP_ROOT/GameData/TheRaceForSpace/Config/CampaignSettings.cfg"
 ```
 
-A successful real KSP build is important after changes in `KspIntegration/`, because the standalone tests do not compile against the actual KSP API.
+A successful real KSP build is important after changes in `KspIntegration/` or the KSP-facing UI, because the standalone tests do not compile against the actual running KSP scene lifecycle.
 
 ## 6. Quick in-game smoke test
 
@@ -177,26 +177,44 @@ Confirm these four contracts are `Offered`:
 
 Confirm Levels II-V of all four lines are initially `Locked`.
 
+### FlightActiveUI lifecycle and contract list
+
+Before entering Flight, confirm the separate Flight contract launcher button is not present in Space Center or editor scenes.
+
+Launch a vessel and confirm:
+
+1. a separate Flight-only launcher button appears;
+2. it opens a small draggable window titled **Offered Contracts**;
+3. the Flight window opens and closes independently of the full Command Center;
+4. unfinished Offered objective contracts appear before player-completed Offered objective contracts;
+5. completed Offered contracts sit at the bottom marked `Complete` and have no expand/collapse control;
+6. unfinished contracts use independent `+` / `-` controls, so several contracts can remain expanded at the same time;
+7. the contract list scrolls rather than forcing the compact window to grow indefinitely.
+
+Return to Space Center and confirm the Flight-only launcher disappears. Re-enter Flight and confirm only one FlightActiveUI launcher button is present.
+
 ### Live Flight Contract telemetry
 
-Launch a vessel and open **Funding Targets**.
+In Flight, open **Offered Contracts** and expand the active Pre-Orbit contracts.
 
-The four opening contracts should show the live values they need:
+The expanded rows should show the live values they need:
 
 - **Directed Power** - current speed, maximum speed, maximum altitude, and impact readiness/status.
 - **Mass** - current mass, distance from launch, and landed state.
 - **Control** - current altitude, hold progress, crew count, and safe-landing readiness.
 - **Biome** - current biome, target biome, match state, and landed state.
 
-The values should update about once per second rather than every frame.
+The values should follow the existing `FlightContractTracker` updates at about the normal once-per-second telemetry cadence. Opening or closing FlightActiveUI must not create another active-vessel sampling loop.
 
-If the UI shows:
+During the current transition, the full **Funding Targets** view may still display the same live tracker state. Both interfaces must agree because they are read-only consumers of the same runtime tracker.
+
+If an expanded Pre-Orbit contract shows:
 
 ```text
-Waiting for active vessel telemetry...
+Waiting for vessel telemetry...
 ```
 
-while a normal vessel is actively being flown, treat that as a runtime/tracking problem rather than a UI-layout problem.
+while a normal vessel is actively being flown for more than the initial loading moment, treat that as a runtime/tracking problem rather than a UI-layout problem.
 
 ### One progression check
 
@@ -205,9 +223,10 @@ Complete one Level I Pre-Orbit objective.
 Confirm:
 
 1. the completed contract no longer behaves as an active unfinished Flight Contract;
-2. the next level in that line becomes `Unlocked`;
-3. it does not become `Offered` until the next sponsor review;
-4. after the review, all currently unlocked Pre-Orbit contracts are offered, even if there are more than two.
+2. in FlightActiveUI, an Offered contract completed by the player moves to the bottom and is marked `Complete` with no `+` / `-` control;
+3. the next level in that line becomes `Unlocked`;
+4. it does not become `Offered` until the next sponsor review;
+5. after the review, all currently unlocked Pre-Orbit contracts are offered, even if there are more than two.
 
 ## 7. Quick contract checks
 
@@ -249,6 +268,8 @@ Save during an active Flight Contract attempt, reload, and confirm:
 - Control hold/qualification state survives when relevant;
 - live values such as current altitude, mass, biome, and crew are refreshed from the vessel after load rather than copied from stale saved telemetry.
 
+FlightActiveUI expansion state and visibility are temporary UI state and do not need to survive a scene/save reload.
+
 ## 9. Orbital vessel check
 
 Put a qualifying Probe or Relay into Kerbin orbit.
@@ -273,6 +294,7 @@ grep -i "Race for Space\|TheRaceForSpace\|Exception" "$KSP_ROOT/KSP.log" | tail 
 Look for:
 
 - repeated exceptions;
+- `FlightActiveUI` exceptions or duplicate launcher behaviour;
 - Directed Power destruction-callback errors;
 - excessive repeated output;
 - save/load errors.
@@ -347,4 +369,5 @@ Before treating a build as a 0.5 release candidate, complete [`KERBAL_CONTRACTS_
 - funding and rival behaviour;
 - save format and scene changes;
 - loaded/unloaded orbital vessel tracking;
-- Command Center presentation.
+- Command Center presentation;
+- FlightActiveUI launcher lifecycle, ordering, expansion, and live requirement presentation.

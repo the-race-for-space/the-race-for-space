@@ -116,6 +116,9 @@ The automated tests cover KSP-independent behaviour such as:
 - Flight Attempt switching, staging/split lineage, docked reference-lineage reconciliation, and multi-attempt save/load;
 - Mass rejection while another lineage is attached and Control reset/preservation across topology changes;
 - conservative lifecycle pruning when a remembered lineage disappears while another craft survives;
+- constructed/replacement craft starting fresh when a reused KSP vessel ID has unrelated persistent-part lineage;
+- destruction removing only the impacted attempt while another remembered craft survives;
+- active-vessel snapshots preserving the display name used by FlightActiveUI presentation;
 - rival mission progress;
 - funding calculations;
 - persistence transformations;
@@ -124,12 +127,12 @@ The automated tests cover KSP-independent behaviour such as:
 They cannot prove direct KSP API behaviour such as:
 
 - vessel-destruction callbacks;
-- active-vessel `Part.persistentId` and reference/control-part capture;
+- active-vessel `Part.persistentId`, reference/control-part, and `vesselName` capture;
 - loaded `Part.persistentId` plus unloaded `ProtoPartSnapshot.persistentId` population capture during the broad vessel refresh;
 - stock biome reporting;
 - loaded/unloaded vessel discovery inside a real KSP save;
 - Career-funds integration;
-- actual Command Center or FlightActiveUI layout and launcher lifecycle;
+- actual Command Center or FlightActiveUI layout, active-attempt header, and launcher lifecycle;
 - stock `MessageSystem` funding-completion notifications.
 
 Those require the in-game checks below.
@@ -195,7 +198,8 @@ Launch a vessel and confirm:
 4. unfinished Offered objective contracts appear before player-completed Offered objective contracts;
 5. completed Offered contracts sit at the bottom marked `Complete` and have no expand/collapse control;
 6. unfinished contracts use independent `+` / `-` controls, so several contracts can remain expanded at the same time;
-7. the contract list scrolls rather than forcing the compact window to grow indefinitely.
+7. the contract list scrolls rather than forcing the compact window to grow indefinitely;
+8. while an unfinished Pre-Orbit Flight Contract is active, the window shows either `Active Flight Attempt: Waiting for vessel telemetry...` during initial capture or `Active Flight Attempt: <vessel name> (launch UT <time> s)` after a successful sample.
 
 Return to Space Center and confirm the Flight-only launcher disappears. Re-enter Flight and confirm only one FlightActiveUI launcher button is present.
 
@@ -203,7 +207,9 @@ Return to Space Center and confirm the Flight-only launcher disappears. Re-enter
 
 In Flight, open **Offered Contracts** and expand the active Pre-Orbit contracts.
 
-The expanded rows should show the live values they need:
+Immediately after entering Flight or reloading a save, a short `Active Flight Attempt: Waiting for vessel telemetry...` state is expected until the first successful active-vessel sample. Once normal telemetry is available, the header should resolve to the currently controlled vessel name and the selected remembered attempt's launch UT. Expanded Pre-Orbit rows should wait as well rather than briefly displaying restored historical values as if they were current.
+
+The expanded rows should then show the live values they need:
 
 - **Directed Power** - current speed, maximum speed, maximum altitude, and impact readiness/status.
 - **Mass** - current mass, distance from launch, and landed/splashed state.
@@ -212,7 +218,7 @@ The expanded rows should show the live values they need:
 
 The values should follow the existing `FlightContractTracker` updates at about the normal once-per-second telemetry cadence. Opening or closing FlightActiveUI must not create another active-vessel sampling loop.
 
-Persistent part-lineage IDs and the current reference/control-part ID are captured while this existing snapshot is built. After flying a normal controllable multi-part craft, the KSP log should contain a deduplicated Flight telemetry line similar to:
+Persistent part-lineage IDs, the current reference/control-part ID, and the vessel display name are captured while this existing snapshot is built. After flying a normal controllable multi-part craft, the KSP log should contain a deduplicated Flight telemetry line similar to:
 
 ```text
 [TheRaceForSpace] Flight telemetry: captured active vessel <id> on Kerbin with <n> persistent part IDs and reference part <part-id>.
@@ -227,8 +233,9 @@ For a focused staging check, use a controllable multi-stage craft while a Direct
 1. reach a noticeable maximum speed before staging;
 2. stage so the actively controlled branch keeps only part of the original vessel;
 3. confirm the FlightActiveUI maximum speed does not reset when KSP changes the vessel identity;
-4. if the detached branch is separately controllable, switch to it and confirm it does **not** inherit the continuing branch's historical maximum;
-5. switch back to the continuing branch and confirm its original maximum is still present.
+4. confirm the Active Flight Attempt header follows the currently controlled staged vessel while the remembered launch UT remains the original attempt's launch time;
+5. if the detached branch is separately controllable, switch to it and confirm it does **not** inherit the continuing branch's historical maximum;
+6. switch back to the continuing branch and confirm its original maximum is still present.
 
 This verifies the staging/split lineage rule.
 
@@ -236,15 +243,15 @@ This verifies the staging/split lineage rule.
 
 Directed Power maximum speed is the easiest visible history value to compare:
 
-1. fly Craft A and establish a recognizable maximum speed;
-2. switch to unrelated Craft B and establish a different lower maximum speed;
-3. return to Craft A and confirm A's original maximum is restored;
+1. fly Craft A and establish a recognizable maximum speed; note its Active Flight Attempt vessel name and launch UT;
+2. switch to unrelated Craft B and establish a different lower maximum speed; confirm the header changes to B and its own launch UT;
+3. return to Craft A and confirm A's original maximum and launch UT are restored;
 4. dock A and B while controlling from a part that belongs to A;
 5. confirm the FlightActiveUI still shows A's history rather than merging or replacing it with B's history;
 6. use KSP's **Control From Here** on a suitable part belonging to B;
-7. after the next telemetry sample, confirm the active history changes to B's remembered values and does not inherit A's earlier maximum;
+7. after the next telemetry sample, confirm the active history changes to B's remembered values and its launch UT. The stock vessel display name may remain the same for the combined docked assembly, so the launch UT is the useful visible lineage discriminator;
 8. undock the vessels;
-9. switch to A and B separately and confirm each branch recovers its own pre-docking history.
+9. switch to A and B separately and confirm each branch recovers its own pre-docking history and header values.
 
 ### Mass and Control topology rules
 
@@ -277,13 +284,26 @@ Continue with two craft that already have clearly different remembered Directed 
 1. make sure Craft A and Craft B have both been sampled and each shows its own recognizable maximum;
 2. optionally dock them and use **Control From Here** so Craft B's lineage is selected while both histories are present in one KSP vessel;
 3. save the game while Craft B is selected;
-4. reload that save and confirm B's remembered maximum is restored rather than reset;
-5. switch to Craft A, or undock and then switch to A if the save was made while docked;
-6. confirm A's older independent maximum is also restored from its saved part lineage;
-7. switch back to B and confirm B still has its own separate history;
-8. if practical, save/reload once more after the vessels have undocked and confirm both histories continue to resolve correctly.
+4. reload that save and open FlightActiveUI immediately. Historical selection may already be restored internally, but the header and expanded rows should remain in the waiting state until a fresh KSP active-vessel sample succeeds;
+5. after the fresh sample, confirm B's remembered maximum is restored rather than reset and the Active Flight Attempt header reflects the current vessel plus B's launch UT;
+6. switch to Craft A, or undock and then switch to A if the save was made while docked;
+7. confirm A's older independent maximum and launch UT are also restored from its saved part lineage;
+8. switch back to B and confirm B still has its own separate history;
+9. if practical, save/reload once more after the vessels have undocked and confirm both histories continue to resolve correctly.
 
-The important result is that saving while B is selected must no longer discard A. Two docked attempts may have the same last KSP vessel ID in `FLIGHT_CONTRACT_PROGRESS`; their saved `PART_LINEAGE` entries keep the histories distinct.
+The important result is that saving while B is selected must no longer discard A, and the UI must not present a restored selection as live until KSP confirms the current craft. Two docked attempts may have the same last KSP vessel ID in `FLIGHT_CONTRACT_PROGRESS`; their saved `PART_LINEAGE` entries keep the histories distinct.
+
+### Constructed or replacement craft identity
+
+This is most useful when testing with a construction/topology mod that can substantially rebuild a vessel in flight. Skip it in a stock-only smoke test if there is no practical reproduction.
+
+1. establish a recognizable Flight Attempt history on Craft A;
+2. create or switch to a constructed/replacement craft whose persistent parts are entirely unrelated to A, even if KSP happens to reuse or transform vessel identity during the operation;
+3. confirm the new craft starts with its own Flight Attempt values rather than inheriting A's earlier maximum speed, origin, or Control state;
+4. if A's original lineage still exists elsewhere, return to it and confirm A's old history is still independently recoverable;
+5. confirm the Active Flight Attempt header follows whichever lineage the fresh sample selected.
+
+The important identity rule is persistent-part lineage, not the KSP vessel ID or display name.
 
 ### Flight Attempt lifecycle pruning
 
@@ -309,7 +329,7 @@ Open the full **Funding Targets** view while still in Flight and confirm it no l
 
 Contract evaluation must continue even when both interfaces are closed. Hiding the UI must never stop `ModRuntime` from maintaining the active Flight Contract tracker.
 
-If an expanded Pre-Orbit contract shows:
+If either the Active Flight Attempt header or an expanded Pre-Orbit contract remains on:
 
 ```text
 Waiting for vessel telemetry...
@@ -385,12 +405,13 @@ Save during Flight Contract activity, reload, and confirm:
 - each attempt's persistent-part lineage still selects the correct historical state after switching, staging, docking, or undocking;
 - Directed Power maximum history and orbit invalidation survive when relevant;
 - Control hold/qualification state survives per remembered attempt when relevant;
-- the attempt marked selected at save time is restored as the selected history until live KSP telemetry resolves the currently controlled lineage;
-- live values such as current altitude, mass, biome, crew, reference part, and current external attachment topology are refreshed from the vessel after load rather than copied from stale saved telemetry.
+- the attempt marked selected at save time is restored as historical selected state until live KSP telemetry resolves the currently controlled lineage;
+- FlightActiveUI remains in its waiting presentation until that fresh active-vessel sample succeeds, then shows the current vessel name plus the resolved attempt's launch UT;
+- live values such as current altitude, mass, biome, crew, vessel display name, reference part, runtime telemetry freshness, and current external attachment topology are refreshed from the vessel after load rather than copied from stale saved telemetry.
 
 `FLIGHT_CONTRACT_PROGRESS` uses repeated `ATTEMPT` nodes with nested `PART_LINEAGE` and `CONTROL_STATE` entries. The previous development single-attempt root format is intentionally not migrated; use a current-build disposable save when validating the current persistence format.
 
-The transient external-attachment topology is rebuilt from the first usable live snapshot after load. That first observation establishes the baseline and should not by itself reset a restored partial Control hold; later docking/undocking changes should reset it normally.
+The current vessel display name and runtime freshness marker are not persisted fields. The transient external-attachment topology is also rebuilt from the first usable live snapshot after load. That first observation establishes the baseline and should not by itself reset a restored partial Control hold; later docking/undocking changes should reset it normally.
 
 FlightActiveUI expansion state and visibility are temporary UI state and do not need to survive a scene/save reload.
 
@@ -422,7 +443,7 @@ grep -i "Race for Space\|TheRaceForSpace\|Exception" "$KSP_ROOT/KSP.log" | tail 
 Look for:
 
 - repeated exceptions;
-- `FlightActiveUI` exceptions or duplicate launcher behaviour;
+- `FlightActiveUI` exceptions, active-attempt header failures, or duplicate launcher behaviour;
 - `FundingNotificationUI` or `MessageSystem` errors;
 - Directed Power destruction-callback errors;
 - active Flight telemetry reporting zero persistent part IDs or reference part `0` for a normal settled controllable craft;
@@ -496,7 +517,8 @@ Before treating a build as a 0.5 release candidate, complete [`KERBAL_CONTRACTS_
 
 - all four Pre-Orbit lines;
 - multiple simultaneously offered levels;
-- Flight Attempt switching, staging, docking/undocking, topology rules, multi-attempt persistence, and lifecycle pruning;
+- Flight Attempt switching, staging, docking/undocking, topology rules, multi-attempt persistence, lifecycle pruning, and constructed/replacement craft identity;
+- Active Flight Attempt vessel-name/launch-UT presentation and fresh-sample waiting after save/load;
 - Level V -> Probe Orbit convergence;
 - funding and rival behaviour;
 - loaded/unloaded orbital vessel tracking;

@@ -13,7 +13,7 @@ This file is a lightweight reminder list for current development ideas and polis
 ## Persistent Flight Attempts
 
 - [x] **Step 1 - separate Flight Attempt state from evaluation.** `FlightAttemptState` now owns the mutable state for the single attempt currently evaluated by `FlightContractTracker`. This is an internal refactor only: vessel switching, staging continuity, contract rules, and the existing single-attempt persistence format are unchanged.
-- [ ] **Step 2 - retain multiple attempts in memory.** Allow switching between unrelated craft without deleting the previous craft's unfinished Flight Contract history.
+- [x] **Step 2 - retain multiple attempts in memory.** `FlightContractTracker` now keeps independent remembered attempt state for unrelated vessel IDs during the current session, so switching A -> B -> A restores A's unfinished maxima and other attempt history. The existing same-launch staging fallback is retained temporarily, and save/load still persists only the currently active attempt until Step 6.
 - [ ] **Step 3 - add stable craft-lineage identity.** Pass persistent part-lineage identifiers through the KSP integration boundary so attempts are not tied to temporary KSP vessel IDs.
 - [ ] **Step 4 - reconcile staging and vessel switching by lineage.** Preserve one attempt on the correct continuing branch without cloning historical progress.
 - [ ] **Step 5 - handle docking and undocking.** Keep separate attempt histories when craft combine and restore the correct histories when they separate.

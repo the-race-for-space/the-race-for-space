@@ -17,6 +17,7 @@ namespace TheRaceForSpace.Tests.Tracking
             ConstructedCraftWithReusedVesselIdStartsFreshAttempt();
             DestructionRemovesOnlyImpactedAttempt();
             ActiveVesselSnapshotCarriesPresentationName();
+            PrelaunchSurfaceSpeedStartsAtZero();
         }
 
         private static void ConstructedCraftWithReusedVesselIdStartsFreshAttempt()
@@ -150,6 +151,72 @@ namespace TheRaceForSpace.Tests.Tracking
             Require(
                 string.Equals(snapshot.VesselName, "Explorer One", StringComparison.Ordinal),
                 "The KSP-independent active snapshot should carry the vessel display name used by FlightActiveUI presentation.");
+        }
+
+        private static void PrelaunchSurfaceSpeedStartsAtZero()
+        {
+            AgencyState player = new AgencyState("player", "Player", true);
+            var tracker = new FlightContractTracker();
+            var noActiveContracts = new List<ObjectiveDefinition>();
+
+            var prelaunchSnapshot = new ActiveVesselSnapshot(
+                "prelaunch-speed",
+                "Kerbin",
+                FlightSituation.Prelaunch,
+                70.0,
+                175.0,
+                1.0,
+                0.0,
+                0.0,
+                600000.0,
+                null,
+                0,
+                3400.0,
+                3400.0,
+                new uint[] { 15001u },
+                15001u,
+                "Launchpad Craft");
+
+            RequireNear(
+                0.0,
+                prelaunchSnapshot.SurfaceSpeedMetersPerSecond,
+                "PRELAUNCH telemetry must normalize transient body-rotation speed to zero.");
+
+            tracker.EvaluateActiveFlightContracts(
+                player,
+                noActiveContracts,
+                prelaunchSnapshot);
+
+            RequireNear(
+                0.0,
+                tracker.MaximumSurfaceSpeedMetersPerSecond,
+                "A new Flight Attempt must not start with a false prelaunch maximum speed.");
+
+            tracker.EvaluateActiveFlightContracts(
+                player,
+                noActiveContracts,
+                new ActiveVesselSnapshot(
+                    "prelaunch-speed",
+                    "Kerbin",
+                    FlightSituation.Flying,
+                    500.0,
+                    220.0,
+                    1.0,
+                    0.0,
+                    0.0,
+                    600000.0,
+                    null,
+                    0,
+                    3400.0,
+                    3401.0,
+                    new uint[] { 15001u },
+                    15001u,
+                    "Launchpad Craft"));
+
+            RequireNear(
+                220.0,
+                tracker.MaximumSurfaceSpeedMetersPerSecond,
+                "Normal surface speed sampling must resume after the craft leaves PRELAUNCH.");
         }
 
         private static ActiveVesselSnapshot Snapshot(

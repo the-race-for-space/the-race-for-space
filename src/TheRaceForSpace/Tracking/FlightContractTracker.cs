@@ -48,9 +48,19 @@ namespace TheRaceForSpace.Tracking
         public FlightSituation CurrentSituation { get { return _attempt.CurrentSituation; } }
         public bool EnteredOrbit { get { return _attempt.EnteredOrbit; } }
 
+        internal IEnumerable<FlightAttemptState> RememberedAttempts
+        {
+            get { return _attempts; }
+        }
+
         internal ICollection<string> ControlStateObjectiveIds
         {
             get { return _attempt.ControlStateObjectiveIds; }
+        }
+
+        internal bool IsSelectedAttempt(FlightAttemptState attempt)
+        {
+            return attempt != null && ReferenceEquals(_attempt, attempt);
         }
 
         /// <summary>
@@ -88,14 +98,31 @@ namespace TheRaceForSpace.Tracking
             bool wasSampleInBand,
             bool isQualified)
         {
-            if (string.IsNullOrEmpty(objectiveId)
+            RestoreControlState(
+                _attempt,
+                objectiveId,
+                holdSeconds,
+                wasSampleInBand,
+                isQualified);
+        }
+
+        internal void RestoreControlState(
+            FlightAttemptState attempt,
+            string objectiveId,
+            double holdSeconds,
+            bool wasSampleInBand,
+            bool isQualified)
+        {
+            if (attempt == null
+                || !_attempts.Contains(attempt)
+                || string.IsNullOrEmpty(objectiveId)
                 || !IsFinite(holdSeconds)
                 || holdSeconds < 0.0)
             {
                 return;
             }
 
-            _attempt.RestoreControlState(
+            attempt.RestoreControlState(
                 objectiveId,
                 holdSeconds,
                 wasSampleInBand,
@@ -274,9 +301,8 @@ namespace TheRaceForSpace.Tracking
         }
 
         /// <summary>
-        /// Restores the common historical fields for the one attempt supported by the current save
-        /// format. In-memory attempts are replaced because persistence is authoritative on load.
-        /// Control states are restored separately by stable contract ID through RestoreControlState.
+        /// Restores one attempt through the public compatibility helper used by existing callers.
+        /// Multi-attempt persistence uses the internal restore path below and supplies lineage data.
         /// </summary>
         public void RestoreState(
             string vesselId,
@@ -288,6 +314,39 @@ namespace TheRaceForSpace.Tracking
             double maximumAltitudeMeters,
             double maximumSurfaceSpeedMetersPerSecond,
             bool enteredOrbit)
+        {
+            ClearAllAttempts();
+            RestoreAttemptState(
+                vesselId,
+                celestialBodyName,
+                launchUniversalTime,
+                startLatitudeDegrees,
+                startLongitudeDegrees,
+                lastSampleUniversalTime,
+                maximumAltitudeMeters,
+                maximumSurfaceSpeedMetersPerSecond,
+                enteredOrbit,
+                null,
+                true);
+        }
+
+        /// <summary>
+        /// Reconstructs one remembered attempt from validated persistence data. Several restored
+        /// attempts may legitimately carry the same last KSP vessel ID after docking; the selected
+        /// attempt owns that fast-cache entry while part lineage remains authoritative after load.
+        /// </summary>
+        internal FlightAttemptState RestoreAttemptState(
+            string vesselId,
+            string celestialBodyName,
+            double launchUniversalTime,
+            double startLatitudeDegrees,
+            double startLongitudeDegrees,
+            double lastSampleUniversalTime,
+            double maximumAltitudeMeters,
+            double maximumSurfaceSpeedMetersPerSecond,
+            bool enteredOrbit,
+            IReadOnlyList<uint> partPersistentIds,
+            bool isSelected)
         {
             if (string.IsNullOrEmpty(vesselId)
                 || string.IsNullOrEmpty(celestialBodyName)
@@ -302,13 +361,34 @@ namespace TheRaceForSpace.Tracking
                 || !IsFinite(maximumAltitudeMeters)
                 || maximumAltitudeMeters < 0.0
                 || !IsFinite(maximumSurfaceSpeedMetersPerSecond)
-                || maximumSurfaceSpeedMetersPerSecond < 0.0)
+                || maximumSurfaceSpeedMetersPerSecond < 0.0
+                || (isSelected && _attempt.HasActiveAttempt))
             {
-                ClearAllAttempts();
-                return;
+                return null;
             }
 
-            ClearAllAttempts();
+            if (partPersistentIds != null)
+            {
+                for (int partIndex = 0; partIndex < partPersistentIds.Count; partIndex++)
+                {
+                    uint partPersistentId = partPersistentIds[partIndex];
+                    if (partPersistentId == 0u)
+                    {
+                        return null;
+                    }
+
+                    for (int attemptIndex = 0; attemptIndex < _attempts.Count; attemptIndex++)
+                    {
+                        FlightAttemptState rememberedAttempt = _attempts[attemptIndex];
+                        if (rememberedAttempt != null
+                            && rememberedAttempt.ContainsPartPersistentId(partPersistentId))
+                        {
+                            return null;
+                        }
+                    }
+                }
+            }
+
             var restoredAttempt = new FlightAttemptState
             {
                 VesselId = vesselId,
@@ -321,10 +401,21 @@ namespace TheRaceForSpace.Tracking
                 MaximumSurfaceSpeedMetersPerSecond = maximumSurfaceSpeedMetersPerSecond,
                 EnteredOrbit = enteredOrbit
             };
+            restoredAttempt.ReconcilePartLineage(partPersistentIds);
 
             _attempts.Add(restoredAttempt);
-            _attemptsByVesselId.Add(vesselId, restoredAttempt);
-            _attempt = restoredAttempt;
+            if (!_attemptsByVesselId.ContainsKey(vesselId))
+            {
+                _attemptsByVesselId.Add(vesselId, restoredAttempt);
+            }
+
+            if (isSelected)
+            {
+                _attempt = restoredAttempt;
+                _attemptsByVesselId[vesselId] = restoredAttempt;
+            }
+
+            return restoredAttempt;
         }
 
         /// <summary>

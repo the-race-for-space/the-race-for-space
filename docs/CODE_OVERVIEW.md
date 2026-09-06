@@ -94,6 +94,8 @@ One remembered set of active-vessel Flight Contract history, such as launch orig
 
 A docked KSP vessel may contain several Flight Attempt lineages at once. Their histories stay separate. The lineage containing KSP's current reference/control part is the one shown/evaluated as the active attempt; `Control From Here` can move that selection to another remembered lineage without combining their historical progress. Two attempts may therefore share the same last KSP vessel ID while remaining different histories because their part lineages are stored independently.
 
+A remembered attempt is not deleted merely because it has been inactive for a long time. The existing broad loaded/unloaded vessel refresh supplies all persistent part IDs still present in the save, and an attempt is pruned only when none of its remembered lineage parts survive that successful refresh.
+
 ## Main classes
 
 ### `ModRuntime`
@@ -106,7 +108,9 @@ It schedules:
 
 - frequent active-vessel Flight Contract samples;
 - normal campaign refreshes;
-- slower orbital vessel scans.
+- slower broad loaded/unloaded vessel scans.
+
+After a successful broad scan and after Flight Contract persistence has been restored, `ModRuntime` asks the tracker to prune lineages that no longer exist. If anything is removed, it refreshes the captured Flight Contract persistence state immediately so a later KSP save does not write obsolete histories.
 
 ### `CampaignController`
 
@@ -204,6 +208,8 @@ If KSP temporarily has no usable reference-part ID, the tracker keeps the curren
 
 The tracker also applies contract-specific topology rules after selecting the attempt. Mass completion is blocked whenever the current vessel contains persistent parts outside the selected attempt's lineage, so unrelated docked mass cannot satisfy the requirement. Control compares the set of externally attached persistent parts between observations: adding or removing those parts resets only an unfinished continuous hold, while already-qualified Control state survives. Ordinary staging is not treated as an external topology change because the selected attempt first narrows its own lineage to the controlled branch.
 
+`PruneAttemptsMissingFromPartPopulation()` handles lifecycle cleanup. It is given the primitive persistent-part population from a successful broad KSP vessel refresh and removes only attempts whose complete remembered lineage is absent. If even one lineage part survives, the attempt remains. Attempts with no persistent-part lineage are retained conservatively because their disappearance cannot be proven from part IDs.
+
 The tracker exposes its remembered attempt collection only to the persistence layer through internal members. Loading reconstructs every saved history and restores one selected attempt when the save recorded one.
 
 ### `FlightAttemptState`
@@ -237,9 +243,11 @@ Location: `KspIntegration/KspVesselMonitor.cs`
 
 Reads KSP vessel state and converts it into project-owned snapshots.
 
-For the Flight Contract path it walks only the active loaded vessel's existing `parts` list and copies every non-zero `Part.persistentId` into `ActiveVesselSnapshot`. It also reads KSP's current reference transform part through `GetReferenceTransformPart()`, falling back to the vessel root part during transient topology changes, and passes only that part's persistent ID across the integration boundary. Raw KSP `Part` objects remain inside `KspIntegration`.
+For the frequent Flight Contract path it walks only the active loaded vessel's existing `parts` list and copies every non-zero `Part.persistentId` into `ActiveVesselSnapshot`. It also reads KSP's current reference transform part through `GetReferenceTransformPart()`, falling back to the vessel root part during transient topology changes, and passes only that part's persistent ID across the integration boundary. Raw KSP `Part` objects remain inside `KspIntegration`.
 
-The deduplicated telemetry status line includes both the number of persistent part IDs and the current reference-part ID, which gives an in-game diagnostic for staging/docking lineage selection.
+For lifecycle pruning it reuses the existing slower broad loaded/unloaded vessel scan. Loaded vessels contribute live `Part.persistentId` values because their `ProtoVessel` can lag after topology changes; unloaded vessels contribute `ProtoPartSnapshot.persistentId` values. Those IDs are copied into a project-owned primitive snapshot that the tracker can inspect without raw KSP objects.
+
+The deduplicated active telemetry status line includes both the number of persistent part IDs and the current reference-part ID, which gives an in-game diagnostic for staging/docking lineage selection.
 
 This is where raw KSP vessel access belongs.
 
@@ -250,6 +258,8 @@ Location: `KspIntegration/ModPersistenceScenario.cs`
 Connects the project-owned save-state classes to KSP's `ScenarioModule` save/load system.
 
 `FLIGHT_CONTRACT_PROGRESS` now serializes every remembered Flight Attempt through repeated `ATTEMPT` nodes. Each node contains its historical telemetry and launch context, persistent-part lineage, selected-attempt marker, and per-attempt `CONTROL_STATE` children. This Step 6 format intentionally does not migrate the earlier development layout that stored one attempt directly on the root node.
+
+Step 8 does not add another save field or node. Once lifecycle pruning removes a dead/recovered attempt, the existing capture path simply stops serializing that `ATTEMPT`.
 
 ### `RivalSimulation`
 
@@ -333,7 +343,9 @@ Only the active vessel is sampled at the normal fast-path cadence. Remembered in
 
 When a split/staged branch continues the attempt, its lineage is narrowed to the persistent parts still on that branch. When several lineages are docked together they remain separate; only the selected reference lineage receives the current sample. An unfinished continuous Control hold resets when the observation gap is too long or when externally attached parts are added/removed, because continuity cannot be proven through those changes. Qualified Control state is preserved.
 
-The persistent-part capture adds one pass over the active vessel's loaded part list per captured telemetry sample and one reference-part lookup. Mass anti-combination and Control topology comparison reuse those same captured IDs. Persisting remembered attempts copies already-owned tracker data into save-state objects; none of these rules scan inactive KSP vessels or add a new timer. Step 8 will prune obsolete histories so the remembered collection does not grow indefinitely.
+The active-vessel persistent-part capture adds one pass over the active vessel's loaded part list per captured telemetry sample and one reference-part lookup. Mass anti-combination and Control topology comparison reuse those same captured IDs. Persisting remembered attempts copies already-owned tracker data into save-state objects; none of these rules scan inactive KSP vessels or add a new timer.
+
+Lifecycle cleanup uses the separate existing broad loaded/unloaded vessel path rather than the one-second Flight path. It therefore adds no new vessel discovery cadence and cannot prune an attempt merely because that craft has not been controlled recently.
 
 UI visibility does not change the telemetry cadence; the tracker continues to be updated by `ModRuntime` whether the compact window is open or closed.
 
@@ -347,14 +359,17 @@ Loaded + unloaded KSP vessels
     v
 KspVesselMonitor
     |
-    v
-OrbitingVesselSnapshot list
+    +--> OrbitingVesselSnapshot list
+    |
+    +--> surviving persistent-part population
+             |
+             +--> FlightContractTracker lifecycle pruning
     |
     v
 OrbitalVesselTracker
 ```
 
-This is slower and runs less often.
+This is slower and runs less often. The persistent-part population is a by-product of the same successful broad walk; it is not a second global vessel scan.
 
 ## Example: completing Mass II
 
@@ -383,6 +398,17 @@ This deliberately uses the stock vessel mass only when no parts outside the sele
 5. After reload, B is restored as the selected attempt from the save snapshot.
 6. Switching back to A matches A's surviving parts to A's saved lineage and restores its earlier 650 m/s history rather than starting over.
 7. The same lineage matching remains available through later docking and undocking.
+
+## Example: recovered craft cleanup
+
+1. Craft A and Craft B both have remembered Flight Attempt histories.
+2. Craft A remains parked or unloaded somewhere in the save.
+3. Craft B is recovered, terminated, or destroyed so none of B's remembered persistent parts remain in the KSP vessel population.
+4. The next successful broad vessel refresh still finds at least one of A's lineage parts but finds none of B's lineage parts.
+5. `FlightContractTracker` removes B's obsolete attempt and keeps A unchanged.
+6. `ModRuntime` refreshes the captured Flight Contract persistence state, so the next save contains A's `ATTEMPT` but no longer contains B's.
+
+No elapsed-time threshold is involved.
 
 ## Example: completing Probe Orbit
 

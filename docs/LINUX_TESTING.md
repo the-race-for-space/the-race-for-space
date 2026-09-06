@@ -113,6 +113,7 @@ The automated tests cover KSP-independent behaviour such as:
 - later Pre-Orbit unlock and sponsor-review behaviour;
 - independent evaluation of multiple offered Flight Contracts;
 - Directed Power, Mass, Control, and Biome rules;
+- in-memory Flight Attempt switching and part-lineage staging/split selection;
 - rival mission progress;
 - funding calculations;
 - persistence transformations;
@@ -208,13 +209,25 @@ The expanded rows should show the live values they need:
 
 The values should follow the existing `FlightContractTracker` updates at about the normal once-per-second telemetry cadence. Opening or closing FlightActiveUI must not create another active-vessel sampling loop.
 
-Step 3 also captures stable part-lineage IDs while this existing snapshot is built. After flying a normal multi-part craft, the KSP log should contain a deduplicated Flight telemetry line similar to:
+Persistent part-lineage IDs are captured while this existing snapshot is built. After flying a normal multi-part craft, the KSP log should contain a deduplicated Flight telemetry line similar to:
 
 ```text
 [TheRaceForSpace] Flight telemetry: captured active vessel <id> on Kerbin with <n> persistent part IDs.
 ```
 
-For a normal loaded craft, `<n>` should be greater than zero. This is only a boundary check in Step 3; vessel switching and staging do not use the lineage for attempt selection until Step 4.
+For a normal loaded craft, `<n>` should be greater than zero. Step 4 now uses those IDs to recover a remembered Flight Attempt when KSP vessel identity changes.
+
+### Flight Attempt staging lineage
+
+For a focused Step 4 in-game check, use a controllable multi-stage craft while a Directed Power contract is active:
+
+1. reach a noticeable maximum speed before staging;
+2. stage so the actively controlled branch keeps only part of the original vessel;
+3. confirm the FlightActiveUI maximum speed does not reset when KSP changes the vessel identity;
+4. if the detached branch is separately controllable, switch to it and confirm it does **not** inherit the continuing branch's historical maximum;
+5. switch back to the continuing branch and confirm its original maximum is still present.
+
+This verifies staging/split lineage only. Docking and undocking multi-lineage ownership are intentionally deferred to Step 5.
 
 Open the full **Funding Targets** view while still in Flight and confirm it no longer shows `Live Flight` requirement rows. Funding Targets should remain focused on funding and contract-lifecycle information; `FlightActiveUI` is the dedicated real-time requirement display.
 
@@ -291,6 +304,8 @@ Save during an active Flight Contract attempt, reload, and confirm:
 - Directed Power maximum history and orbit invalidation survive when relevant;
 - Control hold/qualification state survives when relevant;
 - live values such as current altitude, mass, biome, and crew are refreshed from the vessel after load rather than copied from stale saved telemetry.
+
+The current save format does not yet serialize Step 4's part-lineage set or inactive attempts. The restored active attempt seeds its lineage from the first normal KSP snapshot after load; full multi-attempt lineage persistence is Step 6.
 
 FlightActiveUI expansion state and visibility are temporary UI state and do not need to survive a scene/save reload.
 

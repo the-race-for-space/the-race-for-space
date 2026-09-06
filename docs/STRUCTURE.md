@@ -13,6 +13,7 @@ KSP / Unity
 KspIntegration
     |
     +--> live active-vessel snapshot
+    |        +--> persistent part IDs
     |        |
     |        v
     |    FlightContractTracker
@@ -174,9 +175,11 @@ Main classes:
 
 This path uses frequent telemetry from the actively controlled vessel.
 
-`FlightContractTracker` now retains multiple `FlightAttemptState` records in memory. Switching from unrelated Craft A to Craft B and later back to A reselects A's previous history instead of deleting it. Only the active vessel is sampled; inactive attempt records are passive state and do not create extra vessel scans or evaluation loops.
+`FlightContractTracker` retains multiple `FlightAttemptState` records in memory. Switching from unrelated Craft A to Craft B and later back to A reselects A's previous history instead of deleting it. Only the active vessel is sampled; inactive attempt records are passive state and do not create extra vessel scans or evaluation loops.
 
-Step 2 still uses KSP vessel ID as a temporary in-memory lookup. The previous same-launch-time/body fallback remains in place for staging. Stable part lineage, docking/undocking reconciliation, and final split/merge identity rules are intentionally deferred to the later Persistent Flight Attempt steps.
+`ActiveVesselSnapshot` now also carries the non-zero KSP `Part.persistentId` values present on the active loaded vessel. `KspVesselMonitor` converts these to project-owned primitive `uint` values before they leave `KspIntegration`, so future lineage matching does not need raw KSP `Part` objects.
+
+Step 3 only establishes this stable lineage data. Attempt selection still uses KSP vessel ID as the normal in-memory lookup and the previous same-launch-time/body fallback for staging. Step 4 will start using persistent part overlap to select the correct continuing attempt; docking/undocking reconciliation remains a later step.
 
 The current users are the four Pre-Orbit lines:
 
@@ -235,13 +238,14 @@ Responsibilities include:
 
 - reading active and persistent vessel state;
 - handling loaded and unloaded vessels;
+- capturing active-vessel KSP part persistent IDs for Flight Attempt lineage;
 - listening for KSP destruction events used by Directed Power;
 - converting KSP data into project-owned snapshots;
 - ScenarioModule save/load hooks;
 - loading `CampaignSettings.cfg`;
 - Career-funds integration.
 
-Raw `Vessel`, `ProtoVessel`, `HighLogic`, `FlightGlobals`, and similar KSP types should remain here where practical.
+Raw `Vessel`, `Part`, `ProtoVessel`, `HighLogic`, `FlightGlobals`, and similar KSP types should remain here where practical.
 
 ### `UI/`
 
@@ -292,7 +296,7 @@ Rules:
 3. `CampaignController` decides whether that contract is offered.
 4. Offered, unfinished Pre-Orbit objectives become active Flight Contracts.
 5. `FlightTelemetryPlan` determines which live vessel values are needed.
-6. `KspVesselMonitor` captures only those required values.
+6. `KspVesselMonitor` captures only those required condition values plus common attempt context, including the active vessel's persistent part IDs.
 7. `FlightContractTracker` selects or creates the remembered `FlightAttemptState` for the active craft and evaluates the snapshot against every active contract independently.
 8. `AgencyState` records each completed objective and emits the new-completion signal.
 9. `FundingNotificationUI` may publish the stock funding-completion notice for the player.
@@ -342,7 +346,9 @@ Examples:
 
 When there are no active Flight Contracts, the fast path should avoid unnecessary active-vessel discovery and evaluation.
 
-Remembered inactive Flight Attempts are not sampled or scanned on the one-second path. Normal vessel switching uses a direct vessel-ID lookup; the temporary staging fallback scans only the small remembered-attempt collection when a previously unseen vessel ID is encountered.
+Remembered inactive Flight Attempts are not sampled or scanned on the one-second path. Normal vessel switching currently uses a direct vessel-ID lookup; the temporary staging fallback scans only the small remembered-attempt collection when a previously unseen vessel ID is encountered.
+
+Persistent part IDs are captured only while the existing active-vessel snapshot is already being built. This adds one pass over the **active vessel's** loaded part list per telemetry sample; it does not scan inactive vessels, ProtoVessels, or remembered attempts.
 
 UI visibility does not own or change the telemetry sampling frequency. `FlightActiveUI` reads the existing tracker state maintained by `ModRuntime`; `CommandCenterWindow` no longer draws live Flight Contract requirement telemetry. `FundingNotificationUI` is event-driven and does not add another vessel or contract-evaluation loop.
 
@@ -365,7 +371,7 @@ The slower orbital scan remains separate because it must consider loaded and unl
 - Directed Power maximum speed/altitude and orbit invalidation;
 - independent `CONTROL_STATE` entries.
 
-Step 2's additional inactive in-memory attempts are deliberately **not yet serialized**. Saving while Craft B is active and reloading will therefore restore B only; Craft A's remembered session state will survive A -> B -> A switching only until the multi-attempt persistence work in Step 6 is implemented.
+Step 2's additional inactive in-memory attempts are deliberately **not yet serialized**. Step 3's part-lineage IDs are also not yet persisted. Saving while Craft B is active and reloading will therefore restore B only; Craft A's remembered session state will survive A -> B -> A switching only until the multi-attempt persistence work in Step 6 is implemented.
 
 Instantaneous live telemetry such as current altitude, current mass, current biome, and crew count is rebuilt from the next active-vessel sample instead of being treated as authoritative saved state.
 
@@ -382,7 +388,7 @@ bash tools/run-logic-tests.sh
 
 `.github/workflows/logic-tests.yml` runs the same script in CI.
 
-Direct KSP API behaviour still requires an in-game test. See [`KERBAL_CONTRACTS_V0_5_TESTING.md`](KERBAL_CONTRACTS_V0_5_TESTING.md).
+Direct KSP API behaviour still requires an in-game test. `KspVesselMonitor` now includes the captured persistent-part count in its deduplicated Flight telemetry status line, which can be checked in `KSP.log` when validating this boundary. See [`KERBAL_CONTRACTS_V0_5_TESTING.md`](KERBAL_CONTRACTS_V0_5_TESTING.md).
 
 ## Where common changes belong
 
@@ -392,7 +398,7 @@ Direct KSP API behaviour still requires an in-game test. See [`KERBAL_CONTRACTS_
 | Change unlock logic | `Objectives/UnlockRuleEvaluator.cs` |
 | Change active-vessel contract evaluation | `Tracking/FlightContractTracker.cs` |
 | Change Flight Attempt state | `Tracking/FlightAttemptState.cs` |
-| Change live vessel values collected | `KspIntegration/KspVesselMonitor.cs` |
+| Change live vessel values or lineage IDs collected | `KspIntegration/KspVesselMonitor.cs` |
 | Change orbital vessel evaluation | `Tracking/OrbitalVesselTracker.cs` |
 | Change sponsor reviews or campaign coordination | `Campaign/CampaignController.cs` |
 | Change one-off funding | `Funding/ObjectiveFundingContract.cs` |

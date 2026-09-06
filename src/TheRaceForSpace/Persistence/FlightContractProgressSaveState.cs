@@ -70,7 +70,7 @@ namespace TheRaceForSpace.Persistence
             _enteredOrbit = tracker.EnteredOrbit;
 
             // The tracker owns the active Control dictionary. Iterate its live key collection
-            // directly so the once-per-second capture path does not allocate a temporary ID list.
+            // directly so the once-per-second flight-contract capture path does not allocate a temporary ID list.
             foreach (string objectiveId in tracker.ControlStateObjectiveIds)
             {
                 _controlStates.Add(new SavedControlContractProgress(
@@ -90,7 +90,7 @@ namespace TheRaceForSpace.Persistence
 
             if (!HasData || !_hasActiveAttempt)
             {
-                tracker.ClearAttempt();
+                tracker.ClearAllAttempts();
                 return;
             }
 

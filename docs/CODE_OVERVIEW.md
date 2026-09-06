@@ -440,7 +440,7 @@ This is why persistent part lineage is authoritative and vessel ID remains only 
 
 ## Example: completing Probe Orbit
 
-1. Probe Orbit is offered after any Pre-Orbit line reaches Level V.
+1. Any Pre-Orbit Level V completion unlocks Probe Orbit; the next sponsor review moves it from `Unlocked` to `Offered` through the normal objective offer flow.
 2. A qualifying uncrewed Probe or Relay enters Kerbin orbit.
 3. The slower vessel scan captures that vessel.
 4. `OrbitalVesselTracker` evaluates the orbital objective.

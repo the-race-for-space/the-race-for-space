@@ -142,6 +142,29 @@ namespace TheRaceForSpace.Core
                 if (didRefreshPlayerVessels)
                 {
                     _nextPlayerVesselRefreshTime = currentRealtime + PlayerVesselRefreshIntervalSeconds;
+
+                    // Reuse this already-completed broad vessel walk to retire Flight Attempts whose
+                    // persistent lineage has vanished from the save. Never prune before Scenario
+                    // progress is restored, and immediately refresh captured persistence after a
+                    // removal so dead/recovered histories do not remain in FLIGHT_CONTRACT_PROGRESS.
+                    IReadOnlyList<uint> existingPartPersistentIds;
+                    if (_hasRestoredActiveContractProgress
+                        && KspVesselMonitor.TryGetLastObservedPartPersistentIds(
+                            out existingPartPersistentIds))
+                    {
+                        int prunedAttemptCount =
+                            _flightContractTracker.PruneAttemptsMissingFromPartPopulation(
+                                existingPartPersistentIds);
+                        if (prunedAttemptCount > 0)
+                        {
+                            Debug.Log(
+                                "[TheRaceForSpace] Pruned "
+                                + prunedAttemptCount
+                                + " obsolete Flight Attempt(s) after vessel population refresh.");
+                            ModPersistenceScenario.CaptureFlightContractProgress(
+                                _flightContractTracker);
+                        }
+                    }
                 }
 
                 _nextRefreshTime = currentRealtime + RefreshIntervalSeconds;

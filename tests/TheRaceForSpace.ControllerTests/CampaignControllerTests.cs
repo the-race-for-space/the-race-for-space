@@ -133,7 +133,9 @@ namespace TheRaceForSpace.ControllerTests
             Require(
                 !kerbinNetwork.IsOffered,
                 "An unlocked satellite contract should wait for a funding-day sponsor review.");
-            Require(probeOrbit.HasStarted, "The achieved Probe Orbit offer should start immediately.");
+            Require(
+                !probeOrbit.IsOffered && !probeOrbit.HasStarted,
+                "Probe Orbit should remain Unlocked and unfunded until the next sponsor review offers it.");
             Require(
                 controller.IsObjectiveFundingContractAvailable(munProbeOrbit),
                 "Probe Orbit should make the downstream Mun Probe Orbit contract available.");
@@ -143,7 +145,7 @@ namespace TheRaceForSpace.ControllerTests
             Require(
                 !munNetwork.IsAvailable,
                 "Mun satellite funding should remain locked until Mun Probe Orbit and Kerbin network progress are complete.");
-            Equal(75000.0, controller.PlayerAgency.NextPayoutFunds);
+            Equal(0.0, controller.PlayerAgency.NextPayoutFunds);
             Equal(1, ModPersistenceScenario.RivalCaptureCalls);
             Equal(1, ModPersistenceScenario.CampaignProgressCaptureCalls);
         }
@@ -233,15 +235,19 @@ namespace TheRaceForSpace.ControllerTests
             QualifyForProbeOrbit(controller, 0.0);
             controller.Refresh();
 
+            // This test isolates payout timing after sponsorship; Probe Orbit's separate
+            // unlock-to-sponsor-review transition is covered by FundingOfferControllerTests.
+            ObjectiveFundingContract probeOrbit = FindObjectiveFundingContract(
+                controller,
+                ObjectiveCatalogue.ProbeOrbitId);
+            probeOrbit.Offer();
             controller.PlayerAgency.RecordObjectiveCompletion(ObjectiveCatalogue.ProbeOrbitId, 1.0);
             controller.PlayerAgency.SetSatelliteCount("Kerbin", 1);
+            controller.Refresh(false);
 
             Planetarium.CurrentUniversalTime = FundingIntervalSeconds;
             controller.Refresh();
 
-            ObjectiveFundingContract probeOrbit = FindObjectiveFundingContract(
-                controller,
-                ObjectiveCatalogue.ProbeOrbitId);
             SatelliteNetworkFundingContract kerbinNetwork = FindSatelliteNetworkFundingContract(
                 controller,
                 FundingContractCatalogue.KerbinNetworkId);
@@ -347,6 +353,9 @@ namespace TheRaceForSpace.ControllerTests
                 controller,
                 FundingContractCatalogue.KerbinNetworkId);
 
+            // The cache test needs already-sponsored contracts. Probe Orbit's normal
+            // sponsor-review transition is tested separately by FundingOfferControllerTests.
+            probeOrbit.Offer();
             kerbinNetwork.Offer();
             controller.Refresh(false);
 

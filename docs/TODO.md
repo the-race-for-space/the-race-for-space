@@ -2,10 +2,6 @@
 
 This file tracks current development ideas and polish work only. Completed items are removed once finished; implementation history remains available in Git and the current project documentation. Items are not listed in priority order unless stated otherwise.
 
-## Overview
-
-- [ ] **Show remaining one-off funding payments.** For each completed Objective Funding Contract shown in Overview funding information, display how many of its ten scheduled payments remain, updating after each funding payout.
-
 ## Funding Targets
 
 - [ ] **Order Funding Targets by player completion state.** Show objectives the player has not completed at the top of the list, with player-completed objectives moved to the bottom so current work is easier to find.

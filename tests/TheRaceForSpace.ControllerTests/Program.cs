@@ -118,8 +118,8 @@ namespace TheRaceForSpace.ControllerTests
                 "PreOrbit offers do not consume the normal objective completion limit",
                 FundingOfferControllerTests.PreOrbitOffersDoNotConsumeNormalObjectiveLimit);
             Run(
-                "Any pre-orbit level five offers Probe Orbit",
-                FundingOfferControllerTests.AnyPreOrbitLevelFiveOffersProbeOrbit);
+                "Any pre-orbit level five unlocks Probe Orbit for sponsor review",
+                FundingOfferControllerTests.AnyPreOrbitLevelFiveUnlocksProbeOrbitForSponsorReview);
             Run(
                 "Funding offers wait for sponsor review",
                 FundingOfferControllerTests.UnlockedFundingWaitsForFundingReview);

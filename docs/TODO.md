@@ -4,10 +4,7 @@ This file tracks current development ideas and polish work only. Completed items
 
 ## Overview
 
-- [ ] **Hide achieved objectives from Your Objectives.** The `Your Objectives` list should show only objectives the player has not yet achieved; completed objectives should no longer remain in that list.
-- [ ] **Show `None` when there are no current objectives.** If filtering completed or unavailable objectives leaves `Your Objectives` empty, show an explicit `None` state instead of leaving the section blank.
 - [ ] **Show remaining one-off funding payments.** For each completed Objective Funding Contract shown in Overview funding information, display how many of its ten scheduled payments remain, updating after each funding payout.
-- [ ] **Show `None` when there are no Satellite Contracts.** When the Satellite Contracts or satellite-network summary has no contracts to display, show an explicit `None` state instead of leaving the section empty or ambiguous.
 
 ## Funding Targets
 

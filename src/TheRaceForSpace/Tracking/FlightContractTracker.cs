@@ -442,6 +442,61 @@ namespace TheRaceForSpace.Tracking
             _attempt = new FlightAttemptState();
         }
 
+        /// <summary>
+        /// Removes remembered attempts only when a successful broad KSP vessel refresh reports that
+        /// none of their persistent lineage parts still exist. Inactivity is deliberately irrelevant:
+        /// parked, docked, unloaded, and long-running craft retain their history while any lineage
+        /// part survives. Lineage-less attempts are also retained because absence cannot be proven.
+        /// </summary>
+        internal int PruneAttemptsMissingFromPartPopulation(
+            IReadOnlyList<uint> existingPartPersistentIds)
+        {
+            if (existingPartPersistentIds == null || _attempts.Count == 0)
+            {
+                return 0;
+            }
+
+            var existingPartIds = new HashSet<uint>();
+            for (int partIndex = 0; partIndex < existingPartPersistentIds.Count; partIndex++)
+            {
+                uint partPersistentId = existingPartPersistentIds[partIndex];
+                if (partPersistentId != 0u)
+                {
+                    existingPartIds.Add(partPersistentId);
+                }
+            }
+
+            int prunedAttemptCount = 0;
+            for (int attemptIndex = _attempts.Count - 1; attemptIndex >= 0; attemptIndex--)
+            {
+                FlightAttemptState rememberedAttempt = _attempts[attemptIndex];
+                if (rememberedAttempt == null || !rememberedAttempt.HasPartLineage)
+                {
+                    continue;
+                }
+
+                bool hasSurvivingLineagePart = false;
+                foreach (uint partPersistentId in rememberedAttempt.PartPersistentIds)
+                {
+                    if (existingPartIds.Contains(partPersistentId))
+                    {
+                        hasSurvivingLineagePart = true;
+                        break;
+                    }
+                }
+
+                if (hasSurvivingLineagePart)
+                {
+                    continue;
+                }
+
+                RemoveAttempt(rememberedAttempt);
+                prunedAttemptCount++;
+            }
+
+            return prunedAttemptCount;
+        }
+
         private bool EvaluateControlObjectives(
             AgencyState playerAgency,
             IList<ObjectiveDefinition> activeFlightContracts,

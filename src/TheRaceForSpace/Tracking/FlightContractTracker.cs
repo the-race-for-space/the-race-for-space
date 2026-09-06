@@ -149,6 +149,8 @@ namespace TheRaceForSpace.Tracking
             }
 
             SelectAttempt(snapshot);
+            bool attachedPartTopologyChanged = _attempt.ObserveAttachedPartTopology(
+                snapshot.PartPersistentIds);
 
             double sampleDeltaSeconds = 0.0;
             if (_attempt.LastSampleUniversalTime >= 0.0
@@ -158,10 +160,11 @@ namespace TheRaceForSpace.Tracking
                     - _attempt.LastSampleUniversalTime;
             }
 
-            // Each Control contract is explicitly a continuous hold. A large gap means the vessel
-            // was not observed closely enough to prove any unqualified hold continued throughout
-            // the missing time. Qualified contracts keep their completed hold while awaiting landing.
-            if (sampleDeltaSeconds > MaximumContinuousSampleGapSeconds)
+            // Each Control contract is explicitly a continuous hold. A large observation gap or a
+            // docking/undocking-style change to externally attached parts means continuity cannot be
+            // proven. Qualified contracts keep their completed hold while awaiting safe recovery.
+            if (sampleDeltaSeconds > MaximumContinuousSampleGapSeconds
+                || attachedPartTopologyChanged)
             {
                 sampleDeltaSeconds = 0.0;
                 ResetUnqualifiedControlStates();
@@ -210,11 +213,13 @@ namespace TheRaceForSpace.Tracking
 
                     if (objective.PreOrbitLine == PreOrbitContractLine.Mass
                         && IsLandedOrSplashed(snapshot.Situation)
-                        && snapshot.MassTonnes >= objective.RequiredMassTonnes
+                        && !_attempt.HasAttachedParts
+                        && _attempt.CurrentMassTonnes >= objective.RequiredMassTonnes
                         && _attempt.CurrentDistanceMeters >= objective.RequiredDistanceMeters)
                     {
-                        // Mass represents delivery of a finished craft, so the final recovered vessel
-                        // must still meet both the mass and distance requirement for this contract.
+                        // Mass represents delivery of one finished craft. Parts outside this Flight
+                        // Attempt's lineage may remain physically docked, but their combined vessel
+                        // mass cannot be used to satisfy the delivery requirement.
                         recordedObjective |= playerAgency.RecordObjectiveCompletion(
                             objective.Id,
                             snapshot.ObservationUniversalTime);

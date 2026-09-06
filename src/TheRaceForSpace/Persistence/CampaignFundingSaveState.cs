@@ -106,7 +106,7 @@ namespace TheRaceForSpace.Persistence
             playerAgency.ClearObjectiveCompletionTimes();
             foreach (KeyValuePair<string, double> objectiveCompletion in _playerObjectiveCompletionTimesById)
             {
-                playerAgency.RecordObjectiveCompletion(objectiveCompletion.Key, objectiveCompletion.Value);
+                playerAgency.RestoreObjectiveCompletion(objectiveCompletion.Key, objectiveCompletion.Value);
             }
 
             for (int contractIndex = 0; contractIndex < objectiveFundingContracts.Count; contractIndex++)

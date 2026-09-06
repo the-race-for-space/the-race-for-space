@@ -4,9 +4,8 @@ using System.Collections.Generic;
 namespace TheRaceForSpace.Tracking
 {
     /// <summary>
-    /// Holds the mutable state for one Flight Contract attempt. Contract evaluation remains in
-    /// FlightContractTracker; separating the state now allows later multi-attempt tracking without
-    /// changing the current single-attempt gameplay behaviour in this step.
+    /// Holds the mutable state for one remembered Flight Contract attempt. FlightContractTracker
+    /// owns the collection of attempts and keeps contract evaluation separate from this state model.
     /// </summary>
     internal sealed class FlightAttemptState
     {

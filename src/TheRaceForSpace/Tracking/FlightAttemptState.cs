@@ -11,6 +11,7 @@ namespace TheRaceForSpace.Tracking
     {
         private readonly Dictionary<string, ControlContractState> _controlStates =
             new Dictionary<string, ControlContractState>(StringComparer.OrdinalIgnoreCase);
+        private readonly HashSet<uint> _partPersistentIds = new HashSet<uint>();
 
         internal FlightAttemptState()
         {
@@ -18,6 +19,7 @@ namespace TheRaceForSpace.Tracking
         }
 
         internal bool HasActiveAttempt { get { return !string.IsNullOrEmpty(VesselId); } }
+        internal bool HasPartLineage { get { return _partPersistentIds.Count > 0; } }
         internal string VesselId { get; set; }
         internal string CelestialBodyName { get; set; }
         internal double LaunchUniversalTime { get; set; }
@@ -38,6 +40,80 @@ namespace TheRaceForSpace.Tracking
         // Persistence captures this live key collection directly, avoiding a temporary list allocation
         // on the once-per-second flight-contract capture path.
         internal ICollection<string> ControlStateObjectiveIds { get { return _controlStates.Keys; } }
+
+        internal bool SharesPartLineage(IReadOnlyList<uint> partPersistentIds)
+        {
+            if (_partPersistentIds.Count == 0
+                || partPersistentIds == null
+                || partPersistentIds.Count == 0)
+            {
+                return false;
+            }
+
+            for (int partIndex = 0; partIndex < partPersistentIds.Count; partIndex++)
+            {
+                uint partPersistentId = partPersistentIds[partIndex];
+                if (partPersistentId != 0u && _partPersistentIds.Contains(partPersistentId))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Seeds a new attempt from its first persistent-part set, then narrows that lineage when
+        /// staging removes parts. Newly attached parts are deliberately not absorbed here; docking
+        /// and constructed-part ownership need their own explicit rules in later topology steps.
+        /// </summary>
+        internal void ReconcilePartLineage(IReadOnlyList<uint> partPersistentIds)
+        {
+            if (partPersistentIds == null || partPersistentIds.Count == 0)
+            {
+                return;
+            }
+
+            if (_partPersistentIds.Count == 0)
+            {
+                for (int partIndex = 0; partIndex < partPersistentIds.Count; partIndex++)
+                {
+                    uint partPersistentId = partPersistentIds[partIndex];
+                    if (partPersistentId != 0u)
+                    {
+                        _partPersistentIds.Add(partPersistentId);
+                    }
+                }
+
+                return;
+            }
+
+            List<uint> removedPartPersistentIds = null;
+            foreach (uint rememberedPartPersistentId in _partPersistentIds)
+            {
+                if (ContainsPartPersistentId(partPersistentIds, rememberedPartPersistentId))
+                {
+                    continue;
+                }
+
+                if (removedPartPersistentIds == null)
+                {
+                    removedPartPersistentIds = new List<uint>();
+                }
+
+                removedPartPersistentIds.Add(rememberedPartPersistentId);
+            }
+
+            if (removedPartPersistentIds == null)
+            {
+                return;
+            }
+
+            for (int partIndex = 0; partIndex < removedPartPersistentIds.Count; partIndex++)
+            {
+                _partPersistentIds.Remove(removedPartPersistentIds[partIndex]);
+            }
+        }
 
         internal double GetControlHoldSeconds(string objectiveId)
         {
@@ -122,7 +198,23 @@ namespace TheRaceForSpace.Tracking
             CurrentCrewCount = 0;
             CurrentSituation = FlightSituation.Other;
             EnteredOrbit = false;
+            _partPersistentIds.Clear();
             _controlStates.Clear();
+        }
+
+        private static bool ContainsPartPersistentId(
+            IReadOnlyList<uint> partPersistentIds,
+            uint partPersistentId)
+        {
+            for (int partIndex = 0; partIndex < partPersistentIds.Count; partIndex++)
+            {
+                if (partPersistentIds[partIndex] == partPersistentId)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         internal sealed class ControlContractState

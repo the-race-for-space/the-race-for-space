@@ -115,6 +115,7 @@ The automated tests cover KSP-independent behaviour such as:
 - Directed Power, Mass, Control, and Biome rules;
 - Flight Attempt switching, staging/split lineage, docked reference-lineage reconciliation, and multi-attempt save/load;
 - Mass rejection while another lineage is attached and Control reset/preservation across topology changes;
+- conservative lifecycle pruning when a remembered lineage disappears while another craft survives;
 - rival mission progress;
 - funding calculations;
 - persistence transformations;
@@ -124,6 +125,7 @@ They cannot prove direct KSP API behaviour such as:
 
 - vessel-destruction callbacks;
 - active-vessel `Part.persistentId` and reference/control-part capture;
+- loaded `Part.persistentId` plus unloaded `ProtoPartSnapshot.persistentId` population capture during the broad vessel refresh;
 - stock biome reporting;
 - loaded/unloaded vessel discovery inside a real KSP save;
 - Career-funds integration;
@@ -283,6 +285,26 @@ Continue with two craft that already have clearly different remembered Directed 
 
 The important result is that saving while B is selected must no longer discard A. Two docked attempts may have the same last KSP vessel ID in `FLIGHT_CONTRACT_PROGRESS`; their saved `PART_LINEAGE` entries keep the histories distinct.
 
+### Flight Attempt lifecycle pruning
+
+Use two remembered craft with clearly different histories. This check validates the slower lifecycle path rather than the one-second active telemetry path:
+
+1. leave Craft A intact somewhere in the save; it may be parked, unloaded, or otherwise inactive;
+2. recover, terminate, or fully destroy Craft B so none of B's remembered persistent parts remain as a KSP vessel;
+3. allow the normal broad vessel refresh to run; it is scheduled about every 20 seconds after a successful refresh;
+4. if useful, inspect `KSP.log` for one line similar to:
+
+   ```text
+   [TheRaceForSpace] Pruned 1 obsolete Flight Attempt(s) after vessel population refresh.
+   ```
+
+5. switch back to Craft A and confirm its previous history is still present;
+6. save the game and inspect `FLIGHT_CONTRACT_PROGRESS` in a disposable save if practical: A's `ATTEMPT` should remain, while B's obsolete `ATTEMPT` should no longer be written;
+7. leave A untouched for longer than one refresh and confirm it is **not** pruned merely because it is inactive;
+8. confirm docking or undocking alone does not prune either craft while their lineage parts still exist.
+
+The pruning rule has no age or inactivity timeout. It removes a remembered attempt only after a successful broad loaded/unloaded vessel refresh proves that none of its lineage parts exist anywhere in the current save.
+
 Open the full **Funding Targets** view while still in Flight and confirm it no longer shows `Live Flight` requirement rows. Funding Targets should remain focused on funding and contract-lifecycle information; `FlightActiveUI` is the dedicated real-time requirement display.
 
 Contract evaluation must continue even when both interfaces are closed. Hiding the UI must never stop `ModRuntime` from maintaining the active Flight Contract tracker.
@@ -358,7 +380,8 @@ Save during Flight Contract activity, reload, and confirm:
 
 - campaign offers and objective completions remain correct;
 - rival state remains correct;
-- all remembered Flight Attempts survive, not just the craft that was selected when saving;
+- all remembered Flight Attempts whose lineage still exists survive, not just the craft that was selected when saving;
+- a previously pruned dead/recovered lineage does not reappear after save/reload;
 - each attempt's persistent-part lineage still selects the correct historical state after switching, staging, docking, or undocking;
 - Directed Power maximum history and orbit invalidation survive when relevant;
 - Control hold/qualification state survives per remembered attempt when relevant;
@@ -386,7 +409,7 @@ Confirm:
 
 If Probe Orbit is currently Offered and this action newly completes it for the player, the same stock funding-completion notification should appear for Probe Orbit.
 
-This verifies the boundary between `KspVesselMonitor` and `OrbitalVesselTracker`.
+This verifies the boundary between `KspVesselMonitor` and `OrbitalVesselTracker`. The same broad refresh now also supplies persistent part IDs for Flight Attempt pruning, so parked/unloaded craft should continue to be represented by their `ProtoPartSnapshot` IDs.
 
 ## 10. Check the KSP log
 
@@ -404,9 +427,10 @@ Look for:
 - Directed Power destruction-callback errors;
 - active Flight telemetry reporting zero persistent part IDs or reference part `0` for a normal settled controllable craft;
 - Flight Contract save/load errors or histories unexpectedly resetting after reload;
+- repeated pruning of the same already-removed attempt;
 - excessive repeated output.
 
-A successful completion notification should produce one diagnostic line for that objective ID, not repeated per-frame output. Normal gameplay should not produce per-frame Flight Contract log spam.
+A genuine recovery/destruction cleanup may produce one `Pruned <n> obsolete Flight Attempt(s)` diagnostic after the next successful broad refresh. It should not repeat every frame or every refresh once the attempt has been removed. A successful completion notification should likewise produce one diagnostic line for that objective ID, not repeated per-frame output.
 
 ## Troubleshooting
 
@@ -472,7 +496,7 @@ Before treating a build as a 0.5 release candidate, complete [`KERBAL_CONTRACTS_
 
 - all four Pre-Orbit lines;
 - multiple simultaneously offered levels;
-- Flight Attempt switching, staging, docking/undocking, topology rules, and multi-attempt persistence;
+- Flight Attempt switching, staging, docking/undocking, topology rules, multi-attempt persistence, and lifecycle pruning;
 - Level V -> Probe Orbit convergence;
 - funding and rival behaviour;
 - loaded/unloaded orbital vessel tracking;

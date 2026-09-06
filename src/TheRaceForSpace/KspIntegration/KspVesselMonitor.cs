@@ -302,7 +302,8 @@ namespace TheRaceForSpace.KspIntegration
 
             // KSP persistent part IDs survive ordinary vessel-ID changes and are also maintained
             // for unloaded ProtoPartSnapshots. Capture primitive IDs only; raw Part objects remain
-            // inside KspIntegration. Step 4 will use this lineage to select continuing attempts.
+            // inside KspIntegration. The current reference/control part identifies which remembered
+            // lineage owns a docked assembly without merging the histories of every attached craft.
             var partPersistentIds = new List<uint>(vessel.parts == null ? 0 : vessel.parts.Count);
             if (vessel.parts != null)
             {
@@ -316,6 +317,20 @@ namespace TheRaceForSpace.KspIntegration
 
                     partPersistentIds.Add(part.persistentId);
                 }
+            }
+
+            uint referencePartPersistentId = 0u;
+            Part referencePart = vessel.GetReferenceTransformPart();
+            if (referencePart == null)
+            {
+                // KSP can briefly have no explicit reference part after topology changes. The root
+                // part is the safest available assembly identity until KSP establishes one again.
+                referencePart = vessel.rootPart;
+            }
+
+            if (referencePart != null && referencePart.persistentId != 0u)
+            {
+                referencePartPersistentId = referencePart.persistentId;
             }
 
             vesselSnapshot = new ActiveVesselSnapshot(
@@ -332,7 +347,8 @@ namespace TheRaceForSpace.KspIntegration
                 needsCrew ? vessel.GetCrewCount() : 0,
                 launchUniversalTime,
                 observationUniversalTime,
-                partPersistentIds);
+                partPersistentIds,
+                referencePartPersistentId);
 
             LogActiveVesselTelemetryStatus(
                 "captured active vessel "
@@ -341,7 +357,8 @@ namespace TheRaceForSpace.KspIntegration
                 + vessel.mainBody.bodyName
                 + " with "
                 + partPersistentIds.Count
-                + " persistent part IDs");
+                + " persistent part IDs and reference part "
+                + referencePartPersistentId);
             return true;
         }
 

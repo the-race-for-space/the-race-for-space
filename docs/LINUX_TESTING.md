@@ -113,7 +113,7 @@ The automated tests cover KSP-independent behaviour such as:
 - later Pre-Orbit unlock and sponsor-review behaviour;
 - independent evaluation of multiple offered Flight Contracts;
 - Directed Power, Mass, Control, and Biome rules;
-- in-memory Flight Attempt switching, staging/split lineage, and docked reference-lineage reconciliation;
+- Flight Attempt switching, staging/split lineage, docked reference-lineage reconciliation, and multi-attempt save/load;
 - rival mission progress;
 - funding calculations;
 - persistence transformations;
@@ -157,7 +157,7 @@ A successful real KSP build is important after changes in `KspIntegration/` or t
 
 ## 6. Quick in-game smoke test
 
-Use a disposable Career save.
+Use a disposable Career save created with the current build. The Step 6 `FLIGHT_CONTRACT_PROGRESS` layout intentionally does not migrate the earlier development single-attempt format.
 
 ### Command Center
 
@@ -231,7 +231,7 @@ This verifies the Step 4 staging/split lineage rule.
 
 ### Flight Attempt docking and undocking lineage
 
-For the Step 5 check, Directed Power maximum speed is the easiest visible history value to compare:
+Directed Power maximum speed is the easiest visible history value to compare:
 
 1. fly Craft A and establish a recognizable maximum speed;
 2. switch to unrelated Craft B and establish a different lower maximum speed;
@@ -243,7 +243,22 @@ For the Step 5 check, Directed Power maximum speed is the easiest visible histor
 8. undock the vessels;
 9. switch to A and B separately and confirm each branch recovers its own pre-docking history.
 
-Do not use this check to validate combined Mass or unfinished Control-hold behaviour yet. Step 5 establishes identity and keeps histories separate; the contract-specific anti-combination rules are Step 7. Likewise, do not expect both attempts to survive save/reload yet: multi-attempt persistence is Step 6.
+Do not use this check to validate combined Mass or unfinished Control-hold behaviour yet. Identity and historical persistence are implemented; the contract-specific anti-combination rules are Step 7.
+
+### Multiple Flight Attempts across save/reload
+
+For the focused Step 6 persistence check, continue with two craft that already have clearly different remembered Directed Power maxima:
+
+1. make sure Craft A and Craft B have both been sampled and each shows its own recognizable maximum;
+2. optionally dock them and use **Control From Here** so Craft B's lineage is selected while both histories are present in one KSP vessel;
+3. save the game while Craft B is selected;
+4. reload that save and confirm B's remembered maximum is restored rather than reset;
+5. switch to Craft A, or undock and then switch to A if the save was made while docked;
+6. confirm A's older independent maximum is also restored from its saved part lineage;
+7. switch back to B and confirm B still has its own separate history;
+8. if practical, save/reload once more after the vessels have undocked and confirm both histories continue to resolve correctly.
+
+The important result is that saving while B is selected must no longer discard A. Two docked attempts may have the same last KSP vessel ID in `FLIGHT_CONTRACT_PROGRESS`; their saved `PART_LINEAGE` entries keep the histories distinct.
 
 Open the full **Funding Targets** view while still in Flight and confirm it no longer shows `Live Flight` requirement rows. Funding Targets should remain focused on funding and contract-lifecycle information; `FlightActiveUI` is the dedicated real-time requirement display.
 
@@ -313,15 +328,18 @@ The notification is for player Objective Funding Contract completions only. Riva
 
 ## 8. Save/reload smoke test
 
-Save during an active Flight Contract attempt, reload, and confirm:
+Save during Flight Contract activity, reload, and confirm:
 
 - campaign offers and objective completions remain correct;
 - rival state remains correct;
+- all remembered Flight Attempts survive, not just the craft that was selected when saving;
+- each attempt's persistent-part lineage still selects the correct historical state after switching, staging, docking, or undocking;
 - Directed Power maximum history and orbit invalidation survive when relevant;
-- Control hold/qualification state survives when relevant;
-- live values such as current altitude, mass, biome, and crew are refreshed from the vessel after load rather than copied from stale saved telemetry.
+- Control hold/qualification state survives per remembered attempt when relevant;
+- the attempt marked selected at save time is restored as the selected history until live KSP telemetry resolves the currently controlled lineage;
+- live values such as current altitude, mass, biome, crew, and reference part are refreshed from the vessel after load rather than copied from stale saved telemetry.
 
-The current save format does not yet serialize inactive attempts or their persistent-part/reference-lineage relationships. It restores only the active attempt, which seeds its lineage from the first normal KSP snapshot after load. Full multi-attempt lineage persistence is Step 6.
+`FLIGHT_CONTRACT_PROGRESS` now uses repeated `ATTEMPT` nodes with nested `PART_LINEAGE` and `CONTROL_STATE` entries. The previous development single-attempt root format is intentionally not migrated; use a current-build disposable save when validating Step 6.
 
 FlightActiveUI expansion state and visibility are temporary UI state and do not need to survive a scene/save reload.
 
@@ -357,8 +375,8 @@ Look for:
 - `FundingNotificationUI` or `MessageSystem` errors;
 - Directed Power destruction-callback errors;
 - active Flight telemetry reporting zero persistent part IDs or reference part `0` for a normal settled controllable craft;
-- excessive repeated output;
-- save/load errors.
+- Flight Contract save/load errors or histories unexpectedly resetting after reload;
+- excessive repeated output.
 
 A successful completion notification should produce one diagnostic line for that objective ID, not repeated per-frame output. Normal gameplay should not produce per-frame Flight Contract log spam.
 
@@ -428,7 +446,7 @@ Before treating a build as a 0.5 release candidate, complete [`KERBAL_CONTRACTS_
 - multiple simultaneously offered levels;
 - Level V -> Probe Orbit convergence;
 - funding and rival behaviour;
-- save format and scene changes;
+- multi-attempt Flight Contract persistence and save/reload;
 - loaded/unloaded orbital vessel tracking;
 - Command Center presentation;
 - FlightActiveUI launcher lifecycle, ordering, expansion, and live requirement presentation;

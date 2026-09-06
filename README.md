@@ -15,9 +15,9 @@ Version 0.5 adds a **Pre-Orbit** phase on Kerbin before Probe Orbit.
 There are four Pre-Orbit contract lines, with five levels in each line:
 
 - **Directed Power** — reach a required surface speed below a 70 km ceiling, then impact Kerbin.
-- **Mass** — land on Kerbin with enough remaining vessel mass after travelling far enough from the launch point.
-- **Control** — hold a crewed vessel inside an altitude band for a required time, then land safely on Kerbin with crew.
-- **Biome** — land in progressively harder Kerbin biomes.
+- **Mass** — land or splash down on Kerbin with enough remaining vessel mass after travelling far enough from the launch point.
+- **Control** — hold a crewed vessel inside an altitude band for a required time, then land or splash down safely on Kerbin with crew.
+- **Biome** — reach progressively harder Kerbin biomes and finish landed or splashed in the target biome.
 
 At campaign start, Level I of all four lines is offered. Levels II-V unlock in sequence when the previous level in that line is completed by **any agency**. Completing Level V in any one line offers **Probe Orbit** immediately.
 

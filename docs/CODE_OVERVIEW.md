@@ -22,6 +22,9 @@ ModRuntime
     |       |       |
     |       |       +--> FlightContractTracker
     |       |               +--> remembered FlightAttemptState records
+    |       |                         |
+    |       |                         v
+    |       |                 FlightContractProgressSaveState
     |       +--> OrbitalVesselTracker
     |
     v
@@ -87,9 +90,9 @@ Generic active-vessel contract infrastructure. The current Pre-Orbit contracts u
 
 ### Flight Attempt
 
-One remembered set of active-vessel Flight Contract history, such as launch origin, maximum speed/altitude, orbit state, and Control progress. Several attempts can remain in memory during the current session. Each attempt remembers the persistent-part lineage that owns that history, while KSP vessel ID is retained only as a fast lookup cache.
+One remembered set of active-vessel Flight Contract history, such as launch origin, maximum speed/altitude, orbit state, and Control progress. Several attempts can remain in memory and are now persisted together across save/load. Each attempt remembers the persistent-part lineage that owns that history, while KSP vessel ID is retained only as a fast lookup cache.
 
-A docked KSP vessel may contain several Flight Attempt lineages at once. Their histories stay separate. The lineage containing KSP's current reference/control part is the one shown/evaluated as the active attempt; `Control From Here` can move that selection to another remembered lineage without combining their historical progress.
+A docked KSP vessel may contain several Flight Attempt lineages at once. Their histories stay separate. The lineage containing KSP's current reference/control part is the one shown/evaluated as the active attempt; `Control From Here` can move that selection to another remembered lineage without combining their historical progress. Two attempts may therefore share the same last KSP vessel ID while remaining different histories because their part lineages are stored independently.
 
 ## Main classes
 
@@ -189,17 +192,17 @@ Current Pre-Orbit uses:
 - Control — altitude-band hold, crew, and safe landed/splashed recovery;
 - Biome — current biome and landed/splashed state.
 
-It can evaluate several offered contracts independently from the same flight and retains independent in-memory histories for several craft.
+It can evaluate several offered contracts independently from the same flight and retains independent histories for several craft.
 
 Normal unchanged-vessel samples use the direct vessel-ID dictionary when its cached attempt still owns the current reference/control part. If the vessel ID changes, conflicts with remembered lineage, or a docked vessel's reference part belongs to another remembered attempt, the tracker resolves the correct attempt from persistent-part lineage instead.
 
-When staging or another split removes parts, the continued attempt keeps only the persistent IDs still present on the actively controlled branch. A detached branch therefore cannot later inherit the parent's historical maxima or Control qualification merely because it has the same launch time. The previous launch-time/body fallback is used only for lineage-less attempts, mainly the current single-attempt restore path before its first normal snapshot.
+When staging or another split removes parts, the continued attempt keeps only the persistent IDs still present on the actively controlled branch. A detached branch therefore cannot later inherit the parent's historical maxima or Control qualification merely because it has the same launch time. The launch-time/body fallback is used only for attempts that genuinely have no persistent-part lineage.
 
 Docking never merges remembered histories or automatically absorbs the other craft's parts into the selected attempt. A combined vessel may contain several remembered lineages. The lineage containing `ActiveVesselSnapshot.ReferencePartPersistentId` receives live telemetry. If the player uses KSP's `Control From Here` on the other docked craft, that other attempt becomes active while retaining its own earlier maxima/origin/state. After undocking, each branch is matched back to its own persistent-part lineage.
 
 If KSP temporarily has no usable reference-part ID, the tracker keeps the current matching attempt when possible and otherwise uses the strongest existing persistent-part overlap so it does not invent one merged history from several docked craft.
 
-Step 5 is intentionally about identity and history separation only. Step 7 will define contract-specific topology rules, especially how Mass should treat attached mass from another lineage and whether docking should invalidate an unfinished continuous Control hold.
+The tracker exposes its remembered attempt collection only to the persistence layer through internal members. Loading reconstructs every saved history and restores one selected attempt when the save recorded one. Contract-specific topology rules remain Step 7, especially how Mass should treat attached mass from another lineage and whether docking should invalidate an unfinished continuous Control hold.
 
 ### `FlightAttemptState`
 
@@ -207,7 +210,7 @@ Location: `Tracking/FlightAttemptState.cs`
 
 Stores the mutable state for one remembered Flight Attempt. It contains the attempt's current KSP vessel/body identity, launch origin/time, historical maxima, orbit state, current presentation telemetry, independent Control-contract state, and its current set of remembered persistent-part IDs. It does not evaluate contract rules itself.
 
-The lineage set is seeded from the attempt's first snapshot and is narrowed when parts leave the actively continued branch. Newly attached parts are not automatically added, so docking cannot silently merge independent histories.
+The lineage set is seeded from the attempt's first snapshot and is narrowed when parts leave the actively continued branch. Newly attached parts are not automatically added, so docking cannot silently merge independent histories. Persistence can enumerate the stored lineage and Control state without exposing raw KSP objects.
 
 ### `ActiveVesselSnapshot`
 
@@ -244,7 +247,7 @@ Location: `KspIntegration/ModPersistenceScenario.cs`
 
 Connects the project-owned save-state classes to KSP's `ScenarioModule` save/load system.
 
-The current `FLIGHT_CONTRACT_PROGRESS` format still serializes only the currently active Flight Attempt. Inactive attempts and their Step 5 lineage relationships remain session-only until the planned multi-attempt persistence step.
+`FLIGHT_CONTRACT_PROGRESS` now serializes every remembered Flight Attempt through repeated `ATTEMPT` nodes. Each node contains its historical telemetry and launch context, persistent-part lineage, selected-attempt marker, and per-attempt `CONTROL_STATE` children. This Step 6 format intentionally does not migrate the earlier development layout that stored one attempt directly on the root node.
 
 ### `RivalSimulation`
 
@@ -315,6 +318,10 @@ FlightContractTracker
     +--> select/create current FlightAttemptState
     +--> campaign completion evaluation
     +--> read-only FlightActiveUI presentation
+    |
+    v
+FlightContractProgressSaveState
+    +--> repeated ATTEMPT save records
 ```
 
 The telemetry request is requirement-gated. If only Mass is active, there is no reason to query biome or enable Directed Power impact callbacks. Persistent part IDs and the reference-part ID are common attempt identity context, so they are captured whenever this already-active snapshot path runs.
@@ -323,7 +330,7 @@ Only the active vessel is sampled at the normal fast-path cadence. Remembered in
 
 When a split/staged branch continues the attempt, its lineage is narrowed to the persistent parts still on that branch. When several lineages are docked together they remain separate; only the selected reference lineage receives the current sample. An unfinished continuous Control hold still resets when the observation gap is too long, because the tracker cannot prove continuity while that attempt was not observed.
 
-The persistent-part capture adds one pass over the active vessel's loaded part list per captured telemetry sample and one reference-part lookup. It does not scan other KSP vessels or add a new timer.
+The persistent-part capture adds one pass over the active vessel's loaded part list per captured telemetry sample and one reference-part lookup. Persisting remembered attempts copies already-owned tracker data into save-state objects; it does not scan inactive KSP vessels or add a new timer. Step 8 will prune obsolete histories so the remembered collection does not grow indefinitely.
 
 UI visibility does not change the telemetry cadence; the tracker continues to be updated by `ModRuntime` whether the compact window is open or closed.
 
@@ -358,9 +365,19 @@ This is slower and runs less often.
 8. On a valid Kerbin landing or splashdown, `AgencyState.RecordObjectiveCompletion()` records the result and raises the new-completion signal.
 9. `FundingNotificationUI` posts the stock funding-target completion message for Mass II.
 10. `CampaignController` updates unlocks and funding state.
-11. Persistence saves the change; the Command Center and FlightActiveUI read the resulting state for presentation.
+11. `FlightContractProgressSaveState` captures all remembered Flight Attempts for the normal KSP save path; the Command Center and FlightActiveUI read the resulting state for presentation.
 
 The current Mass evaluator still sees KSP's total active-vessel mass. Preventing unrelated docked mass from satisfying another attempt is explicitly reserved for Step 7.
+
+## Example: save while another craft is active
+
+1. Craft A records a Flight Attempt history, for example a 650 m/s maximum.
+2. The player switches to Craft B, which records its own independent history.
+3. The game is saved while B is selected.
+4. `FLIGHT_CONTRACT_PROGRESS` writes separate `ATTEMPT` nodes for A and B, including each persistent-part lineage.
+5. After reload, B is restored as the selected attempt from the save snapshot.
+6. Switching back to A matches A's surviving parts to A's saved lineage and restores its earlier 650 m/s history rather than starting over.
+7. The same lineage matching remains available through later docking and undocking.
 
 ## Example: completing Probe Orbit
 

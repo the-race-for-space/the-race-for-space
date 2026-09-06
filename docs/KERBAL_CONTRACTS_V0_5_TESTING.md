@@ -345,6 +345,25 @@ Confirm:
 - docking or undocking an external lineage resets an unfinished Control hold but preserves qualified Control state;
 - after undocking, each branch recovers its own history from its surviving persistent parts.
 
+## Flight Attempt lifecycle pruning
+
+Use two remembered craft with clearly distinguishable histories.
+
+1. Leave Craft A intact somewhere in the current save. It may be parked or unloaded and does not need to remain active.
+2. Recover, terminate, or fully destroy Craft B so none of B's remembered persistent parts remain in any KSP vessel.
+3. Allow the normal broad loaded/unloaded vessel refresh to succeed. It normally runs about every 20 seconds.
+4. Confirm A's remembered history remains available when A is selected again.
+5. Save after the cleanup refresh and inspect a disposable save if practical: A's `ATTEMPT` should remain in `FLIGHT_CONTRACT_PROGRESS`, while B's obsolete `ATTEMPT` should be absent.
+6. Leave A inactive across additional broad refreshes and confirm inactivity alone does **not** prune it.
+7. Dock and undock living remembered craft and confirm their histories are not pruned while at least one persistent part from each lineage still exists.
+8. Check `KSP.log`; a genuine cleanup may emit one line such as:
+
+   ```text
+   [TheRaceForSpace] Pruned 1 obsolete Flight Attempt(s) after vessel population refresh.
+   ```
+
+The intended rule has no timeout. An attempt is pruned only when a successful broad refresh proves that **none** of its remembered lineage parts exist. Lineage-less fallback attempts are retained conservatively because part-population absence cannot prove they are gone.
+
 ---
 
 # 8. Telemetry gating and idle behaviour
@@ -366,7 +385,7 @@ When no active Flight Contracts exist, confirm there are no unexpected completio
 
 After a later sponsor review offers a new Pre-Orbit contract, live telemetry should resume without restarting the save or controller.
 
-Mass anti-combination and Control topology detection must reuse the persistent IDs already captured by the normal active-vessel snapshot; they should not introduce another vessel scan or faster telemetry cadence.
+Mass anti-combination and Control topology detection must reuse the persistent IDs already captured by the normal active-vessel snapshot; they should not introduce another vessel scan or faster telemetry cadence. Lifecycle pruning must likewise reuse the existing slower broad loaded/unloaded vessel refresh rather than add another global scan.
 
 ---
 
@@ -516,7 +535,8 @@ CONTROL_STATE
 
 Confirm:
 
-- every remembered attempt is written, not only the currently selected craft;
+- every remembered attempt whose lineage still exists is written, not only the currently selected craft;
+- a pruned dead/recovered attempt is no longer written after the lifecycle refresh;
 - at most one `ATTEMPT` is marked `selected = true`;
 - two histories that were docked may legitimately contain the same last `vesselId` without being merged;
 - their `PART_LINEAGE` IDs remain independent;
@@ -548,10 +568,11 @@ The key result is **A -> B -> save while B -> reload -> A still remembers A**.
 3. Save during a Control hold; reload and confirm valid saved progress resumes.
 4. After reloading a partial Control hold, confirm the first live topology observation does not by itself reset that progress; then perform a real docking/undocking change and confirm the unfinished hold does reset.
 5. Save after Control qualification but before recovery; reload and confirm either a landing or splashdown can still complete it.
-6. Move Flight -> Space Center -> Tracking Station -> Flight and confirm campaign state remains consistent.
-7. Load a different KSP save in the same process and confirm campaign, rival, tracking, and callback state does not leak across saves.
-8. Corrupt a current-format `CONTROL_STATE` inside one `ATTEMPT` in a disposable save and confirm malformed Flight Contract progress fails closed rather than inventing valid progress.
-9. If practical, duplicate one `partPersistentId` across two `ATTEMPT` nodes in a disposable save and confirm the ambiguous Flight Contract progress is rejected rather than merging histories.
+6. Recover or terminate a remembered craft, allow a successful broad vessel refresh, save, reload, and confirm the pruned attempt does not return.
+7. Move Flight -> Space Center -> Tracking Station -> Flight and confirm campaign state remains consistent.
+8. Load a different KSP save in the same process and confirm campaign, rival, tracking, pruning, and callback state does not leak across saves.
+9. Corrupt a current-format `CONTROL_STATE` inside one `ATTEMPT` in a disposable save and confirm malformed Flight Contract progress fails closed rather than inventing valid progress.
+10. If practical, duplicate one `partPersistentId` across two `ATTEMPT` nodes in a disposable save and confirm the ambiguous Flight Contract progress is rejected rather than merging histories.
 
 The current format intentionally does not migrate the earlier development single-attempt root layout.
 
@@ -570,7 +591,7 @@ Confirm:
 5. a crewed Probe can still count toward satellite-network presence while not satisfying an uncrewed Probe Orbit requirement by itself;
 6. scene changes and save/reload do not lose valid orbital vessel state.
 
-This verifies the boundary between `KspVesselMonitor` and `OrbitalVesselTracker`.
+This verifies the boundary between `KspVesselMonitor` and `OrbitalVesselTracker`. The same successful broad vessel refresh now also copies persistent IDs from loaded live `Part` objects and unloaded `ProtoPartSnapshot` objects for Flight Attempt lifecycle pruning.
 
 ---
 
@@ -583,6 +604,7 @@ Confirm:
 - rival progress continues;
 - sponsor/funding timing continues;
 - active Flight Contract tracking continues during Flight;
+- lifecycle pruning can still occur after the normal broad vessel refresh even while the Flight UI is hidden;
 - reopening the UI shows current state rather than restarting progression;
 - moving between normal KSP scenes does not recreate campaign state for the same save.
 
@@ -603,7 +625,10 @@ Look for:
 - repeated exceptions;
 - vessel-destruction callback errors;
 - Flight Attempt save/load errors or histories unexpectedly resetting after reload;
+- repeated pruning of the same already-removed attempt;
 - excessive per-frame logging.
+
+A real dead/recovered lineage may produce one `Pruned <n> obsolete Flight Attempt(s) after vessel population refresh.` message. It should not repeat on later refreshes once that attempt has been removed.
 
 ---
 
@@ -624,6 +649,8 @@ Before calling a 0.5 build ready for broader testing, confirm all of the followi
 - [ ] Unrelated docked parts cannot be combined to satisfy Mass.
 - [ ] Docking/undocking resets unfinished Control holds but does not erase qualified Control state.
 - [ ] Multiple Flight Attempts and their part lineages survive save/reload.
+- [ ] Dead/recovered Flight Attempts are pruned only after their lineage disappears, while inactive surviving craft are retained.
+- [ ] Pruned Flight Attempts do not reappear in later saves.
 - [ ] Any Agency progression works.
 - [ ] Sponsor reviews offer all unlocked Pre-Orbit contracts.
 - [ ] Any Level V offers Probe Orbit immediately.

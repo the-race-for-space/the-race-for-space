@@ -8,7 +8,7 @@ Run it against:
 Alpha/KerbalContracts-v0.5
 ```
 
-Use a disposable Career save where possible. The current Step 6 `FLIGHT_CONTRACT_PROGRESS` format intentionally does not migrate the earlier development single-attempt layout, so use a save created or rewritten by the current build for Flight Attempt persistence checks.
+Use a disposable Career save where possible. The current `FLIGHT_CONTRACT_PROGRESS` format intentionally does not migrate the earlier development single-attempt layout, so use a save created or rewritten by the current build for Flight Attempt persistence checks.
 
 ## Before testing
 
@@ -193,17 +193,30 @@ For each level:
 2. Fly beyond the required distance with enough mass. Confirm no completion while still flying.
 3. Finish landed or splashed beyond the required distance with too little final mass. Confirm no completion.
 4. Finish landed or splashed with enough mass but short of the required distance. Confirm no completion.
-5. Land on Kerbin beyond the required distance with enough final mass. Confirm completion.
-6. Splash down on Kerbin beyond the required distance with enough final mass. Confirm completion.
+5. Land on Kerbin beyond the required distance with enough final mass and no outside-lineage parts attached. Confirm completion.
+6. Splash down on Kerbin beyond the required distance with enough final mass and no outside-lineage parts attached. Confirm completion.
 7. Enter orbit first and confirm the Pre-Orbit attempt is invalid.
 
 Distance is measured from the tracked launch origin. A KSC launch therefore behaves like distance from the Space Centre, while an alternate launch site uses that alternate origin.
+
+## Docked Mass anti-combination
+
+Use Craft A and unrelated Craft B after both have already been sampled as separate Flight Attempts.
+
+1. Make Craft A travel beyond the active Mass distance while retaining enough mass on its own.
+2. Dock B to A and keep A selected using **Control From Here** on an A part.
+3. Land or splash down the combined vessel while B's persistent parts are still attached.
+4. Confirm the Mass contract does **not** complete even though the combined KSP vessel mass is high enough.
+5. Detach B so A is again made only from A's remembered lineage.
+6. With A still satisfying the normal mass, distance, and landed/splashed requirements, confirm Mass can now complete.
+
+The intended rule is conservative: the tracker uses stock vessel mass only when no persistent parts from outside the selected attempt lineage are attached. It does not maintain a second approximate per-part mass calculation.
 
 ## Multiple offered Mass levels
 
 Create a state where Mass I and II are both offered.
 
-Land or splash down one craft at least 75 km from launch with at least 2.5 t remaining.
+Land or splash down one single-lineage craft at least 75 km from launch with at least 2.5 t remaining.
 
 Confirm both complete. A higher Mass level that is not offered must remain incomplete even if the craft also satisfies its numbers.
 
@@ -233,6 +246,22 @@ For each level:
 8. Splash down on Kerbin with crew and confirm completion.
 9. Enter orbit before recovery and confirm the Pre-Orbit attempt is invalid.
 
+## Docking and undocking during Control
+
+Use Craft A with an active Control objective and another separately remembered craft B.
+
+1. Begin an unqualified Control hold on A and accumulate several seconds.
+2. Dock B to A while A remains the selected lineage.
+3. Confirm A's unfinished Control hold resets when B's external persistent parts appear.
+4. Keep the docked topology unchanged and confirm a new continuous hold can begin normally.
+5. Undock B before that new hold qualifies.
+6. Confirm the unfinished hold resets again when B's external parts disappear.
+7. Complete a fresh uninterrupted hold until Control is qualified.
+8. Dock or undock another lineage again.
+9. Confirm the already-qualified Control state remains qualified and can still finish with the normal crewed Kerbin landing or splashdown.
+
+Ordinary staging of the selected attempt's own continuing lineage should not count as this external attachment change and should not reset a Control hold solely because own-lineage parts were staged away.
+
 ## Save/load Control state
 
 Test both cases:
@@ -241,6 +270,8 @@ Test both cases:
 - save after qualification but before recovery, reload, then land or splash down.
 
 Confirm state resumes correctly.
+
+The transient external-attachment set is rebuilt from the first usable live snapshot after load. That first observation establishes the current topology baseline and should not itself reset valid saved partial Control progress; a later real docking or undocking change should reset an unfinished hold normally.
 
 If the vessel is not observed for a long interval before qualification, that missing time must not be credited as continuous hold time.
 
@@ -310,9 +341,9 @@ Confirm:
 - returning to Craft A restores A's previous remembered history;
 - docking A and B keeps both histories separate;
 - KSP's **Control From Here** can select the remembered lineage belonging to the new reference/control part;
+- Mass cannot use a second attached lineage to satisfy its final mass requirement;
+- docking or undocking an external lineage resets an unfinished Control hold but preserves qualified Control state;
 - after undocking, each branch recovers its own history from its surviving persistent parts.
-
-Contract-specific anti-combination behavior for docked Mass and unfinished Control holds is the separate Step 7 feature and should not be treated as a Step 6 acceptance requirement.
 
 ---
 
@@ -334,6 +365,8 @@ Confirm the remaining active contract still works in each reduced state.
 When no active Flight Contracts exist, confirm there are no unexpected completions, impact callback errors, or repeated tracking exceptions.
 
 After a later sponsor review offers a new Pre-Orbit contract, live telemetry should resume without restarting the save or controller.
+
+Mass anti-combination and Control topology detection must reuse the persistent IDs already captured by the normal active-vessel snapshot; they should not introduce another vessel scan or faster telemetry cadence.
 
 ---
 
@@ -489,7 +522,7 @@ Confirm:
 - their `PART_LINEAGE` IDs remain independent;
 - the old root-level `active`, `vesselId`, and root-level `CONTROL_STATE` layout is not written by the current build.
 
-Instantaneous telemetry such as current altitude, current mass, current biome, current crew, and current reference part should be rebuilt from the next live sample after load.
+Instantaneous telemetry such as current altitude, current mass, current biome, current crew, current reference part, and the transient external-attachment topology should be rebuilt from the next live sample after load.
 
 ## Multi-attempt save/reload check
 
@@ -506,20 +539,21 @@ Use two controllable craft with clearly different Directed Power maximum speeds 
 9. Switch back to B and confirm B retains its own history.
 10. If practical, save again after undocking, reload, and reconfirm both histories.
 
-The key Step 6 result is **A -> B -> save while B -> reload -> A still remembers A**.
+The key result is **A -> B -> save while B -> reload -> A still remembers A**.
 
 ## Other save/reload checks
 
 1. Save with no remembered attempt and confirm reload does not invent one.
 2. Save during a Directed Power attempt after exceeding 70 km; reload and confirm the invalidation remains.
 3. Save during a Control hold; reload and confirm valid saved progress resumes.
-4. Save after Control qualification but before recovery; reload and confirm either a landing or splashdown can still complete it.
-5. Move Flight -> Space Center -> Tracking Station -> Flight and confirm campaign state remains consistent.
-6. Load a different KSP save in the same process and confirm campaign, rival, tracking, and callback state does not leak across saves.
-7. Corrupt a current-format `CONTROL_STATE` inside one `ATTEMPT` in a disposable save and confirm malformed Flight Contract progress fails closed rather than inventing valid progress.
-8. If practical, duplicate one `partPersistentId` across two `ATTEMPT` nodes in a disposable save and confirm the ambiguous Flight Contract progress is rejected rather than merging histories.
+4. After reloading a partial Control hold, confirm the first live topology observation does not by itself reset that progress; then perform a real docking/undocking change and confirm the unfinished hold does reset.
+5. Save after Control qualification but before recovery; reload and confirm either a landing or splashdown can still complete it.
+6. Move Flight -> Space Center -> Tracking Station -> Flight and confirm campaign state remains consistent.
+7. Load a different KSP save in the same process and confirm campaign, rival, tracking, and callback state does not leak across saves.
+8. Corrupt a current-format `CONTROL_STATE` inside one `ATTEMPT` in a disposable save and confirm malformed Flight Contract progress fails closed rather than inventing valid progress.
+9. If practical, duplicate one `partPersistentId` across two `ATTEMPT` nodes in a disposable save and confirm the ambiguous Flight Contract progress is rejected rather than merging histories.
 
-The current Step 6 format intentionally does not migrate the earlier development single-attempt root layout.
+The current format intentionally does not migrate the earlier development single-attempt root layout.
 
 ---
 
@@ -582,11 +616,13 @@ Before calling a 0.5 build ready for broader testing, confirm all of the followi
 - [ ] Four opening Pre-Orbit offers are correct.
 - [ ] Live telemetry displays correctly in FlightActiveUI.
 - [ ] Directed Power impact behaviour works.
-- [ ] Mass landed/splashed recovery behaviour works.
-- [ ] Control hold + safe landing/splashdown works.
+- [ ] Mass landed/splashed recovery and docked-lineage rejection work.
+- [ ] Control hold, topology resets, qualification preservation, and safe landing/splashdown work.
 - [ ] Biome landed/splashed completion behaviour works where the target biome is reported.
 - [ ] Multiple simultaneously offered contracts evaluate independently.
 - [ ] Staging, vessel switching, docking, and undocking preserve independent Flight Attempt histories.
+- [ ] Unrelated docked parts cannot be combined to satisfy Mass.
+- [ ] Docking/undocking resets unfinished Control holds but does not erase qualified Control state.
 - [ ] Multiple Flight Attempts and their part lineages survive save/reload.
 - [ ] Any Agency progression works.
 - [ ] Sponsor reviews offer all unlocked Pre-Orbit contracts.

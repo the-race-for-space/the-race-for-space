@@ -1,5 +1,6 @@
 using System;
 using System.Globalization;
+using TheRaceForSpace.Core;
 
 namespace TheRaceForSpace.Objectives
 {
@@ -165,10 +166,14 @@ namespace TheRaceForSpace.Objectives
 
     /// <summary>
     /// Immutable definition of one campaign objective. Gameplay state remains owned by space agencies;
-    /// this type describes the objective, pre-orbit contract balance metadata, and campaign unlock rule.
+    /// this type describes the objective, pre-orbit contract criteria, and campaign unlock rule.
+    /// Pre-Orbit reward and rival-cost values are read from CampaignSettings so user config remains authoritative.
     /// </summary>
     public sealed class ObjectiveDefinition
     {
+        private readonly double _baseRewardFunds;
+        private readonly double _rivalProgressCostFunds;
+
         public ObjectiveDefinition(
             string id,
             string name,
@@ -247,8 +252,8 @@ namespace TheRaceForSpace.Objectives
             ObjectiveType = objectiveType;
             PreOrbitLine = preOrbitLine;
             PreOrbitLevel = Math.Max(0, preOrbitLevel);
-            BaseRewardFunds = Math.Max(0.0, baseRewardFunds);
-            RivalProgressCostFunds = Math.Max(0.0, rivalProgressCostFunds);
+            _baseRewardFunds = Math.Max(0.0, baseRewardFunds);
+            _rivalProgressCostFunds = Math.Max(0.0, rivalProgressCostFunds);
 
             PreOrbitContractCriteria criteria = preOrbitCriteria ?? PreOrbitContractCriteria.None;
             RequiredSpeedMetersPerSecond = criteria.RequiredSpeedMetersPerSecond;
@@ -274,8 +279,26 @@ namespace TheRaceForSpace.Objectives
         public ObjectiveType ObjectiveType { get; private set; }
         public PreOrbitContractLine PreOrbitLine { get; private set; }
         public int PreOrbitLevel { get; private set; }
-        public double BaseRewardFunds { get; private set; }
-        public double RivalProgressCostFunds { get; private set; }
+
+        public double BaseRewardFunds
+        {
+            get
+            {
+                return IsPreOrbitContract
+                    ? CampaignSettings.GetPreOrbitRewardFunds(PreOrbitLevel)
+                    : _baseRewardFunds;
+            }
+        }
+
+        public double RivalProgressCostFunds
+        {
+            get
+            {
+                return IsPreOrbitContract
+                    ? CampaignSettings.GetPreOrbitRivalProgressCostFunds(PreOrbitLevel)
+                    : _rivalProgressCostFunds;
+            }
+        }
 
         // Tracking and UI consume these values directly. ObjectiveCatalogue supplies them explicitly
         // for each pre-orbit definition instead of ObjectiveDefinition inferring balance from line/level.

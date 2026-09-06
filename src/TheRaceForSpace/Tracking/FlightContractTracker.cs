@@ -15,9 +15,10 @@ namespace TheRaceForSpace.Tracking
         private const double LaunchTimeMatchToleranceSeconds = 1.0;
         private const double MaximumContinuousSampleGapSeconds = 5.0;
 
-        // Vessel IDs are only a temporary lookup for the in-memory multi-attempt step. Later lineage
-        // work will replace this identity rule so docking, undocking, and vessel-ID changes are handled
-        // from persistent craft lineage rather than treating a KSP Vessel ID as long-term identity.
+        // The list is the authoritative in-memory attempt collection. Vessel ID remains a fast lookup
+        // for normal samples, while persistent part lineage can recover an attempt after KSP changes
+        // vessel identity during staging or other topology changes.
+        private readonly List<FlightAttemptState> _attempts = new List<FlightAttemptState>();
         private readonly Dictionary<string, FlightAttemptState> _attemptsByVesselId =
             new Dictionary<string, FlightAttemptState>(StringComparer.OrdinalIgnoreCase);
 
@@ -321,6 +322,7 @@ namespace TheRaceForSpace.Tracking
                 EnteredOrbit = enteredOrbit
             };
 
+            _attempts.Add(restoredAttempt);
             _attemptsByVesselId.Add(vesselId, restoredAttempt);
             _attempt = restoredAttempt;
         }
@@ -339,6 +341,7 @@ namespace TheRaceForSpace.Tracking
         /// </summary>
         internal void ClearAllAttempts()
         {
+            _attempts.Clear();
             _attemptsByVesselId.Clear();
             _attempt = new FlightAttemptState();
         }
@@ -408,25 +411,47 @@ namespace TheRaceForSpace.Tracking
 
         private void SelectAttempt(ActiveVesselSnapshot snapshot)
         {
+            bool snapshotHasLineage = snapshot.PartPersistentIds != null
+                && snapshot.PartPersistentIds.Count > 0;
+
             FlightAttemptState selectedAttempt;
             if (_attemptsByVesselId.TryGetValue(snapshot.VesselId, out selectedAttempt))
             {
-                _attempt = selectedAttempt;
-                return;
+                bool lineageCompatible = !snapshotHasLineage
+                    || !selectedAttempt.HasPartLineage
+                    || selectedAttempt.SharesPartLineage(snapshot.PartPersistentIds);
+                if (lineageCompatible)
+                {
+                    selectedAttempt.ReconcilePartLineage(snapshot.PartPersistentIds);
+                    _attempt = selectedAttempt;
+                    return;
+                }
+
+                // Vessel IDs are not permanent craft identity. If KSP reuses an ID for a vessel that
+                // shares no remembered parts, drop only the cache entry and keep the old attempt alive
+                // in the authoritative collection so its lineage can be found again later.
+                _attemptsByVesselId.Remove(snapshot.VesselId);
             }
 
-            // Until persistent part lineage is introduced, retain the existing staging behaviour by
-            // treating a new Vessel ID with matching launch time/body as the same continuing attempt.
-            // This is intentionally a temporary split/merge rule and will be replaced by lineage work.
-            selectedAttempt = FindLaunchContinuation(snapshot);
+            selectedAttempt = snapshotHasLineage
+                ? FindLineageContinuation(snapshot)
+                : FindLaunchContinuation(snapshot);
             if (selectedAttempt != null)
             {
                 if (!string.IsNullOrEmpty(selectedAttempt.VesselId))
                 {
-                    _attemptsByVesselId.Remove(selectedAttempt.VesselId);
+                    FlightAttemptState mappedAttempt;
+                    if (_attemptsByVesselId.TryGetValue(
+                            selectedAttempt.VesselId,
+                            out mappedAttempt)
+                        && ReferenceEquals(mappedAttempt, selectedAttempt))
+                    {
+                        _attemptsByVesselId.Remove(selectedAttempt.VesselId);
+                    }
                 }
 
                 selectedAttempt.VesselId = snapshot.VesselId;
+                selectedAttempt.ReconcilePartLineage(snapshot.PartPersistentIds);
                 _attemptsByVesselId[snapshot.VesselId] = selectedAttempt;
                 _attempt = selectedAttempt;
                 return;
@@ -434,16 +459,47 @@ namespace TheRaceForSpace.Tracking
 
             selectedAttempt = new FlightAttemptState();
             BeginAttempt(selectedAttempt, snapshot);
-            _attemptsByVesselId.Add(snapshot.VesselId, selectedAttempt);
+            _attempts.Add(selectedAttempt);
+            _attemptsByVesselId[snapshot.VesselId] = selectedAttempt;
             _attempt = selectedAttempt;
+        }
+
+        private FlightAttemptState FindLineageContinuation(ActiveVesselSnapshot snapshot)
+        {
+            FlightAttemptState singleMatch = null;
+            int matchCount = 0;
+
+            for (int attemptIndex = 0; attemptIndex < _attempts.Count; attemptIndex++)
+            {
+                FlightAttemptState rememberedAttempt = _attempts[attemptIndex];
+                if (rememberedAttempt == null
+                    || !rememberedAttempt.SharesPartLineage(snapshot.PartPersistentIds))
+                {
+                    continue;
+                }
+
+                // If a future docked vessel contains several remembered lineages, keep the attempt
+                // the player was already controlling rather than arbitrarily merging histories.
+                // Full multi-lineage docking/undocking reconciliation is Step 5.
+                if (ReferenceEquals(rememberedAttempt, _attempt))
+                {
+                    return rememberedAttempt;
+                }
+
+                singleMatch = rememberedAttempt;
+                matchCount++;
+            }
+
+            return matchCount == 1 ? singleMatch : null;
         }
 
         private FlightAttemptState FindLaunchContinuation(ActiveVesselSnapshot snapshot)
         {
-            foreach (KeyValuePair<string, FlightAttemptState> entry in _attemptsByVesselId)
+            for (int attemptIndex = 0; attemptIndex < _attempts.Count; attemptIndex++)
             {
-                FlightAttemptState rememberedAttempt = entry.Value;
+                FlightAttemptState rememberedAttempt = _attempts[attemptIndex];
                 if (rememberedAttempt == null
+                    || rememberedAttempt.HasPartLineage
                     || rememberedAttempt.LaunchUniversalTime < 0.0
                     || snapshot.LaunchUniversalTime < 0.0
                     || Math.Abs(
@@ -479,6 +535,7 @@ namespace TheRaceForSpace.Tracking
                 0.0,
                 snapshot.SurfaceSpeedMetersPerSecond);
             attempt.EnteredOrbit = snapshot.Situation == FlightSituation.Orbiting;
+            attempt.ReconcilePartLineage(snapshot.PartPersistentIds);
         }
 
         private void RemoveAttempt(FlightAttemptState attempt)
@@ -488,9 +545,15 @@ namespace TheRaceForSpace.Tracking
                 return;
             }
 
+            _attempts.Remove(attempt);
             if (!string.IsNullOrEmpty(attempt.VesselId))
             {
-                _attemptsByVesselId.Remove(attempt.VesselId);
+                FlightAttemptState mappedAttempt;
+                if (_attemptsByVesselId.TryGetValue(attempt.VesselId, out mappedAttempt)
+                    && ReferenceEquals(mappedAttempt, attempt))
+                {
+                    _attemptsByVesselId.Remove(attempt.VesselId);
+                }
             }
 
             if (ReferenceEquals(_attempt, attempt))

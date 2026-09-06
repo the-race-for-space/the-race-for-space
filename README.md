@@ -118,6 +118,8 @@ The mod uses one full Command Center window with four main views:
 
 The Contract Catalogue shows `Offered`, `Unlocked`, `Locked`, and `Expired` objective funding contracts.
 
+Overview shows only Offered objectives the player has not yet achieved under `Your Objectives`; completed objectives are hidden, and empty objective or satellite-network summaries show `None`. Completed one-off contracts that are still paying out appear under Funding Information with the player's projected next payout on the first line and the number of scheduled payments remaining on the second line. When more than one agency is eligible for that next payout, the second line also reports the split, for example `3 payments remaining (split between 2 agencies)`.
+
 Funding Targets shows detailed funding, payout, completion, and contract-lifecycle information. It does not draw live active-vessel requirement telemetry; the compact Flight interface is the dedicated real-time flight display.
 
 Flight mode also has a separate compact **Offered Contracts** window implemented by `FlightActiveUI`. It has its own Flight-only launcher button so the player can track contract requirements without opening the full Command Center. Unfinished Offered objective contracts appear first and can be expanded independently. Offered contracts already completed by the player sit at the bottom marked `Complete` with no expansion control.

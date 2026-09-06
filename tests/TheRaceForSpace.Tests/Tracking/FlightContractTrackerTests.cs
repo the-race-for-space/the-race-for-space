@@ -23,6 +23,7 @@ namespace TheRaceForSpace.Tests.Tracking
             DockingKeepsAttemptHistoriesSeparate();
             SwitchingCraftPreservesIndependentAttempts();
             MultipleFlightAttemptsSurviveSaveLoad();
+            MissingPartPopulationPrunesObsoleteAttempts();
             PartialControlHoldSurvivesSaveLoad();
             MultipleControlStatesSurviveSaveLoad();
             DirectedPowerDisqualificationSurvivesSaveLoad();
@@ -1003,6 +1004,110 @@ namespace TheRaceForSpace.Tests.Tracking
                     referencePartPersistentId: 801u));
             RequireNear(450.0, restoredTracker.MaximumSurfaceSpeedMetersPerSecond,
                 "After reload and undocking, Craft B should recover the history updated while docked.");
+        }
+
+        private static void MissingPartPopulationPrunesObsoleteAttempts()
+        {
+            AgencyState player = new AgencyState("player", "Player", true);
+            var noActiveContracts = new List<ObjectiveDefinition>();
+            var tracker = new FlightContractTracker();
+
+            tracker.EvaluateActiveFlightContracts(
+                player,
+                noActiveContracts,
+                Snapshot(
+                    "prune-a",
+                    1600.0,
+                    1600.0,
+                    20000.0,
+                    650.0,
+                    1.0,
+                    0,
+                    null,
+                    FlightSituation.Flying,
+                    partPersistentIds: new uint[] { 901u, 902u },
+                    referencePartPersistentId: 901u));
+            tracker.EvaluateActiveFlightContracts(
+                player,
+                noActiveContracts,
+                Snapshot(
+                    "prune-b",
+                    1700.0,
+                    1700.0,
+                    10000.0,
+                    350.0,
+                    1.0,
+                    0,
+                    null,
+                    FlightSituation.Flying,
+                    partPersistentIds: new uint[] { 903u, 904u },
+                    referencePartPersistentId: 903u));
+
+            int prunedAttemptCount = tracker.PruneAttemptsMissingFromPartPopulation(
+                new uint[] { 901u, 902u });
+            Require(prunedAttemptCount == 1,
+                "A broad vessel population containing only Craft A should prune Craft B's missing lineage exactly once.");
+            Require(!tracker.HasActiveAttempt,
+                "Pruning the currently selected missing craft should clear the selected Flight Attempt until live telemetry chooses another lineage.");
+
+            tracker.EvaluateActiveFlightContracts(
+                player,
+                noActiveContracts,
+                Snapshot(
+                    "prune-a",
+                    1600.0,
+                    1710.0,
+                    21000.0,
+                    400.0,
+                    1.0,
+                    0,
+                    null,
+                    FlightSituation.Flying,
+                    partPersistentIds: new uint[] { 901u, 902u },
+                    referencePartPersistentId: 901u));
+            RequireNear(650.0, tracker.MaximumSurfaceSpeedMetersPerSecond,
+                "A surviving parked craft must retain its remembered history when another craft is pruned.");
+
+            var saveState = new FlightContractProgressSaveState();
+            saveState.Capture(tracker);
+            var node = new ConfigNode();
+            saveState.Save(node);
+            Require(node.GetNodes("ATTEMPT").Length == 1,
+                "Persistence captured after pruning should contain only the surviving Flight Attempt.");
+
+            tracker.EvaluateActiveFlightContracts(
+                player,
+                noActiveContracts,
+                Snapshot(
+                    "prune-b-new",
+                    1800.0,
+                    1800.0,
+                    5000.0,
+                    250.0,
+                    1.0,
+                    0,
+                    null,
+                    FlightSituation.Flying,
+                    partPersistentIds: new uint[] { 903u, 904u },
+                    referencePartPersistentId: 903u));
+            RequireNear(250.0, tracker.MaximumSurfaceSpeedMetersPerSecond,
+                "A craft lineage observed again after its old attempt was pruned must start fresh rather than recover deleted history.");
+
+            var lineageLessTracker = new FlightContractTracker();
+            lineageLessTracker.RestoreState(
+                "lineageless",
+                "Kerbin",
+                1900.0,
+                0.0,
+                0.0,
+                1901.0,
+                100.0,
+                200.0,
+                false);
+            Require(
+                lineageLessTracker.PruneAttemptsMissingFromPartPopulation(new uint[0]) == 0
+                    && lineageLessTracker.HasActiveAttempt,
+                "A lineage-less compatibility attempt must be retained because part-population absence cannot safely prove that craft no longer exists.");
         }
 
         private static void PartialControlHoldSurvivesSaveLoad()

@@ -193,39 +193,6 @@ namespace TheRaceForSpace.UI
                 return;
             }
 
-            IList<ObjectiveDefinition> activeFlightContracts =
-                _campaignController.ActiveFlightContracts;
-            if (activeFlightContracts != null && activeFlightContracts.Count > 0)
-            {
-                FlightContractTracker tracker = ModRuntime.FlightContractTrackingState;
-                if (!ModRuntime.HasCurrentFlightVesselTelemetry
-                    || tracker == null
-                    || !tracker.HasActiveAttempt)
-                {
-                    GUILayout.Label("Active Flight Attempt: Waiting for vessel telemetry...");
-                }
-                else
-                {
-                    string currentVesselName = ModRuntime.CurrentFlightVesselName;
-                    if (string.IsNullOrEmpty(currentVesselName))
-                    {
-                        currentVesselName = "Unnamed vessel";
-                    }
-
-                    // Launch UT remains different for independently launched histories even while
-                    // several remembered lineages are docked into one stock KSP vessel. Showing it
-                    // makes a Control-From-Here lineage switch visible without exposing raw part IDs.
-                    GUILayout.Label(
-                        "Active Flight Attempt: "
-                        + currentVesselName
-                        + " (launch UT "
-                        + tracker.LaunchUniversalTime.ToString("N0")
-                        + " s)");
-                }
-
-                GUILayout.Space(4.0f);
-            }
-
             _contractScrollPosition = GUILayout.BeginScrollView(
                 _contractScrollPosition,
                 ContractListOptions);

@@ -70,7 +70,7 @@ namespace TheRaceForSpace.Tracking
 
         /// <summary>
         /// Returns whether one Control contract has completed its altitude hold and is waiting
-        /// for the required crewed Kerbin landing.
+        /// for the required crewed Kerbin landing or splashdown.
         /// </summary>
         public bool IsControlObjectiveQualified(string objectiveId)
         {
@@ -198,11 +198,11 @@ namespace TheRaceForSpace.Tracking
                     }
 
                     if (objective.PreOrbitLine == PreOrbitContractLine.Mass
-                        && snapshot.Situation == FlightSituation.Landed
+                        && IsLandedOrSplashed(snapshot.Situation)
                         && snapshot.MassTonnes >= objective.RequiredMassTonnes
                         && _currentDistanceMeters >= objective.RequiredDistanceMeters)
                     {
-                        // Mass represents delivery of a finished craft, so the final landed vessel
+                        // Mass represents delivery of a finished craft, so the final recovered vessel
                         // must still meet both the mass and distance requirement for this contract.
                         recordedObjective |= playerAgency.RecordObjectiveCompletion(
                             objective.Id,
@@ -211,15 +211,15 @@ namespace TheRaceForSpace.Tracking
                     }
 
                     if (objective.PreOrbitLine == PreOrbitContractLine.Biome
-                        && snapshot.Situation == FlightSituation.Landed
+                        && IsLandedOrSplashed(snapshot.Situation)
                         && !string.IsNullOrEmpty(snapshot.BiomeName)
                         && string.Equals(
                             snapshot.BiomeName,
                             objective.RequiredBiomeName,
                             StringComparison.OrdinalIgnoreCase))
                     {
-                        // Flying over a biome is not enough; this individual contract completes
-                        // only when the active craft finishes landed in its requested biome.
+                        // Flying over a biome is not enough; this individual contract completes only
+                        // when the active craft finishes landed or splashed in its requested biome.
                         recordedObjective |= playerAgency.RecordObjectiveCompletion(
                             objective.Id,
                             snapshot.ObservationUniversalTime);
@@ -386,7 +386,7 @@ namespace TheRaceForSpace.Tracking
 
                 ControlContractState state = GetOrCreateControlState(controlObjective.Id);
                 if (state.IsQualified
-                    && snapshot.Situation == FlightSituation.Landed
+                    && IsLandedOrSplashed(snapshot.Situation)
                     && snapshot.CrewCount > 0)
                 {
                     recordedObjective |= playerAgency.RecordObjectiveCompletion(
@@ -520,6 +520,11 @@ namespace TheRaceForSpace.Tracking
                 Math.Sqrt(haversine),
                 Math.Sqrt(1.0 - haversine));
             return snapshot.BodyRadiusMeters * centralAngle;
+        }
+
+        private static bool IsLandedOrSplashed(FlightSituation situation)
+        {
+            return situation == FlightSituation.Landed || situation == FlightSituation.Splashed;
         }
 
         private static bool IsFinite(double value)

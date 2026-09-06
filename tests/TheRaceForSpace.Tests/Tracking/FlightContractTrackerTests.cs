@@ -18,6 +18,7 @@ namespace TheRaceForSpace.Tests.Tracking
             BiomeAllowsOnlyOneLineObjectivePerLaunch();
             StagingPreservesDirectedPowerAttempt();
             DetachedStageDoesNotCloneAttemptHistory();
+            DockingKeepsAttemptHistoriesSeparate();
             SwitchingCraftPreservesIndependentAttempts();
             PartialControlHoldSurvivesSaveLoad();
             MultipleControlStatesSurviveSaveLoad();
@@ -367,6 +368,139 @@ namespace TheRaceForSpace.Tests.Tracking
 
             RequireNear(650.0, tracker.MaximumSurfaceSpeedMetersPerSecond,
                 "Returning to the continuing branch should recover its original history after the detached branch was observed.");
+        }
+
+        private static void DockingKeepsAttemptHistoriesSeparate()
+        {
+            AgencyState player = new AgencyState("player", "Player", true);
+            var tracker = new FlightContractTracker();
+            var noActiveContracts = new List<ObjectiveDefinition>();
+
+            tracker.EvaluateActiveFlightContracts(
+                player,
+                noActiveContracts,
+                Snapshot(
+                    "dock-a",
+                    1000.0,
+                    1000.0,
+                    20000.0,
+                    650.0,
+                    1.0,
+                    0,
+                    null,
+                    FlightSituation.Flying,
+                    partPersistentIds: new uint[] { 501u, 502u },
+                    referencePartPersistentId: 501u));
+            tracker.EvaluateActiveFlightContracts(
+                player,
+                noActiveContracts,
+                Snapshot(
+                    "dock-b",
+                    1100.0,
+                    1100.0,
+                    10000.0,
+                    350.0,
+                    1.0,
+                    0,
+                    null,
+                    FlightSituation.Flying,
+                    partPersistentIds: new uint[] { 601u, 602u },
+                    referencePartPersistentId: 601u));
+            tracker.EvaluateActiveFlightContracts(
+                player,
+                noActiveContracts,
+                Snapshot(
+                    "dock-a",
+                    1000.0,
+                    1200.0,
+                    22000.0,
+                    500.0,
+                    1.0,
+                    0,
+                    null,
+                    FlightSituation.Flying,
+                    partPersistentIds: new uint[] { 501u, 502u },
+                    referencePartPersistentId: 501u));
+
+            // Deliberately reuse Craft B's vessel ID for the combined assembly. Reference-part
+            // lineage must keep Craft A selected because the player is still controlling from A.
+            tracker.EvaluateActiveFlightContracts(
+                player,
+                noActiveContracts,
+                Snapshot(
+                    "dock-b",
+                    1000.0,
+                    1201.0,
+                    22000.0,
+                    500.0,
+                    2.0,
+                    0,
+                    null,
+                    FlightSituation.Flying,
+                    partPersistentIds: new uint[] { 501u, 502u, 601u, 602u },
+                    referencePartPersistentId: 501u));
+
+            RequireNear(650.0, tracker.MaximumSurfaceSpeedMetersPerSecond,
+                "Docking must keep Craft A's history selected when the reference part belongs to A even if KSP reuses Craft B's vessel ID.");
+
+            // Switching Control From Here to a Craft B part should select B's independent attempt,
+            // not merge A's earlier 650 m/s maximum into B.
+            tracker.EvaluateActiveFlightContracts(
+                player,
+                noActiveContracts,
+                Snapshot(
+                    "dock-b",
+                    1000.0,
+                    1202.0,
+                    22000.0,
+                    450.0,
+                    2.0,
+                    0,
+                    null,
+                    FlightSituation.Flying,
+                    partPersistentIds: new uint[] { 501u, 502u, 601u, 602u },
+                    referencePartPersistentId: 601u));
+
+            RequireNear(450.0, tracker.MaximumSurfaceSpeedMetersPerSecond,
+                "A docked Craft B reference part should recover and update B's own history without inheriting Craft A's maximum.");
+
+            tracker.EvaluateActiveFlightContracts(
+                player,
+                noActiveContracts,
+                Snapshot(
+                    "dock-a-undocked",
+                    1000.0,
+                    1203.0,
+                    23000.0,
+                    400.0,
+                    1.0,
+                    0,
+                    null,
+                    FlightSituation.Flying,
+                    partPersistentIds: new uint[] { 501u, 502u },
+                    referencePartPersistentId: 501u));
+
+            RequireNear(650.0, tracker.MaximumSurfaceSpeedMetersPerSecond,
+                "After undocking, Craft A should recover the same independent history it had before docking.");
+
+            tracker.EvaluateActiveFlightContracts(
+                player,
+                noActiveContracts,
+                Snapshot(
+                    "dock-b-undocked",
+                    1100.0,
+                    1204.0,
+                    12000.0,
+                    300.0,
+                    1.0,
+                    0,
+                    null,
+                    FlightSituation.Flying,
+                    partPersistentIds: new uint[] { 601u, 602u },
+                    referencePartPersistentId: 601u));
+
+            RequireNear(450.0, tracker.MaximumSurfaceSpeedMetersPerSecond,
+                "After undocking, Craft B should recover the independent history updated while docked.");
         }
 
         private static void SwitchingCraftPreservesIndependentAttempts()
@@ -749,7 +883,8 @@ namespace TheRaceForSpace.Tests.Tracking
             string biomeName,
             FlightSituation situation,
             double longitudeDegrees = 0.0,
-            IList<uint> partPersistentIds = null)
+            IList<uint> partPersistentIds = null,
+            uint referencePartPersistentId = 0u)
         {
             return new ActiveVesselSnapshot(
                 vesselId,
@@ -765,7 +900,8 @@ namespace TheRaceForSpace.Tests.Tracking
                 crewCount,
                 launchUniversalTime,
                 observationUniversalTime,
-                partPersistentIds);
+                partPersistentIds,
+                referencePartPersistentId);
         }
 
         private static void Require(bool condition, string message)

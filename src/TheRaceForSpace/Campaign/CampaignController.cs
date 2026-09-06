@@ -421,10 +421,6 @@ namespace TheRaceForSpace.Campaign
                 UpdateFundingAvailability(stateEvaluationUniversalTime);
             }
 
-            // Probe Orbit remains an immediate shared-campaign unlock once any pre-orbit line reaches
-            // Level V. PreOrbit Levels II-V wait for the funding-day review, where every unlocked
-            // pre-orbit contract is offered without consuming normal one-off objective completion slots.
-            UpdateSpecialObjectiveOffers(stateEvaluationUniversalTime);
             UpdateSatelliteTargetReachedState();
             StartObjectiveFundingContracts(stateEvaluationUniversalTime);
             RebuildActiveFlightContractPlanIfNeeded();
@@ -465,38 +461,6 @@ namespace TheRaceForSpace.Campaign
                     evaluationUniversalTime))
                 {
                     contract.Unlock();
-                }
-            }
-        }
-
-        /// <summary>
-        /// Offers Probe Orbit immediately when any agency completes a Level V pre-orbit contract.
-        /// PreOrbit Levels II-V otherwise wait in Unlocked until the funding-day sponsor review,
-        /// where every unlocked pre-orbit contract is offered independently of the normal offer cap.
-        /// </summary>
-        private void UpdateSpecialObjectiveOffers(double evaluationUniversalTime)
-        {
-            for (int contractIndex = 0;
-                contractIndex < _objectiveFundingContracts.Count;
-                contractIndex++)
-            {
-                ObjectiveFundingContract contract = _objectiveFundingContracts[contractIndex];
-                if (contract == null || contract.IsOffered || contract.IsExpired)
-                {
-                    continue;
-                }
-
-                if (!string.Equals(
-                    contract.Id,
-                    ObjectiveCatalogue.ProbeOrbitId,
-                    StringComparison.OrdinalIgnoreCase))
-                {
-                    continue;
-                }
-
-                if (IsObjectiveFundingContractAvailableAtTime(contract, evaluationUniversalTime))
-                {
-                    contract.Offer();
                 }
             }
         }
@@ -548,7 +512,6 @@ namespace TheRaceForSpace.Campaign
 
                 RefreshRivals(payoutUniversalTime);
                 UpdateFundingAvailability(payoutUniversalTime);
-                UpdateSpecialObjectiveOffers(payoutUniversalTime);
                 UpdateSatelliteTargetReachedState();
                 StartObjectiveFundingContracts(payoutUniversalTime);
 

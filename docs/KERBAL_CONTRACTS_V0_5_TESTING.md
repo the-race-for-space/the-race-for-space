@@ -8,7 +8,7 @@ Run it against:
 Alpha/KerbalContracts-v0.5
 ```
 
-Use a disposable Career save where possible.
+Use a disposable Career save where possible. The current Step 6 `FLIGHT_CONTRACT_PROGRESS` format intentionally does not migrate the earlier development single-attempt layout, so use a save created or rewritten by the current build for Flight Attempt persistence checks.
 
 ## Before testing
 
@@ -289,7 +289,7 @@ Confirm each offered objective can complete independently. A higher level that i
 
 ---
 
-# 7. Cross-line behaviour
+# 7. Cross-line and Flight Attempt behaviour
 
 Use one launch that can satisfy more than one active contract.
 
@@ -304,8 +304,15 @@ Confirm:
 - every offered, unfinished active contract is evaluated independently;
 - one valid landed/splashed recovery or impact may complete several offered contracts;
 - `Locked` or merely `Unlocked` contracts are not evaluated as active Flight Contracts;
-- staging does not create a new attempt when the continuing vessel belongs to the same launch;
-- switching to an unrelated vessel does not inherit old maxima, origin, or Control timers.
+- staging does not create a new attempt when the continuing branch retains the remembered lineage;
+- a detached same-launch branch does not clone the continuing branch's historical progress;
+- switching from Craft A to unrelated Craft B does not transfer A's maxima, origin, or Control state to B;
+- returning to Craft A restores A's previous remembered history;
+- docking A and B keeps both histories separate;
+- KSP's **Control From Here** can select the remembered lineage belonging to the new reference/control part;
+- after undocking, each branch recovers its own history from its surviving persistent parts.
+
+Contract-specific anti-combination behavior for docked Mass and unfinished Control holds is the separate Step 7 feature and should not be treated as a Step 6 acceptance requirement.
 
 ---
 
@@ -430,34 +437,89 @@ entries keyed by stable agency identity.
 
 ## `FLIGHT_CONTRACT_PROGRESS`
 
-Confirm it stores only temporary active-flight evaluation state, including:
-
-- active attempt identity;
-- launch time and origin;
-- maximum Directed Power altitude and speed history;
-- orbit invalidation;
-- repeated `CONTROL_STATE` children.
-
-Each `CONTROL_STATE` should contain:
+Confirm the current format contains repeated:
 
 ```text
-objectiveId
-holdSeconds
-wasSampleInBand
-qualified
+ATTEMPT
 ```
 
-Instantaneous telemetry such as current altitude, current mass, current biome, and current crew should be rebuilt from the next live sample after load.
+nodes rather than one active attempt stored directly on the root.
 
-## Save/reload checks
+Each `ATTEMPT` should contain:
 
-1. Save with no active attempt and confirm reload does not invent one.
+```text
+selected
+vesselId
+body
+launchUniversalTime
+startLatitude
+startLongitude
+lastSampleUniversalTime
+maximumAltitudeMeters
+maximumSurfaceSpeedMetersPerSecond
+enteredOrbit
+```
+
+Each remembered persistent part should appear as a nested:
+
+```text
+PART_LINEAGE
+{
+    partPersistentId = ...
+}
+```
+
+and each saved Control objective should remain nested under its owning attempt as:
+
+```text
+CONTROL_STATE
+{
+    objectiveId = ...
+    holdSeconds = ...
+    wasSampleInBand = ...
+    qualified = ...
+}
+```
+
+Confirm:
+
+- every remembered attempt is written, not only the currently selected craft;
+- at most one `ATTEMPT` is marked `selected = true`;
+- two histories that were docked may legitimately contain the same last `vesselId` without being merged;
+- their `PART_LINEAGE` IDs remain independent;
+- the old root-level `active`, `vesselId`, and root-level `CONTROL_STATE` layout is not written by the current build.
+
+Instantaneous telemetry such as current altitude, current mass, current biome, current crew, and current reference part should be rebuilt from the next live sample after load.
+
+## Multi-attempt save/reload check
+
+Use two controllable craft with clearly different Directed Power maximum speeds because that history is easy to see in FlightActiveUI:
+
+1. Fly Craft A and record a recognizable maximum speed.
+2. Switch to Craft B and record a different maximum speed.
+3. Return to A and confirm its old maximum is still present.
+4. Optionally dock A and B, then use **Control From Here** on B so both lineages share one KSP vessel while B is selected.
+5. Save the game while B is selected.
+6. Reload the save and confirm B's saved maximum is restored immediately.
+7. Switch to A, or undock and switch to A if the save was made docked.
+8. Confirm A's previous independent maximum is restored by its saved persistent-part lineage rather than starting at the post-load live value.
+9. Switch back to B and confirm B retains its own history.
+10. If practical, save again after undocking, reload, and reconfirm both histories.
+
+The key Step 6 result is **A -> B -> save while B -> reload -> A still remembers A**.
+
+## Other save/reload checks
+
+1. Save with no remembered attempt and confirm reload does not invent one.
 2. Save during a Directed Power attempt after exceeding 70 km; reload and confirm the invalidation remains.
 3. Save during a Control hold; reload and confirm valid saved progress resumes.
 4. Save after Control qualification but before recovery; reload and confirm either a landing or splashdown can still complete it.
 5. Move Flight -> Space Center -> Tracking Station -> Flight and confirm campaign state remains consistent.
 6. Load a different KSP save in the same process and confirm campaign, rival, tracking, and callback state does not leak across saves.
-7. Corrupt a current-format `CONTROL_STATE` in a disposable save and confirm malformed progress fails closed rather than inventing valid progress.
+7. Corrupt a current-format `CONTROL_STATE` inside one `ATTEMPT` in a disposable save and confirm malformed Flight Contract progress fails closed rather than inventing valid progress.
+8. If practical, duplicate one `partPersistentId` across two `ATTEMPT` nodes in a disposable save and confirm the ambiguous Flight Contract progress is rejected rather than merging histories.
+
+The current Step 6 format intentionally does not migrate the earlier development single-attempt root layout.
 
 ---
 
@@ -506,7 +568,7 @@ Look for:
 
 - repeated exceptions;
 - vessel-destruction callback errors;
-- save/load errors;
+- Flight Attempt save/load errors or histories unexpectedly resetting after reload;
 - excessive per-frame logging.
 
 ---
@@ -524,6 +586,8 @@ Before calling a 0.5 build ready for broader testing, confirm all of the followi
 - [ ] Control hold + safe landing/splashdown works.
 - [ ] Biome landed/splashed completion behaviour works where the target biome is reported.
 - [ ] Multiple simultaneously offered contracts evaluate independently.
+- [ ] Staging, vessel switching, docking, and undocking preserve independent Flight Attempt histories.
+- [ ] Multiple Flight Attempts and their part lineages survive save/reload.
 - [ ] Any Agency progression works.
 - [ ] Sponsor reviews offer all unlocked Pre-Orbit contracts.
 - [ ] Any Level V offers Probe Orbit immediately.

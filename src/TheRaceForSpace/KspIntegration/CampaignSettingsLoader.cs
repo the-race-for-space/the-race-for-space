@@ -70,6 +70,7 @@ namespace TheRaceForSpace.KspIntegration
                 0,
                 int.MaxValue);
 
+            ApplyPreOrbitSettings(rootNode.GetNode("PRE_ORBIT"));
             ApplyBodySettings(rootNode.GetNode("KERBIN"), CampaignSettings.Kerbin);
             ApplyBodySettings(rootNode.GetNode("KERBIN_MOONS"), CampaignSettings.KerbinMoons);
             ApplyBodySettings(
@@ -80,6 +81,34 @@ namespace TheRaceForSpace.KspIntegration
                 CampaignSettings.InterplanetaryMoons);
 
             Debug.Log("[TheRaceForSpace] Loaded CampaignSettings.cfg.");
+        }
+
+        private static void ApplyPreOrbitSettings(ConfigNode node)
+        {
+            if (node == null)
+            {
+                return;
+            }
+
+            for (int level = 1; level <= 5; level++)
+            {
+                string levelText = level.ToString(CultureInfo.InvariantCulture);
+                double rewardFunds = ReadDouble(
+                    node,
+                    "level" + levelText + "Reward",
+                    CampaignSettings.GetPreOrbitRewardFunds(level),
+                    0.0,
+                    double.MaxValue);
+                double rivalProgressCostFunds = ReadDouble(
+                    node,
+                    "level" + levelText + "RivalProgressCost",
+                    CampaignSettings.GetPreOrbitRivalProgressCostFunds(level),
+                    0.0,
+                    double.MaxValue);
+
+                CampaignSettings.SetPreOrbitRewardFunds(level, rewardFunds);
+                CampaignSettings.SetPreOrbitRivalProgressCostFunds(level, rivalProgressCostFunds);
+            }
         }
 
         private static void ApplyBodySettings(ConfigNode node, BodyBalanceSettings settings)

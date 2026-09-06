@@ -17,6 +17,7 @@ ModRuntime
     +--> KspVesselMonitor
     |       |
     |       +--> FlightContractTracker
+    |       |       +--> remembered FlightAttemptState records
     |       +--> OrbitalVesselTracker
     |
     v
@@ -79,6 +80,10 @@ One of the current twenty Kerbin contracts in the Directed Power, Mass, Control,
 ### Flight Contract
 
 Generic active-vessel contract infrastructure. The current Pre-Orbit contracts use it, but future Mun, Minmus, or other active-vessel contracts can use it too.
+
+### Flight Attempt
+
+One remembered set of active-vessel Flight Contract history, such as launch origin, maximum speed/altitude, orbit state, and Control progress. Step 2 can keep several unrelated attempts in memory during the current session; persistent lineage identity and multi-attempt save data are later steps.
 
 ## Main classes
 
@@ -169,7 +174,7 @@ Creates the code-owned funding contract set.
 
 Location: `Tracking/FlightContractTracker.cs`
 
-Evaluates frequent active-vessel telemetry.
+Evaluates frequent active-vessel telemetry and selects the remembered attempt associated with the currently sampled craft.
 
 Current Pre-Orbit uses:
 
@@ -178,7 +183,15 @@ Current Pre-Orbit uses:
 - Control — altitude-band hold, crew, and safe landed/splashed recovery;
 - Biome — current biome and landed/splashed state.
 
-It can evaluate several offered contracts independently from the same flight.
+It can evaluate several offered contracts independently from the same flight. It now also retains independent in-memory attempt histories for unrelated vessel IDs, so A -> B -> A restores A's previous maxima/history during the same session instead of starting over.
+
+The vessel-ID lookup is temporary. Same-launch time/body matching still preserves the old staging behaviour until persistent part lineage and split/merge rules are added.
+
+### `FlightAttemptState`
+
+Location: `Tracking/FlightAttemptState.cs`
+
+Stores the mutable state for one remembered Flight Attempt. It contains the attempt's current KSP vessel/body identity, launch origin/time, historical maxima, orbit state, current presentation telemetry, and independent Control-contract state. It does not evaluate contract rules itself.
 
 ### `OrbitalVesselTracker`
 
@@ -204,6 +217,8 @@ This is where raw KSP vessel access belongs.
 Location: `KspIntegration/ModPersistenceScenario.cs`
 
 Connects the project-owned save-state classes to KSP's `ScenarioModule` save/load system.
+
+The current `FLIGHT_CONTRACT_PROGRESS` format still serializes only the currently active Flight Attempt. Inactive attempts remembered by Step 2 are session-only until the planned multi-attempt persistence step.
 
 ### `RivalSimulation`
 
@@ -264,11 +279,14 @@ ActiveVesselSnapshot
     v
 FlightContractTracker
     |
+    +--> select/create current FlightAttemptState
     +--> campaign completion evaluation
     +--> read-only FlightActiveUI presentation
 ```
 
 The telemetry request is requirement-gated. If only Mass is active, there is no reason to query biome or enable Directed Power impact callbacks.
+
+Only the active vessel is sampled at the normal fast-path cadence. Remembered inactive attempts are passive state; switching back to one reselects it from memory and resumes its historical maxima and qualified state. An unfinished continuous Control hold still resets when the observation gap is too long, because the tracker cannot prove continuity while the vessel was not observed.
 
 UI visibility does not change the telemetry cadence; the tracker continues to be updated by `ModRuntime` whether the compact window is open or closed.
 
@@ -299,7 +317,7 @@ This is slower and runs less often.
 4. It becomes part of `ActiveFlightContracts`.
 5. `FlightTelemetryPlan` requests Mass telemetry.
 6. `KspVesselMonitor` captures active-vessel mass, launch position, current position, and situation.
-7. `FlightContractTracker` checks the Mass II requirements.
+7. `FlightContractTracker` selects the active craft's remembered Flight Attempt and checks the Mass II requirements.
 8. On a valid Kerbin landing or splashdown, `AgencyState.RecordObjectiveCompletion()` records the result and raises the new-completion signal.
 9. `FundingNotificationUI` posts the stock funding-target completion message for Mass II.
 10. `CampaignController` updates unlocks and funding state.
@@ -322,6 +340,7 @@ This is slower and runs less often.
 | Objective definitions or thresholds | `Objectives/ObjectiveCatalogue.cs` |
 | Unlock rules | `Objectives/UnlockRuleEvaluator.cs` |
 | Active-vessel contract behaviour | `Tracking/FlightContractTracker.cs` |
+| Flight Attempt state | `Tracking/FlightAttemptState.cs` |
 | KSP telemetry collection | `KspIntegration/KspVesselMonitor.cs` |
 | Orbital tracking | `Tracking/OrbitalVesselTracker.cs` |
 | Sponsor review or campaign progression | `Campaign/CampaignController.cs` |

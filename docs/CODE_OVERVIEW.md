@@ -16,7 +16,9 @@ ModRuntime
     |
     +--> KspVesselMonitor
     |       |
-    |       +--> ActiveVesselSnapshot + persistent part IDs
+    |       +--> ActiveVesselSnapshot
+    |       |       +--> persistent part IDs
+    |       |       +--> reference/control part persistent ID
     |       |       |
     |       |       +--> FlightContractTracker
     |       |               +--> remembered FlightAttemptState records
@@ -85,7 +87,9 @@ Generic active-vessel contract infrastructure. The current Pre-Orbit contracts u
 
 ### Flight Attempt
 
-One remembered set of active-vessel Flight Contract history, such as launch origin, maximum speed/altitude, orbit state, and Control progress. Several attempts can remain in memory during the current session. Each attempt now also remembers the persistent-part lineage that identifies which actively controlled split/staged branch owns that history. Vessel ID is retained only as a fast lookup cache; full docking/undocking multi-lineage ownership remains Step 5.
+One remembered set of active-vessel Flight Contract history, such as launch origin, maximum speed/altitude, orbit state, and Control progress. Several attempts can remain in memory during the current session. Each attempt remembers the persistent-part lineage that owns that history, while KSP vessel ID is retained only as a fast lookup cache.
+
+A docked KSP vessel may contain several Flight Attempt lineages at once. Their histories stay separate. The lineage containing KSP's current reference/control part is the one shown/evaluated as the active attempt; `Control From Here` can move that selection to another remembered lineage without combining their historical progress.
 
 ## Main classes
 
@@ -187,11 +191,15 @@ Current Pre-Orbit uses:
 
 It can evaluate several offered contracts independently from the same flight and retains independent in-memory histories for several craft.
 
-Normal unchanged-vessel samples still use a direct vessel-ID dictionary lookup. If that ID is new, or if KSP reuses an ID for a craft that shares none of the remembered lineage, the tracker searches the remembered attempts for persistent-part overlap instead. A unique overlapping attempt is rebound to the current KSP vessel ID.
+Normal unchanged-vessel samples use the direct vessel-ID dictionary when its cached attempt still owns the current reference/control part. If the vessel ID changes, conflicts with remembered lineage, or a docked vessel's reference part belongs to another remembered attempt, the tracker resolves the correct attempt from persistent-part lineage instead.
 
 When staging or another split removes parts, the continued attempt keeps only the persistent IDs still present on the actively controlled branch. A detached branch therefore cannot later inherit the parent's historical maxima or Control qualification merely because it has the same launch time. The previous launch-time/body fallback is used only for lineage-less attempts, mainly the current single-attempt restore path before its first normal snapshot.
 
-If several remembered lineages are present together, the tracker currently keeps the attempt the player was already controlling and deliberately does not merge histories or absorb newly attached parts. Step 5 will define the complete docking/undocking behavior.
+Docking never merges remembered histories or automatically absorbs the other craft's parts into the selected attempt. A combined vessel may contain several remembered lineages. The lineage containing `ActiveVesselSnapshot.ReferencePartPersistentId` receives live telemetry. If the player uses KSP's `Control From Here` on the other docked craft, that other attempt becomes active while retaining its own earlier maxima/origin/state. After undocking, each branch is matched back to its own persistent-part lineage.
+
+If KSP temporarily has no usable reference-part ID, the tracker keeps the current matching attempt when possible and otherwise uses the strongest existing persistent-part overlap so it does not invent one merged history from several docked craft.
+
+Step 5 is intentionally about identity and history separation only. Step 7 will define contract-specific topology rules, especially how Mass should treat attached mass from another lineage and whether docking should invalidate an unfinished continuous Control hold.
 
 ### `FlightAttemptState`
 
@@ -199,13 +207,13 @@ Location: `Tracking/FlightAttemptState.cs`
 
 Stores the mutable state for one remembered Flight Attempt. It contains the attempt's current KSP vessel/body identity, launch origin/time, historical maxima, orbit state, current presentation telemetry, independent Control-contract state, and its current set of remembered persistent-part IDs. It does not evaluate contract rules itself.
 
-The lineage set is seeded from the attempt's first snapshot and is narrowed when parts leave the actively continued branch. Newly attached parts are not automatically added yet, because docking and constructed-part ownership need explicit topology rules rather than accidental history merging.
+The lineage set is seeded from the attempt's first snapshot and is narrowed when parts leave the actively continued branch. Newly attached parts are not automatically added, so docking cannot silently merge independent histories.
 
 ### `ActiveVesselSnapshot`
 
 Location: `Tracking/ActiveVesselSnapshot.cs`
 
-Carries KSP-independent active-vessel values into the tracker. Alongside telemetry and launch context it includes a read-only list of KSP part persistent IDs represented only as primitive `uint` values. The constructor copies that list so later KSP-side collection changes cannot mutate an already captured snapshot.
+Carries KSP-independent active-vessel values into the tracker. Alongside telemetry and launch context it includes a read-only list of KSP part persistent IDs represented only as primitive `uint` values plus `ReferencePartPersistentId`, the persistent ID of KSP's current reference/control part. The constructor copies the part-ID list so later KSP-side collection changes cannot mutate an already captured snapshot.
 
 ### `OrbitalVesselTracker`
 
@@ -224,7 +232,9 @@ Location: `KspIntegration/KspVesselMonitor.cs`
 
 Reads KSP vessel state and converts it into project-owned snapshots.
 
-For the Flight Contract path it walks only the active loaded vessel's existing `parts` list and copies every non-zero `Part.persistentId` into `ActiveVesselSnapshot`. Raw KSP `Part` objects remain inside `KspIntegration`; the tracking layer sees only primitive IDs. The deduplicated telemetry status line includes the number of persistent part IDs captured, which gives an in-game diagnostic for this boundary.
+For the Flight Contract path it walks only the active loaded vessel's existing `parts` list and copies every non-zero `Part.persistentId` into `ActiveVesselSnapshot`. It also reads KSP's current reference transform part through `GetReferenceTransformPart()`, falling back to the vessel root part during transient topology changes, and passes only that part's persistent ID across the integration boundary. Raw KSP `Part` objects remain inside `KspIntegration`.
+
+The deduplicated telemetry status line includes both the number of persistent part IDs and the current reference-part ID, which gives an in-game diagnostic for staging/docking lineage selection.
 
 This is where raw KSP vessel access belongs.
 
@@ -234,7 +244,7 @@ Location: `KspIntegration/ModPersistenceScenario.cs`
 
 Connects the project-owned save-state classes to KSP's `ScenarioModule` save/load system.
 
-The current `FLIGHT_CONTRACT_PROGRESS` format still serializes only the currently active Flight Attempt. Inactive attempts and their Step 4 lineage sets remain session-only until the planned multi-attempt persistence step.
+The current `FLIGHT_CONTRACT_PROGRESS` format still serializes only the currently active Flight Attempt. Inactive attempts and their Step 5 lineage relationships remain session-only until the planned multi-attempt persistence step.
 
 ### `RivalSimulation`
 
@@ -291,6 +301,7 @@ KspVesselMonitor
     |
     +--> condition telemetry
     +--> Part.persistentId values
+    +--> reference/control Part.persistentId
     |
     v
 ActiveVesselSnapshot
@@ -298,20 +309,21 @@ ActiveVesselSnapshot
     v
 FlightContractTracker
     |
-    +--> vessel-ID cache when lineage-compatible
+    +--> vessel-ID cache when reference lineage matches
+    +--> reference-part ownership for docked assemblies
     +--> persistent-part overlap when identity changes
     +--> select/create current FlightAttemptState
     +--> campaign completion evaluation
     +--> read-only FlightActiveUI presentation
 ```
 
-The telemetry request is requirement-gated. If only Mass is active, there is no reason to query biome or enable Directed Power impact callbacks. Persistent part IDs are common attempt identity context, so they are captured whenever this already-active snapshot path runs.
+The telemetry request is requirement-gated. If only Mass is active, there is no reason to query biome or enable Directed Power impact callbacks. Persistent part IDs and the reference-part ID are common attempt identity context, so they are captured whenever this already-active snapshot path runs.
 
-Only the active vessel is sampled at the normal fast-path cadence. Remembered inactive attempts are passive state. Most samples use the O(1) vessel-ID cache; the tracker scans the small in-memory attempt collection for lineage overlap only when vessel identity changes or conflicts.
+Only the active vessel is sampled at the normal fast-path cadence. Remembered inactive attempts are passive state. Most samples use the O(1) vessel-ID cache plus one reference-part membership check. The tracker scans the small in-memory attempt collection only when the current reference part belongs to a different history, vessel identity changes/conflicts, or a fallback overlap match is required.
 
-When a split/staged branch continues the attempt, its lineage is narrowed to the persistent parts still on that branch. An unfinished continuous Control hold still resets when the observation gap is too long, because the tracker cannot prove continuity while the vessel was not observed.
+When a split/staged branch continues the attempt, its lineage is narrowed to the persistent parts still on that branch. When several lineages are docked together they remain separate; only the selected reference lineage receives the current sample. An unfinished continuous Control hold still resets when the observation gap is too long, because the tracker cannot prove continuity while that attempt was not observed.
 
-The persistent-part capture adds one pass over the active vessel's loaded part list per captured telemetry sample. It does not scan other KSP vessels or add a new timer.
+The persistent-part capture adds one pass over the active vessel's loaded part list per captured telemetry sample and one reference-part lookup. It does not scan other KSP vessels or add a new timer.
 
 UI visibility does not change the telemetry cadence; the tracker continues to be updated by `ModRuntime` whether the compact window is open or closed.
 
@@ -341,12 +353,14 @@ This is slower and runs less often.
 3. `CampaignController` offers it after the correct progression and sponsor-review rules are met.
 4. It becomes part of `ActiveFlightContracts`.
 5. `FlightTelemetryPlan` requests Mass telemetry.
-6. `KspVesselMonitor` captures active-vessel mass, launch position, current position, situation, and persistent part IDs.
-7. `FlightContractTracker` resolves the active craft's remembered Flight Attempt through the vessel-ID cache or part-lineage overlap and checks the Mass II requirements.
+6. `KspVesselMonitor` captures active-vessel mass, launch position, current position, situation, persistent part IDs, and the reference/control part ID.
+7. `FlightContractTracker` resolves the active craft's remembered Flight Attempt without merging any other docked lineage and checks the Mass II requirements.
 8. On a valid Kerbin landing or splashdown, `AgencyState.RecordObjectiveCompletion()` records the result and raises the new-completion signal.
 9. `FundingNotificationUI` posts the stock funding-target completion message for Mass II.
 10. `CampaignController` updates unlocks and funding state.
 11. Persistence saves the change; the Command Center and FlightActiveUI read the resulting state for presentation.
+
+The current Mass evaluator still sees KSP's total active-vessel mass. Preventing unrelated docked mass from satisfying another attempt is explicitly reserved for Step 7.
 
 ## Example: completing Probe Orbit
 

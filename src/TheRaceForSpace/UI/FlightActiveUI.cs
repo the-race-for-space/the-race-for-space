@@ -1,4 +1,7 @@
 using KSP.UI.Screens;
+using TheRaceForSpace.Campaign;
+using TheRaceForSpace.Core;
+using TheRaceForSpace.Funding;
 using UnityEngine;
 
 namespace TheRaceForSpace.UI
@@ -12,13 +15,17 @@ namespace TheRaceForSpace.UI
     {
         private const float WindowBackgroundOpacity = 0.82f;
         private const float WindowWidth = 380.0f;
-        private const float WindowHeight = 120.0f;
+        private const float WindowHeight = 220.0f;
         private const string LauncherIconTexturePath =
             "Squad/PartList/SimpleIcons/R&D_node_icon_flightControl";
+
+        private static readonly GUILayoutOption[] ContractMarkerOptions = { GUILayout.Width(24.0f) };
+        private static readonly GUILayoutOption[] CompleteLabelOptions = { GUILayout.Width(72.0f) };
 
         private static FlightActiveUI _activeInstance;
 
         private ApplicationLauncherButton _launcherButton;
+        private CampaignController _campaignController;
         private GUI.WindowFunction _drawWindowFunction;
         private Rect _windowRect;
         private bool _isDuplicateInstance;
@@ -57,6 +64,7 @@ namespace TheRaceForSpace.UI
             }
 
             _launcherButton = null;
+            _campaignController = null;
             _drawWindowFunction = null;
 
             if (_activeInstance == this)
@@ -73,6 +81,10 @@ namespace TheRaceForSpace.UI
             {
                 return;
             }
+
+            // The Core runtime owns this controller. FlightActiveUI only refreshes its non-owning
+            // reference so a UI instance created before the runtime is ready can recover naturally.
+            _campaignController = ModRuntime.Controller;
 
             // The stock launcher is not guaranteed to be ready during Awake, so create the button
             // lazily once KSP exposes it. No campaign or vessel work is performed from this Update.
@@ -165,7 +177,72 @@ namespace TheRaceForSpace.UI
 
         private void DrawWindow(int windowId)
         {
-            GUILayout.Label("Flight contract list will appear here.");
+            if (_campaignController == null)
+            {
+                GUILayout.Label("Contract data is not available yet.");
+                GUILayout.FlexibleSpace();
+                GUI.DragWindow();
+                return;
+            }
+
+            bool hasUncompletedContracts = false;
+            for (int contractIndex = 0;
+                contractIndex < _campaignController.ObjectiveFundingContracts.Count;
+                contractIndex++)
+            {
+                ObjectiveFundingContract contract =
+                    _campaignController.ObjectiveFundingContracts[contractIndex];
+                if (contract.IsExpired
+                    || !contract.IsOffered
+                    || _campaignController.HasAgencyCompletedObjective(
+                        _campaignController.PlayerAgency,
+                        contract))
+                {
+                    continue;
+                }
+
+                hasUncompletedContracts = true;
+                GUILayout.BeginHorizontal();
+                GUILayout.Label("+", ContractMarkerOptions);
+                GUILayout.Label(contract.Name);
+                GUILayout.EndHorizontal();
+            }
+
+            bool hasCompletedContracts = false;
+            for (int contractIndex = 0;
+                contractIndex < _campaignController.ObjectiveFundingContracts.Count;
+                contractIndex++)
+            {
+                ObjectiveFundingContract contract =
+                    _campaignController.ObjectiveFundingContracts[contractIndex];
+                if (contract.IsExpired
+                    || !contract.IsOffered
+                    || !_campaignController.HasAgencyCompletedObjective(
+                        _campaignController.PlayerAgency,
+                        contract))
+                {
+                    continue;
+                }
+
+                if (!hasCompletedContracts && hasUncompletedContracts)
+                {
+                    GUILayout.Space(6.0f);
+                }
+
+                hasCompletedContracts = true;
+                GUILayout.BeginHorizontal();
+                GUILayout.Space(24.0f);
+                GUILayout.Label(contract.Name);
+                GUILayout.FlexibleSpace();
+                GUILayout.Label("Complete", CompleteLabelOptions);
+                GUILayout.EndHorizontal();
+            }
+
+            if (!hasUncompletedContracts && !hasCompletedContracts)
+            {
+                GUILayout.Label("No offered contracts.");
+            }
+
             GUILayout.FlexibleSpace();
             GUI.DragWindow();
         }

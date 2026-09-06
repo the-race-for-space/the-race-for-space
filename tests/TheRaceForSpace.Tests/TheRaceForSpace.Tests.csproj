@@ -30,6 +30,7 @@
     <Compile Include="../../src/TheRaceForSpace/Tracking/OrbitingVesselSnapshot.cs" Link="Production/Tracking/OrbitingVesselSnapshot.cs" />
     <Compile Include="../../src/TheRaceForSpace/Tracking/ActiveVesselSnapshot.cs" Link="Production/Tracking/ActiveVesselSnapshot.cs" />
     <Compile Include="../../src/TheRaceForSpace/Tracking/OrbitalVesselTracker.cs" Link="Production/Tracking/OrbitalVesselTracker.cs" />
+    <Compile Include="../../src/TheRaceForSpace/Tracking/FlightAttemptState.cs" Link="Production/Tracking/FlightAttemptState.cs" />
     <Compile Include="../../src/TheRaceForSpace/Tracking/FlightContractTracker.cs" Link="Production/Tracking/FlightContractTracker.cs" />
     <Compile Include="../../src/TheRaceForSpace/Tracking/SurfaceImpactEvaluator.cs" Link="Production/Tracking/SurfaceImpactEvaluator.cs" />
     <Compile Include="../../src/TheRaceForSpace/Persistence/CampaignFundingSaveState.cs" Link="Production/Persistence/CampaignFundingSaveState.cs" />

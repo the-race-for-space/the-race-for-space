@@ -30,6 +30,7 @@ CampaignController
     +--> Persistence
     +--> CommandCenterWindow reads campaign/funding state
     +--> FlightActiveUI reads offered/live Flight Contract state
+    +--> FundingNotificationUI publishes new player completions through KSP MessageSystem
 ```
 
 `ModRuntime` decides **when** work happens.
@@ -40,7 +41,7 @@ The trackers decide **what the vessel state means**.
 
 `CampaignController` coordinates **campaign progression**.
 
-The UI only **displays** the current state.
+The UI only **displays or reports** the current state.
 
 ## Main terms
 
@@ -121,6 +122,8 @@ Examples:
 - funds;
 - satellite counts;
 - rival mission progress.
+
+A genuinely new gameplay completion recorded through `RecordObjectiveCompletion()` raises an internal completion signal. Persistence uses `RestoreObjectiveCompletion()` instead, which restores the same saved state without raising that signal. This is what prevents old achievements from being announced again when a save is loaded.
 
 ### `ObjectiveDefinition`
 
@@ -226,6 +229,23 @@ It has its own Flight-scene launcher button and reads the same controller/tracke
 
 Expanded Pre-Orbit contracts show the live requirements already tracked for Directed Power, Mass, Control, and Biome. Other objective types use their normal objective description. The window does not query KSP vessels or create a second telemetry loop.
 
+### `FundingNotificationUI`
+
+Location: `UI/FundingNotificationUI.cs`
+
+Publishes the stock KSP inbox notice for a newly completed player Objective Funding Contract.
+
+The class subscribes once for the KSP session to `AgencyState.ObjectiveCompletionRecorded`. Player completions are queued by stable objective ID until KSP's `MessageSystem` is ready, then resolved back to the current `ObjectiveFundingContract`. A message is sent only when the matching funding target is currently Offered and unexpired. Rival completions are ignored.
+
+The approved notification format is:
+
+```text
+Funding Target Completed — Control II
+Control II has been achieved. Your agency is now eligible for a share of the remaining contract funding.
+```
+
+The message uses KSP's green message styling and normal message icon. It does not complete objectives, calculate funding, or add another polling/telemetry loop. Loading saved objective completions is silent, so historical achievements do not generate duplicate inbox entries.
+
 ## The two vessel paths
 
 ### 1. Flight Contract path
@@ -280,9 +300,10 @@ This is slower and runs less often.
 5. `FlightTelemetryPlan` requests Mass telemetry.
 6. `KspVesselMonitor` captures active-vessel mass, launch position, current position, and situation.
 7. `FlightContractTracker` checks the Mass II requirements.
-8. On a valid Kerbin landing, `AgencyState.RecordObjectiveCompletion()` records the result.
-9. `CampaignController` updates unlocks and funding state.
-10. Persistence saves the change; the Command Center and FlightActiveUI read the resulting state for presentation.
+8. On a valid Kerbin landing, `AgencyState.RecordObjectiveCompletion()` records the result and raises the new-completion signal.
+9. `FundingNotificationUI` posts the stock funding-target completion message for Mass II.
+10. `CampaignController` updates unlocks and funding state.
+11. Persistence saves the change; the Command Center and FlightActiveUI read the resulting state for presentation.
 
 ## Example: completing Probe Orbit
 
@@ -290,8 +311,9 @@ This is slower and runs less often.
 2. A qualifying uncrewed Probe or Relay enters Kerbin orbit.
 3. The slower vessel scan captures that vessel.
 4. `OrbitalVesselTracker` evaluates the orbital objective.
-5. The player's agency records Probe Orbit completion.
-6. Campaign progression and funding update on the normal controller path.
+5. The player's agency records Probe Orbit completion and emits the same completion signal.
+6. `FundingNotificationUI` posts the stock completion notice if Probe Orbit is still an Offered, unexpired funding target.
+7. Campaign progression and funding update on the normal controller path.
 
 ## Where to make changes
 
@@ -309,9 +331,10 @@ This is slower and runs less often.
 | KSP save/load hooks | `KspIntegration/ModPersistenceScenario.cs` |
 | Full Command Center | `UI/CommandCenterWindow.cs` |
 | Compact Flight contract window | `UI/FlightActiveUI.cs` |
+| Funding completion inbox messages | `UI/FundingNotificationUI.cs` |
 
 ## Three rules to remember
 
-1. **KSP API access stays in `KspIntegration` where practical.**
+1. **KSP API access stays in `KspIntegration` where practical.** Presentation classes may use KSP's stock UI APIs for their own display responsibility.
 2. **Gameplay logic should use project-owned state and snapshots.**
-3. **The UI displays state; it does not advance the campaign.**
+3. **The UI displays or reports state; it does not advance the campaign.**

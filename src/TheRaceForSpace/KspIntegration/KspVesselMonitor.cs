@@ -24,10 +24,13 @@ namespace TheRaceForSpace.KspIntegration
         private static string _pendingImpactBodyName;
         private static double _pendingImpactUniversalTime = -1.0;
         private static string _lastActiveVesselTelemetryStatus;
+        private static uint[] _lastObservedPartPersistentIds;
 
         /// <summary>
         /// Captures the orbiting vessels available in the current save together with the KSP
         /// universal time for that observation. Returns false while required game state is not ready.
+        /// The same broad vessel walk also snapshots every persistent part ID still present in the
+        /// save so Flight Attempt cleanup can reuse this low-frequency population refresh.
         /// </summary>
         public static bool TryCaptureOrbitingVesselSnapshots(
             out IList<OrbitingVesselSnapshot> vesselSnapshots,
@@ -55,6 +58,7 @@ namespace TheRaceForSpace.KspIntegration
             currentUniversalTime = observationUniversalTime;
             List<ProtoVessel> protoVessels = HighLogic.CurrentGame.flightState.protoVessels;
             var snapshots = new List<OrbitingVesselSnapshot>(protoVessels.Count);
+            var observedPartPersistentIds = new HashSet<uint>();
 
             for (int vesselIndex = 0; vesselIndex < protoVessels.Count; vesselIndex++)
             {
@@ -69,11 +73,23 @@ namespace TheRaceForSpace.KspIntegration
                 int crewCount;
                 Vessel liveVessel = protoVessel.vesselRef;
 
-                // A loaded vessel's ProtoVessel can lag behind the live craft after a scene
-                // transition. Prefer live situation/body/type/crew so a newly reached orbit is
-                // visible immediately. Unloaded vessels continue to use persistent state.
+                // A loaded vessel's ProtoVessel can lag behind the live craft after a scene or
+                // topology transition. Use live parts for the existence snapshot whenever possible;
+                // unloaded vessels use their persistent ProtoPartSnapshots instead.
                 if (liveVessel != null && liveVessel.loaded)
                 {
+                    if (liveVessel.parts != null)
+                    {
+                        for (int partIndex = 0; partIndex < liveVessel.parts.Count; partIndex++)
+                        {
+                            Part part = liveVessel.parts[partIndex];
+                            if (part != null && part.persistentId != 0u)
+                            {
+                                observedPartPersistentIds.Add(part.persistentId);
+                            }
+                        }
+                    }
+
                     if (liveVessel.situation != Vessel.Situations.ORBITING
                         || liveVessel.mainBody == null)
                     {
@@ -86,6 +102,21 @@ namespace TheRaceForSpace.KspIntegration
                 }
                 else
                 {
+                    if (protoVessel.protoPartSnapshots != null)
+                    {
+                        for (int partIndex = 0;
+                            partIndex < protoVessel.protoPartSnapshots.Count;
+                            partIndex++)
+                        {
+                            ProtoPartSnapshot partSnapshot =
+                                protoVessel.protoPartSnapshots[partIndex];
+                            if (partSnapshot != null && partSnapshot.persistentId != 0u)
+                            {
+                                observedPartPersistentIds.Add(partSnapshot.persistentId);
+                            }
+                        }
+                    }
+
                     if (protoVessel.orbitSnapShot == null
                         || protoVessel.situation != Vessel.Situations.ORBITING
                         || FlightGlobals.Bodies == null)
@@ -121,8 +152,24 @@ namespace TheRaceForSpace.KspIntegration
                     Math.Max(0, crewCount)));
             }
 
+            var observedPartPersistentIdSnapshot = new uint[observedPartPersistentIds.Count];
+            observedPartPersistentIds.CopyTo(observedPartPersistentIdSnapshot);
+            _lastObservedPartPersistentIds = observedPartPersistentIdSnapshot;
+
             vesselSnapshots = snapshots;
             return true;
+        }
+
+        /// <summary>
+        /// Returns the persistent part population captured by the most recent successful broad
+        /// vessel refresh. The returned primitive snapshot owns no KSP objects and is not rebuilt
+        /// by the one-second active-vessel telemetry path.
+        /// </summary>
+        internal static bool TryGetLastObservedPartPersistentIds(
+            out IReadOnlyList<uint> partPersistentIds)
+        {
+            partPersistentIds = _lastObservedPartPersistentIds;
+            return partPersistentIds != null;
         }
 
         /// <summary>
@@ -416,6 +463,7 @@ namespace TheRaceForSpace.KspIntegration
             DisableActiveVesselSurfaceImpactTracking();
             _activeTrackingSaveFolder = null;
             _lastActiveVesselTelemetryStatus = null;
+            _lastObservedPartPersistentIds = null;
         }
 
         private static void EnsureActiveTrackingSaveFolder()

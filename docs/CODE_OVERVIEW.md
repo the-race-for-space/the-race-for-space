@@ -16,8 +16,10 @@ ModRuntime
     |
     +--> KspVesselMonitor
     |       |
-    |       +--> FlightContractTracker
-    |       |       +--> remembered FlightAttemptState records
+    |       +--> ActiveVesselSnapshot + persistent part IDs
+    |       |       |
+    |       |       +--> FlightContractTracker
+    |       |               +--> remembered FlightAttemptState records
     |       +--> OrbitalVesselTracker
     |
     v
@@ -83,7 +85,7 @@ Generic active-vessel contract infrastructure. The current Pre-Orbit contracts u
 
 ### Flight Attempt
 
-One remembered set of active-vessel Flight Contract history, such as launch origin, maximum speed/altitude, orbit state, and Control progress. Step 2 can keep several unrelated attempts in memory during the current session; persistent lineage identity and multi-attempt save data are later steps.
+One remembered set of active-vessel Flight Contract history, such as launch origin, maximum speed/altitude, orbit state, and Control progress. Step 2 can keep several unrelated attempts in memory during the current session. Step 3 now supplies stable KSP part persistent IDs on each active-vessel snapshot; Step 4 will use that lineage for attempt selection instead of relying on temporary vessel ID changes.
 
 ## Main classes
 
@@ -183,15 +185,21 @@ Current Pre-Orbit uses:
 - Control — altitude-band hold, crew, and safe landed/splashed recovery;
 - Biome — current biome and landed/splashed state.
 
-It can evaluate several offered contracts independently from the same flight. It now also retains independent in-memory attempt histories for unrelated vessel IDs, so A -> B -> A restores A's previous maxima/history during the same session instead of starting over.
+It can evaluate several offered contracts independently from the same flight. It also retains independent in-memory attempt histories for unrelated vessel IDs, so A -> B -> A restores A's previous maxima/history during the same session instead of starting over.
 
-The vessel-ID lookup is temporary. Same-launch time/body matching still preserves the old staging behaviour until persistent part lineage and split/merge rules are added.
+Step 3 does not yet change the tracker selection rule: vessel-ID lookup and the same-launch fallback remain active. The tracker can now receive persistent part lineage through `ActiveVesselSnapshot`, and Step 4 will use that data to replace the temporary staging/switching identity rule.
 
 ### `FlightAttemptState`
 
 Location: `Tracking/FlightAttemptState.cs`
 
 Stores the mutable state for one remembered Flight Attempt. It contains the attempt's current KSP vessel/body identity, launch origin/time, historical maxima, orbit state, current presentation telemetry, and independent Control-contract state. It does not evaluate contract rules itself.
+
+### `ActiveVesselSnapshot`
+
+Location: `Tracking/ActiveVesselSnapshot.cs`
+
+Carries KSP-independent active-vessel values into the tracker. Alongside telemetry and launch context it now includes a read-only list of KSP part persistent IDs represented only as primitive `uint` values. The constructor copies that list so later KSP-side collection changes cannot mutate an already captured snapshot.
 
 ### `OrbitalVesselTracker`
 
@@ -210,6 +218,8 @@ Location: `KspIntegration/KspVesselMonitor.cs`
 
 Reads KSP vessel state and converts it into project-owned snapshots.
 
+For the Flight Contract path it now walks only the active loaded vessel's existing `parts` list and copies every non-zero `Part.persistentId` into `ActiveVesselSnapshot`. Raw KSP `Part` objects remain inside `KspIntegration`; the tracking layer sees only primitive IDs. The deduplicated telemetry status line includes the number of persistent part IDs captured, which gives an in-game diagnostic for this boundary.
+
 This is where raw KSP vessel access belongs.
 
 ### `ModPersistenceScenario`
@@ -218,7 +228,7 @@ Location: `KspIntegration/ModPersistenceScenario.cs`
 
 Connects the project-owned save-state classes to KSP's `ScenarioModule` save/load system.
 
-The current `FLIGHT_CONTRACT_PROGRESS` format still serializes only the currently active Flight Attempt. Inactive attempts remembered by Step 2 are session-only until the planned multi-attempt persistence step.
+The current `FLIGHT_CONTRACT_PROGRESS` format still serializes only the currently active Flight Attempt. Inactive attempts remembered by Step 2 and the new Step 3 part-lineage IDs are session-only until the planned multi-attempt persistence step.
 
 ### `RivalSimulation`
 
@@ -273,6 +283,9 @@ Active KSP vessel
     v
 KspVesselMonitor
     |
+    +--> condition telemetry
+    +--> Part.persistentId values
+    |
     v
 ActiveVesselSnapshot
     |
@@ -284,9 +297,11 @@ FlightContractTracker
     +--> read-only FlightActiveUI presentation
 ```
 
-The telemetry request is requirement-gated. If only Mass is active, there is no reason to query biome or enable Directed Power impact callbacks.
+The telemetry request is requirement-gated. If only Mass is active, there is no reason to query biome or enable Directed Power impact callbacks. Persistent part IDs are common attempt identity context, so they are captured whenever this already-active snapshot path runs.
 
 Only the active vessel is sampled at the normal fast-path cadence. Remembered inactive attempts are passive state; switching back to one reselects it from memory and resumes its historical maxima and qualified state. An unfinished continuous Control hold still resets when the observation gap is too long, because the tracker cannot prove continuity while the vessel was not observed.
+
+Step 3 adds one pass over the active vessel's loaded part list per captured telemetry sample. It does not scan other vessels or add a new timer.
 
 UI visibility does not change the telemetry cadence; the tracker continues to be updated by `ModRuntime` whether the compact window is open or closed.
 
@@ -316,7 +331,7 @@ This is slower and runs less often.
 3. `CampaignController` offers it after the correct progression and sponsor-review rules are met.
 4. It becomes part of `ActiveFlightContracts`.
 5. `FlightTelemetryPlan` requests Mass telemetry.
-6. `KspVesselMonitor` captures active-vessel mass, launch position, current position, and situation.
+6. `KspVesselMonitor` captures active-vessel mass, launch position, current position, situation, and persistent part IDs.
 7. `FlightContractTracker` selects the active craft's remembered Flight Attempt and checks the Mass II requirements.
 8. On a valid Kerbin landing or splashdown, `AgencyState.RecordObjectiveCompletion()` records the result and raises the new-completion signal.
 9. `FundingNotificationUI` posts the stock funding-target completion message for Mass II.
@@ -341,7 +356,8 @@ This is slower and runs less often.
 | Unlock rules | `Objectives/UnlockRuleEvaluator.cs` |
 | Active-vessel contract behaviour | `Tracking/FlightContractTracker.cs` |
 | Flight Attempt state | `Tracking/FlightAttemptState.cs` |
-| KSP telemetry collection | `KspIntegration/KspVesselMonitor.cs` |
+| Active-vessel snapshot data | `Tracking/ActiveVesselSnapshot.cs` |
+| KSP telemetry or lineage collection | `KspIntegration/KspVesselMonitor.cs` |
 | Orbital tracking | `Tracking/OrbitalVesselTracker.cs` |
 | Sponsor review or campaign progression | `Campaign/CampaignController.cs` |
 | Funding calculations | `Funding/` |

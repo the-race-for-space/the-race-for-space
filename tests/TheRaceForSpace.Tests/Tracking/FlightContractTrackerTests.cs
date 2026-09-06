@@ -13,8 +13,10 @@ namespace TheRaceForSpace.Tests.Tracking
         {
             DirectedPowerRequiresImpactBelowCeiling();
             MassUsesRemainingMassAndLaunchDistance();
+            DockedMassRequiresOriginalAttemptToBeSeparate();
             ControlRequiresContinuousCrewedHoldAndLanding();
             UnobservedControlGapResetsHold();
+            ControlTopologyChangesResetUnqualifiedHold();
             BiomeAllowsOnlyOneLineObjectivePerLaunch();
             StagingPreservesDirectedPowerAttempt();
             DetachedStageDoesNotCloneAttemptHistory();
@@ -125,6 +127,105 @@ namespace TheRaceForSpace.Tests.Tracking
                 "A fresh splashed craft retaining at least 2.5 t beyond 75 km should complete Mass II.");
         }
 
+        private static void DockedMassRequiresOriginalAttemptToBeSeparate()
+        {
+            AgencyState player = new AgencyState("player", "Player", true);
+            var tracker = new FlightContractTracker();
+            var massContracts = new List<ObjectiveDefinition>
+            {
+                ObjectiveCatalogue.FindById(ObjectiveCatalogue.Mass1Id)
+            };
+
+            tracker.EvaluateActiveFlightContracts(
+                player,
+                massContracts,
+                Snapshot(
+                    "mass-topology-a",
+                    2200.0,
+                    2200.0,
+                    100.0,
+                    0.0,
+                    1.2,
+                    0,
+                    null,
+                    FlightSituation.Prelaunch,
+                    partPersistentIds: new uint[] { 1001u, 1002u },
+                    referencePartPersistentId: 1001u));
+            tracker.EvaluateActiveFlightContracts(
+                player,
+                massContracts,
+                Snapshot(
+                    "mass-topology-b",
+                    2300.0,
+                    2300.0,
+                    100.0,
+                    0.0,
+                    2.0,
+                    0,
+                    null,
+                    FlightSituation.Prelaunch,
+                    partPersistentIds: new uint[] { 2001u, 2002u },
+                    referencePartPersistentId: 2001u));
+            tracker.EvaluateActiveFlightContracts(
+                player,
+                massContracts,
+                Snapshot(
+                    "mass-topology-a",
+                    2200.0,
+                    2301.0,
+                    1000.0,
+                    200.0,
+                    1.2,
+                    0,
+                    null,
+                    FlightSituation.Flying,
+                    3.0,
+                    new uint[] { 1001u, 1002u },
+                    1001u));
+
+            tracker.EvaluateActiveFlightContracts(
+                player,
+                massContracts,
+                Snapshot(
+                    "mass-topology-docked",
+                    2200.0,
+                    2302.0,
+                    0.0,
+                    0.0,
+                    3.2,
+                    0,
+                    null,
+                    FlightSituation.Landed,
+                    3.0,
+                    new uint[] { 1001u, 1002u, 2001u, 2002u },
+                    1001u));
+
+            Require(
+                !player.HasCompletedObjective(ObjectiveCatalogue.Mass1Id),
+                "A landed docked assembly must not use mass from parts outside the selected Flight Attempt lineage.");
+
+            tracker.EvaluateActiveFlightContracts(
+                player,
+                massContracts,
+                Snapshot(
+                    "mass-topology-a-undocked",
+                    2200.0,
+                    2303.0,
+                    0.0,
+                    0.0,
+                    1.2,
+                    0,
+                    null,
+                    FlightSituation.Landed,
+                    3.0,
+                    new uint[] { 1001u, 1002u },
+                    1001u));
+
+            Require(
+                player.HasCompletedObjective(ObjectiveCatalogue.Mass1Id),
+                "After the unrelated lineage is detached, the original craft's own qualifying mass and distance should complete Mass I normally.");
+        }
+
         private static void ControlRequiresContinuousCrewedHoldAndLanding()
         {
             AgencyState player = new AgencyState("player", "Player", true);
@@ -190,6 +291,155 @@ namespace TheRaceForSpace.Tests.Tracking
                 "A long unobserved gap must not qualify Control from missing flight time.");
             Require(!player.HasCompletedObjective(ObjectiveCatalogue.Control1Id),
                 "An unobserved gap must not complete Control I.");
+        }
+
+        private static void ControlTopologyChangesResetUnqualifiedHold()
+        {
+            AgencyState player = new AgencyState("player", "Player", true);
+            var tracker = new FlightContractTracker();
+            var controlContracts = new List<ObjectiveDefinition>
+            {
+                ObjectiveCatalogue.FindById(ObjectiveCatalogue.Control1Id)
+            };
+
+            tracker.EvaluateActiveFlightContracts(
+                player,
+                controlContracts,
+                Snapshot(
+                    "control-topology-a",
+                    2400.0,
+                    2400.0,
+                    3000.0,
+                    150.0,
+                    1.0,
+                    1,
+                    null,
+                    FlightSituation.Flying,
+                    partPersistentIds: new uint[] { 3001u, 3002u },
+                    referencePartPersistentId: 3001u));
+            tracker.EvaluateActiveFlightContracts(
+                player,
+                controlContracts,
+                Snapshot(
+                    "control-topology-a",
+                    2400.0,
+                    2404.0,
+                    3000.0,
+                    150.0,
+                    1.0,
+                    1,
+                    null,
+                    FlightSituation.Flying,
+                    partPersistentIds: new uint[] { 3001u, 3002u },
+                    referencePartPersistentId: 3001u));
+            RequireNear(
+                4.0,
+                tracker.GetControlHoldSeconds(ObjectiveCatalogue.Control1Id),
+                "Control should accumulate normally before a topology change.");
+
+            tracker.EvaluateActiveFlightContracts(
+                player,
+                controlContracts,
+                Snapshot(
+                    "control-topology-docked",
+                    2400.0,
+                    2405.0,
+                    3000.0,
+                    150.0,
+                    2.0,
+                    1,
+                    null,
+                    FlightSituation.Flying,
+                    partPersistentIds: new uint[] { 3001u, 3002u, 4001u },
+                    referencePartPersistentId: 3001u));
+            RequireNear(
+                0.0,
+                tracker.GetControlHoldSeconds(ObjectiveCatalogue.Control1Id),
+                "Docking an external lineage must reset an unfinished continuous Control hold.");
+
+            tracker.EvaluateActiveFlightContracts(
+                player,
+                controlContracts,
+                Snapshot(
+                    "control-topology-docked",
+                    2400.0,
+                    2409.0,
+                    3000.0,
+                    150.0,
+                    2.0,
+                    1,
+                    null,
+                    FlightSituation.Flying,
+                    partPersistentIds: new uint[] { 3001u, 3002u, 4001u },
+                    referencePartPersistentId: 3001u));
+            RequireNear(
+                4.0,
+                tracker.GetControlHoldSeconds(ObjectiveCatalogue.Control1Id),
+                "An unchanged docked topology may begin a new continuous Control hold.");
+
+            tracker.EvaluateActiveFlightContracts(
+                player,
+                controlContracts,
+                Snapshot(
+                    "control-topology-undocked",
+                    2400.0,
+                    2410.0,
+                    3000.0,
+                    150.0,
+                    1.0,
+                    1,
+                    null,
+                    FlightSituation.Flying,
+                    partPersistentIds: new uint[] { 3001u, 3002u },
+                    referencePartPersistentId: 3001u));
+            RequireNear(
+                0.0,
+                tracker.GetControlHoldSeconds(ObjectiveCatalogue.Control1Id),
+                "Undocking an external lineage must also reset an unfinished continuous Control hold.");
+
+            int[] laterSampleTimes = { 2414, 2418, 2422, 2426, 2430, 2434, 2438, 2440 };
+            for (int sampleIndex = 0; sampleIndex < laterSampleTimes.Length; sampleIndex++)
+            {
+                tracker.EvaluateActiveFlightContracts(
+                    player,
+                    controlContracts,
+                    Snapshot(
+                        "control-topology-undocked",
+                        2400.0,
+                        laterSampleTimes[sampleIndex],
+                        3000.0,
+                        150.0,
+                        1.0,
+                        1,
+                        null,
+                        FlightSituation.Flying,
+                        partPersistentIds: new uint[] { 3001u, 3002u },
+                        referencePartPersistentId: 3001u));
+            }
+
+            Require(
+                tracker.IsControlObjectiveQualified(ObjectiveCatalogue.Control1Id),
+                "Control should qualify normally after a full uninterrupted post-undocking hold.");
+
+            tracker.EvaluateActiveFlightContracts(
+                player,
+                controlContracts,
+                Snapshot(
+                    "control-topology-docked-again",
+                    2400.0,
+                    2441.0,
+                    3000.0,
+                    150.0,
+                    2.0,
+                    1,
+                    null,
+                    FlightSituation.Flying,
+                    partPersistentIds: new uint[] { 3001u, 3002u, 4001u },
+                    referencePartPersistentId: 3001u));
+
+            Require(
+                tracker.IsControlObjectiveQualified(ObjectiveCatalogue.Control1Id),
+                "A topology change after Control qualification must not erase the completed hold.");
         }
 
         private static void BiomeAllowsOnlyOneLineObjectivePerLaunch()

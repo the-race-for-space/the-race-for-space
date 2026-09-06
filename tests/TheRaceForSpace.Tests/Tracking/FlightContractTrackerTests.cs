@@ -17,6 +17,7 @@ namespace TheRaceForSpace.Tests.Tracking
             UnobservedControlGapResetsHold();
             BiomeAllowsOnlyOneLineObjectivePerLaunch();
             StagingPreservesDirectedPowerAttempt();
+            DetachedStageDoesNotCloneAttemptHistory();
             SwitchingCraftPreservesIndependentAttempts();
             PartialControlHoldSurvivesSaveLoad();
             MultipleControlStatesSurviveSaveLoad();
@@ -247,12 +248,34 @@ namespace TheRaceForSpace.Tests.Tracking
             tracker.EvaluateActiveFlightContracts(
                 player,
                 ObjectiveCatalogue.PreOrbitContracts,
-                Snapshot("stage-a", 600.0, 600.0, 20000.0, 500.0, 1.0, 0, null, FlightSituation.Flying));
+                Snapshot(
+                    "stage-a",
+                    600.0,
+                    600.0,
+                    20000.0,
+                    650.0,
+                    1.0,
+                    0,
+                    null,
+                    FlightSituation.Flying,
+                    partPersistentIds: new uint[] { 101u, 102u, 103u }));
             tracker.EvaluateActiveFlightContracts(
                 player,
                 ObjectiveCatalogue.PreOrbitContracts,
-                Snapshot("stage-b", 600.0, 605.0, 30000.0, 650.0, 0.5, 0, null, FlightSituation.Flying));
+                Snapshot(
+                    "stage-b",
+                    600.0,
+                    605.0,
+                    30000.0,
+                    500.0,
+                    0.5,
+                    0,
+                    null,
+                    FlightSituation.Flying,
+                    partPersistentIds: new uint[] { 102u, 103u }));
 
+            RequireNear(650.0, tracker.MaximumSurfaceSpeedMetersPerSecond,
+                "The controlled stage should retain the parent attempt's earlier maximum speed through shared part lineage.");
             Require(
                 tracker.RecordSurfaceImpact(
                     player,
@@ -260,7 +283,90 @@ namespace TheRaceForSpace.Tests.Tracking
                     "stage-b",
                     "Kerbin",
                     606.0),
-                "A stage keeping the same launch time should preserve Directed Power flight history.");
+                "A stage retaining the parent lineage should complete Directed Power from the continuing attempt history.");
+        }
+
+        private static void DetachedStageDoesNotCloneAttemptHistory()
+        {
+            AgencyState player = new AgencyState("player", "Player", true);
+            var tracker = new FlightContractTracker();
+
+            tracker.EvaluateActiveFlightContracts(
+                player,
+                ObjectiveCatalogue.PreOrbitContracts,
+                Snapshot(
+                    "split-parent",
+                    650.0,
+                    650.0,
+                    20000.0,
+                    650.0,
+                    1.0,
+                    0,
+                    null,
+                    FlightSituation.Flying,
+                    partPersistentIds: new uint[] { 201u, 202u, 203u }));
+
+            tracker.EvaluateActiveFlightContracts(
+                player,
+                ObjectiveCatalogue.PreOrbitContracts,
+                Snapshot(
+                    "split-upper",
+                    650.0,
+                    655.0,
+                    25000.0,
+                    500.0,
+                    0.6,
+                    0,
+                    null,
+                    FlightSituation.Flying,
+                    partPersistentIds: new uint[] { 202u, 203u }));
+
+            RequireNear(650.0, tracker.MaximumSurfaceSpeedMetersPerSecond,
+                "The first actively controlled split branch should continue the parent attempt.");
+
+            tracker.EvaluateActiveFlightContracts(
+                player,
+                ObjectiveCatalogue.PreOrbitContracts,
+                Snapshot(
+                    "split-booster",
+                    650.0,
+                    656.0,
+                    1000.0,
+                    100.0,
+                    0.4,
+                    0,
+                    null,
+                    FlightSituation.Flying,
+                    partPersistentIds: new uint[] { 201u }));
+
+            RequireNear(100.0, tracker.MaximumSurfaceSpeedMetersPerSecond,
+                "A detached branch with no remaining continuing lineage must start its own attempt even when launch time matches.");
+            Require(
+                !tracker.RecordSurfaceImpact(
+                    player,
+                    ObjectiveCatalogue.PreOrbitContracts,
+                    "split-booster",
+                    "Kerbin",
+                    657.0),
+                "The detached branch must not inherit the parent's qualifying Directed Power maximum.");
+
+            tracker.EvaluateActiveFlightContracts(
+                player,
+                ObjectiveCatalogue.PreOrbitContracts,
+                Snapshot(
+                    "split-upper",
+                    650.0,
+                    658.0,
+                    26000.0,
+                    450.0,
+                    0.6,
+                    0,
+                    null,
+                    FlightSituation.Flying,
+                    partPersistentIds: new uint[] { 202u, 203u }));
+
+            RequireNear(650.0, tracker.MaximumSurfaceSpeedMetersPerSecond,
+                "Returning to the continuing branch should recover its original history after the detached branch was observed.");
         }
 
         private static void SwitchingCraftPreservesIndependentAttempts()
@@ -271,11 +377,31 @@ namespace TheRaceForSpace.Tests.Tracking
             tracker.EvaluateActiveFlightContracts(
                 player,
                 ObjectiveCatalogue.PreOrbitContracts,
-                Snapshot("switch-a", 1000.0, 1200.0, 20000.0, 650.0, 1.0, 0, null, FlightSituation.Flying));
+                Snapshot(
+                    "switch-a",
+                    1000.0,
+                    1200.0,
+                    20000.0,
+                    650.0,
+                    1.0,
+                    0,
+                    null,
+                    FlightSituation.Flying,
+                    partPersistentIds: new uint[] { 301u, 302u }));
             tracker.EvaluateActiveFlightContracts(
                 player,
                 ObjectiveCatalogue.PreOrbitContracts,
-                Snapshot("switch-b", 1100.0, 1210.0, 10000.0, 300.0, 1.0, 0, null, FlightSituation.Flying));
+                Snapshot(
+                    "switch-b",
+                    1100.0,
+                    1210.0,
+                    10000.0,
+                    300.0,
+                    1.0,
+                    0,
+                    null,
+                    FlightSituation.Flying,
+                    partPersistentIds: new uint[] { 401u, 402u }));
 
             Require(tracker.VesselId == "switch-b",
                 "The most recently sampled craft should remain the active Flight Contract attempt.");
@@ -285,7 +411,17 @@ namespace TheRaceForSpace.Tests.Tracking
             tracker.EvaluateActiveFlightContracts(
                 player,
                 ObjectiveCatalogue.PreOrbitContracts,
-                Snapshot("switch-a", 1000.0, 1220.0, 25000.0, 500.0, 1.0, 0, null, FlightSituation.Flying));
+                Snapshot(
+                    "switch-a",
+                    1000.0,
+                    1220.0,
+                    25000.0,
+                    500.0,
+                    1.0,
+                    0,
+                    null,
+                    FlightSituation.Flying,
+                    partPersistentIds: new uint[] { 301u, 302u }));
 
             Require(tracker.VesselId == "switch-a",
                 "Returning to Craft A should select its remembered in-memory attempt.");
@@ -297,7 +433,17 @@ namespace TheRaceForSpace.Tests.Tracking
             tracker.EvaluateActiveFlightContracts(
                 player,
                 ObjectiveCatalogue.PreOrbitContracts,
-                Snapshot("switch-b", 1100.0, 1230.0, 12000.0, 350.0, 1.0, 0, null, FlightSituation.Flying));
+                Snapshot(
+                    "switch-b",
+                    1100.0,
+                    1230.0,
+                    12000.0,
+                    350.0,
+                    1.0,
+                    0,
+                    null,
+                    FlightSituation.Flying,
+                    partPersistentIds: new uint[] { 401u, 402u }));
             RequireNear(350.0, tracker.MaximumSurfaceSpeedMetersPerSecond,
                 "Craft B should keep an independent maximum instead of receiving Craft A's 650 m/s history.");
 
@@ -310,7 +456,17 @@ namespace TheRaceForSpace.Tests.Tracking
             tracker.EvaluateActiveFlightContracts(
                 player,
                 ObjectiveCatalogue.PreOrbitContracts,
-                Snapshot("switch-a", 1000.0, 1240.0, 26000.0, 400.0, 1.0, 0, null, FlightSituation.Flying));
+                Snapshot(
+                    "switch-a",
+                    1000.0,
+                    1240.0,
+                    26000.0,
+                    400.0,
+                    1.0,
+                    0,
+                    null,
+                    FlightSituation.Flying,
+                    partPersistentIds: new uint[] { 301u, 302u }));
 
             RequireNear(650.0, tracker.MaximumSurfaceSpeedMetersPerSecond,
                 "Removing Craft B's attempt must not erase Craft A's remembered history.");
@@ -592,7 +748,8 @@ namespace TheRaceForSpace.Tests.Tracking
             int crewCount,
             string biomeName,
             FlightSituation situation,
-            double longitudeDegrees = 0.0)
+            double longitudeDegrees = 0.0,
+            IList<uint> partPersistentIds = null)
         {
             return new ActiveVesselSnapshot(
                 vesselId,
@@ -607,7 +764,8 @@ namespace TheRaceForSpace.Tests.Tracking
                 biomeName,
                 crewCount,
                 launchUniversalTime,
-                observationUniversalTime);
+                observationUniversalTime,
+                partPersistentIds);
         }
 
         private static void Require(bool condition, string message)

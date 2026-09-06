@@ -174,9 +174,9 @@ Evaluates frequent active-vessel telemetry.
 Current Pre-Orbit uses:
 
 - Directed Power — speed, altitude, and impact state;
-- Mass — final mass and distance;
-- Control — altitude-band hold, crew, and safe landing;
-- Biome — current biome and landing state.
+- Mass — final mass, distance, and landed/splashed state;
+- Control — altitude-band hold, crew, and safe landed/splashed recovery;
+- Biome — current biome and landed/splashed state.
 
 It can evaluate several offered contracts independently from the same flight.
 
@@ -300,7 +300,7 @@ This is slower and runs less often.
 5. `FlightTelemetryPlan` requests Mass telemetry.
 6. `KspVesselMonitor` captures active-vessel mass, launch position, current position, and situation.
 7. `FlightContractTracker` checks the Mass II requirements.
-8. On a valid Kerbin landing, `AgencyState.RecordObjectiveCompletion()` records the result and raises the new-completion signal.
+8. On a valid Kerbin landing or splashdown, `AgencyState.RecordObjectiveCompletion()` records the result and raises the new-completion signal.
 9. `FundingNotificationUI` posts the stock funding-target completion message for Mass II.
 10. `CampaignController` updates unlocks and funding state.
 11. Persistence saves the change; the Command Center and FlightActiveUI read the resulting state for presentation.

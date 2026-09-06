@@ -236,20 +236,16 @@ Raw `Vessel`, `ProtoVessel`, `HighLogic`, `FlightGlobals`, and similar KSP types
 
 ### `UI/`
 
-Owns Command Center presentation.
+Owns presentation for the full Command Center and the compact Flight-only contract tracker.
 
-Main class:
+Main classes:
 
-- `CommandCenterWindow`
+- `CommandCenterWindow` — the full campaign interface with Overview, Funding Targets, Rival Agencies, and Contract Catalogue views.
+- `FlightActiveUI` — a separate Flight-scene window for quickly checking Offered objective requirements while controlling a vessel.
 
-Current views:
+`FlightActiveUI` owns its own Flight-only stock launcher button and window visibility. It lists player-uncompleted Offered objective contracts first, allows each unfinished contract to expand independently by stable contract ID, and places Offered contracts already completed by the player at the bottom marked `Complete` with no expansion control. Expanded Pre-Orbit contracts display the current requirement state from `ModRuntime.FlightContractTrackingState`; other objective types fall back to their normal objective description.
 
-- Overview;
-- Funding Targets;
-- Rival Agencies;
-- Contract Catalogue.
-
-The UI reads state. It must not complete objectives, advance rivals, process funding, or sample KSP vessels directly.
+Both UI classes are read-only consumers. They must not complete objectives, advance rivals, process funding, sample KSP vessels, or create another telemetry cadence. During the current transition the Funding Targets view and `FlightActiveUI` can both display the same tracker state, but the underlying active-vessel sampling remains the single `ModRuntime` path.
 
 ## Current Pre-Orbit progression
 
@@ -283,7 +279,7 @@ Rules:
 7. `FlightContractTracker` evaluates the snapshot against every active contract independently.
 8. `AgencyState` records each completed objective.
 9. `CampaignController` settles unlocks, offers, funding, and rival state on its normal refresh.
-10. Persistence stores the changed campaign state and the Command Center displays it.
+10. Persistence stores the changed campaign state; the UI reads the controller and tracker state for presentation.
 
 Multiple offered contracts may complete from the same flight if their own criteria are independently satisfied.
 
@@ -328,6 +324,8 @@ Examples:
 - Directed Power destruction tracking is enabled only while Directed Power requires impact telemetry.
 
 When there are no active Flight Contracts, the fast path should avoid unnecessary active-vessel discovery and evaluation.
+
+UI visibility does not own or change the telemetry sampling frequency. `CommandCenterWindow` and `FlightActiveUI` read the same existing tracker state rather than requesting separate active-vessel samples.
 
 The slower orbital scan remains separate because it must consider loaded and unloaded vessels.
 
@@ -381,6 +379,7 @@ Direct KSP API behaviour still requires an in-game test. See [`KERBAL_CONTRACTS_
 | Change save-state models | `Persistence/` |
 | Change KSP save hooks | `KspIntegration/ModPersistenceScenario.cs` |
 | Change Command Center presentation | `UI/CommandCenterWindow.cs` |
+| Change compact Flight contract presentation | `UI/FlightActiveUI.cs` |
 
 ## Structure rule
 

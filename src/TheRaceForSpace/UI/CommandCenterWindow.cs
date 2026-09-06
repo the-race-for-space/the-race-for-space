@@ -895,6 +895,32 @@ namespace TheRaceForSpace.UI
             EnsurePayoutScratchBuffers();
             EnsureContractCatalogueFundingEntries();
 
+            int offeredCount = 0;
+            int unlockedCount = 0;
+            int lockedCount = 0;
+            int expiredCount = 0;
+            for (int entryIndex = 0; entryIndex < _contractCatalogueFundingEntries.Count; entryIndex++)
+            {
+                switch (GetContractCatalogueFundingCategory(_contractCatalogueFundingEntries[entryIndex]))
+                {
+                    case ContractCatalogueFundingCategory.Offered:
+                        offeredCount++;
+                        break;
+
+                    case ContractCatalogueFundingCategory.Unlocked:
+                        unlockedCount++;
+                        break;
+
+                    case ContractCatalogueFundingCategory.Locked:
+                        lockedCount++;
+                        break;
+
+                    case ContractCatalogueFundingCategory.Expired:
+                        expiredCount++;
+                        break;
+                }
+            }
+
             GUILayout.Label("Current Funding Info", _boldLabelStyle);
             ContractCatalogueFundingEntry selectedEntry = EnsureSelectedContractCatalogueFundingEntry();
 
@@ -922,18 +948,22 @@ namespace TheRaceForSpace.UI
             DrawContractCatalogueFundingSection(
                 "Offered",
                 ContractCatalogueFundingCategory.Offered,
+                offeredCount,
                 ref _contractCatalogueOfferedExpanded);
             DrawContractCatalogueFundingSection(
                 "Unlocked",
                 ContractCatalogueFundingCategory.Unlocked,
+                unlockedCount,
                 ref _contractCatalogueUnlockedExpanded);
             DrawContractCatalogueFundingSection(
                 "Locked",
                 ContractCatalogueFundingCategory.Locked,
+                lockedCount,
                 ref _contractCatalogueLockedExpanded);
             DrawContractCatalogueFundingSection(
                 "Expired",
                 ContractCatalogueFundingCategory.Expired,
+                expiredCount,
                 ref _contractCatalogueExpiredExpanded);
 
             GUILayout.EndScrollView();
@@ -991,10 +1021,11 @@ namespace TheRaceForSpace.UI
         private void DrawContractCatalogueFundingSection(
             string heading,
             ContractCatalogueFundingCategory category,
+            int contractCount,
             ref bool isExpanded)
         {
             GUILayout.BeginHorizontal();
-            GUILayout.Label(heading, _boldLabelStyle);
+            GUILayout.Label(heading + " (" + contractCount + ")", _boldLabelStyle);
             GUILayout.FlexibleSpace();
             if (GUILayout.Button(isExpanded ? "-" : "+", ContractCatalogueSectionToggleOptions))
             {

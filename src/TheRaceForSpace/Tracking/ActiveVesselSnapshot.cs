@@ -107,7 +107,8 @@ namespace TheRaceForSpace.Tracking
             double launchUniversalTime,
             double observationUniversalTime,
             IList<uint> partPersistentIds = null,
-            uint referencePartPersistentId = 0u)
+            uint referencePartPersistentId = 0u,
+            string vesselName = null)
         {
             VesselId = vesselId;
             CelestialBodyName = celestialBodyName;
@@ -123,6 +124,7 @@ namespace TheRaceForSpace.Tracking
             LaunchUniversalTime = launchUniversalTime;
             ObservationUniversalTime = observationUniversalTime;
             ReferencePartPersistentId = referencePartPersistentId;
+            VesselName = vesselName;
 
             if (partPersistentIds == null || partPersistentIds.Count == 0)
             {
@@ -153,6 +155,12 @@ namespace TheRaceForSpace.Tracking
         public int CrewCount { get; private set; }
         public double LaunchUniversalTime { get; private set; }
         public double ObservationUniversalTime { get; private set; }
+
+        /// <summary>
+        /// Player-visible KSP vessel name captured with this exact active-vessel observation. It is
+        /// presentation context only and is intentionally not part of persistent Flight Attempt state.
+        /// </summary>
+        public string VesselName { get; private set; }
 
         /// <summary>
         /// KSP persistent part IDs present on the controlled vessel when this snapshot was captured.

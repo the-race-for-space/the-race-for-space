@@ -430,9 +430,9 @@ namespace TheRaceForSpace.Tests
 
             AssertPreOrbitCriteria(ObjectiveCatalogue.Control1Id, 0.0, 0.0, 0.0, 2000.0, 5000.0, 30.0, null);
             AssertPreOrbitCriteria(ObjectiveCatalogue.Control2Id, 0.0, 0.0, 0.0, 8000.0, 12000.0, 45.0, null);
-            AssertPreOrbitCriteria(ObjectiveCatalogue.Control3Id, 0.0, 0.0, 0.0, 15000.0, 25000.0, 60.0, null);
-            AssertPreOrbitCriteria(ObjectiveCatalogue.Control4Id, 0.0, 0.0, 0.0, 30000.0, 40000.0, 75.0, null);
-            AssertPreOrbitCriteria(ObjectiveCatalogue.Control5Id, 0.0, 0.0, 0.0, 50000.0, 65000.0, 90.0, null);
+            AssertPreOrbitCriteria(ObjectiveCatalogue.Control3Id, 0.0, 0.0, 0.0, 22000.0, 25000.0, 60.0, null);
+            AssertPreOrbitCriteria(ObjectiveCatalogue.Control4Id, 0.0, 0.0, 0.0, 40000.0, 42500.0, 75.0, null);
+            AssertPreOrbitCriteria(ObjectiveCatalogue.Control5Id, 0.0, 0.0, 0.0, 50000.0, 52000.0, 90.0, null);
 
             AssertPreOrbitCriteria(ObjectiveCatalogue.Biome1Id, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, "Grasslands");
             AssertPreOrbitCriteria(ObjectiveCatalogue.Biome2Id, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, "Highlands");

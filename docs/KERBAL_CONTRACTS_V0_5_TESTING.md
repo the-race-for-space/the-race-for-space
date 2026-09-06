@@ -247,9 +247,9 @@ Confirm both complete. A higher Mass level that is not offered must remain incom
 | --- | --- | ---: |
 | I | 2-5 km | 30 s |
 | II | 8-12 km | 45 s |
-| III | 15-25 km | 60 s |
-| IV | 30-40 km | 75 s |
-| V | 50-65 km | 90 s |
+| III | 22-25 km | 60 s |
+| IV | 40-42.5 km | 75 s |
+| V | 50-52 km | 90 s |
 
 Every Control objective requires crew and a safe Kerbin landing or splashdown after qualification.
 

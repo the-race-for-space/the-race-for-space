@@ -95,15 +95,15 @@ User-editable campaign balance is stored in:
 GameData/TheRaceForSpace/Config/CampaignSettings.cfg
 ```
 
-The config controls body-tier funding values, network sizes, funding interval, rival starting funds, rival progress chance, and rival count.
+The config controls body-tier funding values, network sizes, funding interval, rival starting funds, rival progress chance, rival count, and the Level I-V Pre-Orbit rewards and rival progress costs.
 
-The current twenty Pre-Orbit objectives use code-defined values:
+The default Pre-Orbit values are:
 
 - Level I-V rewards: **10,000 / 20,000 / 30,000 / 40,000 / 50,000** funds.
-- Rival progress per successful check: **20%**.
+- Rival progress per successful Pre-Orbit check: **20%**.
 - Level I-V rival step costs: **4,000 / 6,000 / 8,000 / 10,000 / 12,000** funds.
 
-Normal orbital and satellite-network rival missions continue to use 10% progress steps.
+These values are configured in the `PRE_ORBIT` section. Each rival progress cost is charged for one successful 20% Pre-Orbit development step. Normal orbital and satellite-network rival missions continue to use 10% progress steps.
 
 Restart KSP after changing `CampaignSettings.cfg`.
 

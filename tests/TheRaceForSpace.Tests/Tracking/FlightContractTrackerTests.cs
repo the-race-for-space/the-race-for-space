@@ -20,6 +20,7 @@ namespace TheRaceForSpace.Tests.Tracking
             DetachedStageDoesNotCloneAttemptHistory();
             DockingKeepsAttemptHistoriesSeparate();
             SwitchingCraftPreservesIndependentAttempts();
+            MultipleFlightAttemptsSurviveSaveLoad();
             PartialControlHoldSurvivesSaveLoad();
             MultipleControlStatesSurviveSaveLoad();
             DirectedPowerDisqualificationSurvivesSaveLoad();
@@ -606,6 +607,154 @@ namespace TheRaceForSpace.Tests.Tracking
                 "Removing Craft B's attempt must not erase Craft A's remembered history.");
         }
 
+        private static void MultipleFlightAttemptsSurviveSaveLoad()
+        {
+            AgencyState player = new AgencyState("player", "Player", true);
+            var noActiveContracts = new List<ObjectiveDefinition>();
+            var sourceTracker = new FlightContractTracker();
+
+            sourceTracker.EvaluateActiveFlightContracts(
+                player,
+                noActiveContracts,
+                Snapshot(
+                    "persist-a",
+                    1300.0,
+                    1300.0,
+                    20000.0,
+                    650.0,
+                    1.0,
+                    0,
+                    null,
+                    FlightSituation.Flying,
+                    partPersistentIds: new uint[] { 701u, 702u },
+                    referencePartPersistentId: 701u));
+            sourceTracker.EvaluateActiveFlightContracts(
+                player,
+                noActiveContracts,
+                Snapshot(
+                    "persist-b",
+                    1400.0,
+                    1400.0,
+                    10000.0,
+                    350.0,
+                    1.0,
+                    0,
+                    null,
+                    FlightSituation.Flying,
+                    partPersistentIds: new uint[] { 801u, 802u },
+                    referencePartPersistentId: 801u));
+
+            // Give both attempts the same last KSP vessel ID while docked, then save with B selected.
+            // Persistence must keep part lineage authoritative rather than collapsing them by vessel ID.
+            sourceTracker.EvaluateActiveFlightContracts(
+                player,
+                noActiveContracts,
+                Snapshot(
+                    "persist-docked",
+                    1300.0,
+                    1500.0,
+                    22000.0,
+                    500.0,
+                    2.0,
+                    0,
+                    null,
+                    FlightSituation.Flying,
+                    partPersistentIds: new uint[] { 701u, 702u, 801u, 802u },
+                    referencePartPersistentId: 701u));
+            sourceTracker.EvaluateActiveFlightContracts(
+                player,
+                noActiveContracts,
+                Snapshot(
+                    "persist-docked",
+                    1300.0,
+                    1501.0,
+                    22000.0,
+                    450.0,
+                    2.0,
+                    0,
+                    null,
+                    FlightSituation.Flying,
+                    partPersistentIds: new uint[] { 701u, 702u, 801u, 802u },
+                    referencePartPersistentId: 801u));
+
+            var saveState = new FlightContractProgressSaveState();
+            saveState.Capture(sourceTracker);
+            var node = new ConfigNode();
+            saveState.Save(node);
+
+            ConfigNode[] attemptNodes = node.GetNodes("ATTEMPT");
+            Require(attemptNodes.Length == 2,
+                "The multi-attempt save format should write one ATTEMPT node for each remembered history.");
+            Require(node.GetValue("active") == null,
+                "The multi-attempt format should not write the removed single-attempt active flag.");
+
+            int selectedAttemptCount = 0;
+            int lineagePartCount = 0;
+            for (int attemptIndex = 0; attemptIndex < attemptNodes.Length; attemptIndex++)
+            {
+                bool isSelected;
+                Require(bool.TryParse(
+                        attemptNodes[attemptIndex].GetValue("selected"),
+                        out isSelected),
+                    "Every ATTEMPT node should explicitly record whether it was selected.");
+                if (isSelected)
+                {
+                    selectedAttemptCount++;
+                }
+
+                lineagePartCount += attemptNodes[attemptIndex].GetNodes("PART_LINEAGE").Length;
+            }
+
+            Require(selectedAttemptCount == 1,
+                "Exactly one remembered attempt should be selected when the tracker had an active attempt at save time.");
+            Require(lineagePartCount == 4,
+                "Both remembered craft lineages should be serialized independently.");
+
+            var loadedState = new FlightContractProgressSaveState();
+            loadedState.Load(node);
+            var restoredTracker = new FlightContractTracker();
+            loadedState.ApplyTo(restoredTracker);
+
+            RequireNear(450.0, restoredTracker.MaximumSurfaceSpeedMetersPerSecond,
+                "The selected Craft B history should be restored immediately after load.");
+
+            restoredTracker.EvaluateActiveFlightContracts(
+                player,
+                noActiveContracts,
+                Snapshot(
+                    "persist-a-undocked",
+                    1300.0,
+                    1502.0,
+                    23000.0,
+                    400.0,
+                    1.0,
+                    0,
+                    null,
+                    FlightSituation.Flying,
+                    partPersistentIds: new uint[] { 701u, 702u },
+                    referencePartPersistentId: 701u));
+            RequireNear(650.0, restoredTracker.MaximumSurfaceSpeedMetersPerSecond,
+                "After reload and undocking, Craft A should recover its saved independent maximum by lineage.");
+
+            restoredTracker.EvaluateActiveFlightContracts(
+                player,
+                noActiveContracts,
+                Snapshot(
+                    "persist-b-undocked",
+                    1400.0,
+                    1503.0,
+                    12000.0,
+                    300.0,
+                    1.0,
+                    0,
+                    null,
+                    FlightSituation.Flying,
+                    partPersistentIds: new uint[] { 801u, 802u },
+                    referencePartPersistentId: 801u));
+            RequireNear(450.0, restoredTracker.MaximumSurfaceSpeedMetersPerSecond,
+                "After reload and undocking, Craft B should recover the history updated while docked.");
+        }
+
         private static void PartialControlHoldSurvivesSaveLoad()
         {
             AgencyState player = new AgencyState("player", "Player", true);
@@ -720,11 +869,16 @@ namespace TheRaceForSpace.Tests.Tracking
             var node = new ConfigNode();
             saveState.Save(node);
 
-            Require(node.GetNodes("CONTROL_STATE").Length == 2,
-                "The current save format should write one CONTROL_STATE node per tracked Control contract.");
-            Require(node.GetValue("controlHoldObjectiveId") == null,
+            ConfigNode[] attemptNodes = node.GetNodes("ATTEMPT");
+            Require(attemptNodes.Length == 1,
+                "A single remembered craft should be written as one ATTEMPT node.");
+            Require(attemptNodes[0].GetNodes("CONTROL_STATE").Length == 2,
+                "The ATTEMPT node should write one CONTROL_STATE child per tracked Control contract.");
+            Require(node.GetNodes("CONTROL_STATE").Length == 0,
+                "CONTROL_STATE nodes should belong to their ATTEMPT rather than the progress root.");
+            Require(attemptNodes[0].GetValue("controlHoldObjectiveId") == null,
                 "The current save format should not write the removed single-Control objective field.");
-            Require(node.GetValue("completedControl") == null,
+            Require(attemptNodes[0].GetValue("completedControl") == null,
                 "The current save format should not write obsolete per-line completion flags.");
 
             var loadedState = new FlightContractProgressSaveState();
@@ -837,17 +991,18 @@ namespace TheRaceForSpace.Tests.Tracking
         private static void MalformedActiveSaveIsDiscarded()
         {
             var node = new ConfigNode();
-            node.AddValue("active", true);
-            node.AddValue("vesselId", "broken-vessel");
-            node.AddValue("body", "Kerbin");
-            node.AddValue("launchUniversalTime", "1000");
-            node.AddValue("startLatitude", "0");
-            node.AddValue("startLongitude", "0");
-            node.AddValue("lastSampleUniversalTime", "1010");
-            node.AddValue("maximumAltitudeMeters", "1000");
-            node.AddValue("maximumSurfaceSpeedMetersPerSecond", "650");
-            node.AddValue("enteredOrbit", false);
-            ConfigNode controlStateNode = node.AddNode("CONTROL_STATE");
+            ConfigNode attemptNode = node.AddNode("ATTEMPT");
+            attemptNode.AddValue("selected", true);
+            attemptNode.AddValue("vesselId", "broken-vessel");
+            attemptNode.AddValue("body", "Kerbin");
+            attemptNode.AddValue("launchUniversalTime", "1000");
+            attemptNode.AddValue("startLatitude", "0");
+            attemptNode.AddValue("startLongitude", "0");
+            attemptNode.AddValue("lastSampleUniversalTime", "1010");
+            attemptNode.AddValue("maximumAltitudeMeters", "1000");
+            attemptNode.AddValue("maximumSurfaceSpeedMetersPerSecond", "650");
+            attemptNode.AddValue("enteredOrbit", false);
+            ConfigNode controlStateNode = attemptNode.AddNode("CONTROL_STATE");
             controlStateNode.AddValue("objectiveId", ObjectiveCatalogue.Control1Id);
             controlStateNode.AddValue("holdSeconds", "not-a-number");
             controlStateNode.AddValue("wasSampleInBand", true);
@@ -869,7 +1024,7 @@ namespace TheRaceForSpace.Tests.Tracking
 
             loadedState.ApplyTo(tracker);
             Require(!tracker.HasActiveAttempt,
-                "Malformed per-contract Control save data should clear the active attempt rather than restore invented progress.");
+                "Malformed per-attempt Control save data should clear all remembered attempts rather than restore invented progress.");
         }
 
         private static ActiveVesselSnapshot Snapshot(

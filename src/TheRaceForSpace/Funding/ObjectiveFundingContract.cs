@@ -73,6 +73,14 @@ namespace TheRaceForSpace.Funding
         public bool HasStarted { get; private set; }
         public int PaymentsProcessed { get; private set; }
 
+        /// <summary>
+        /// Number of scheduled payments still available in this contract's ten-payment lifecycle.
+        /// </summary>
+        public int PaymentsRemaining
+        {
+            get { return Math.Max(0, TotalPayments - PaymentsProcessed); }
+        }
+
         public bool IsExpired
         {
             get { return PaymentsProcessed >= TotalPayments; }

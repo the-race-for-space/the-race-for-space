@@ -37,11 +37,19 @@ namespace TheRaceForSpace.Core
     }
 
     /// <summary>
-    /// Current campaign-wide balance settings. Defaults match version 0.4 behaviour and are
+    /// Current campaign-wide balance settings. Defaults match the current campaign behaviour and are
     /// replaced from GameData/TheRaceForSpace/Config/CampaignSettings.cfg before controller creation.
     /// </summary>
     internal static class CampaignSettings
     {
+        private static readonly double[] DefaultPreOrbitRewardFundsByLevel =
+            { 0.0, 10000.0, 20000.0, 30000.0, 40000.0, 50000.0 };
+        private static readonly double[] DefaultPreOrbitRivalProgressCostFundsByLevel =
+            { 0.0, 4000.0, 6000.0, 8000.0, 10000.0, 12000.0 };
+
+        private static double[] _preOrbitRewardFundsByLevel;
+        private static double[] _preOrbitRivalProgressCostFundsByLevel;
+
         static CampaignSettings()
         {
             ResetToDefaults();
@@ -92,10 +100,56 @@ namespace TheRaceForSpace.Core
                 5,
                 100000.0);
 
+            _preOrbitRewardFundsByLevel =
+                (double[])DefaultPreOrbitRewardFundsByLevel.Clone();
+            _preOrbitRivalProgressCostFundsByLevel =
+                (double[])DefaultPreOrbitRivalProgressCostFundsByLevel.Clone();
+
             FundingIntervalDays = 90.0;
             RivalStartingFunds = 300000.0;
             RivalProgressChance = 0.30;
             NumberOfRivals = 2;
+        }
+
+        /// <summary>
+        /// Returns the configured one-off funding reward for a Pre-Orbit level.
+        /// Invalid levels return zero rather than borrowing another level's balance.
+        /// </summary>
+        public static double GetPreOrbitRewardFunds(int preOrbitLevel)
+        {
+            return IsValidPreOrbitLevel(preOrbitLevel)
+                ? _preOrbitRewardFundsByLevel[preOrbitLevel]
+                : 0.0;
+        }
+
+        /// <summary>
+        /// Returns the configured rival cost for one successful 20% Pre-Orbit progress step.
+        /// Invalid levels return zero rather than borrowing another level's balance.
+        /// </summary>
+        public static double GetPreOrbitRivalProgressCostFunds(int preOrbitLevel)
+        {
+            return IsValidPreOrbitLevel(preOrbitLevel)
+                ? _preOrbitRivalProgressCostFundsByLevel[preOrbitLevel]
+                : 0.0;
+        }
+
+        public static void SetPreOrbitRewardFunds(int preOrbitLevel, double rewardFunds)
+        {
+            if (IsValidPreOrbitLevel(preOrbitLevel))
+            {
+                _preOrbitRewardFundsByLevel[preOrbitLevel] = Math.Max(0.0, rewardFunds);
+            }
+        }
+
+        public static void SetPreOrbitRivalProgressCostFunds(
+            int preOrbitLevel,
+            double progressCostFunds)
+        {
+            if (IsValidPreOrbitLevel(preOrbitLevel))
+            {
+                _preOrbitRivalProgressCostFundsByLevel[preOrbitLevel] =
+                    Math.Max(0.0, progressCostFunds);
+            }
         }
 
         /// <summary>
@@ -127,6 +181,15 @@ namespace TheRaceForSpace.Core
             }
 
             return InterplanetaryPlanets;
+        }
+
+        private static bool IsValidPreOrbitLevel(int preOrbitLevel)
+        {
+            return preOrbitLevel > 0
+                && _preOrbitRewardFundsByLevel != null
+                && _preOrbitRivalProgressCostFundsByLevel != null
+                && preOrbitLevel < _preOrbitRewardFundsByLevel.Length
+                && preOrbitLevel < _preOrbitRivalProgressCostFundsByLevel.Length;
         }
     }
 }

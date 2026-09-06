@@ -1,26 +1,38 @@
 # Development To-Do
 
-This file is a lightweight reminder list for current development ideas and polish work. It is not a release plan and items are not listed in priority order unless stated otherwise.
+This file tracks current development ideas and polish work only. Completed items are removed once finished; implementation history remains available in Git and the current project documentation. Items are not listed in priority order unless stated otherwise.
 
-## Command Center and contract UI
+## Overview
 
-- [ ] **Show remaining funding payments for completed contracts on Overview.** In the Overview funding information, show how many funding payments remain for objective funding contracts the player has already completed so their remaining value is visible at a glance.
 - [ ] **Hide achieved objectives from Your Objectives.** The `Your Objectives` list should show only objectives the player has not yet achieved; completed objectives should no longer remain in that list.
-- [ ] **Show `None` when there are no Satellite Contracts.** When the Satellite Contracts section has no contracts to display, show an explicit `None` state instead of leaving the section empty or ambiguous.
+- [ ] **Show `None` when there are no current objectives.** If filtering completed or unavailable objectives leaves `Your Objectives` empty, show an explicit `None` state instead of leaving the section blank.
+- [ ] **Show remaining one-off funding payments.** For each completed Objective Funding Contract shown in Overview funding information, display how many of its ten scheduled payments remain, updating after each funding payout.
+- [ ] **Show `None` when there are no Satellite Contracts.** When the Satellite Contracts or satellite-network summary has no contracts to display, show an explicit `None` state instead of leaving the section empty or ambiguous.
+
+## Funding Targets
+
 - [ ] **Order Funding Targets by player completion state.** Show objectives the player has not completed at the top of the list, with player-completed objectives moved to the bottom so current work is easier to find.
-- [x] **Add a compact Flight-mode objective tracker.** `FlightActiveUI` now provides a separate Flight-only Offered Contracts window with independent expand/collapse controls, live Pre-Orbit requirement state, and completed Offered contracts grouped at the bottom. Final in-game acceptance is covered by the current v0.5 smoke test.
-- [x] **Remove duplicate live telemetry presentation from Funding Targets.** Funding Targets now stays focused on funding and contract-lifecycle information. `FlightActiveUI` is the dedicated live Flight Contract presentation while `ModRuntime` remains the single telemetry source.
-- [x] **Make Flight objective status text more natural.** `FlightActiveUI` now uses normal readable casing for live states such as `Pending`, `Met`, `Valid`, `Invalid`, `In band`, and `Out of band` instead of all-caps status text.
-- [x] **Notify the player when an Offered objective funding target is completed.** `FundingNotificationUI` now sends one green stock KSP message for a newly recorded player completion, ignores rival completions, and does not replay historical completions after save restoration.
 
-## Persistent Flight Attempts
+## Contract Catalogue
 
-- [x] **Step 1 - separate Flight Attempt state from evaluation.** `FlightAttemptState` now owns the mutable state for the single attempt currently evaluated by `FlightContractTracker`. This is an internal refactor only: vessel switching, staging continuity, contract rules, and the existing single-attempt persistence format are unchanged.
-- [x] **Step 2 - retain multiple attempts in memory.** `FlightContractTracker` now keeps independent remembered attempt state for unrelated vessel IDs during the current session, so switching A -> B -> A restores A's unfinished maxima and other attempt history. The existing same-launch staging fallback is retained temporarily, and save/load still persists only the currently active attempt until Step 6.
-- [x] **Step 3 - add stable craft-lineage identity at the KSP boundary.** `KspVesselMonitor` now captures every non-zero KSP `Part.persistentId` on the active loaded vessel and passes those primitive IDs through `ActiveVesselSnapshot`. Attempt selection deliberately remains vessel-ID/same-launch based until Step 4; this step only establishes the stable lineage data without changing gameplay behaviour.
-- [x] **Step 4 - reconcile staging and vessel switching by lineage.** `FlightContractTracker` now uses persistent-part overlap when KSP vessel identity changes, keeps vessel ID only as a fast lookup cache, narrows an attempt's lineage to the actively continued split branch, and prevents a detached same-launch branch from cloning the parent's historical progress.
-- [x] **Step 5 - handle docking and undocking.** `ActiveVesselSnapshot` now carries KSP's current reference/control-part persistent ID. A docked assembly may contain several remembered lineages, but `FlightContractTracker` keeps their histories separate and routes telemetry to the lineage containing the current reference part. Changing `Control From Here` can therefore select the other remembered history, and each branch recovers its own state again after undocking. Contract-specific anti-combination rules remain Step 7.
-- [x] **Step 6 - replace single-attempt persistence.** `FLIGHT_CONTRACT_PROGRESS` now stores repeated `ATTEMPT` nodes for every remembered history, including persistent-part lineage, historical telemetry, selected-attempt state, and per-attempt `CONTROL_STATE` children. Docked attempts may share a last KSP vessel ID without being merged because lineage is serialized independently. Previous build compatibility is intentionally not supported for this format change.
-- [x] **Step 7 - define contract-specific topology rules.** Mass completion is blocked while the selected Flight Attempt has parts attached from outside its own lineage, so another docked craft cannot supply qualifying mass. A change to those externally attached parts resets unfinished continuous Control holds while preserving already-qualified Control state; ordinary staging of the attempt's own lineage does not trigger that reset.
-- [x] **Step 8 - prune obsolete attempt state.** The existing broad loaded/unloaded vessel refresh now also captures every persistent part ID still present in the save. A remembered attempt is removed only when none of its lineage parts survive that successful refresh; inactivity alone never prunes parked, docked, unloaded, or long-running craft, and lineage-less attempts are retained conservatively.
-- [x] **Step 9 - adapt presentation and complete regression coverage.** `FlightActiveUI` waits instead of showing restored/stale live requirement values before a fresh runtime sample arrives, but Flight Attempt identity details such as vessel name and launch UT are intentionally hidden from the compact player-facing panel. The final tracking regressions explicitly cover constructed/replacement craft with reused vessel IDs plus isolated destruction while retaining the existing switching, save/load, staging, docking/undocking, and recovery/pruning coverage.
+- [ ] **Display counts in catalogue section headings.** Show the number of contracts in each section heading, for example `Offered (4)`, `Unlocked (2)`, `Locked (20)`, and `Expired (1)`.
+
+## Flight UI
+
+- [ ] **Display funding reward beside each contract.** Show the contract's funding reward in the compact Offered Contracts window so the player can see the value of the objective without opening the full Command Center.
+
+## Notifications
+
+- [ ] **Announce completed sponsor reviews.** When a sponsor review makes new funding targets `Offered`, notify the player and identify the newly offered targets.
+- [ ] **Announce rival objective completions.** Notify the player when a rival agency completes an objective so important competitive progress is visible without continuously checking the Rival Agencies view.
+- [ ] **Announce funding payouts received.** When a funding boundary pays the player's agency, notify the player of the funds received from the campaign funding system.
+
+## Funding information polish
+
+- [ ] **Show projected player share percentage.** Where one-off contract payout information is displayed, show the player's projected percentage share of the next payout as well as the funds amount.
+- [ ] **Show the current number of eligible agencies.** Show how many agencies currently qualify to share the next one-off objective funding payout so the displayed player share is easier to understand.
+
+## Help / tutorial
+
+- [ ] **Add a Pre-Orbit line quick guide.** Add a short player-facing explanation of Directed Power, Mass, Control, and Biome, including the basic purpose of each progression line.
+- [ ] **Explain funding sharing with one worked example.** Add one simple example showing how a one-off objective payout is shared when multiple agencies are eligible, so the declining funding and competition rules are easier to understand.

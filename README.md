@@ -122,7 +122,11 @@ Funding Targets shows detailed funding, payout, completion, and contract-lifecyc
 
 Flight mode also has a separate compact **Offered Contracts** window implemented by `FlightActiveUI`. It has its own Flight-only launcher button so the player can track contract requirements without opening the full Command Center. Unfinished Offered objective contracts appear first and can be expanded independently. Offered contracts already completed by the player sit at the bottom marked `Complete` with no expansion control.
 
+When at least one active Pre-Orbit Flight Contract exists, the window also shows the **Active Flight Attempt** from the latest successful runtime vessel sample using the KSP vessel name and that remembered attempt's original launch UT. This makes switches between remembered histories visible, including `Control From Here` changes inside a docked assembly. After save/load or a Flight scene transition the UI waits for a fresh active-vessel sample rather than briefly presenting stale restored telemetry as current.
+
 Expanded Pre-Orbit contracts show the current Directed Power, Mass, Control, or Biome requirement state from the existing `FlightContractTracker`. The Flight window does not sample vessels or advance gameplay; it reads the same runtime state already maintained by `ModRuntime`.
+
+Persistent Flight Attempts keep independent history through vessel switching, staging, docking/undocking, and save/load. A newly constructed or replacement craft with a reused KSP vessel ID starts fresh when its persistent-part lineage does not overlap the old craft, while surviving remembered lineages remain independently recoverable. Dead or recovered histories are pruned only after a successful broad vessel refresh proves that none of their remembered persistent parts still exist.
 
 `FundingNotificationUI` listens for newly recorded player objective completions and posts one green message through KSP's stock message system when the matching Objective Funding Contract is currently Offered and unexpired. The notification title is `Funding Target Completed — <Contract Name>` and the body explains that the agency is now eligible for a share of the remaining contract funding. Rival completions do not generate player notifications.
 

@@ -17,6 +17,7 @@ namespace TheRaceForSpace.Tests.Tracking
             UnobservedControlGapResetsHold();
             BiomeAllowsOnlyOneLineObjectivePerLaunch();
             StagingPreservesDirectedPowerAttempt();
+            SwitchingCraftPreservesIndependentAttempts();
             PartialControlHoldSurvivesSaveLoad();
             MultipleControlStatesSurviveSaveLoad();
             DirectedPowerDisqualificationSurvivesSaveLoad();
@@ -260,6 +261,59 @@ namespace TheRaceForSpace.Tests.Tracking
                     "Kerbin",
                     606.0),
                 "A stage keeping the same launch time should preserve Directed Power flight history.");
+        }
+
+        private static void SwitchingCraftPreservesIndependentAttempts()
+        {
+            AgencyState player = new AgencyState("player", "Player", true);
+            var tracker = new FlightContractTracker();
+
+            tracker.EvaluateActiveFlightContracts(
+                player,
+                ObjectiveCatalogue.PreOrbitContracts,
+                Snapshot("switch-a", 1000.0, 1200.0, 20000.0, 650.0, 1.0, 0, null, FlightSituation.Flying));
+            tracker.EvaluateActiveFlightContracts(
+                player,
+                ObjectiveCatalogue.PreOrbitContracts,
+                Snapshot("switch-b", 1100.0, 1210.0, 10000.0, 300.0, 1.0, 0, null, FlightSituation.Flying));
+
+            Require(tracker.VesselId == "switch-b",
+                "The most recently sampled craft should remain the active Flight Contract attempt.");
+            RequireNear(300.0, tracker.MaximumSurfaceSpeedMetersPerSecond,
+                "Craft B must start with its own speed history rather than inherit Craft A progress.");
+
+            tracker.EvaluateActiveFlightContracts(
+                player,
+                ObjectiveCatalogue.PreOrbitContracts,
+                Snapshot("switch-a", 1000.0, 1220.0, 25000.0, 500.0, 1.0, 0, null, FlightSituation.Flying));
+
+            Require(tracker.VesselId == "switch-a",
+                "Returning to Craft A should select its remembered in-memory attempt.");
+            RequireNear(650.0, tracker.MaximumSurfaceSpeedMetersPerSecond,
+                "Craft A should retain its earlier maximum speed after temporarily flying Craft B.");
+            RequireNear(25000.0, tracker.MaximumAltitudeMeters,
+                "Craft A should continue updating its own remembered altitude history after returning.");
+
+            tracker.EvaluateActiveFlightContracts(
+                player,
+                ObjectiveCatalogue.PreOrbitContracts,
+                Snapshot("switch-b", 1100.0, 1230.0, 12000.0, 350.0, 1.0, 0, null, FlightSituation.Flying));
+            RequireNear(350.0, tracker.MaximumSurfaceSpeedMetersPerSecond,
+                "Craft B should keep an independent maximum instead of receiving Craft A's 650 m/s history.");
+
+            tracker.RecordSurfaceImpact(
+                player,
+                new List<ObjectiveDefinition>(),
+                "switch-b",
+                "Kerbin",
+                1231.0);
+            tracker.EvaluateActiveFlightContracts(
+                player,
+                ObjectiveCatalogue.PreOrbitContracts,
+                Snapshot("switch-a", 1000.0, 1240.0, 26000.0, 400.0, 1.0, 0, null, FlightSituation.Flying));
+
+            RequireNear(650.0, tracker.MaximumSurfaceSpeedMetersPerSecond,
+                "Removing Craft B's attempt must not erase Craft A's remembered history.");
         }
 
         private static void PartialControlHoldSurvivesSaveLoad()

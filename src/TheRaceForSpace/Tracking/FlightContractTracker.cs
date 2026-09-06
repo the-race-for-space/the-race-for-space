@@ -6,66 +6,53 @@ using TheRaceForSpace.Agencies;
 namespace TheRaceForSpace.Tracking
 {
     /// <summary>
-    /// Maintains one player flight attempt and records the four special pre-orbit contract lines
-    /// from KSP-independent active-vessel snapshots.
+    /// Evaluates one player flight attempt and records the four special pre-orbit contract lines
+    /// from KSP-independent active-vessel snapshots. Mutable attempt state is held separately by
+    /// FlightAttemptState so later work can add multiple remembered attempts without mixing state
+    /// ownership into the contract evaluation rules.
     /// </summary>
     public sealed class FlightContractTracker
     {
         private const double LaunchTimeMatchToleranceSeconds = 1.0;
         private const double MaximumContinuousSampleGapSeconds = 5.0;
 
-        private readonly Dictionary<string, ControlContractState> _controlStates =
-            new Dictionary<string, ControlContractState>(StringComparer.OrdinalIgnoreCase);
+        private readonly FlightAttemptState _attempt = new FlightAttemptState();
 
-        private string _vesselId;
-        private string _celestialBodyName;
-        private double _launchUniversalTime = -1.0;
-        private double _startLatitudeDegrees;
-        private double _startLongitudeDegrees;
-        private double _lastSampleUniversalTime = -1.0;
-        private double _maximumAltitudeMeters;
-        private double _maximumSurfaceSpeedMetersPerSecond;
-        private double _currentAltitudeMeters;
-        private double _currentSurfaceSpeedMetersPerSecond;
-        private double _currentMassTonnes;
-        private double _currentDistanceMeters;
-        private string _currentBiomeName;
-        private int _currentCrewCount;
-        private FlightSituation _currentSituation = FlightSituation.Other;
-        private bool _enteredOrbit;
+        public bool HasActiveAttempt { get { return _attempt.HasActiveAttempt; } }
+        public string VesselId { get { return _attempt.VesselId; } }
+        public string CelestialBodyName { get { return _attempt.CelestialBodyName; } }
+        public double LaunchUniversalTime { get { return _attempt.LaunchUniversalTime; } }
+        public double StartLatitudeDegrees { get { return _attempt.StartLatitudeDegrees; } }
+        public double StartLongitudeDegrees { get { return _attempt.StartLongitudeDegrees; } }
+        public double LastSampleUniversalTime { get { return _attempt.LastSampleUniversalTime; } }
+        public double MaximumAltitudeMeters { get { return _attempt.MaximumAltitudeMeters; } }
+        public double MaximumSurfaceSpeedMetersPerSecond
+        {
+            get { return _attempt.MaximumSurfaceSpeedMetersPerSecond; }
+        }
+        public double CurrentAltitudeMeters { get { return _attempt.CurrentAltitudeMeters; } }
+        public double CurrentSurfaceSpeedMetersPerSecond
+        {
+            get { return _attempt.CurrentSurfaceSpeedMetersPerSecond; }
+        }
+        public double CurrentMassTonnes { get { return _attempt.CurrentMassTonnes; } }
+        public double CurrentDistanceMeters { get { return _attempt.CurrentDistanceMeters; } }
+        public string CurrentBiomeName { get { return _attempt.CurrentBiomeName; } }
+        public int CurrentCrewCount { get { return _attempt.CurrentCrewCount; } }
+        public FlightSituation CurrentSituation { get { return _attempt.CurrentSituation; } }
+        public bool EnteredOrbit { get { return _attempt.EnteredOrbit; } }
 
-        public bool HasActiveAttempt { get { return !string.IsNullOrEmpty(_vesselId); } }
-        public string VesselId { get { return _vesselId; } }
-        public string CelestialBodyName { get { return _celestialBodyName; } }
-        public double LaunchUniversalTime { get { return _launchUniversalTime; } }
-        public double StartLatitudeDegrees { get { return _startLatitudeDegrees; } }
-        public double StartLongitudeDegrees { get { return _startLongitudeDegrees; } }
-        public double LastSampleUniversalTime { get { return _lastSampleUniversalTime; } }
-        public double MaximumAltitudeMeters { get { return _maximumAltitudeMeters; } }
-        public double MaximumSurfaceSpeedMetersPerSecond { get { return _maximumSurfaceSpeedMetersPerSecond; } }
-        public double CurrentAltitudeMeters { get { return _currentAltitudeMeters; } }
-        public double CurrentSurfaceSpeedMetersPerSecond { get { return _currentSurfaceSpeedMetersPerSecond; } }
-        public double CurrentMassTonnes { get { return _currentMassTonnes; } }
-        public double CurrentDistanceMeters { get { return _currentDistanceMeters; } }
-        public string CurrentBiomeName { get { return _currentBiomeName; } }
-        public int CurrentCrewCount { get { return _currentCrewCount; } }
-        public FlightSituation CurrentSituation { get { return _currentSituation; } }
-        public bool EnteredOrbit { get { return _enteredOrbit; } }
-
-        // Persistence captures this live key collection directly, avoiding a temporary list allocation
-        // on the once-per-second flight-contract capture path.
-        internal ICollection<string> ControlStateObjectiveIds { get { return _controlStates.Keys; } }
+        internal ICollection<string> ControlStateObjectiveIds
+        {
+            get { return _attempt.ControlStateObjectiveIds; }
+        }
 
         /// <summary>
         /// Returns the accumulated continuous hold time for one active Control contract.
         /// </summary>
         public double GetControlHoldSeconds(string objectiveId)
         {
-            ControlContractState state;
-            return !string.IsNullOrEmpty(objectiveId)
-                && _controlStates.TryGetValue(objectiveId, out state)
-                ? state.HoldSeconds
-                : 0.0;
+            return _attempt.GetControlHoldSeconds(objectiveId);
         }
 
         /// <summary>
@@ -74,10 +61,7 @@ namespace TheRaceForSpace.Tracking
         /// </summary>
         public bool IsControlObjectiveQualified(string objectiveId)
         {
-            ControlContractState state;
-            return !string.IsNullOrEmpty(objectiveId)
-                && _controlStates.TryGetValue(objectiveId, out state)
-                && state.IsQualified;
+            return _attempt.IsControlObjectiveQualified(objectiveId);
         }
 
         /// <summary>
@@ -85,10 +69,7 @@ namespace TheRaceForSpace.Tracking
         /// </summary>
         public bool IsControlSampleInBand(string objectiveId)
         {
-            ControlContractState state;
-            return !string.IsNullOrEmpty(objectiveId)
-                && _controlStates.TryGetValue(objectiveId, out state)
-                && state.WasSampleInBand;
+            return _attempt.IsControlSampleInBand(objectiveId);
         }
 
         /// <summary>
@@ -108,10 +89,11 @@ namespace TheRaceForSpace.Tracking
                 return;
             }
 
-            ControlContractState state = GetOrCreateControlState(objectiveId);
-            state.HoldSeconds = holdSeconds;
-            state.WasSampleInBand = wasSampleInBand;
-            state.IsQualified = isQualified;
+            _attempt.RestoreControlState(
+                objectiveId,
+                holdSeconds,
+                wasSampleInBand,
+                isQualified);
         }
 
         /// <summary>
@@ -141,14 +123,15 @@ namespace TheRaceForSpace.Tracking
             {
                 // Staging can replace the active Vessel object while preserving the launch time.
                 // Keep the mission history but follow the newly controlled vessel ID for impact detection.
-                _vesselId = snapshot.VesselId;
+                _attempt.VesselId = snapshot.VesselId;
             }
 
             double sampleDeltaSeconds = 0.0;
-            if (_lastSampleUniversalTime >= 0.0
-                && snapshot.ObservationUniversalTime >= _lastSampleUniversalTime)
+            if (_attempt.LastSampleUniversalTime >= 0.0
+                && snapshot.ObservationUniversalTime >= _attempt.LastSampleUniversalTime)
             {
-                sampleDeltaSeconds = snapshot.ObservationUniversalTime - _lastSampleUniversalTime;
+                sampleDeltaSeconds = snapshot.ObservationUniversalTime
+                    - _attempt.LastSampleUniversalTime;
             }
 
             // Each Control contract is explicitly a continuous hold. A large gap means the vessel
@@ -160,22 +143,26 @@ namespace TheRaceForSpace.Tracking
                 ResetUnqualifiedControlStates();
             }
 
-            _currentAltitudeMeters = snapshot.AltitudeMeters;
-            _currentSurfaceSpeedMetersPerSecond = Math.Max(0.0, snapshot.SurfaceSpeedMetersPerSecond);
-            _currentMassTonnes = Math.Max(0.0, snapshot.MassTonnes);
-            _currentDistanceMeters = CalculateSurfaceDistanceMeters(snapshot);
-            _currentBiomeName = snapshot.BiomeName;
-            _currentCrewCount = Math.Max(0, snapshot.CrewCount);
-            _currentSituation = snapshot.Situation;
+            _attempt.CurrentAltitudeMeters = snapshot.AltitudeMeters;
+            _attempt.CurrentSurfaceSpeedMetersPerSecond = Math.Max(
+                0.0,
+                snapshot.SurfaceSpeedMetersPerSecond);
+            _attempt.CurrentMassTonnes = Math.Max(0.0, snapshot.MassTonnes);
+            _attempt.CurrentDistanceMeters = CalculateSurfaceDistanceMeters(snapshot);
+            _attempt.CurrentBiomeName = snapshot.BiomeName;
+            _attempt.CurrentCrewCount = Math.Max(0, snapshot.CrewCount);
+            _attempt.CurrentSituation = snapshot.Situation;
 
-            _maximumAltitudeMeters = Math.Max(_maximumAltitudeMeters, snapshot.AltitudeMeters);
-            _maximumSurfaceSpeedMetersPerSecond = Math.Max(
-                _maximumSurfaceSpeedMetersPerSecond,
+            _attempt.MaximumAltitudeMeters = Math.Max(
+                _attempt.MaximumAltitudeMeters,
+                snapshot.AltitudeMeters);
+            _attempt.MaximumSurfaceSpeedMetersPerSecond = Math.Max(
+                _attempt.MaximumSurfaceSpeedMetersPerSecond,
                 snapshot.SurfaceSpeedMetersPerSecond);
 
             if (snapshot.Situation == FlightSituation.Orbiting)
             {
-                _enteredOrbit = true;
+                _attempt.EnteredOrbit = true;
             }
 
             bool recordedObjective = false;
@@ -184,7 +171,7 @@ namespace TheRaceForSpace.Tracking
                 "Kerbin",
                 StringComparison.OrdinalIgnoreCase);
 
-            if (isKerbin && !_enteredOrbit)
+            if (isKerbin && !_attempt.EnteredOrbit)
             {
                 // The controller already filtered this collection to Offered, unexpired contracts
                 // the player has not completed. Evaluate each supplied definition on its own terms
@@ -200,7 +187,7 @@ namespace TheRaceForSpace.Tracking
                     if (objective.PreOrbitLine == PreOrbitContractLine.Mass
                         && IsLandedOrSplashed(snapshot.Situation)
                         && snapshot.MassTonnes >= objective.RequiredMassTonnes
-                        && _currentDistanceMeters >= objective.RequiredDistanceMeters)
+                        && _attempt.CurrentDistanceMeters >= objective.RequiredDistanceMeters)
                     {
                         // Mass represents delivery of a finished craft, so the final recovered vessel
                         // must still meet both the mass and distance requirement for this contract.
@@ -237,7 +224,7 @@ namespace TheRaceForSpace.Tracking
                 ResetUnqualifiedControlStates();
             }
 
-            _lastSampleUniversalTime = snapshot.ObservationUniversalTime;
+            _attempt.LastSampleUniversalTime = snapshot.ObservationUniversalTime;
             return recordedObjective;
         }
 
@@ -257,13 +244,16 @@ namespace TheRaceForSpace.Tracking
                 || activeFlightContracts == null
                 || !HasActiveAttempt
                 || string.IsNullOrEmpty(vesselId)
-                || !string.Equals(_vesselId, vesselId, StringComparison.OrdinalIgnoreCase))
+                || !string.Equals(
+                    _attempt.VesselId,
+                    vesselId,
+                    StringComparison.OrdinalIgnoreCase))
             {
                 return false;
             }
 
             bool recordedObjective = false;
-            if (!_enteredOrbit
+            if (!_attempt.EnteredOrbit
                 && string.Equals(celestialBodyName, "Kerbin", StringComparison.OrdinalIgnoreCase))
             {
                 for (int objectiveIndex = 0; objectiveIndex < activeFlightContracts.Count; objectiveIndex++)
@@ -272,8 +262,8 @@ namespace TheRaceForSpace.Tracking
                     if (objective == null
                         || objective.PreOrbitLine != PreOrbitContractLine.DirectedPower
                         || playerAgency.HasCompletedObjective(objective.Id)
-                        || _maximumAltitudeMeters > objective.MaximumAltitudeMeters
-                        || _maximumSurfaceSpeedMetersPerSecond
+                        || _attempt.MaximumAltitudeMeters > objective.MaximumAltitudeMeters
+                        || _attempt.MaximumSurfaceSpeedMetersPerSecond
                             < objective.RequiredSpeedMetersPerSecond)
                     {
                         continue;
@@ -323,47 +313,23 @@ namespace TheRaceForSpace.Tracking
                 return;
             }
 
-            // Instantaneous telemetry is intentionally not persisted. Clear any previous live
-            // values before applying historical state so a scene/save restore cannot display stale data.
-            _currentAltitudeMeters = 0.0;
-            _currentSurfaceSpeedMetersPerSecond = 0.0;
-            _currentMassTonnes = 0.0;
-            _currentDistanceMeters = 0.0;
-            _currentBiomeName = null;
-            _currentCrewCount = 0;
-            _currentSituation = FlightSituation.Other;
-
-            _vesselId = vesselId;
-            _celestialBodyName = celestialBodyName;
-            _launchUniversalTime = launchUniversalTime;
-            _startLatitudeDegrees = startLatitudeDegrees;
-            _startLongitudeDegrees = startLongitudeDegrees;
-            _lastSampleUniversalTime = lastSampleUniversalTime;
-            _maximumAltitudeMeters = maximumAltitudeMeters;
-            _maximumSurfaceSpeedMetersPerSecond = maximumSurfaceSpeedMetersPerSecond;
-            _enteredOrbit = enteredOrbit;
-            _controlStates.Clear();
+            // Clear all live values and prior Control state before applying the persisted history.
+            // Instantaneous telemetry is rebuilt from the next active-vessel sample as before.
+            _attempt.Clear();
+            _attempt.VesselId = vesselId;
+            _attempt.CelestialBodyName = celestialBodyName;
+            _attempt.LaunchUniversalTime = launchUniversalTime;
+            _attempt.StartLatitudeDegrees = startLatitudeDegrees;
+            _attempt.StartLongitudeDegrees = startLongitudeDegrees;
+            _attempt.LastSampleUniversalTime = lastSampleUniversalTime;
+            _attempt.MaximumAltitudeMeters = maximumAltitudeMeters;
+            _attempt.MaximumSurfaceSpeedMetersPerSecond = maximumSurfaceSpeedMetersPerSecond;
+            _attempt.EnteredOrbit = enteredOrbit;
         }
 
         public void ClearAttempt()
         {
-            _vesselId = null;
-            _celestialBodyName = null;
-            _launchUniversalTime = -1.0;
-            _startLatitudeDegrees = 0.0;
-            _startLongitudeDegrees = 0.0;
-            _lastSampleUniversalTime = -1.0;
-            _maximumAltitudeMeters = 0.0;
-            _maximumSurfaceSpeedMetersPerSecond = 0.0;
-            _currentAltitudeMeters = 0.0;
-            _currentSurfaceSpeedMetersPerSecond = 0.0;
-            _currentMassTonnes = 0.0;
-            _currentDistanceMeters = 0.0;
-            _currentBiomeName = null;
-            _currentCrewCount = 0;
-            _currentSituation = FlightSituation.Other;
-            _controlStates.Clear();
-            _enteredOrbit = false;
+            _attempt.Clear();
         }
 
         private bool EvaluateControlObjectives(
@@ -384,7 +350,8 @@ namespace TheRaceForSpace.Tracking
                     continue;
                 }
 
-                ControlContractState state = GetOrCreateControlState(controlObjective.Id);
+                FlightAttemptState.ControlContractState state =
+                    _attempt.GetOrCreateControlState(controlObjective.Id);
                 if (state.IsQualified
                     && IsLandedOrSplashed(snapshot.Situation)
                     && snapshot.CrewCount > 0)
@@ -423,32 +390,9 @@ namespace TheRaceForSpace.Tracking
             return recordedObjective;
         }
 
-        private ControlContractState GetOrCreateControlState(string objectiveId)
-        {
-            ControlContractState state;
-            if (_controlStates.TryGetValue(objectiveId, out state))
-            {
-                return state;
-            }
-
-            state = new ControlContractState();
-            _controlStates.Add(objectiveId, state);
-            return state;
-        }
-
         private void ResetUnqualifiedControlStates()
         {
-            foreach (KeyValuePair<string, ControlContractState> entry in _controlStates)
-            {
-                ControlContractState state = entry.Value;
-                if (state == null || state.IsQualified)
-                {
-                    continue;
-                }
-
-                state.HoldSeconds = 0.0;
-                state.WasSampleInBand = false;
-            }
+            _attempt.ResetUnqualifiedControlStates();
         }
 
         private bool IsSameAttempt(ActiveVesselSnapshot snapshot)
@@ -458,7 +402,10 @@ namespace TheRaceForSpace.Tracking
                 return false;
             }
 
-            if (string.Equals(_vesselId, snapshot.VesselId, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(
+                _attempt.VesselId,
+                snapshot.VesselId,
+                StringComparison.OrdinalIgnoreCase))
             {
                 return true;
             }
@@ -466,30 +413,30 @@ namespace TheRaceForSpace.Tracking
             // KSP can assign a new vessel ID to a separated stage. Shared launch time and body
             // provide a narrow continuation rule without treating an unrelated later launch as
             // the same contract attempt.
-            return _launchUniversalTime >= 0.0
+            return _attempt.LaunchUniversalTime >= 0.0
                 && snapshot.LaunchUniversalTime >= 0.0
-                && Math.Abs(_launchUniversalTime - snapshot.LaunchUniversalTime)
+                && Math.Abs(_attempt.LaunchUniversalTime - snapshot.LaunchUniversalTime)
                     <= LaunchTimeMatchToleranceSeconds
                 && string.Equals(
-                    _celestialBodyName,
+                    _attempt.CelestialBodyName,
                     snapshot.CelestialBodyName,
                     StringComparison.OrdinalIgnoreCase);
         }
 
         private void BeginAttempt(ActiveVesselSnapshot snapshot)
         {
-            ClearAttempt();
-            _vesselId = snapshot.VesselId;
-            _celestialBodyName = snapshot.CelestialBodyName;
-            _launchUniversalTime = snapshot.LaunchUniversalTime;
-            _startLatitudeDegrees = snapshot.LatitudeDegrees;
-            _startLongitudeDegrees = snapshot.LongitudeDegrees;
-            _lastSampleUniversalTime = snapshot.ObservationUniversalTime;
-            _maximumAltitudeMeters = Math.Max(0.0, snapshot.AltitudeMeters);
-            _maximumSurfaceSpeedMetersPerSecond = Math.Max(
+            _attempt.Clear();
+            _attempt.VesselId = snapshot.VesselId;
+            _attempt.CelestialBodyName = snapshot.CelestialBodyName;
+            _attempt.LaunchUniversalTime = snapshot.LaunchUniversalTime;
+            _attempt.StartLatitudeDegrees = snapshot.LatitudeDegrees;
+            _attempt.StartLongitudeDegrees = snapshot.LongitudeDegrees;
+            _attempt.LastSampleUniversalTime = snapshot.ObservationUniversalTime;
+            _attempt.MaximumAltitudeMeters = Math.Max(0.0, snapshot.AltitudeMeters);
+            _attempt.MaximumSurfaceSpeedMetersPerSecond = Math.Max(
                 0.0,
                 snapshot.SurfaceSpeedMetersPerSecond);
-            _enteredOrbit = snapshot.Situation == FlightSituation.Orbiting;
+            _attempt.EnteredOrbit = snapshot.Situation == FlightSituation.Orbiting;
         }
 
         private double CalculateSurfaceDistanceMeters(ActiveVesselSnapshot snapshot)
@@ -500,11 +447,11 @@ namespace TheRaceForSpace.Tracking
             }
 
             double degreesToRadians = Math.PI / 180.0;
-            double startLatitude = _startLatitudeDegrees * degreesToRadians;
+            double startLatitude = _attempt.StartLatitudeDegrees * degreesToRadians;
             double endLatitude = snapshot.LatitudeDegrees * degreesToRadians;
-            double latitudeDifference = (snapshot.LatitudeDegrees - _startLatitudeDegrees)
+            double latitudeDifference = (snapshot.LatitudeDegrees - _attempt.StartLatitudeDegrees)
                 * degreesToRadians;
-            double longitudeDifference = (snapshot.LongitudeDegrees - _startLongitudeDegrees)
+            double longitudeDifference = (snapshot.LongitudeDegrees - _attempt.StartLongitudeDegrees)
                 * degreesToRadians;
 
             double sinHalfLatitude = Math.Sin(latitudeDifference * 0.5);
@@ -530,13 +477,6 @@ namespace TheRaceForSpace.Tracking
         private static bool IsFinite(double value)
         {
             return !double.IsNaN(value) && !double.IsInfinity(value);
-        }
-
-        private sealed class ControlContractState
-        {
-            public double HoldSeconds;
-            public bool WasSampleInBand;
-            public bool IsQualified;
         }
     }
 }

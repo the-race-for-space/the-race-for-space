@@ -114,6 +114,7 @@ The automated tests cover KSP-independent behaviour such as:
 - independent evaluation of multiple offered Flight Contracts;
 - Directed Power, Mass, Control, and Biome rules;
 - Flight Attempt switching, staging/split lineage, docked reference-lineage reconciliation, and multi-attempt save/load;
+- Mass rejection while another lineage is attached and Control reset/preservation across topology changes;
 - rival mission progress;
 - funding calculations;
 - persistence transformations;
@@ -227,7 +228,7 @@ For a focused staging check, use a controllable multi-stage craft while a Direct
 4. if the detached branch is separately controllable, switch to it and confirm it does **not** inherit the continuing branch's historical maximum;
 5. switch back to the continuing branch and confirm its original maximum is still present.
 
-This verifies the Step 4 staging/split lineage rule.
+This verifies the staging/split lineage rule.
 
 ### Flight Attempt docking and undocking lineage
 
@@ -243,11 +244,33 @@ Directed Power maximum speed is the easiest visible history value to compare:
 8. undock the vessels;
 9. switch to A and B separately and confirm each branch recovers its own pre-docking history.
 
-Do not use this check to validate combined Mass or unfinished Control-hold behaviour yet. Identity and historical persistence are implemented; the contract-specific anti-combination rules are Step 7.
+### Mass and Control topology rules
+
+Use two independently remembered craft so their part lineages are already known to the tracker.
+
+For **Mass**:
+
+1. make Craft A satisfy the Mass distance requirement and retain enough mass on its own;
+2. dock unrelated Craft B to A and keep A's lineage selected with **Control From Here**;
+3. land or splash down the combined assembly while it still contains B's parts;
+4. confirm the Mass objective does **not** complete while another lineage is attached;
+5. undock B so A is again made only from A's remembered lineage;
+6. with A still meeting its normal mass, distance, and recovery requirements, confirm the Mass objective can complete.
+
+For **Control**:
+
+1. begin an unqualified Control hold on Craft A and let several seconds accumulate;
+2. dock another remembered craft to A while A remains selected and confirm the unfinished hold resets;
+3. begin a new hold while the docked topology remains unchanged;
+4. undock the other craft and confirm that unfinished hold resets again;
+5. complete a fresh uninterrupted hold so Control becomes qualified;
+6. dock or undock again and confirm the already-qualified Control state is **not** erased.
+
+Ordinary staging of A's own continuing lineage should not be treated as this external attachment change. These rules reuse the persistent IDs already captured by the normal telemetry sample; they do not add another vessel scan.
 
 ### Multiple Flight Attempts across save/reload
 
-For the focused Step 6 persistence check, continue with two craft that already have clearly different remembered Directed Power maxima:
+Continue with two craft that already have clearly different remembered Directed Power maxima:
 
 1. make sure Craft A and Craft B have both been sampled and each shows its own recognizable maximum;
 2. optionally dock them and use **Control From Here** so Craft B's lineage is selected while both histories are present in one KSP vessel;
@@ -310,15 +333,18 @@ The notification is for player Objective Funding Contract completions only. Riva
 
 - Travel beyond the required distance.
 - Keep enough final mass.
-- Confirm completion after either `LANDED` or `SPLASHED` on Kerbin.
+- Confirm completion after either `LANDED` or `SPLASHED` on Kerbin when no outside-lineage parts remain attached.
 - Confirm insufficient mass or distance still prevents completion in either final situation.
+- Confirm an unrelated docked lineage blocks completion even when the combined vessel mass is high enough.
 
 ### Control
 
 - Use a crewed vessel.
 - Hold continuously inside the required altitude band.
 - Leave the band early and confirm the timer resets.
-- After qualification, either land or splash down safely on Kerbin with crew and confirm completion.
+- Dock or undock another lineage before qualification and confirm the timer resets.
+- After qualification, confirm a later docking/undocking change does not erase the qualified state.
+- Then land or splash down safely on Kerbin with crew and confirm completion.
 
 ### Biome
 
@@ -337,9 +363,11 @@ Save during Flight Contract activity, reload, and confirm:
 - Directed Power maximum history and orbit invalidation survive when relevant;
 - Control hold/qualification state survives per remembered attempt when relevant;
 - the attempt marked selected at save time is restored as the selected history until live KSP telemetry resolves the currently controlled lineage;
-- live values such as current altitude, mass, biome, crew, and reference part are refreshed from the vessel after load rather than copied from stale saved telemetry.
+- live values such as current altitude, mass, biome, crew, reference part, and current external attachment topology are refreshed from the vessel after load rather than copied from stale saved telemetry.
 
-`FLIGHT_CONTRACT_PROGRESS` now uses repeated `ATTEMPT` nodes with nested `PART_LINEAGE` and `CONTROL_STATE` entries. The previous development single-attempt root format is intentionally not migrated; use a current-build disposable save when validating Step 6.
+`FLIGHT_CONTRACT_PROGRESS` uses repeated `ATTEMPT` nodes with nested `PART_LINEAGE` and `CONTROL_STATE` entries. The previous development single-attempt root format is intentionally not migrated; use a current-build disposable save when validating the current persistence format.
+
+The transient external-attachment topology is rebuilt from the first usable live snapshot after load. That first observation establishes the baseline and should not by itself reset a restored partial Control hold; later docking/undocking changes should reset it normally.
 
 FlightActiveUI expansion state and visibility are temporary UI state and do not need to survive a scene/save reload.
 
@@ -444,9 +472,9 @@ Before treating a build as a 0.5 release candidate, complete [`KERBAL_CONTRACTS_
 
 - all four Pre-Orbit lines;
 - multiple simultaneously offered levels;
+- Flight Attempt switching, staging, docking/undocking, topology rules, and multi-attempt persistence;
 - Level V -> Probe Orbit convergence;
 - funding and rival behaviour;
-- multi-attempt Flight Contract persistence and save/reload;
 - loaded/unloaded orbital vessel tracking;
 - Command Center presentation;
 - FlightActiveUI launcher lifecycle, ordering, expansion, and live requirement presentation;

@@ -19,7 +19,7 @@ There are four Pre-Orbit contract lines, with five levels in each line:
 - **Control** — hold a crewed vessel inside an altitude band for a required time, then land or splash down safely on Kerbin with crew. Docking or undocking another lineage resets an unfinished continuous hold but does not erase a hold that has already qualified.
 - **Biome** — reach progressively harder Kerbin biomes and finish landed or splashed in the target biome.
 
-At campaign start, Level I of all four lines is offered. Levels II-V unlock in sequence when the previous level in that line is completed by **any agency**. Completing Level V in any one line offers **Probe Orbit** immediately.
+At campaign start, Level I of all four lines is offered. Levels II-V unlock in sequence when the previous level in that line is completed by **any agency**. Completing Level V in any one line unlocks **Probe Orbit**, which then waits for the next sponsor review before becoming `Offered`.
 
 The existing orbital objectives, satellite-network funding, sponsor reviews, rival simulation, and persistent campaign state remain part of the same campaign.
 

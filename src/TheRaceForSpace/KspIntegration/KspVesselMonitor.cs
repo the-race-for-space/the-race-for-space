@@ -395,7 +395,8 @@ namespace TheRaceForSpace.KspIntegration
                 launchUniversalTime,
                 observationUniversalTime,
                 partPersistentIds,
-                referencePartPersistentId);
+                referencePartPersistentId,
+                vessel.vesselName);
 
             LogActiveVesselTelemetryStatus(
                 "captured active vessel "

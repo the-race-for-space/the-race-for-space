@@ -6,10 +6,6 @@ This file tracks current development ideas and polish work only. Completed items
 
 - [ ] **Order Funding Targets by player completion state.** Show objectives the player has not completed at the top of the list, with player-completed objectives moved to the bottom so current work is easier to find.
 
-## Contract Catalogue
-
-- [ ] **Display counts in catalogue section headings.** Show the number of contracts in each section heading, for example `Offered (4)`, `Unlocked (2)`, `Locked (20)`, and `Expired (1)`.
-
 ## Flight UI
 
 - [ ] **Display funding reward beside each contract.** Show the contract's funding reward in the compact Offered Contracts window so the player can see the value of the objective without opening the full Command Center.

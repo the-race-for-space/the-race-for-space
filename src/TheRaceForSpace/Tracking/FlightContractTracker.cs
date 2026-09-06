@@ -6,17 +6,22 @@ using TheRaceForSpace.Agencies;
 namespace TheRaceForSpace.Tracking
 {
     /// <summary>
-    /// Evaluates one player flight attempt and records the four special pre-orbit contract lines
-    /// from KSP-independent active-vessel snapshots. Mutable attempt state is held separately by
-    /// FlightAttemptState so later work can add multiple remembered attempts without mixing state
-    /// ownership into the contract evaluation rules.
+    /// Evaluates active player flight attempts and records the four special pre-orbit contract lines
+    /// from KSP-independent active-vessel snapshots. Mutable state is retained per remembered craft
+    /// so switching vessels during the same session does not discard unfinished contract history.
     /// </summary>
     public sealed class FlightContractTracker
     {
         private const double LaunchTimeMatchToleranceSeconds = 1.0;
         private const double MaximumContinuousSampleGapSeconds = 5.0;
 
-        private readonly FlightAttemptState _attempt = new FlightAttemptState();
+        // Vessel IDs are only a temporary lookup for the in-memory multi-attempt step. Later lineage
+        // work will replace this identity rule so docking, undocking, and vessel-ID changes are handled
+        // from persistent craft lineage rather than treating a KSP Vessel ID as long-term identity.
+        private readonly Dictionary<string, FlightAttemptState> _attemptsByVesselId =
+            new Dictionary<string, FlightAttemptState>(StringComparer.OrdinalIgnoreCase);
+
+        private FlightAttemptState _attempt = new FlightAttemptState();
 
         public bool HasActiveAttempt { get { return _attempt.HasActiveAttempt; } }
         public string VesselId { get { return _attempt.VesselId; } }
@@ -115,16 +120,7 @@ namespace TheRaceForSpace.Tracking
                 return false;
             }
 
-            if (!IsSameAttempt(snapshot))
-            {
-                BeginAttempt(snapshot);
-            }
-            else
-            {
-                // Staging can replace the active Vessel object while preserving the launch time.
-                // Keep the mission history but follow the newly controlled vessel ID for impact detection.
-                _attempt.VesselId = snapshot.VesselId;
-            }
+            SelectAttempt(snapshot);
 
             double sampleDeltaSeconds = 0.0;
             if (_attempt.LastSampleUniversalTime >= 0.0
@@ -229,9 +225,9 @@ namespace TheRaceForSpace.Tracking
         }
 
         /// <summary>
-        /// Consumes a KSP integration signal that the tracked active vessel was destroyed at the
-        /// Kerbin surface. Every supplied active Directed Power contract is evaluated independently
-        /// against the same completed flight history before the destroyed attempt is cleared.
+        /// Consumes a KSP integration signal that a remembered vessel was destroyed at the Kerbin
+        /// surface. Only that vessel's attempt is evaluated and removed; other remembered craft keep
+        /// their unfinished histories.
         /// </summary>
         public bool RecordSurfaceImpact(
             AgencyState playerAgency,
@@ -240,20 +236,17 @@ namespace TheRaceForSpace.Tracking
             string celestialBodyName,
             double impactUniversalTime)
         {
+            FlightAttemptState impactedAttempt;
             if (playerAgency == null
                 || activeFlightContracts == null
-                || !HasActiveAttempt
                 || string.IsNullOrEmpty(vesselId)
-                || !string.Equals(
-                    _attempt.VesselId,
-                    vesselId,
-                    StringComparison.OrdinalIgnoreCase))
+                || !_attemptsByVesselId.TryGetValue(vesselId, out impactedAttempt))
             {
                 return false;
             }
 
             bool recordedObjective = false;
-            if (!_attempt.EnteredOrbit
+            if (!impactedAttempt.EnteredOrbit
                 && string.Equals(celestialBodyName, "Kerbin", StringComparison.OrdinalIgnoreCase))
             {
                 for (int objectiveIndex = 0; objectiveIndex < activeFlightContracts.Count; objectiveIndex++)
@@ -262,8 +255,8 @@ namespace TheRaceForSpace.Tracking
                     if (objective == null
                         || objective.PreOrbitLine != PreOrbitContractLine.DirectedPower
                         || playerAgency.HasCompletedObjective(objective.Id)
-                        || _attempt.MaximumAltitudeMeters > objective.MaximumAltitudeMeters
-                        || _attempt.MaximumSurfaceSpeedMetersPerSecond
+                        || impactedAttempt.MaximumAltitudeMeters > objective.MaximumAltitudeMeters
+                        || impactedAttempt.MaximumSurfaceSpeedMetersPerSecond
                             < objective.RequiredSpeedMetersPerSecond)
                     {
                         continue;
@@ -275,12 +268,13 @@ namespace TheRaceForSpace.Tracking
                 }
             }
 
-            ClearAttempt();
+            RemoveAttempt(impactedAttempt);
             return recordedObjective;
         }
 
         /// <summary>
-        /// Restores the common historical fields for one persisted flight-contract attempt. Current
+        /// Restores the common historical fields for the one attempt supported by the current save
+        /// format. In-memory attempts are replaced because persistence is authoritative on load.
         /// Control states are restored separately by stable contract ID through RestoreControlState.
         /// </summary>
         public void RestoreState(
@@ -309,27 +303,44 @@ namespace TheRaceForSpace.Tracking
                 || !IsFinite(maximumSurfaceSpeedMetersPerSecond)
                 || maximumSurfaceSpeedMetersPerSecond < 0.0)
             {
-                ClearAttempt();
+                ClearAllAttempts();
                 return;
             }
 
-            // Clear all live values and prior Control state before applying the persisted history.
-            // Instantaneous telemetry is rebuilt from the next active-vessel sample as before.
-            _attempt.Clear();
-            _attempt.VesselId = vesselId;
-            _attempt.CelestialBodyName = celestialBodyName;
-            _attempt.LaunchUniversalTime = launchUniversalTime;
-            _attempt.StartLatitudeDegrees = startLatitudeDegrees;
-            _attempt.StartLongitudeDegrees = startLongitudeDegrees;
-            _attempt.LastSampleUniversalTime = lastSampleUniversalTime;
-            _attempt.MaximumAltitudeMeters = maximumAltitudeMeters;
-            _attempt.MaximumSurfaceSpeedMetersPerSecond = maximumSurfaceSpeedMetersPerSecond;
-            _attempt.EnteredOrbit = enteredOrbit;
+            ClearAllAttempts();
+            var restoredAttempt = new FlightAttemptState
+            {
+                VesselId = vesselId,
+                CelestialBodyName = celestialBodyName,
+                LaunchUniversalTime = launchUniversalTime,
+                StartLatitudeDegrees = startLatitudeDegrees,
+                StartLongitudeDegrees = startLongitudeDegrees,
+                LastSampleUniversalTime = lastSampleUniversalTime,
+                MaximumAltitudeMeters = maximumAltitudeMeters,
+                MaximumSurfaceSpeedMetersPerSecond = maximumSurfaceSpeedMetersPerSecond,
+                EnteredOrbit = enteredOrbit
+            };
+
+            _attemptsByVesselId.Add(vesselId, restoredAttempt);
+            _attempt = restoredAttempt;
         }
 
+        /// <summary>
+        /// Clears only the currently selected attempt. Other remembered craft remain available for
+        /// later vessel switching during the same session.
+        /// </summary>
         public void ClearAttempt()
         {
-            _attempt.Clear();
+            RemoveAttempt(_attempt);
+        }
+
+        /// <summary>
+        /// Clears all remembered in-memory attempts before applying persisted state.
+        /// </summary>
+        internal void ClearAllAttempts()
+        {
+            _attemptsByVesselId.Clear();
+            _attempt = new FlightAttemptState();
         }
 
         private bool EvaluateControlObjectives(
@@ -395,48 +406,97 @@ namespace TheRaceForSpace.Tracking
             _attempt.ResetUnqualifiedControlStates();
         }
 
-        private bool IsSameAttempt(ActiveVesselSnapshot snapshot)
+        private void SelectAttempt(ActiveVesselSnapshot snapshot)
         {
-            if (!HasActiveAttempt)
+            FlightAttemptState selectedAttempt;
+            if (_attemptsByVesselId.TryGetValue(snapshot.VesselId, out selectedAttempt))
             {
-                return false;
+                _attempt = selectedAttempt;
+                return;
             }
 
-            if (string.Equals(
-                _attempt.VesselId,
-                snapshot.VesselId,
-                StringComparison.OrdinalIgnoreCase))
+            // Until persistent part lineage is introduced, retain the existing staging behaviour by
+            // treating a new Vessel ID with matching launch time/body as the same continuing attempt.
+            // This is intentionally a temporary split/merge rule and will be replaced by lineage work.
+            selectedAttempt = FindLaunchContinuation(snapshot);
+            if (selectedAttempt != null)
             {
-                return true;
+                if (!string.IsNullOrEmpty(selectedAttempt.VesselId))
+                {
+                    _attemptsByVesselId.Remove(selectedAttempt.VesselId);
+                }
+
+                selectedAttempt.VesselId = snapshot.VesselId;
+                _attemptsByVesselId[snapshot.VesselId] = selectedAttempt;
+                _attempt = selectedAttempt;
+                return;
             }
 
-            // KSP can assign a new vessel ID to a separated stage. Shared launch time and body
-            // provide a narrow continuation rule without treating an unrelated later launch as
-            // the same contract attempt.
-            return _attempt.LaunchUniversalTime >= 0.0
-                && snapshot.LaunchUniversalTime >= 0.0
-                && Math.Abs(_attempt.LaunchUniversalTime - snapshot.LaunchUniversalTime)
-                    <= LaunchTimeMatchToleranceSeconds
-                && string.Equals(
-                    _attempt.CelestialBodyName,
-                    snapshot.CelestialBodyName,
-                    StringComparison.OrdinalIgnoreCase);
+            selectedAttempt = new FlightAttemptState();
+            BeginAttempt(selectedAttempt, snapshot);
+            _attemptsByVesselId.Add(snapshot.VesselId, selectedAttempt);
+            _attempt = selectedAttempt;
         }
 
-        private void BeginAttempt(ActiveVesselSnapshot snapshot)
+        private FlightAttemptState FindLaunchContinuation(ActiveVesselSnapshot snapshot)
         {
-            _attempt.Clear();
-            _attempt.VesselId = snapshot.VesselId;
-            _attempt.CelestialBodyName = snapshot.CelestialBodyName;
-            _attempt.LaunchUniversalTime = snapshot.LaunchUniversalTime;
-            _attempt.StartLatitudeDegrees = snapshot.LatitudeDegrees;
-            _attempt.StartLongitudeDegrees = snapshot.LongitudeDegrees;
-            _attempt.LastSampleUniversalTime = snapshot.ObservationUniversalTime;
-            _attempt.MaximumAltitudeMeters = Math.Max(0.0, snapshot.AltitudeMeters);
-            _attempt.MaximumSurfaceSpeedMetersPerSecond = Math.Max(
+            foreach (KeyValuePair<string, FlightAttemptState> entry in _attemptsByVesselId)
+            {
+                FlightAttemptState rememberedAttempt = entry.Value;
+                if (rememberedAttempt == null
+                    || rememberedAttempt.LaunchUniversalTime < 0.0
+                    || snapshot.LaunchUniversalTime < 0.0
+                    || Math.Abs(
+                        rememberedAttempt.LaunchUniversalTime - snapshot.LaunchUniversalTime)
+                        > LaunchTimeMatchToleranceSeconds
+                    || !string.Equals(
+                        rememberedAttempt.CelestialBodyName,
+                        snapshot.CelestialBodyName,
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                return rememberedAttempt;
+            }
+
+            return null;
+        }
+
+        private static void BeginAttempt(
+            FlightAttemptState attempt,
+            ActiveVesselSnapshot snapshot)
+        {
+            attempt.Clear();
+            attempt.VesselId = snapshot.VesselId;
+            attempt.CelestialBodyName = snapshot.CelestialBodyName;
+            attempt.LaunchUniversalTime = snapshot.LaunchUniversalTime;
+            attempt.StartLatitudeDegrees = snapshot.LatitudeDegrees;
+            attempt.StartLongitudeDegrees = snapshot.LongitudeDegrees;
+            attempt.LastSampleUniversalTime = snapshot.ObservationUniversalTime;
+            attempt.MaximumAltitudeMeters = Math.Max(0.0, snapshot.AltitudeMeters);
+            attempt.MaximumSurfaceSpeedMetersPerSecond = Math.Max(
                 0.0,
                 snapshot.SurfaceSpeedMetersPerSecond);
-            _attempt.EnteredOrbit = snapshot.Situation == FlightSituation.Orbiting;
+            attempt.EnteredOrbit = snapshot.Situation == FlightSituation.Orbiting;
+        }
+
+        private void RemoveAttempt(FlightAttemptState attempt)
+        {
+            if (attempt == null)
+            {
+                return;
+            }
+
+            if (!string.IsNullOrEmpty(attempt.VesselId))
+            {
+                _attemptsByVesselId.Remove(attempt.VesselId);
+            }
+
+            if (ReferenceEquals(_attempt, attempt))
+            {
+                _attempt = new FlightAttemptState();
+            }
         }
 
         private double CalculateSurfaceDistanceMeters(ActiveVesselSnapshot snapshot)

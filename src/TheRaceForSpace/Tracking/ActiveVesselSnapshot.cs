@@ -20,8 +20,8 @@ namespace TheRaceForSpace.Tracking
 
     /// <summary>
     /// Condition-specific telemetry requested by the cached active flight-contract plan.
-    /// Vessel identity, body, situation, launch time, coordinates, and observation time remain
-    /// common attempt context because they are cheap direct values and preserve launch continuity.
+    /// Vessel identity, body, situation, launch time, coordinates, persistent part lineage, and
+    /// observation time remain common attempt context because they are needed to identify a flight.
     /// </summary>
     [Flags]
     public enum FlightTelemetryRequirement
@@ -90,6 +90,8 @@ namespace TheRaceForSpace.Tracking
     /// </summary>
     public sealed class ActiveVesselSnapshot
     {
+        private static readonly uint[] EmptyPartPersistentIds = new uint[0];
+
         public ActiveVesselSnapshot(
             string vesselId,
             string celestialBodyName,
@@ -103,7 +105,8 @@ namespace TheRaceForSpace.Tracking
             string biomeName,
             int crewCount,
             double launchUniversalTime,
-            double observationUniversalTime)
+            double observationUniversalTime,
+            IList<uint> partPersistentIds = null)
         {
             VesselId = vesselId;
             CelestialBodyName = celestialBodyName;
@@ -118,6 +121,21 @@ namespace TheRaceForSpace.Tracking
             CrewCount = Math.Max(0, crewCount);
             LaunchUniversalTime = launchUniversalTime;
             ObservationUniversalTime = observationUniversalTime;
+
+            if (partPersistentIds == null || partPersistentIds.Count == 0)
+            {
+                PartPersistentIds = EmptyPartPersistentIds;
+            }
+            else
+            {
+                var persistentIdCopy = new uint[partPersistentIds.Count];
+                for (int partIndex = 0; partIndex < partPersistentIds.Count; partIndex++)
+                {
+                    persistentIdCopy[partIndex] = partPersistentIds[partIndex];
+                }
+
+                PartPersistentIds = persistentIdCopy;
+            }
         }
 
         public string VesselId { get; private set; }
@@ -133,5 +151,12 @@ namespace TheRaceForSpace.Tracking
         public int CrewCount { get; private set; }
         public double LaunchUniversalTime { get; private set; }
         public double ObservationUniversalTime { get; private set; }
+
+        /// <summary>
+        /// KSP persistent part IDs present on the controlled vessel when this snapshot was captured.
+        /// These project-owned primitive values allow later lineage matching without exposing Part
+        /// objects outside KspIntegration.
+        /// </summary>
+        public IReadOnlyList<uint> PartPersistentIds { get; private set; }
     }
 }

@@ -29,6 +29,7 @@ CampaignController
     |
     +--> Persistence
     +--> CommandCenterWindow reads the result
+    +--> FlightActiveUI reads offered/live Flight Contract state
 ```
 
 `ModRuntime` decides **when** work happens.
@@ -211,9 +212,19 @@ Selects rival targets, spends rival funds, advances mission progress, and record
 
 Location: `UI/CommandCenterWindow.cs`
 
-Draws the Command Center.
+Draws the full Command Center with Overview, Funding Targets, Rival Agencies, and Contract Catalogue views.
 
 It reads campaign and Flight Contract state but does not advance gameplay.
+
+### `FlightActiveUI`
+
+Location: `UI/FlightActiveUI.cs`
+
+Draws the compact Flight-only **Offered Contracts** window.
+
+It has its own Flight-scene launcher button and reads the same controller/tracker state already owned by `ModRuntime`. Player-uncompleted Offered objective contracts appear first and can be expanded independently by stable contract ID. Offered contracts already completed by the player sit at the bottom marked `Complete` with no expand/collapse control.
+
+Expanded Pre-Orbit contracts show the live requirements already tracked for Directed Power, Mass, Control, and Biome. Other objective types use their normal objective description. The window does not query KSP vessels or create a second telemetry loop.
 
 ## The two vessel paths
 
@@ -232,9 +243,14 @@ ActiveVesselSnapshot
     |
     v
 FlightContractTracker
+    |
+    +--> campaign completion evaluation
+    +--> read-only FlightActiveUI presentation
 ```
 
 The telemetry request is requirement-gated. If only Mass is active, there is no reason to query biome or enable Directed Power impact callbacks.
+
+UI visibility does not change the telemetry cadence; the tracker continues to be updated by `ModRuntime` whether the compact window is open or closed.
 
 ### 2. Orbital Vessel path
 
@@ -266,7 +282,7 @@ This is slower and runs less often.
 7. `FlightContractTracker` checks the Mass II requirements.
 8. On a valid Kerbin landing, `AgencyState.RecordObjectiveCompletion()` records the result.
 9. `CampaignController` updates unlocks and funding state.
-10. Persistence saves the change and the Command Center shows the updated state.
+10. Persistence saves the change; the Command Center and FlightActiveUI read the resulting state for presentation.
 
 ## Example: completing Probe Orbit
 
@@ -291,7 +307,8 @@ This is slower and runs less often.
 | Rival behaviour | `Rivals/RivalSimulation.cs` |
 | Save-state models | `Persistence/` |
 | KSP save/load hooks | `KspIntegration/ModPersistenceScenario.cs` |
-| Command Center | `UI/CommandCenterWindow.cs` |
+| Full Command Center | `UI/CommandCenterWindow.cs` |
+| Compact Flight contract window | `UI/FlightActiveUI.cs` |
 
 ## Three rules to remember
 

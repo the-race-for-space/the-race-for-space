@@ -315,12 +315,12 @@ namespace TheRaceForSpace.UI
                 StringComparison.OrdinalIgnoreCase);
             if (!isKerbin)
             {
-                GUILayout.Label("Attempt status: INVALID - active vessel is not on Kerbin.");
+                GUILayout.Label("Attempt status: Invalid - active vessel is not on Kerbin.");
             }
 
             if (tracker.EnteredOrbit)
             {
-                GUILayout.Label("Attempt status: INVALID - vessel entered orbit.");
+                GUILayout.Label("Attempt status: Invalid - vessel entered orbit.");
             }
 
             if (objective.PreOrbitLine == PreOrbitContractLine.DirectedPower)
@@ -340,19 +340,19 @@ namespace TheRaceForSpace.UI
                     + " / "
                     + objective.RequiredSpeedMetersPerSecond.ToString("N0")
                     + " m/s - "
-                    + (speedMet ? "MET" : "PENDING"));
+                    + (speedMet ? "Met" : "Pending"));
                 GUILayout.Label(
                     "Max Altitude: "
                     + (tracker.MaximumAltitudeMeters / 1000.0).ToString("N1")
                     + " / "
                     + (objective.MaximumAltitudeMeters / 1000.0).ToString("N0")
                     + " km - "
-                    + (altitudeValid ? "VALID" : "INVALID"));
+                    + (altitudeValid ? "Valid" : "Invalid"));
                 GUILayout.Label(
                     "Kerbin Impact: "
                     + (isKerbin && !tracker.EnteredOrbit && speedMet && altitudeValid
-                        ? "READY - impact Kerbin to complete"
-                        : "PENDING"));
+                        ? "Ready - impact Kerbin to complete"
+                        : "Pending"));
                 return;
             }
 
@@ -368,15 +368,15 @@ namespace TheRaceForSpace.UI
                     + " / "
                     + objective.RequiredMassTonnes.ToString("N1")
                     + " t - "
-                    + (massMet ? "MET" : "PENDING"));
+                    + (massMet ? "Met" : "Pending"));
                 GUILayout.Label(
                     "Distance: "
                     + (tracker.CurrentDistanceMeters / 1000.0).ToString("N0")
                     + " / "
                     + (objective.RequiredDistanceMeters / 1000.0).ToString("N0")
                     + " km - "
-                    + (distanceMet ? "MET" : "PENDING"));
-                GUILayout.Label("Landed: " + (landed ? "YES - MET" : "NO - PENDING"));
+                    + (distanceMet ? "Met" : "Pending"));
+                GUILayout.Label("Landed: " + (landed ? "Yes - Met" : "No - Pending"));
                 return;
             }
 
@@ -394,24 +394,24 @@ namespace TheRaceForSpace.UI
                     + "-"
                     + (objective.MaximumAltitudeMeters / 1000.0).ToString("N0")
                     + " km) - "
-                    + (holdQualified ? "HOLD COMPLETE" : (sampleInBand ? "IN BAND" : "OUT OF BAND")));
+                    + (holdQualified ? "Hold complete" : (sampleInBand ? "In band" : "Out of band")));
                 GUILayout.Label(
                     "Hold: "
                     + tracker.GetControlHoldSeconds(objective.Id).ToString("N0")
                     + " / "
                     + objective.RequiredDurationSeconds.ToString("N0")
                     + " s - "
-                    + (holdQualified ? "MET" : "PENDING"));
+                    + (holdQualified ? "Met" : "Pending"));
                 GUILayout.Label(
                     "Crew aboard: "
                     + tracker.CurrentCrewCount
                     + " - "
-                    + (hasCrew ? "MET" : "REQUIRED"));
+                    + (hasCrew ? "Met" : "Required"));
                 GUILayout.Label(
                     "Safe Kerbin landing: "
                     + (holdQualified && hasCrew
-                        ? "READY - land safely to complete"
-                        : "PENDING"));
+                        ? "Ready - land safely to complete"
+                        : "Pending"));
                 return;
             }
 
@@ -428,8 +428,8 @@ namespace TheRaceForSpace.UI
 
                 GUILayout.Label("Current Biome: " + currentBiome);
                 GUILayout.Label("Target: " + objective.RequiredBiomeName);
-                GUILayout.Label("Biome Match: " + (biomeMatched ? "YES - MET" : "NO - PENDING"));
-                GUILayout.Label("Landed: " + (landed ? "YES - MET" : "NO - PENDING"));
+                GUILayout.Label("Biome Match: " + (biomeMatched ? "Yes - Met" : "No - Pending"));
+                GUILayout.Label("Landed: " + (landed ? "Yes - Met" : "No - Pending"));
             }
         }
     }

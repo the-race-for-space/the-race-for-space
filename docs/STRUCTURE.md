@@ -312,6 +312,11 @@ Level I -> Level II -> Level III -> Level IV -> Level V
                        any line Level V complete
                                       |
                                       v
+                               Probe Orbit unlocked
+                                      |
+                            next sponsor review
+                                      |
+                                      v
                                 Probe Orbit offered
 ```
 
@@ -321,7 +326,7 @@ Rules:
 - A later level unlocks when any agency completes the previous level in that line.
 - Unlocked Pre-Orbit contracts wait for the next sponsor review before becoming offered.
 - All unlocked Pre-Orbit contracts can be offered together; they do not consume the normal one-off objective offer limit.
-- Probe Orbit is the exception: completing Level V in any Pre-Orbit line offers Probe Orbit immediately.
+- Completing Level V in any Pre-Orbit line unlocks Probe Orbit; Probe Orbit then follows the normal sponsor-review offer flow.
 
 ## How a Pre-Orbit contract is evaluated
 

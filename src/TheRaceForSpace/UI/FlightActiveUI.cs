@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using KSP.UI.Screens;
 using TheRaceForSpace.Campaign;
 using TheRaceForSpace.Core;
@@ -19,15 +20,19 @@ namespace TheRaceForSpace.UI
         private const string LauncherIconTexturePath =
             "Squad/PartList/SimpleIcons/R&D_node_icon_flightControl";
 
-        private static readonly GUILayoutOption[] ContractMarkerOptions = { GUILayout.Width(24.0f) };
+        private static readonly GUILayoutOption[] ContractToggleOptions =
+            { GUILayout.Width(24.0f), GUILayout.Height(22.0f) };
         private static readonly GUILayoutOption[] CompleteLabelOptions = { GUILayout.Width(72.0f) };
+        private static readonly GUILayoutOption[] ContractListOptions = { GUILayout.Height(175.0f) };
 
         private static FlightActiveUI _activeInstance;
 
+        private readonly HashSet<string> _expandedContractIds = new HashSet<string>();
         private ApplicationLauncherButton _launcherButton;
         private CampaignController _campaignController;
         private GUI.WindowFunction _drawWindowFunction;
         private Rect _windowRect;
+        private Vector2 _contractScrollPosition;
         private bool _isDuplicateInstance;
         private bool _isVisible;
 
@@ -185,6 +190,10 @@ namespace TheRaceForSpace.UI
                 return;
             }
 
+            _contractScrollPosition = GUILayout.BeginScrollView(
+                _contractScrollPosition,
+                ContractListOptions);
+
             bool hasUncompletedContracts = false;
             for (int contractIndex = 0;
                 contractIndex < _campaignController.ObjectiveFundingContracts.Count;
@@ -202,10 +211,37 @@ namespace TheRaceForSpace.UI
                 }
 
                 hasUncompletedContracts = true;
+                bool isExpanded = _expandedContractIds.Contains(contract.Id);
+
                 GUILayout.BeginHorizontal();
-                GUILayout.Label("+", ContractMarkerOptions);
+                if (GUILayout.Button(isExpanded ? "-" : "+", ContractToggleOptions))
+                {
+                    if (isExpanded)
+                    {
+                        _expandedContractIds.Remove(contract.Id);
+                        isExpanded = false;
+                    }
+                    else
+                    {
+                        _expandedContractIds.Add(contract.Id);
+                        isExpanded = true;
+                    }
+                }
+
                 GUILayout.Label(contract.Name);
                 GUILayout.EndHorizontal();
+
+                if (isExpanded)
+                {
+                    // Step 4 replaces this placeholder with the objective's live requirement rows.
+                    // Expansion state is already keyed by the stable contract ID so each row can
+                    // remain open independently as the offered list changes.
+                    GUILayout.BeginHorizontal();
+                    GUILayout.Space(28.0f);
+                    GUILayout.Label("Live requirements will appear here.");
+                    GUILayout.EndHorizontal();
+                    GUILayout.Space(4.0f);
+                }
             }
 
             bool hasCompletedContracts = false;
@@ -243,7 +279,7 @@ namespace TheRaceForSpace.UI
                 GUILayout.Label("No offered contracts.");
             }
 
-            GUILayout.FlexibleSpace();
+            GUILayout.EndScrollView();
             GUI.DragWindow();
         }
     }

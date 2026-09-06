@@ -437,26 +437,33 @@ namespace TheRaceForSpace.UI
             GUILayout.BeginVertical(OverviewObjectivesOptions);
             GUILayout.Label("Your Objectives", _boldLabelStyle);
 
+            bool hasCurrentObjective = false;
             for (int contractIndex = 0;
                 contractIndex < _campaignController.ObjectiveFundingContracts.Count;
                 contractIndex++)
             {
                 ObjectiveFundingContract contract =
                     _campaignController.ObjectiveFundingContracts[contractIndex];
-                if (contract.IsExpired || !contract.IsOffered)
+                if (contract.IsExpired
+                    || !contract.IsOffered
+                    || _campaignController.HasAgencyCompletedObjective(player, contract))
                 {
                     continue;
                 }
 
-                GUILayout.Label(
-                    contract.Name
-                    + ": "
-                    + (_campaignController.HasAgencyCompletedObjective(player, contract) ? "ACHIEVED" : "IN PROGRESS"));
+                GUILayout.Label(contract.Name + ": IN PROGRESS");
+                hasCurrentObjective = true;
+            }
+
+            if (!hasCurrentObjective)
+            {
+                GUILayout.Label("None");
             }
 
             GUILayout.Space(10.0f);
             GUILayout.Label("Your Satellite Networks", _boldLabelStyle);
 
+            bool hasSatelliteNetwork = false;
             for (int contractIndex = 0;
                 contractIndex < _campaignController.SatelliteNetworkFundingContracts.Count;
                 contractIndex++)
@@ -473,6 +480,12 @@ namespace TheRaceForSpace.UI
                     + " orbit: "
                     + satelliteCount
                     + " qualifying satellite(s)");
+                hasSatelliteNetwork = true;
+            }
+
+            if (!hasSatelliteNetwork)
+            {
+                GUILayout.Label("None");
             }
 
             GUILayout.EndVertical();

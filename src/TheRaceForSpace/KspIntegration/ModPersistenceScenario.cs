@@ -19,13 +19,13 @@ namespace TheRaceForSpace.KspIntegration
     {
         private const string FundingContractsNodeName = "CAMPAIGN_FUNDING";
         private const string RivalAgenciesNodeName = "RIVAL_AGENCIES";
-        private const string ActiveContractProgressNodeName = "FLIGHT_CONTRACT_PROGRESS";
+        private const string FlightContractProgressNodeName = "FLIGHT_CONTRACT_PROGRESS";
         private const string CommandCenterVisibleValueName = "commandCenterVisible";
 
         private static readonly CampaignFundingSaveState FundingContractsState =
             new CampaignFundingSaveState();
         private static readonly RivalAgenciesSaveState RivalAgenciesState = new RivalAgenciesSaveState();
-        private static readonly FlightContractProgressSaveState ActiveContractProgressState =
+        private static readonly FlightContractProgressSaveState FlightContractProgressState =
             new FlightContractProgressSaveState();
         private static string _loadedSaveFolder;
         private static bool _commandCenterVisible;
@@ -48,8 +48,8 @@ namespace TheRaceForSpace.KspIntegration
                 FundingContractsState.Load(
                     node == null ? null : node.GetNode(FundingContractsNodeName));
                 RivalAgenciesState.Load(node == null ? null : node.GetNode(RivalAgenciesNodeName));
-                ActiveContractProgressState.Load(
-                    node == null ? null : node.GetNode(ActiveContractProgressNodeName));
+                FlightContractProgressState.Load(
+                    node == null ? null : node.GetNode(FlightContractProgressNodeName));
 
                 bool parsedCommandCenterVisible;
                 _commandCenterVisible = node != null
@@ -83,9 +83,9 @@ namespace TheRaceForSpace.KspIntegration
                 RivalAgenciesState.Save(node.AddNode(RivalAgenciesNodeName));
             }
 
-            if (ActiveContractProgressState.HasData)
+            if (FlightContractProgressState.HasData)
             {
-                ActiveContractProgressState.Save(node.AddNode(ActiveContractProgressNodeName));
+                FlightContractProgressState.Save(node.AddNode(FlightContractProgressNodeName));
             }
         }
 
@@ -152,8 +152,8 @@ namespace TheRaceForSpace.KspIntegration
         }
 
         /// <summary>
-        /// Restores temporary progress used to continue evaluating active contract conditions,
-        /// including the tracked flight history and independent Control contract hold state.
+        /// Restores every remembered Flight Attempt, including lineage, historical telemetry, and
+        /// independent Control contract progress, once KSP has loaded the current save state.
         /// </summary>
         public static bool TryRestoreFlightContractProgress(FlightContractTracker flightContractTracker)
         {
@@ -162,7 +162,7 @@ namespace TheRaceForSpace.KspIntegration
                 return false;
             }
 
-            ActiveContractProgressState.ApplyTo(flightContractTracker);
+            FlightContractProgressState.ApplyTo(flightContractTracker);
             return true;
         }
 
@@ -199,8 +199,8 @@ namespace TheRaceForSpace.KspIntegration
         }
 
         /// <summary>
-        /// Captures temporary active-condition progress. This only updates ScenarioModule state;
-        /// KSP writes it to disk during the normal save path.
+        /// Captures all remembered Flight Attempts into ScenarioModule-owned state. This does not
+        /// query KSP vessels; KSP writes the captured project-owned data during its normal save path.
         /// </summary>
         public static void CaptureFlightContractProgress(FlightContractTracker flightContractTracker)
         {
@@ -209,7 +209,7 @@ namespace TheRaceForSpace.KspIntegration
                 return;
             }
 
-            ActiveContractProgressState.Capture(flightContractTracker);
+            FlightContractProgressState.Capture(flightContractTracker);
         }
 
         /// <summary>
@@ -220,7 +220,7 @@ namespace TheRaceForSpace.KspIntegration
         {
             FundingContractsState.Load(null);
             RivalAgenciesState.Load(null);
-            ActiveContractProgressState.Load(null);
+            FlightContractProgressState.Load(null);
             _loadedSaveFolder = null;
             _commandCenterVisible = false;
             _stateReady = false;

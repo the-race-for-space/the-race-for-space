@@ -23,6 +23,8 @@ namespace TheRaceForSpace.Core
         private static CampaignController _campaignController;
         private static FlightContractTracker _flightContractTracker;
         private static string _controllerSaveFolder;
+        private static bool _hasCurrentFlightVesselTelemetry;
+        private static string _currentFlightVesselName;
 
         private bool _hasRestoredActiveContractProgress;
         private float _nextRefreshTime;
@@ -48,6 +50,25 @@ namespace TheRaceForSpace.Core
         public static FlightContractTracker FlightContractTrackingState
         {
             get { return IsControllerForCurrentSave() ? _flightContractTracker : null; }
+        }
+
+        /// <summary>
+        /// Presentation-only freshness flag for the most recent successful active-vessel sample.
+        /// A remembered selected attempt can exist before live KSP telemetry confirms which craft is
+        /// currently controlled, especially immediately after save/load or a Flight scene transition.
+        /// </summary>
+        internal static bool HasCurrentFlightVesselTelemetry
+        {
+            get { return IsControllerForCurrentSave() && _hasCurrentFlightVesselTelemetry; }
+        }
+
+        /// <summary>
+        /// Player-visible vessel name captured by the same active-vessel snapshot that most recently
+        /// updated the Flight Contract tracker. Null means fresh active-vessel telemetry is unavailable.
+        /// </summary>
+        internal static string CurrentFlightVesselName
+        {
+            get { return HasCurrentFlightVesselTelemetry ? _currentFlightVesselName : null; }
         }
 
         public void Awake()
@@ -227,14 +248,21 @@ namespace TheRaceForSpace.Core
 
             if (activeFlightContracts == null || activeFlightContracts.Count == 0)
             {
-                // No active pre-orbit contract means the tracker cannot change on this tick. Its last
-                // captured state is already sufficient for a later save or sponsor offer.
+                // No active pre-orbit contract means there is no current Flight Contract telemetry
+                // to present. Remembered histories remain untouched for persistence and later offers.
+                _hasCurrentFlightVesselTelemetry = false;
+                _currentFlightVesselName = null;
                 return;
             }
 
             bool recordedObjective = false;
             bool needsSurfaceImpact = (_flightTelemetryRequirements
                 & FlightTelemetryRequirement.SurfaceImpact) != 0;
+
+            // A restored selected attempt is historical state until a fresh KSP snapshot succeeds.
+            // Clear only presentation freshness here; remembered Flight Attempt history is unchanged.
+            _hasCurrentFlightVesselTelemetry = false;
+            _currentFlightVesselName = null;
 
             // Consume destruction before observing a replacement active vessel. KSP can switch
             // control immediately after a crash, and beginning the next attempt first would discard
@@ -267,6 +295,12 @@ namespace TheRaceForSpace.Core
                     _campaignController.PlayerAgency,
                     activeFlightContracts,
                     activeVesselSnapshot);
+
+                // Mark presentation current only after the same snapshot has successfully selected
+                // and updated its Flight Attempt. The UI can therefore never pair a new vessel name
+                // with stale history from a previously selected remembered attempt.
+                _currentFlightVesselName = activeVesselSnapshot.VesselName;
+                _hasCurrentFlightVesselTelemetry = true;
             }
 
             if (recordedObjective)
@@ -311,6 +345,8 @@ namespace TheRaceForSpace.Core
             _campaignController = new CampaignController();
             _flightContractTracker = new FlightContractTracker();
             _controllerSaveFolder = currentSaveFolder;
+            _hasCurrentFlightVesselTelemetry = false;
+            _currentFlightVesselName = null;
             KspVesselMonitor.ResetActiveVesselTracking();
             _hasRestoredActiveContractProgress = false;
             _nextRefreshTime = 0.0f;
@@ -337,6 +373,8 @@ namespace TheRaceForSpace.Core
             _campaignController = null;
             _flightContractTracker = null;
             _controllerSaveFolder = null;
+            _hasCurrentFlightVesselTelemetry = false;
+            _currentFlightVesselName = null;
             _hasRestoredActiveContractProgress = false;
             _nextRefreshTime = 0.0f;
             _nextActiveVesselRefreshTime = 0.0f;

@@ -187,8 +187,8 @@ namespace TheRaceForSpace.Objectives
                     ObjectiveType.AltitudeHold,
                     PreOrbitContractLine.Control,
                     3,
-                    PreOrbitContractCriteria.Control(15000.0, 25000.0, 60.0),
-                    "With crew aboard, remain between 15-25 km for 60 seconds, then land safely on Kerbin.",
+                    PreOrbitContractCriteria.Control(22000.0, 25000.0, 60.0),
+                    "With crew aboard, remain between 22-25 km for 60 seconds, then land safely on Kerbin.",
                     Control2Id,
                     ObjectiveCrewRequirement.Crewed),
                 CreatePreOrbitObjective(
@@ -197,8 +197,8 @@ namespace TheRaceForSpace.Objectives
                     ObjectiveType.AltitudeHold,
                     PreOrbitContractLine.Control,
                     4,
-                    PreOrbitContractCriteria.Control(30000.0, 40000.0, 75.0),
-                    "With crew aboard, remain between 30-40 km for 75 seconds, then land safely on Kerbin.",
+                    PreOrbitContractCriteria.Control(40000.0, 42500.0, 75.0),
+                    "With crew aboard, remain between 40-42.5 km for 75 seconds, then land safely on Kerbin.",
                     Control3Id,
                     ObjectiveCrewRequirement.Crewed),
                 CreatePreOrbitObjective(
@@ -207,8 +207,8 @@ namespace TheRaceForSpace.Objectives
                     ObjectiveType.AltitudeHold,
                     PreOrbitContractLine.Control,
                     5,
-                    PreOrbitContractCriteria.Control(50000.0, 65000.0, 90.0),
-                    "With crew aboard, remain between 50-65 km for 90 seconds, then land safely on Kerbin.",
+                    PreOrbitContractCriteria.Control(50000.0, 52000.0, 90.0),
+                    "With crew aboard, remain between 50-52 km for 90 seconds, then land safely on Kerbin.",
                     Control4Id,
                     ObjectiveCrewRequirement.Crewed),
 

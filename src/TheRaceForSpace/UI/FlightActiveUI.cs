@@ -360,7 +360,8 @@ namespace TheRaceForSpace.UI
             {
                 bool massMet = tracker.CurrentMassTonnes >= objective.RequiredMassTonnes;
                 bool distanceMet = tracker.CurrentDistanceMeters >= objective.RequiredDistanceMeters;
-                bool landed = tracker.CurrentSituation == FlightSituation.Landed;
+                bool recovered = tracker.CurrentSituation == FlightSituation.Landed
+                    || tracker.CurrentSituation == FlightSituation.Splashed;
 
                 GUILayout.Label(
                     "Mass: "
@@ -376,7 +377,8 @@ namespace TheRaceForSpace.UI
                     + (objective.RequiredDistanceMeters / 1000.0).ToString("N0")
                     + " km - "
                     + (distanceMet ? "Met" : "Pending"));
-                GUILayout.Label("Landed: " + (landed ? "Yes - Met" : "No - Pending"));
+                GUILayout.Label(
+                    "Landed / splashed: " + (recovered ? "Yes - Met" : "No - Pending"));
                 return;
             }
 
@@ -408,9 +410,9 @@ namespace TheRaceForSpace.UI
                     + " - "
                     + (hasCrew ? "Met" : "Required"));
                 GUILayout.Label(
-                    "Safe Kerbin landing: "
+                    "Safe Kerbin recovery: "
                     + (holdQualified && hasCrew
-                        ? "Ready - land safely to complete"
+                        ? "Ready - land or splash down safely to complete"
                         : "Pending"));
                 return;
             }
@@ -424,12 +426,14 @@ namespace TheRaceForSpace.UI
                     currentBiome,
                     objective.RequiredBiomeName,
                     StringComparison.OrdinalIgnoreCase);
-                bool landed = tracker.CurrentSituation == FlightSituation.Landed;
+                bool recovered = tracker.CurrentSituation == FlightSituation.Landed
+                    || tracker.CurrentSituation == FlightSituation.Splashed;
 
                 GUILayout.Label("Current Biome: " + currentBiome);
                 GUILayout.Label("Target: " + objective.RequiredBiomeName);
                 GUILayout.Label("Biome Match: " + (biomeMatched ? "Yes - Met" : "No - Pending"));
-                GUILayout.Label("Landed: " + (landed ? "Yes - Met" : "No - Pending"));
+                GUILayout.Label(
+                    "Landed / splashed: " + (recovered ? "Yes - Met" : "No - Pending"));
             }
         }
     }

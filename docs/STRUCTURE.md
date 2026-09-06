@@ -16,6 +16,8 @@ KspIntegration
     |        |
     |        v
     |    FlightContractTracker
+    |        |
+    |        +--> remembered FlightAttemptState records
     |
     +--> slower loaded/unloaded vessel snapshot
              |
@@ -165,11 +167,16 @@ There are two separate paths.
 Main classes:
 
 - `FlightContractTracker`
+- `FlightAttemptState`
 - `FlightTelemetryPlan`
 - `ActiveVesselSnapshot`
 - `SurfaceImpactEvaluator`
 
 This path uses frequent telemetry from the actively controlled vessel.
+
+`FlightContractTracker` now retains multiple `FlightAttemptState` records in memory. Switching from unrelated Craft A to Craft B and later back to A reselects A's previous history instead of deleting it. Only the active vessel is sampled; inactive attempt records are passive state and do not create extra vessel scans or evaluation loops.
+
+Step 2 still uses KSP vessel ID as a temporary in-memory lookup. The previous same-launch-time/body fallback remains in place for staging. Stable part lineage, docking/undocking reconciliation, and final split/merge identity rules are intentionally deferred to the later Persistent Flight Attempt steps.
 
 The current users are the four Pre-Orbit lines:
 
@@ -286,7 +293,7 @@ Rules:
 4. Offered, unfinished Pre-Orbit objectives become active Flight Contracts.
 5. `FlightTelemetryPlan` determines which live vessel values are needed.
 6. `KspVesselMonitor` captures only those required values.
-7. `FlightContractTracker` evaluates the snapshot against every active contract independently.
+7. `FlightContractTracker` selects or creates the remembered `FlightAttemptState` for the active craft and evaluates the snapshot against every active contract independently.
 8. `AgencyState` records each completed objective and emits the new-completion signal.
 9. `FundingNotificationUI` may publish the stock funding-completion notice for the player.
 10. `CampaignController` settles unlocks, offers, funding, and rival state on its normal refresh.
@@ -335,6 +342,8 @@ Examples:
 
 When there are no active Flight Contracts, the fast path should avoid unnecessary active-vessel discovery and evaluation.
 
+Remembered inactive Flight Attempts are not sampled or scanned on the one-second path. Normal vessel switching uses a direct vessel-ID lookup; the temporary staging fallback scans only the small remembered-attempt collection when a previously unseen vessel ID is encountered.
+
 UI visibility does not own or change the telemetry sampling frequency. `FlightActiveUI` reads the existing tracker state maintained by `ModRuntime`; `CommandCenterWindow` no longer draws live Flight Contract requirement telemetry. `FundingNotificationUI` is event-driven and does not add another vessel or contract-evaluation loop.
 
 The slower orbital scan remains separate because it must consider loaded and unloaded vessels.
@@ -350,11 +359,13 @@ The slower orbital scan remains separate because it must consider loaded and unl
 
 `RIVAL_AGENCIES` stores each rival by stable agency ID.
 
-`FLIGHT_CONTRACT_PROGRESS` stores temporary active-flight state needed for fair continuation after save/load, including:
+`FLIGHT_CONTRACT_PROGRESS` currently stores only the **active** Flight Attempt needed for continuation after save/load, including:
 
 - tracked flight identity and launch origin;
 - Directed Power maximum speed/altitude and orbit invalidation;
 - independent `CONTROL_STATE` entries.
+
+Step 2's additional inactive in-memory attempts are deliberately **not yet serialized**. Saving while Craft B is active and reloading will therefore restore B only; Craft A's remembered session state will survive A -> B -> A switching only until the multi-attempt persistence work in Step 6 is implemented.
 
 Instantaneous live telemetry such as current altitude, current mass, current biome, and crew count is rebuilt from the next active-vessel sample instead of being treated as authoritative saved state.
 
@@ -380,6 +391,7 @@ Direct KSP API behaviour still requires an in-game test. See [`KERBAL_CONTRACTS_
 | Add or change an objective | `Objectives/ObjectiveCatalogue.cs` |
 | Change unlock logic | `Objectives/UnlockRuleEvaluator.cs` |
 | Change active-vessel contract evaluation | `Tracking/FlightContractTracker.cs` |
+| Change Flight Attempt state | `Tracking/FlightAttemptState.cs` |
 | Change live vessel values collected | `KspIntegration/KspVesselMonitor.cs` |
 | Change orbital vessel evaluation | `Tracking/OrbitalVesselTracker.cs` |
 | Change sponsor reviews or campaign coordination | `Campaign/CampaignController.cs` |

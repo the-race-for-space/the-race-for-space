@@ -111,14 +111,14 @@ namespace TheRaceForSpace.Tests.Tracking
                 ObjectiveCatalogue.PreOrbitContracts,
                 Snapshot("mass-b", 200.0, 210.0, 1000.0, 400.0, 2.6, 0, null, FlightSituation.Flying, 8.0));
             Require(!player.HasCompletedObjective(ObjectiveCatalogue.Mass2Id),
-                "Mass II must wait for the qualifying 2.5 t craft to land beyond 75 km.");
+                "Mass II must wait for the qualifying 2.5 t craft to finish beyond 75 km.");
 
             tracker.EvaluateActiveFlightContracts(
                 player,
                 ObjectiveCatalogue.PreOrbitContracts,
-                Snapshot("mass-b", 200.0, 211.0, 0.0, 0.0, 2.6, 0, null, FlightSituation.Landed, 8.0));
+                Snapshot("mass-b", 200.0, 211.0, 0.0, 0.0, 2.6, 0, null, FlightSituation.Splashed, 8.0));
             Require(player.HasCompletedObjective(ObjectiveCatalogue.Mass2Id),
-                "A fresh landed craft retaining at least 2.5 t beyond 75 km should complete Mass II.");
+                "A fresh splashed craft retaining at least 2.5 t beyond 75 km should complete Mass II.");
         }
 
         private static void ControlRequiresContinuousCrewedHoldAndLanding()
@@ -144,14 +144,14 @@ namespace TheRaceForSpace.Tests.Tracking
             }
 
             Require(!player.HasCompletedObjective(ObjectiveCatalogue.Control1Id),
-                "Completing the altitude hold alone must not award Control I before landing.");
+                "Completing the altitude hold alone must not award Control I before recovery.");
 
             tracker.EvaluateActiveFlightContracts(
                 player,
                 ObjectiveCatalogue.PreOrbitContracts,
-                Snapshot("control-a", 300.0, 331.0, 80.0, 0.0, 1.0, 1, null, FlightSituation.Landed));
+                Snapshot("control-a", 300.0, 331.0, 80.0, 0.0, 1.0, 1, null, FlightSituation.Splashed));
             Require(player.HasCompletedObjective(ObjectiveCatalogue.Control1Id),
-                "A qualified Control hold followed by a crewed Kerbin landing should complete the objective.");
+                "A qualified Control hold followed by a crewed Kerbin splashdown should complete the objective.");
         }
 
         private static void UnobservedControlGapResetsHold()
@@ -233,9 +233,9 @@ namespace TheRaceForSpace.Tests.Tracking
             tracker.EvaluateActiveFlightContracts(
                 player,
                 ObjectiveCatalogue.PreOrbitContracts,
-                Snapshot("biome-b", 500.0, 511.0, 0.0, 0.0, 1.0, 0, "Highlands", FlightSituation.Landed));
+                Snapshot("biome-b", 500.0, 511.0, 0.0, 0.0, 1.0, 0, "Highlands", FlightSituation.Splashed));
             Require(player.HasCompletedObjective(ObjectiveCatalogue.Biome2Id),
-                "A later launch landed in Highlands may complete the next unlocked Biome objective.");
+                "A later launch splashed in Highlands may complete the next unlocked Biome objective.");
         }
 
         private static void StagingPreservesDirectedPowerAttempt()

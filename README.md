@@ -116,7 +116,7 @@ The mod uses one full Command Center window with four main views:
 - **Rival Agencies**
 - **Contract Catalogue**
 
-The Contract Catalogue shows `Offered`, `Unlocked`, `Locked`, and `Expired` objective funding contracts.
+The Contract Catalogue shows `Offered`, `Unlocked`, `Locked`, and `Expired` objective funding contracts. Each section heading includes the current number of contracts in that state, for example `Offered (4)` or `Unlocked (2)`, and the count remains visible when the section is collapsed.
 
 Overview shows only Offered objectives the player has not yet achieved under `Your Objectives`; completed objectives are hidden, and empty objective or satellite-network summaries show `None`. Completed one-off contracts that are still paying out appear under Funding Information with the player's projected next payout on the first line and the number of scheduled payments remaining on the second line. When more than one agency is eligible for that next payout, the second line also reports the split, for example `3 payments remaining (split between 2 agencies)`.
 

@@ -36,3 +36,8 @@ This file tracks current development ideas and polish work only. Completed items
 
 - [ ] **Add a Pre-Orbit line quick guide.** Add a short player-facing explanation of Directed Power, Mass, Control, and Biome, including the basic purpose of each progression line.
 - [ ] **Explain funding sharing with one worked example.** Add one simple example showing how a one-off objective payout is shared when multiple agencies are eligible, so the declining funding and competition rules are easier to understand.
+
+## Config / balance
+
+- [ ] **Make Pre-Orbit rewards configurable.** Move the Level I-V Pre-Orbit rewards from code-owned values into `CampaignSettings.cfg`, preserving the current 10,000 / 20,000 / 30,000 / 40,000 / 50,000 funds progression as the default.
+- [ ] **Make Pre-Orbit rival progress costs configurable.** Move the Level I-V Pre-Orbit rival progress costs into `CampaignSettings.cfg`, preserving the current 4,000 / 6,000 / 8,000 / 10,000 / 12,000 funds progression as the default.

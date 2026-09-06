@@ -201,9 +201,9 @@ In Flight, open **Offered Contracts** and expand the active Pre-Orbit contracts.
 The expanded rows should show the live values they need:
 
 - **Directed Power** - current speed, maximum speed, maximum altitude, and impact readiness/status.
-- **Mass** - current mass, distance from launch, and landed state.
-- **Control** - current altitude, hold progress, crew count, and safe-landing readiness.
-- **Biome** - current biome, target biome, match state, and landed state.
+- **Mass** - current mass, distance from launch, and landed/splashed state.
+- **Control** - current altitude, hold progress, crew count, and safe recovery readiness.
+- **Biome** - current biome, target biome, match state, and landed/splashed state.
 
 The values should follow the existing `FlightContractTracker` updates at about the normal once-per-second telemetry cadence. Opening or closing FlightActiveUI must not create another active-vessel sampling loop.
 
@@ -257,21 +257,21 @@ The notification is for player Objective Funding Contract completions only. Riva
 
 - Travel beyond the required distance.
 - Keep enough final mass.
-- Confirm completion only after `LANDED` on Kerbin.
-- Confirm `SPLASHED` does not count.
+- Confirm completion after either `LANDED` or `SPLASHED` on Kerbin.
+- Confirm insufficient mass or distance still prevents completion in either final situation.
 
 ### Control
 
 - Use a crewed vessel.
 - Hold continuously inside the required altitude band.
 - Leave the band early and confirm the timer resets.
-- After qualification, land safely on Kerbin with crew.
+- After qualification, either land or splash down safely on Kerbin with crew and confirm completion.
 
 ### Biome
 
 - Fly over the target biome and confirm no completion.
-- Land in the target biome and confirm completion.
-- Confirm splashdown does not count.
+- Finish either `LANDED` or `SPLASHED` while KSP reports the target biome and confirm completion.
+- Confirm merely passing through the target biome without finishing there does not count.
 
 ## 8. Save/reload smoke test
 

@@ -61,7 +61,7 @@ The main source modules are:
 - `Tracking/` — KSP-independent flight-contract and orbital-vessel evaluation.
 - `Persistence/` — project-owned save state.
 - `KspIntegration/` — direct KSP API access and ScenarioModule integration.
-- `UI/` — full Command Center and compact Flight-only contract presentation.
+- `UI/` — full Command Center, compact Flight-only contract presentation, and stock funding-completion notifications.
 
 See [`docs/STRUCTURE.md`](docs/STRUCTURE.md) for the ownership rules and [`docs/CODE_OVERVIEW.md`](docs/CODE_OVERVIEW.md) for a simple walkthrough.
 
@@ -124,8 +124,12 @@ Flight mode also has a separate compact **Offered Contracts** window implemented
 
 Expanded Pre-Orbit contracts show the current Directed Power, Mass, Control, or Biome requirement state from the existing `FlightContractTracker`. The Flight window does not sample vessels or advance gameplay; it reads the same runtime state already maintained by `ModRuntime`.
 
+`FundingNotificationUI` listens for newly recorded player objective completions and posts one green message through KSP's stock message system when the matching Objective Funding Contract is currently Offered and unexpired. The notification title is `Funding Target Completed — <Contract Name>` and the body explains that the agency is now eligible for a share of the remaining contract funding. Rival completions do not generate player notifications.
+
+Saved objective completions are restored silently, so loading or reloading a save does not replay historical funding-completion messages. No notification-specific save data is added.
+
 The UI reads campaign and tracking state. It does not advance gameplay.
 
 ## Architecture in one sentence
 
-`ModRuntime` schedules work, `KspIntegration` reads KSP, `Tracking` evaluates project-owned snapshots, `CampaignController` coordinates campaign state, and the Command Center plus FlightActiveUI display the result.
+`ModRuntime` schedules work, `KspIntegration` reads KSP, `Tracking` evaluates project-owned snapshots, `CampaignController` coordinates campaign state, and the Command Center, `FlightActiveUI`, and `FundingNotificationUI` present the result.

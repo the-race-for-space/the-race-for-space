@@ -206,7 +206,9 @@ The expanded rows should show the live values they need:
 
 The values should follow the existing `FlightContractTracker` updates at about the normal once-per-second telemetry cadence. Opening or closing FlightActiveUI must not create another active-vessel sampling loop.
 
-During the current transition, the full **Funding Targets** view may still display the same live tracker state. Both interfaces must agree because they are read-only consumers of the same runtime tracker.
+Open the full **Funding Targets** view while still in Flight and confirm it no longer shows `Live Flight` requirement rows. Funding Targets should remain focused on funding and contract-lifecycle information; `FlightActiveUI` is the dedicated real-time requirement display.
+
+Contract evaluation must continue even when both interfaces are closed. Hiding the UI must never stop `ModRuntime` from maintaining the active Flight Contract tracker.
 
 If an expanded Pre-Orbit contract shows:
 

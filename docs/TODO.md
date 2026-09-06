@@ -4,6 +4,9 @@ This file is a lightweight reminder list for current development ideas and polis
 
 ## Command Center and contract UI
 
+- [ ] **Show remaining funding payments for completed contracts on Overview.** In the Overview funding information, show how many funding payments remain for objective funding contracts the player has already completed so their remaining value is visible at a glance.
+- [ ] **Hide achieved objectives from Your Objectives.** The `Your Objectives` list should show only objectives the player has not yet achieved; completed objectives should no longer remain in that list.
+- [ ] **Show `None` when there are no Satellite Contracts.** When the Satellite Contracts section has no contracts to display, show an explicit `None` state instead of leaving the section empty or ambiguous.
 - [ ] **Order Funding Targets by player completion state.** Show objectives the player has not completed at the top of the list, with player-completed objectives moved to the bottom so current work is easier to find.
 - [x] **Add a compact Flight-mode objective tracker.** `FlightActiveUI` now provides a separate Flight-only Offered Contracts window with independent expand/collapse controls, live Pre-Orbit requirement state, and completed Offered contracts grouped at the bottom. Final in-game acceptance is covered by the current v0.5 smoke test.
 - [x] **Remove duplicate live telemetry presentation from Funding Targets.** Funding Targets now stays focused on funding and contract-lifecycle information. `FlightActiveUI` is the dedicated live Flight Contract presentation while `ModRuntime` remains the single telemetry source.

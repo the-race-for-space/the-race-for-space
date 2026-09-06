@@ -121,6 +121,7 @@ The automated tests cover KSP-independent behaviour such as:
 They cannot prove direct KSP API behaviour such as:
 
 - vessel-destruction callbacks;
+- active-vessel `Part.persistentId` lineage capture;
 - stock biome reporting;
 - loaded/unloaded vessel discovery inside a real KSP save;
 - Career-funds integration;
@@ -206,6 +207,14 @@ The expanded rows should show the live values they need:
 - **Biome** - current biome, target biome, match state, and landed/splashed state.
 
 The values should follow the existing `FlightContractTracker` updates at about the normal once-per-second telemetry cadence. Opening or closing FlightActiveUI must not create another active-vessel sampling loop.
+
+Step 3 also captures stable part-lineage IDs while this existing snapshot is built. After flying a normal multi-part craft, the KSP log should contain a deduplicated Flight telemetry line similar to:
+
+```text
+[TheRaceForSpace] Flight telemetry: captured active vessel <id> on Kerbin with <n> persistent part IDs.
+```
+
+For a normal loaded craft, `<n>` should be greater than zero. This is only a boundary check in Step 3; vessel switching and staging do not use the lineage for attempt selection until Step 4.
 
 Open the full **Funding Targets** view while still in Flight and confirm it no longer shows `Live Flight` requirement rows. Funding Targets should remain focused on funding and contract-lifecycle information; `FlightActiveUI` is the dedicated real-time requirement display.
 
@@ -316,6 +325,7 @@ Look for:
 - `FlightActiveUI` exceptions or duplicate launcher behaviour;
 - `FundingNotificationUI` or `MessageSystem` errors;
 - Directed Power destruction-callback errors;
+- active Flight telemetry reporting zero persistent part IDs for a normal loaded craft;
 - excessive repeated output;
 - save/load errors.
 

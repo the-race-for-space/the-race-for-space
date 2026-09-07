@@ -49,3 +49,92 @@ This file tracks current development ideas and polish work only. Completed items
 - [ ] **Select valid next rival expeditions from current access and technology.** Expedition selection should consider the agency's completed missions, unlocked destinations and situations, available experiment technologies, and science subjects it has not already completed.
 - [ ] **Show the rival's current science expedition to the player.** The Rival Agencies interface should identify the experiment or science subject each rival is currently working on, alongside its existing launch-programme information.
 - [ ] **Define expedition progress, duration, and Science spending rules.** Balance how quickly rival expeditions complete, whether they cost funds, how Science is awarded, how rivals choose which tech node to unlock next, and how expedition activity interacts with sponsor/funding progression.
+
+#### Rival stock tech tree
+
+```text
+0 Science
+└─ Start
+
+5 Science
+├─ Basic Rocketry
+└─ Engineering 101
+
+15 Science
+└─ Survivability
+
+18 Science
+└─ Stability
+
+20 Science
+└─ General Rocketry
+
+45 Science
+├─ Aviation
+├─ Basic Science
+├─ Flight Control
+├─ Advanced Rocketry
+└─ General Construction
+
+90 Science
+├─ Propulsion Systems
+├─ Space Exploration
+├─ Advanced Flight Control
+├─ Landing
+├─ Aerodynamics
+├─ Electrics
+├─ Heavy Rocketry
+├─ Fuel Systems
+├─ Advanced Construction
+└─ Miniaturization
+
+160 Science
+├─ Actuators
+├─ Command Modules
+├─ Heavier Rocketry
+├─ Precision Engineering
+├─ Advanced Exploration
+├─ Specialized Control
+├─ Advanced Landing
+├─ Supersonic Flight
+├─ Adv. Fuel Systems
+├─ Advanced Electrics
+├─ Specialized Construction
+├─ Precision Propulsion
+└─ Advanced Aerodynamics
+
+300 Science
+├─ Heavy Landing
+├─ Scanning Tech
+├─ Unmanned Tech
+├─ Nuclear Propulsion
+├─ Advanced MetalWorks
+├─ Field Science
+├─ High Altitude Flight
+├─ Large Volume Containment
+├─ Composites
+├─ Electronics
+├─ High-Power Electrics
+└─ Heavy Aerodynamics
+
+550 Science
+├─ Ion Propulsion
+├─ Hypersonic Flight
+├─ Nanolathing
+├─ Advanced Unmanned Tech
+├─ Meta-Materials
+├─ Very Heavy Rocketry
+├─ Advanced Science Tech
+├─ Advanced Motors
+├─ Specialized Electrics
+├─ High-Performance Fuel Systems
+├─ Experimental Aerodynamics
+└─ Automation
+
+1000 Science
+├─ Aerospace Tech
+├─ Large Probes
+├─ Experimental Science
+├─ Experimental Motors
+└─ Experimental Electrics
+```

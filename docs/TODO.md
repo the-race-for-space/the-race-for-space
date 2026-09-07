@@ -35,3 +35,17 @@ This file tracks current development ideas and polish work only. Completed items
 - [ ] **Add three Minmus Orbital Base funding tiers.** Create Minmus Orbital Base I, II, and III as recurring funding contracts tied to maintaining qualifying orbital infrastructure around Minmus.
 - [ ] **Add three Minmus Ground Base funding tiers.** Create Minmus Ground Base I, II, and III as recurring funding contracts tied to maintaining qualifying landed infrastructure on Minmus.
 - [ ] **Define the twelve Mun/Minmus recurring funding contracts.** Balance the eligibility criteria, tier progression, payout values, and loss/resumption rules for the three orbital and three ground-base tiers on each body.
+
+### Science expeditions and rival tech progression
+
+- [ ] **Add a rival Expedition system.** Allow each rival agency to run science expeditions independently of its normal launch programme, so research activity can progress at the same time as launch development.
+- [ ] **Give each rival its own stored Science balance.** Science earned from completed rival expeditions should be recorded against that agency and remain available for later technology purchases.
+- [ ] **Model a rival version of the stock tech tree.** Give each rival agency its own technology progression based on the stock KSP tech tree, with Science spent to unlock tech nodes.
+- [ ] **Use rival technology to gate agency capabilities.** A rival should only be able to select launches, destinations, experiments, and other activities supported by the technologies it has unlocked.
+- [ ] **Create science expeditions from stock experiments.** Rival expeditions should represent completing specific stock science experiments in valid situations and locations, awarding the rival the corresponding configured Science value when completed.
+- [ ] **Gate expedition locations by achieved mission capability.** Rivals may begin with accessible Kerbin surface expeditions, but new situations and celestial bodies should become available only after the agency has demonstrated the required mission progress; for example, Low Kerbin Space after completing a probe-orbit objective, Mun orbital science after first orbiting the Mun, and Mun surface science after first landing there.
+- [ ] **Keep launch and expedition programmes simultaneous.** Rival agencies should be able to work toward one launch target and one science expedition at the same time rather than science replacing their existing mission-development activity.
+- [ ] **Prevent repeated collection of the same rival science subject.** Track completed experiment/body/situation/biome combinations for each rival so an agency cannot repeatedly farm the same expedition for Science.
+- [ ] **Select valid next rival expeditions from current access and technology.** Expedition selection should consider the agency's completed missions, unlocked destinations and situations, available experiment technologies, and science subjects it has not already completed.
+- [ ] **Show the rival's current science expedition to the player.** The Rival Agencies interface should identify the experiment or science subject each rival is currently working on, alongside its existing launch-programme information.
+- [ ] **Define expedition progress, duration, and Science spending rules.** Balance how quickly rival expeditions complete, whether they cost funds, how Science is awarded, how rivals choose which tech node to unlock next, and how expedition activity interacts with sponsor/funding progression.

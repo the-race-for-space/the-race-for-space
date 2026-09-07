@@ -54,14 +54,14 @@ This file tracks current development ideas and polish work only. Completed items
 
 ```text
 0 Science
-└─ Start
+└─ Start (Crew Report, Mystery Goo Observation)
 
 5 Science
 ├─ Basic Rocketry
-└─ Engineering 101
+└─ Engineering 101 (Temperature Scan)
 
 15 Science
-└─ Survivability
+└─ Survivability (Atmospheric Pressure Scan)
 
 18 Science
 └─ Stability
@@ -71,7 +71,7 @@ This file tracks current development ideas and polish work only. Completed items
 
 45 Science
 ├─ Aviation
-├─ Basic Science
+├─ Basic Science (Materials Study)
 ├─ Flight Control
 ├─ Advanced Rocketry
 └─ General Construction
@@ -86,7 +86,7 @@ This file tracks current development ideas and polish work only. Completed items
 ├─ Heavy Rocketry
 ├─ Fuel Systems
 ├─ Advanced Construction
-└─ Miniaturization
+└─ Miniaturization (EVA Science)
 
 160 Science
 ├─ Actuators
@@ -105,7 +105,7 @@ This file tracks current development ideas and polish work only. Completed items
 
 300 Science
 ├─ Heavy Landing
-├─ Scanning Tech
+├─ Scanning Tech (Atmosphere Analysis, SENTINEL Infrared Telescope)
 ├─ Unmanned Tech
 ├─ Nuclear Propulsion
 ├─ Advanced MetalWorks
@@ -113,7 +113,7 @@ This file tracks current development ideas and polish work only. Completed items
 ├─ High Altitude Flight
 ├─ Large Volume Containment
 ├─ Composites
-├─ Electronics
+├─ Electronics (Seismic Scan, Magnetometer Report)
 ├─ High-Power Electrics
 └─ Heavy Aerodynamics
 
@@ -124,7 +124,7 @@ This file tracks current development ideas and polish work only. Completed items
 ├─ Advanced Unmanned Tech
 ├─ Meta-Materials
 ├─ Very Heavy Rocketry
-├─ Advanced Science Tech
+├─ Advanced Science Tech (Gravity Scan)
 ├─ Advanced Motors
 ├─ Specialized Electrics
 ├─ High-Performance Fuel Systems
@@ -138,3 +138,5 @@ This file tracks current development ideas and polish work only. Completed items
 ├─ Experimental Motors
 └─ Experimental Electrics
 ```
+
+`EVA Report` and `Surface Sample` are not unlocked by a stock tech-tree node; rival access to those subjects should be gated separately by expedition/mission capability rules.

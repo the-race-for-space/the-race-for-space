@@ -65,13 +65,31 @@ This file tracks current development ideas and polish work only. Completed items
 - [ ] **Use a fixed live-mission duration lookup by target location.** Mission Type should not independently change duration. A Contract and a Science mission targeting the same location should use the same configured live duration. Each supported Kerbin biome and celestial body has one manually assigned travel time in the tables below.
 - [ ] **Treat the duration tables as authoritative balance data.** Do not calculate travel time from physical distance, orbital distance, launch windows, phase angles, live planet positions, or vessel state. The simulation should look up the configured value for the target location and use it directly.
 - [ ] **Keep location durations configurable and stable.** Use stable project-owned location IDs so these manual travel times can be balanced later without changing mission logic or save interpretation. Unknown locations should fail safely rather than borrowing an unrelated travel time.
-- [ ] **Give every launched mission persistent timing data.** Store the launch date, configured base duration, elapsed time, expected completion date, mission type, target, assigned Kerbals, and any science subject/reward data required by science expeditions.
-- [ ] **Resolve mission success or failure at the end of the mission.** When the configured mission duration expires, make one outcome roll using that mission's authoritative success chance and failure chance. The result is not known to the player before the mission completes.
-- [ ] **Apply gameplay rewards only after a successful live mission.** Successful normal missions may complete their objective or add the relevant satellite/infrastructure state. Successful science expeditions award Science and consume the matching player science subject. A failed mission must not grant the successful mission result.
-- [ ] **Define mission success/failure balance rules.** Decide the base success chance and failure chance for each mission class and what modifies those chances, such as destination difficulty, crewed/uncrewed status, technology, facility level, or prior agency achievements.
-- [ ] **Define failure consequences.** Decide whether failure only withholds the mission result or can also affect Funds, satellites, Kerbals, future launch preparation, or other agency state. Do not assume crew loss or asset loss until these rules are explicitly set.
+- [ ] **Give every launched mission persistent timing and difficulty data.** Store the launch date, configured base duration, elapsed time, expected completion date, mission type, target, assigned Kerbals, mission difficulty from 1 to 10, and any science subject/reward data required by science expeditions.
+- [ ] **Do not complete a rival mission at launch.** Reaching 100% `Launch Progress` only starts the live mission. A Contract remains incomplete, and a Science expedition grants no Science, until the configured live duration has finished and the mission passes its final success check.
+- [ ] **Use mission difficulty to determine final Success Chance.** Every live Contract and Science mission uses a difficulty rating from 1 to 10. Contract missions use the contract's difficulty; science expedition definitions should carry an equivalent difficulty rating on the same scale. Difficulty 1 has a 90% Success Chance, and each additional difficulty level reduces Success Chance by 5 percentage points, down to 45% at difficulty 10. Use `Success Chance = 95% - (Difficulty × 5%)` for valid difficulty values 1–10.
+- [ ] **Resolve the mission with one outcome roll after its duration ends.** When the expected completion date is reached, make one random check against the mission's Success Chance. A successful check completes the result; otherwise the mission fails. The result must not be rolled or known before the live duration has elapsed.
+- [ ] **Apply rewards only after a successful live mission.** On a successful Contract mission, mark the objective complete and apply any related satellite/infrastructure result. On a successful Science mission, award the expedition's Science to the rival, record the subject as completed, and consume the matching player science subject. No successful gameplay result is granted before this point.
+- [ ] **Lose the spacecraft when a live mission fails.** A failed Contract or Science mission grants no objective completion, satellite/infrastructure result, or Science reward, and its simulated spacecraft is lost.
+- [ ] **Apply a 25% Kerbal-loss chance on failed crewed missions.** If a failed mission has one or more Kerbals assigned, make a 25% crew-loss check. When this triggers, record a Kerbal loss for the rival. Multi-Kerbal loss handling should not exceed the explicitly defined rule until it is balanced separately.
+- [ ] **Charge 50,000 Funds insurance after a Kerbal loss.** A Kerbal loss caused by a failed live mission creates a 50,000 Funds insurance payout for the rival. Do not deduct it immediately; subtract the 50,000 Funds from that rival's income at the next campaign funding boundary and persist the pending deduction through save/load.
 - [ ] **Define simultaneous live-mission limits.** Decide how many launched normal missions and science expeditions a rival may have active at once and whether Mission Control, Astronaut Complex, or another facility limits those live missions.
 - [ ] **Persist live missions across save/load and time warp.** Live mission completion and outcome resolution must be deterministic from stored dates/state and must correctly catch up if the player time-warps past a completion date or reloads after it.
+
+##### Mission difficulty success table
+
+| Difficulty | Success Chance | Failure Chance |
+| ---: | ---: | ---: |
+| 1 | 90% | 10% |
+| 2 | 85% | 15% |
+| 3 | 80% | 20% |
+| 4 | 75% | 25% |
+| 5 | 70% | 30% |
+| 6 | 65% | 35% |
+| 7 | 60% | 40% |
+| 8 | 55% | 45% |
+| 9 | 50% | 50% |
+| 10 | 45% | 55% |
 
 ##### Kerbin biome live-duration database
 
@@ -252,6 +270,7 @@ The stock Flag Pole, Crawlerway, water tower, tanks, and other KSC scenery are n
 - [ ] **Add Live Mission Progress immediately below Programme Status.** This should be the highest-priority detailed section in the rival card and list every launched normal mission and launched science expedition currently underway.
 - [ ] **Show Live Mission Progress as a compact row-and-column list.** Use the columns `Item`, `Location`, `Mission Type`, `Duration`, `Progress`, `ETA`, and `Success Chance`. `Item` is the contract name for a normal mission or the experiment name for a science expedition. `Location` is the body and biome where relevant. `Mission Type` must be only `Contract` or `Science`. Do not show Status, Outcome, or Failure Chance in this list.
 - [ ] **Keep science mission identity readable in the live-mission list.** For science rows, use the experiment as `Item`, include the body/biome in `Location`, and use `Science` as the Mission Type. For objective/funding rows, use the contract name as `Item` and `Contract` as the Mission Type. The detailed science reward and subject state remain part of the simulation even though the compact live list does not need extra columns for them.
+- [ ] **Use mission difficulty as the source for the live Success Chance column.** Display the calculated Success Chance from the mission's 1–10 difficulty rating; do not independently calculate or invent a different UI percentage.
 - [ ] **Prioritize the rival card as Programme Status → Live Mission Progress → launch preparation → construction → facilities → Tech Tree/Research → Funding.** Place Current Launch Programme and Launch Science Expedition together after live missions so the player can distinguish missions already underway from missions still being prepared.
 - [ ] **Use title case instead of all-caps UI headings and wording.** Rival Agencies headings, section titles, facility levels, construction states, research states, and other display wording should use normal title case rather than all-capital text. Standard acronyms such as ETA, VAB, and SPH may remain uppercase.
 - [ ] **Show one rival card cleanly and reuse the layout for additional rivals.** The card should be readable as a self-contained programme dashboard so the same component can be repeated for however many rivals are configured.
@@ -261,7 +280,7 @@ The stock Flag Pole, Crawlerway, water tower, tanks, and other KSC scenery are n
 
 #### Rival Agencies UI text example
 
-Mission duration and success-chance values in this mock-up use the configured location-duration table where possible; success-chance values remain illustrative until those balance rules are defined.
+Mission duration values in this mock-up use the configured location-duration table. Success Chance values are derived from the mission difficulty table.
 
 ```text
 Rival Agencies                                      Next Funding: Year 2, Day 120

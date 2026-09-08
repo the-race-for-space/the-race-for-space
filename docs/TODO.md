@@ -48,6 +48,9 @@ This file tracks current development ideas and polish work only. Completed items
 - [ ] **Remove rival discoveries from the player's science pool.** When a rival completes a specific experiment/body/situation/biome science subject, consume that same stock science subject from the science pool available to the player so the player can no longer earn its Science. For example, if a rival completes a Crew Report in Kerbin's Shores biome, that Crew Report science subject is no longer available for the player to collect.
 - [ ] **Select valid next rival expeditions from current access and technology.** Expedition selection should consider the agency's completed missions, unlocked destinations and situations, available experiment technologies, and science subjects it has not already completed.
 - [ ] **Show the rival's current science expedition to the player.** The Rival Agencies interface should identify the experiment or science subject each rival is currently working on, alongside its existing launch-programme information.
+- [ ] **Simulate a next rival research project.** Once a rival has enough stored Science for an eligible tech node, select a next research project and deduct that node's Science cost from the rival's stored balance when research begins.
+- [ ] **Use a fixed 90-day rival research period.** A selected tech project takes 90 campaign days to research and becomes unlocked at the first campaign funding boundary on or after the 90-day research period has elapsed. Persist the project, Science cost, start date, and eligible completion funding date through save/load.
+- [ ] **Show the next rival research project under Stored Science.** In the Rival Agencies Tech Tree section, show the selected tech, its Science cost, research status, and funding-date completion/ETA directly beneath the rival's Stored Science value.
 - [ ] **Define expedition progress, duration, and Science spending rules.** Balance how quickly rival expeditions complete, whether they cost funds, how Science is awarded, how rivals choose which tech node to unlock next, and how expedition activity interacts with sponsor/funding progression.
 
 #### Rival stock tech tree
@@ -174,3 +177,139 @@ All nine stock Career facilities have three upgrade levels: Level 1, Level 2, an
 | **Tracking Station** | Basic orbital tracking | Patched-conic/navigation capability | Adds unowned-object tracking and full stock tracking capability | Limits rival launch destinations: Level 1 = Kerbin only; Level 2 = Kerbin orbit and Kerbin's moons; Level 3 = no destination limit, allowing missions to other planets. |
 
 The stock Flag Pole, Crawlerway, water tower, tanks, and other KSC scenery are not separately upgradable programme facilities, so they do not need independent rival simulation states.
+
+### Rival Agencies UI redesign
+
+- [ ] **Redesign only the Rival Agencies tab around current rival activity.** Preserve the existing rival Funds, next mission, mission progress, mission-progress cost, launch ETA, funding income, completed objectives, satellite-network income, and total next payout while adding the new science, research, tech-tree, facility, and construction information.
+- [ ] **Make launch Progress Chance a main visible stat.** Replace the current `Progress Increase` presentation with `Progress Chance - each 5 days`. Show the authoritative total launch-progress success chance after applying the 15% base chance, the applicable +15% starting launch modifier, and any +3% facility upgrade modifiers. The UI should display the calculated total rather than reconstructing it independently.
+- [ ] **Prioritize live rival activity before historical progression.** Order each rival card as Programme Status, Current Launch Programme + Science Expedition, Space Centre Construction, Space Centre Facilities, Tech Tree/Research, then detailed Funding.
+- [ ] **Show one rival card cleanly and reuse the layout for additional rivals.** The card should be readable as a self-contained programme dashboard so the same component can be repeated for however many rivals are configured.
+- [ ] **Show facility capabilities after every facility level.** Do not display only `Level 1/2/3`; immediately state the capability the current level provides, such as Kerbal limit, satellite limit, launch/research chance modifiers, tech-cost ceiling, base funding, or destination access.
+- [ ] **Show ongoing construction with a clear ETA.** Display facility, source/target level, elapsed construction days, remaining days/ETA, and paid cost. Do not include explanatory text stating that the old level remains active while construction is underway.
+- [ ] **Show researched techs clearly and keep the long tree collapsible.** The compact Tech Tree view should emphasize researched nodes and their experiment unlocks, with a `Show Full Tech Tree` control for the complete progression.
+
+#### Rival Agencies UI text example
+
+```text
+RIVAL AGENCIES                                      Next Funding: Year 2, Day 120
+
+══════════════════════════════ KERBAL DYNAMICS ═══════════════════════════════════════
+
+PROGRAMME STATUS
+
+Funds:               186,500              Stored Science:          72
+Kerbals on Mission:        2 / 8           Satellites:               4 / 8
+Total Next Payout:    42,000
+
+
+┌─ CURRENT LAUNCH PROGRAMME ─────────────────────┐
+│ Next Mission:       Mun Probe Orbit            │
+│ Mission Progress:   60%                        │
+│ Progress Chance - each 5 days: 36%             │
+│ Progress Cost:      25,000 Funds               │
+│ Estimated Launch:   80 days                    │
+└────────────────────────────────────────────────┘
+
+┌─ SCIENCE EXPEDITION ───────────────────────────┐
+│ Status:              IN PROGRESS               │
+│ Experiment:          Temperature Scan          │
+│ Target:              Kerbin - Shores           │
+│ Situation:           Landed                    │
+│ Expedition Progress: 45%                       │
+│ Science Available:   2.4 Science               │
+│ Kerbals Assigned:    1                         │
+└────────────────────────────────────────────────┘
+
+
+┌─ SPACE CENTRE CONSTRUCTION ────────────────────────────────────────────────────────┐
+│ Research & Development                                                            │
+│ Level 1  ───────────────────────────────►  Level 2                                │
+│                                                                                    │
+│ Progress:       Day 74 / 180                                                       │
+│ ETA:            106 days                                                          │
+│ Cost:           100,000 Funds - PAID                                              │
+└────────────────────────────────────────────────────────────────────────────────────┘
+
+
+SPACE CENTRE FACILITIES
+
+Administration Building     LEVEL 2
+  └─ Base funding: 20,000 Funds per funding period
+
+Astronaut Complex           LEVEL 2
+  └─ Maximum rival Kerbals: 8
+
+Mission Control             LEVEL 2
+  └─ Maximum satellites: 8
+
+Research & Development      LEVEL 1       [UPGRADING → LEVEL 2]
+  └─ May research tech nodes costing up to 90 Science
+
+Vehicle Assembly Building   LEVEL 2
+  └─ Starting Launch Chance +15%
+     Launch Progress Chance +3%
+
+Launch Pad                  LEVEL 2
+  └─ Starting Launch Chance +15%
+     Launch Progress Chance +3%
+
+Spaceplane Hangar           LEVEL 1
+  └─ Starting Research Chance +15%
+
+Runway                      LEVEL 1
+  └─ Starting Research Chance +15%
+
+Tracking Station            LEVEL 2
+  └─ Missions permitted around Kerbin, Mun and Minmus
+
+
+TECH TREE
+
+Stored Science: 72
+Next Research Project: Advanced Rocketry
+Science Cost: 45 [SPENT]
+Research Time: 90 days
+Status: IN PROGRESS
+Completion: Next eligible funding date
+ETA: 38 days
+
+RESEARCHED
+
+  ✓ Start
+      └─ Crew Report
+      └─ Mystery Goo Observation
+
+  ✓ Basic Rocketry
+
+  ✓ Engineering 101
+      └─ Temperature Scan
+
+  ✓ Survivability
+      └─ Atmospheric Pressure Scan
+
+  ✓ Stability
+
+  ✓ General Rocketry
+
+  ✓ Basic Science
+      └─ Materials Study
+
+------------------------------------------------------------
+[ Show Full Tech Tree ]
+------------------------------------------------------------
+
+
+FUNDING & EXISTING PROGRAMME INFORMATION
+
+Base Income                                      20,000
+
+Completed Objective Funding
+  Probe Orbit                                     8,000
+  Crewed Kerbin Orbit                             6,000
+
+Satellite Network Funding
+  Kerbin Satellites: 4 / 8                        8,000
+
+                                                   ──────
+Total Next Payout                                 42,000
+```

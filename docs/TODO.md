@@ -43,15 +43,21 @@ This file tracks current development ideas and polish work only. Completed items
 - [ ] **Model a rival version of the stock tech tree.** Give each rival agency its own technology progression based on the stock KSP tech tree, with Science spent to unlock tech nodes.
 - [ ] **Use rival technology to gate agency capabilities.** A rival should only be able to select launches, destinations, experiments, and other activities supported by the technologies it has unlocked.
 - [ ] **Create science expeditions from stock experiments.** Rival expeditions should represent completing specific stock science experiments in valid situations and locations, awarding the rival the corresponding configured Science value when completed.
+- [ ] **Choose expeditions only from unlocked experiments and locations.** A rival may select a science expedition only when the experiment has been unlocked by its technology and the body, situation, and biome are inside its achieved expedition access. The selected science subject must also be one the rival has not already completed.
 - [ ] **Gate expedition locations by achieved mission capability.** Rivals may begin with accessible Kerbin surface expeditions, but new situations and celestial bodies should become available only after the agency has demonstrated the required mission progress; for example, Low Kerbin Space after completing a probe-orbit objective, Mun orbital science after first orbiting the Mun, and Mun surface science after first landing there.
+- [ ] **Track a clear rival Expedition Range.** Represent the locations currently available to the rival in a player-readable range such as `Kerbin only`, `Kerbin, Mun and Minmus`, or `Planets available`, while still enforcing the more detailed body/situation/biome mission gates internally.
 - [ ] **Keep launch and expedition programmes simultaneous.** Rival agencies should be able to work toward one launch target and one science expedition at the same time rather than science replacing their existing mission-development activity.
+- [ ] **Progress rival science expeditions once per Kerbin day.** Each expedition receives one progress check every Kerbin day. A successful check adds 10 percentage points to expedition progress, so an expedition requires ten successful checks to advance from 0% to 100%.
+- [ ] **Use a daily expedition Progress Chance.** The default base `Progress Chance - daily` is 30%. Store and expose the authoritative calculated chance on the rival simulation so the UI and ETA calculation use the same value.
+- [ ] **Estimate expedition completion from remaining successful checks.** Calculate the average remaining duration as `remaining 10% progress steps / daily success chance`. At 0% progress and the default 30% daily chance, ten successful checks are required and the expected completion time is about 33.3 Kerbin days; the UI should round this to about 34 days. This is an average estimate rather than a guaranteed completion date.
+- [ ] **Complete and replace expeditions immediately at 100%.** When expedition progress reaches 100%, award its Science to the rival, apply the matching player science-pool depletion, record the science subject as completed for that rival, and select a new valid expedition from its current experiment/location access.
 - [ ] **Remove rival discoveries from the player's science pool.** When a rival completes a specific experiment/body/situation/biome science subject, consume that same stock science subject from the science pool available to the player so the player can no longer earn its Science. For example, if a rival completes a Crew Report in Kerbin's Shores biome, that Crew Report science subject is no longer available for the player to collect.
 - [ ] **Select valid next rival expeditions from current access and technology.** Expedition selection should consider the agency's completed missions, unlocked destinations and situations, available experiment technologies, and science subjects it has not already completed.
-- [ ] **Show the rival's current science expedition to the player.** The Rival Agencies interface should identify the experiment or science subject each rival is currently working on, alongside its existing launch-programme information.
+- [ ] **Show rival expedition capability and current target to the player.** The Rival Agencies interface should show the rival's unlocked science experiments, current Expedition Range, current experiment/body/situation/biome target, expedition progress, `Progress Chance - daily`, estimated completion, Science reward, and Kerbals assigned.
 - [ ] **Simulate a next rival research project.** Once a rival has enough stored Science for an eligible tech node, select a next research project and deduct that node's Science cost from the rival's stored balance when research begins.
 - [ ] **Use a fixed 90-day rival research period.** A selected tech project takes 90 campaign days to research and becomes unlocked at the first campaign funding boundary on or after the 90-day research period has elapsed. Persist the project, Science cost, start date, and eligible completion funding date through save/load.
 - [ ] **Show the next rival research project under Stored Science.** In the Rival Agencies Tech Tree section, show the selected tech, its Science cost, research status, and funding-date completion/ETA directly beneath the rival's Stored Science value.
-- [ ] **Define expedition progress, duration, and Science spending rules.** Balance how quickly rival expeditions complete, whether they cost funds, how Science is awarded, how rivals choose which tech node to unlock next, and how expedition activity interacts with sponsor/funding progression.
+- [ ] **Define remaining Expedition and Science spending rules.** Balance any expedition Funds cost, how rivals choose between valid science subjects, how they choose which eligible tech node to research next, and how expedition activity interacts with sponsor/funding progression.
 
 #### Rival stock tech tree
 
@@ -182,6 +188,8 @@ The stock Flag Pole, Crawlerway, water tower, tanks, and other KSC scenery are n
 
 - [ ] **Redesign only the Rival Agencies tab around current rival activity.** Preserve the existing rival Funds, next mission, mission progress, mission-progress cost, launch ETA, funding income, completed objectives, satellite-network income, and total next payout while adding the new science, research, tech-tree, facility, and construction information.
 - [ ] **Make launch Progress Chance a main visible stat.** Replace the current `Progress Increase` presentation with `Progress Chance - each 5 days`. Show the authoritative total launch-progress success chance after applying the 15% base chance, the applicable +15% starting launch modifier, and any +3% facility upgrade modifiers. The UI should display the calculated total rather than reconstructing it independently.
+- [ ] **Make expedition Progress Chance and Estimated Completion main visible stats.** In the Science Expedition section, show `Progress Chance - daily` and `Estimated Completion` beside the current expedition progress. The ETA must be calculated from remaining 10% steps and the authoritative current daily success chance rather than from a separate UI approximation.
+- [ ] **Show expedition capability above the current target.** The Science Expedition section should show the rival's unlocked experiments and its current Expedition Range before the active experiment/body/situation/biome target, so the player can understand why that expedition is available.
 - [ ] **Prioritize live rival activity before historical progression.** Order each rival card as Programme Status, Current Launch Programme + Science Expedition, Space Centre Construction, Space Centre Facilities, Tech Tree/Research, then detailed Funding.
 - [ ] **Show one rival card cleanly and reuse the layout for additional rivals.** The card should be readable as a self-contained programme dashboard so the same component can be repeated for however many rivals are configured.
 - [ ] **Show facility capabilities after every facility level.** Do not display only `Level 1/2/3`; immediately state the capability the current level provides, such as Kerbal limit, satellite limit, launch/research chance modifiers, tech-cost ceiling, base funding, or destination access.
@@ -210,15 +218,22 @@ Total Next Payout:    42,000
 │ Estimated Launch:   80 days                    │
 └────────────────────────────────────────────────┘
 
-┌─ SCIENCE EXPEDITION ───────────────────────────┐
-│ Status:              IN PROGRESS               │
-│ Experiment:          Temperature Scan          │
-│ Target:              Kerbin - Shores           │
-│ Situation:           Landed                    │
-│ Expedition Progress: 45%                       │
-│ Science Available:   2.4 Science               │
-│ Kerbals Assigned:    1                         │
-└────────────────────────────────────────────────┘
+┌─ SCIENCE EXPEDITION ────────────────────────────────────────────┐
+│ Expedition Range:     Kerbin, Mun and Minmus                  │
+│ Unlocked Experiments: Crew Report, Mystery Goo,               │
+│                       Temperature Scan, Pressure Scan,         │
+│                       Materials Study                          │
+│                                                                 │
+│ Status:               IN PROGRESS                              │
+│ Experiment:           Temperature Scan                         │
+│ Target:               Kerbin - Shores                          │
+│ Situation:            Landed                                   │
+│ Expedition Progress:  40%                                      │
+│ Progress Chance - daily: 30%                                   │
+│ Estimated Completion: 20 days                                  │
+│ Science Available:    2.4 Science                              │
+│ Kerbals Assigned:     1                                        │
+└─────────────────────────────────────────────────────────────────┘
 
 
 ┌─ SPACE CENTRE CONSTRUCTION ────────────────────────────────────────────────────────┐

@@ -38,26 +38,37 @@ This file tracks current development ideas and polish work only. Completed items
 
 ### Science expeditions and rival tech progression
 
-- [ ] **Add a rival Expedition system.** Allow each rival agency to run science expeditions independently of its normal launch programme, so research activity can progress at the same time as launch development.
-- [ ] **Give each rival its own stored Science balance.** Science earned from completed rival expeditions should be recorded against that agency and remain available for later technology purchases.
+- [ ] **Add a rival Launch Science Expedition system.** Allow each rival agency to prepare one science expedition independently of its normal launch programme. Science-expedition launch preparation and normal mission launch preparation should be able to progress at the same time.
+- [ ] **Give each rival its own stored Science balance.** Science earned from successful rival science expeditions should be recorded against that agency and remain available for later technology purchases.
 - [ ] **Model a rival version of the stock tech tree.** Give each rival agency its own technology progression based on the stock KSP tech tree, with Science spent to unlock tech nodes.
 - [ ] **Use rival technology to gate agency capabilities.** A rival should only be able to select launches, destinations, experiments, and other activities supported by the technologies it has unlocked.
-- [ ] **Create science expeditions from stock experiments.** Rival expeditions should represent completing specific stock science experiments in valid situations and locations, awarding the rival the corresponding configured Science value when completed.
-- [ ] **Choose expeditions only from unlocked experiments and locations.** A rival may select a science expedition only when the experiment has been unlocked by its technology and the body, situation, and biome are inside its achieved expedition access. The selected science subject must also be one the rival has not already completed.
+- [ ] **Create Launch Science Expeditions from stock experiments.** Rival science expeditions should represent completing specific stock science experiments in valid situations and locations. Preparing an expedition to 100% launches it; Science is awarded only if the resulting live science mission later succeeds.
+- [ ] **Choose expeditions only from unlocked experiments and locations.** A rival may select a Launch Science Expedition only when the experiment has been unlocked by its technology and the body, situation, and biome are inside its achieved expedition access. The selected science subject must also be one the rival has not already completed.
 - [ ] **Gate expedition locations by achieved mission capability.** Rivals may begin with accessible Kerbin surface expeditions, but new situations and celestial bodies should become available only after the agency has demonstrated the required mission progress; for example, Low Kerbin Space after completing a probe-orbit objective, Mun orbital science after first orbiting the Mun, and Mun surface science after first landing there.
 - [ ] **Track a clear rival Expedition Range.** Represent the locations currently available to the rival in a player-readable range such as `Kerbin only`, `Kerbin, Mun and Minmus`, or `Planets available`, while still enforcing the more detailed body/situation/biome mission gates internally.
-- [ ] **Keep launch and expedition programmes simultaneous.** Rival agencies should be able to work toward one launch target and one science expedition at the same time rather than science replacing their existing mission-development activity.
-- [ ] **Progress rival science expeditions once per Kerbin day.** Each expedition receives one progress check every Kerbin day. A successful check adds 10 percentage points to expedition progress, so an expedition requires ten successful checks to advance from 0% to 100%.
-- [ ] **Use a daily expedition Progress Chance.** The default base `Progress Chance - daily` is 30%. Store and expose the authoritative calculated chance on the rival simulation so the UI and ETA calculation use the same value.
-- [ ] **Estimate expedition completion from remaining successful checks.** Calculate the average remaining duration as `remaining 10% progress steps / daily success chance`. At 0% progress and the default 30% daily chance, ten successful checks are required and the expected completion time is about 33.3 Kerbin days; the UI should round this to about 34 days. This is an average estimate rather than a guaranteed completion date.
-- [ ] **Complete and replace expeditions immediately at 100%.** When expedition progress reaches 100%, award its Science to the rival, apply the matching player science-pool depletion, record the science subject as completed for that rival, and select a new valid expedition from its current experiment/location access.
-- [ ] **Remove rival discoveries from the player's science pool.** When a rival completes a specific experiment/body/situation/biome science subject, consume that same stock science subject from the science pool available to the player so the player can no longer earn its Science. For example, if a rival completes a Crew Report in Kerbin's Shores biome, that Crew Report science subject is no longer available for the player to collect.
-- [ ] **Select valid next rival expeditions from current access and technology.** Expedition selection should consider the agency's completed missions, unlocked destinations and situations, available experiment technologies, and science subjects it has not already completed.
-- [ ] **Show rival expedition capability and current target to the player.** The Rival Agencies interface should show the rival's unlocked science experiments, current Expedition Range, current experiment/body/situation/biome target, expedition progress, `Progress Chance - daily`, estimated completion, Science reward, and Kerbals assigned.
+- [ ] **Progress Launch Science Expeditions once per Kerbin day.** Each science-launch preparation receives one progress check every Kerbin day. A successful check adds 10 percentage points to `Launch Progress`, so ten successful checks are required to advance from 0% to 100% and launch the expedition.
+- [ ] **Derive science-launch Progress Chance from the SPH and Runway.** The Spaceplane Hangar and Runway each contribute 20% at Level 1, giving a default combined `Progress Chance - daily` of 40%. Each Level 2 facility adds another +3% and each Level 3 facility adds another +3%. Store and expose the authoritative calculated total so the simulation, UI, and ETA use the same value.
+- [ ] **Estimate science-expedition launch time from remaining successful checks.** Calculate the average remaining launch-preparation duration as `remaining 10% Launch Progress steps / daily success chance`. At 0% progress and the default 40% daily chance, ten successful checks are required and the expected launch time is 25 Kerbin days. This is an average estimate rather than a guaranteed launch date.
+- [ ] **Move a science expedition into Live Mission Progress at 100% Launch Progress.** Reaching 100% should create a launched live science mission with its own mission duration, completion date, success chance, and failure chance. Do not award Science or consume the player's matching science subject at the moment of launch.
+- [ ] **Remove successful rival discoveries from the player's science pool.** When a launched rival science expedition reaches the end of its live mission and succeeds, award the Science to the rival and consume that same stock science subject from the science pool available to the player so the player can no longer earn its Science. For example, a successful Crew Report expedition in Kerbin's Shores biome removes that Crew Report science subject from the player's available pool.
+- [ ] **Select a new valid Launch Science Expedition after the previous expedition launches.** Launch preparation can begin for another valid science subject while the previously launched expedition is still running as a live mission, subject to any later limits placed on simultaneous missions.
+- [ ] **Show rival science-launch capability and current target to the player.** The Rival Agencies interface should show the rival's unlocked science experiments, current Expedition Range, current experiment/body/situation/biome target, `Launch Progress`, `Progress Chance - daily`, estimated launch, Science reward, and Kerbals assigned.
 - [ ] **Simulate a next rival research project.** Once a rival has enough stored Science for an eligible tech node, select a next research project and deduct that node's Science cost from the rival's stored balance when research begins.
 - [ ] **Use a fixed 90-day rival research period.** A selected tech project takes 90 campaign days to research and becomes unlocked at the first campaign funding boundary on or after the 90-day research period has elapsed. Persist the project, Science cost, start date, and eligible completion funding date through save/load.
 - [ ] **Show the next rival research project under Stored Science.** In the Rival Agencies Tech Tree section, show the selected tech, its Science cost, research status, and funding-date completion/ETA directly beneath the rival's Stored Science value.
-- [ ] **Define remaining Expedition and Science spending rules.** Balance any expedition Funds cost, how rivals choose between valid science subjects, how they choose which eligible tech node to research next, and how expedition activity interacts with sponsor/funding progression.
+- [ ] **Define remaining Expedition and Science spending rules.** Balance any expedition Funds cost, how rivals choose between valid science subjects, how they choose which eligible tech node to research next, and how science activity interacts with sponsor/funding progression.
+
+#### Live rival mission simulation
+
+- [ ] **Add a Live Mission Progress phase after launch.** Normal rival missions and Launch Science Expeditions should no longer complete their gameplay result immediately when launch preparation reaches 100%. At launch, create a persistent live-mission record and move it into the Rival Agencies `Live Mission Progress` section.
+- [ ] **Give every launched mission a fixed mission duration.** Store the launch date, configured mission length, elapsed time, expected completion date, mission type, target, assigned Kerbals, and any science subject/reward data required by science expeditions.
+- [ ] **Resolve mission success or failure at the end of the mission.** When the configured mission duration expires, make one outcome roll using that mission's authoritative success chance and failure chance. The result is not known to the player before the mission completes.
+- [ ] **Apply gameplay rewards only after a successful live mission.** Successful normal missions may complete their objective or add the relevant satellite/infrastructure state. Successful science expeditions award Science and consume the matching player science subject. A failed mission must not grant the successful mission result.
+- [ ] **Define mission-duration balance rules.** Decide the mission lengths for Pre-Orbit work, Kerbin orbital missions, Mun/Minmus missions, interplanetary missions, satellite launches, bases/stations, and science expeditions.
+- [ ] **Define mission success/failure balance rules.** Decide the base success chance and failure chance for each mission class and what modifies those chances, such as destination difficulty, crewed/uncrewed status, technology, facility level, or prior agency achievements.
+- [ ] **Define failure consequences.** Decide whether failure only withholds the mission result or can also affect Funds, satellites, Kerbals, future launch preparation, or other agency state. Do not assume crew loss or asset loss until these rules are explicitly set.
+- [ ] **Define simultaneous live-mission limits.** Decide how many launched normal missions and science expeditions a rival may have active at once and whether Mission Control, Astronaut Complex, or another facility limits those live missions.
+- [ ] **Persist live missions across save/load and time warp.** Live mission completion and outcome resolution must be deterministic from stored dates/state and must correctly catch up if the player time-warps past a completion date or reloads after it.
 
 #### Rival stock tech tree
 
@@ -176,27 +187,33 @@ All nine stock Career facilities have three upgrade levels: Level 1, Level 2, an
 | **Astronaut Complex** | Roster limit 5; no off-Kerbin EVA | Roster limit 12; off-Kerbin EVA and flag planting available | Unlimited roster | Limits the rival's simulated Kerbal roster: Level 1 = 3 Kerbals, Level 2 = 8 Kerbals, Level 3 = no limit. |
 | **Mission Control** | Maximum 2 active contracts; no flight planning | Maximum 7 active contracts; flight planning available when navigation requirements are met | Unlimited active contracts | Limits the number of rival satellites that may be launched/maintained: Level 1 = 3 satellites, Level 2 = 8 satellites, Level 3 = no limit. |
 | **Research and Development** | May unlock tech nodes costing up to 100 Science | May unlock tech nodes costing up to 500 Science; surface sampling/resource transfer capability becomes available with the other requirements met | No tech-node Science-cost limit | Directly gates the rival stock tech tree. Level 1 permits nodes through 90 Science, Level 2 permits nodes through 300 Science, and Level 3 permits the 550- and 1000-Science nodes. Also gates Surface Sample expeditions. |
-| **Vehicle Assembly Building (VAB)** | 30-part craft limit; no action groups | 255-part craft limit; basic action groups | Unlimited parts; full action groups | Modifies rival launch development and can be used as a mission-body capability gate: Level 1 = starting Launch Chance +15%; Level 2 = Launch Progress Chance +3%; Level 3 = Launch Progress Chance +3%. |
-| **Spaceplane Hangar (SPH)** | 30-part craft limit; no action groups | 255-part craft limit; basic action groups | Unlimited parts; full action groups | Modifies rival research development: Level 1 = starting Research Chance +15%; Level 2 = Research Progress Chance +3%; Level 3 = Research Progress Chance +3%. |
-| **Launch Pad** | Small launch vehicle size/mass limit; about 18 t maximum mass | Medium launch vehicle limits; about 140 t maximum mass | Unlimited stock size/mass | Modifies rival launch development: Level 1 = starting Launch Chance +15%; Level 2 = Launch Progress Chance +3%; Level 3 = Launch Progress Chance +3%. |
-| **Runway** | Small aircraft size/mass limit; about 18 t maximum mass | Medium aircraft limits; about 140 t maximum mass | Unlimited stock size/mass | Modifies rival research development: Level 1 = starting Research Chance +15%; Level 2 = Research Progress Chance +3%; Level 3 = Research Progress Chance +3%. |
+| **Vehicle Assembly Building (VAB)** | 30-part craft limit; no action groups | 255-part craft limit; basic action groups | Unlimited parts; full action groups | Modifies rival launch development and can be used as a mission-body capability gate: Level 1 = Launch Progress Chance +15%; Level 2 = additional Launch Progress Chance +3%; Level 3 = additional Launch Progress Chance +3%. |
+| **Spaceplane Hangar (SPH)** | 30-part craft limit; no action groups | 255-part craft limit; basic action groups | Unlimited parts; full action groups | Modifies Launch Science Expedition preparation: Level 1 = Science Launch Progress Chance +20%; Level 2 = additional +3%; Level 3 = additional +3%. |
+| **Launch Pad** | Small launch vehicle size/mass limit; about 18 t maximum mass | Medium launch vehicle limits; about 140 t maximum mass | Unlimited stock size/mass | Modifies rival launch development: Level 1 = Launch Progress Chance +15%; Level 2 = additional Launch Progress Chance +3%; Level 3 = additional Launch Progress Chance +3%. |
+| **Runway** | Small aircraft size/mass limit; about 18 t maximum mass | Medium aircraft limits; about 140 t maximum mass | Unlimited stock size/mass | Modifies Launch Science Expedition preparation: Level 1 = Science Launch Progress Chance +20%; Level 2 = additional +3%; Level 3 = additional +3%. |
 | **Tracking Station** | Basic orbital tracking | Patched-conic/navigation capability | Adds unowned-object tracking and full stock tracking capability | Limits rival launch destinations: Level 1 = Kerbin only; Level 2 = Kerbin orbit and Kerbin's moons; Level 3 = no destination limit, allowing missions to other planets. |
 
 The stock Flag Pole, Crawlerway, water tower, tanks, and other KSC scenery are not separately upgradable programme facilities, so they do not need independent rival simulation states.
 
 ### Rival Agencies UI redesign
 
-- [ ] **Redesign only the Rival Agencies tab around current rival activity.** Preserve the existing rival Funds, next mission, mission progress, mission-progress cost, launch ETA, funding income, completed objectives, satellite-network income, and total next payout while adding the new science, research, tech-tree, facility, and construction information.
-- [ ] **Make launch Progress Chance a main visible stat.** Replace the current `Progress Increase` presentation with `Progress Chance - each 5 days`. Show the authoritative total launch-progress success chance after applying the 15% base chance, the applicable +15% starting launch modifier, and any +3% facility upgrade modifiers. The UI should display the calculated total rather than reconstructing it independently.
-- [ ] **Make expedition Progress Chance and Estimated Completion main visible stats.** In the Science Expedition section, show `Progress Chance - daily` and `Estimated Completion` beside the current expedition progress. The ETA must be calculated from remaining 10% steps and the authoritative current daily success chance rather than from a separate UI approximation.
-- [ ] **Show expedition capability above the current target.** The Science Expedition section should show the rival's unlocked experiments and its current Expedition Range before the active experiment/body/situation/biome target, so the player can understand why that expedition is available.
-- [ ] **Prioritize live rival activity before historical progression.** Order each rival card as Programme Status, Current Launch Programme + Science Expedition, Space Centre Construction, Space Centre Facilities, Tech Tree/Research, then detailed Funding.
+- [ ] **Redesign only the Rival Agencies tab around current rival activity.** Preserve the existing rival Funds, next mission, launch preparation, launch-progress cost, launch ETA, funding income, completed objectives, satellite-network income, and total next payout while adding live missions, science-launch preparation, research, tech-tree, facility, and construction information.
+- [ ] **Rename preparation progress to Launch Progress.** The existing normal rival mission `Mission Progress` display and the former science `Expedition Progress` display should both use `Launch Progress`, because reaching 100% launches the mission rather than immediately completing its gameplay result.
+- [ ] **Make normal launch Progress Chance a main visible stat.** Show `Progress Chance - each 5 days` as the authoritative combined value from the VAB and Launch Pad. With both at Level 1 the default is 30% (15% + 15%); Level 2 on either facility adds +3%, and Level 3 on either facility adds another +3%. The UI should display the calculated total rather than reconstructing it independently.
+- [ ] **Rename the Science Expedition card to Launch Science Expedition.** Show `Launch Progress`, `Progress Chance - daily`, and `Estimated Launch` beside the target. The authoritative science-launch chance is the combined SPH + Runway value: 40% at the default Level 1/Level 1 facilities, giving an average 25-day launch-preparation time from 0%.
+- [ ] **Show science-expedition capability above the launch target.** The Launch Science Expedition section should show unlocked experiments and current Expedition Range before the current experiment/body/situation/biome target.
+- [ ] **Add Live Mission Progress immediately below Programme Status.** This should be the highest-priority detailed section in the rival card and list every launched normal mission and launched science expedition currently underway.
+- [ ] **Show live mission time and risk at a glance.** Each live-mission entry should show mission type, mission/experiment target, destination or science situation, assigned Kerbals where applicable, mission duration, elapsed time, ETA/remaining time, Success Chance, Failure Chance, and `Outcome: Pending` until the mission ends.
+- [ ] **Show science-specific live mission information.** A live science mission should additionally show the Science reward that will be earned on success and enough subject information to identify the exact experiment/body/situation/biome being contested.
+- [ ] **Prioritize the rival card as Programme Status → Live Mission Progress → launch preparation → construction → facilities → Tech Tree/Research → Funding.** Place Current Launch Programme and Launch Science Expedition together after live missions so the player can distinguish missions already underway from missions still being prepared.
 - [ ] **Show one rival card cleanly and reuse the layout for additional rivals.** The card should be readable as a self-contained programme dashboard so the same component can be repeated for however many rivals are configured.
-- [ ] **Show facility capabilities after every facility level.** Do not display only `Level 1/2/3`; immediately state the capability the current level provides, such as Kerbal limit, satellite limit, launch/research chance modifiers, tech-cost ceiling, base funding, or destination access.
+- [ ] **Show facility capabilities after every facility level.** Do not display only `Level 1/2/3`; immediately state the capability the current level provides, such as Kerbal limit, satellite limit, launch/science-launch chance modifiers, tech-cost ceiling, base funding, or destination access.
 - [ ] **Show ongoing construction with a clear ETA.** Display facility, source/target level, elapsed construction days, remaining days/ETA, and paid cost. Do not include explanatory text stating that the old level remains active while construction is underway.
 - [ ] **Show researched techs clearly and keep the long tree collapsible.** The compact Tech Tree view should emphasize researched nodes and their experiment unlocks, with a `Show Full Tech Tree` control for the complete progression.
 
 #### Rival Agencies UI text example
+
+Mission duration and success/failure values in this mock-up are illustrative until the balance rules above are defined.
 
 ```text
 RIVAL AGENCIES                                      Next Funding: Year 2, Day 120
@@ -210,40 +227,69 @@ Kerbals on Mission:        2 / 8           Satellites:               4 / 8
 Total Next Payout:    42,000
 
 
-┌─ CURRENT LAUNCH PROGRAMME ─────────────────────┐
-│ Next Mission:       Mun Probe Orbit            │
-│ Mission Progress:   60%                        │
-│ Progress Chance - each 5 days: 36%             │
-│ Progress Cost:      25,000 Funds               │
-│ Estimated Launch:   80 days                    │
-└────────────────────────────────────────────────┘
+════════════════════════ LIVE MISSION PROGRESS ═══════════════════════════════════════
 
-┌─ SCIENCE EXPEDITION ────────────────────────────────────────────┐
-│ Expedition Range:     Kerbin, Mun and Minmus                  │
-│ Unlocked Experiments: Crew Report, Mystery Goo,               │
-│                       Temperature Scan, Pressure Scan,         │
-│                       Materials Study                          │
-│                                                                 │
-│ Status:               IN PROGRESS                              │
-│ Experiment:           Temperature Scan                         │
-│ Target:               Kerbin - Shores                          │
-│ Situation:            Landed                                   │
-│ Expedition Progress:  40%                                      │
-│ Progress Chance - daily: 30%                                   │
-│ Estimated Completion: 20 days                                  │
-│ Science Available:    2.4 Science                              │
-│ Kerbals Assigned:     1                                        │
-└─────────────────────────────────────────────────────────────────┘
+┌─ MISSION: KERBIN CREWED ORBIT ─────────────────────────────────────────────────────┐
+│ Type:              Objective Mission                                               │
+│ Status:            IN FLIGHT                                                       │
+│ Kerbals:           2                                                               │
+│ Mission Duration:  20 days                                                         │
+│ Mission Progress:  Day 8 / 20                                                      │
+│ ETA:               12 days                                                         │
+│ Success Chance:    80%                                                             │
+│ Failure Chance:    20%                                                             │
+│ Outcome:           PENDING                                                         │
+└─────────────────────────────────────────────────────────────────────────────────────┘
+
+┌─ SCIENCE: MYSTERY GOO - KERBIN HIGHLANDS ─────────────────────────────────────────┐
+│ Type:              Science Expedition                                              │
+│ Situation:         Landed                                                          │
+│ Status:            IN FLIGHT                                                       │
+│ Kerbals:           0                                                               │
+│ Mission Duration:  12 days                                                         │
+│ Mission Progress:  Day 5 / 12                                                      │
+│ ETA:               7 days                                                          │
+│ Success Chance:    90%                                                             │
+│ Failure Chance:    10%                                                             │
+│ Science Reward:    13 Science                                                      │
+│ Outcome:           PENDING                                                         │
+└─────────────────────────────────────────────────────────────────────────────────────┘
+
+
+┌─ CURRENT LAUNCH PROGRAMME ─────────────────────────────────────────────────────────┐
+│ Next Mission:                    Mun Probe Orbit                                    │
+│ Launch Progress:                 60%                                                │
+│ Progress Chance - each 5 days:   36%                                                │
+│ Progress Cost:                   25,000 Funds                                       │
+│ Estimated Launch:                80 days                                            │
+└─────────────────────────────────────────────────────────────────────────────────────┘
+
+┌─ LAUNCH SCIENCE EXPEDITION ────────────────────────────────────────────────────────┐
+│ Expedition Range:                Kerbin, Mun and Minmus                            │
+│ Unlocked Experiments:            Crew Report, Mystery Goo,                        │
+│                                  Temperature Scan, Pressure Scan,                  │
+│                                  Materials Study                                   │
+│                                                                                     │
+│ Status:                           PREPARING                                          │
+│ Experiment:                       Temperature Scan                                  │
+│ Target:                           Kerbin - Shores                                   │
+│ Situation:                        Landed                                            │
+│ Launch Progress:                  40%                                               │
+│ Progress Chance - daily:          40%                                               │
+│ Estimated Launch:                 15 days                                           │
+│ Science Reward:                   2.4 Science                                       │
+│ Kerbals Assigned:                 1                                                 │
+└─────────────────────────────────────────────────────────────────────────────────────┘
 
 
 ┌─ SPACE CENTRE CONSTRUCTION ────────────────────────────────────────────────────────┐
-│ Research & Development                                                            │
-│ Level 1  ───────────────────────────────►  Level 2                                │
-│                                                                                    │
-│ Progress:       Day 74 / 180                                                       │
-│ ETA:            106 days                                                          │
-│ Cost:           100,000 Funds - PAID                                              │
-└────────────────────────────────────────────────────────────────────────────────────┘
+│ Research & Development                                                             │
+│ Level 1  ───────────────────────────────►  Level 2                                 │
+│                                                                                     │
+│ Progress:       Day 74 / 180                                                        │
+│ ETA:            106 days                                                           │
+│ Cost:           100,000 Funds - PAID                                               │
+└─────────────────────────────────────────────────────────────────────────────────────┘
 
 
 SPACE CENTRE FACILITIES
@@ -261,18 +307,18 @@ Research & Development      LEVEL 1       [UPGRADING → LEVEL 2]
   └─ May research tech nodes costing up to 90 Science
 
 Vehicle Assembly Building   LEVEL 2
-  └─ Starting Launch Chance +15%
-     Launch Progress Chance +3%
+  └─ Launch Progress Chance +15% base
+     Additional +3% at Level 2
 
 Launch Pad                  LEVEL 2
-  └─ Starting Launch Chance +15%
-     Launch Progress Chance +3%
+  └─ Launch Progress Chance +15% base
+     Additional +3% at Level 2
 
 Spaceplane Hangar           LEVEL 1
-  └─ Starting Research Chance +15%
+  └─ Science Launch Progress Chance +20%
 
 Runway                      LEVEL 1
-  └─ Starting Research Chance +15%
+  └─ Science Launch Progress Chance +20%
 
 Tracking Station            LEVEL 2
   └─ Missions permitted around Kerbin, Mun and Minmus

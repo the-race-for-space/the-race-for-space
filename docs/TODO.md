@@ -144,9 +144,20 @@ This file tracks current development ideas and polish work only. Completed items
 ### Rival Space Centre progression
 
 - [ ] **Simulate each rival building and upgrading its own Space Centre.** Give every rival persistent facility levels based on the nine separately upgradable stock Career facilities. Rivals should begin with Level 1 facilities and spend their own Funds to improve them through Level 2 and Level 3 rather than receiving all programme capabilities automatically.
-- [ ] **Make rival facility upgrades take campaign time.** Define upgrade costs, construction durations, upgrade-selection priorities, and whether more than one facility can be under construction at the same time.
+- [ ] **Simulate rival facility construction progress.** A facility upgrade should remain under construction for its full build period, with its previous level remaining active until construction completes.
+- [ ] **Start facility construction only at funding times.** Rivals should evaluate and begin eligible Space Centre upgrades when a campaign funding boundary is processed rather than starting construction at arbitrary times between funding events.
+- [ ] **Charge rival Funds when construction starts.** Upgrading a facility from Level 1 to Level 2 costs 100,000 Funds. Upgrading from Level 2 to Level 3 costs 250,000 Funds. Construction may only begin if the rival can pay the full upgrade cost.
+- [ ] **Use fixed rival facility construction times.** Level 1 to Level 2 takes 180 campaign days. Level 2 to Level 3 takes 270 campaign days. Record the construction start date, completion date, source level, and target level so progress survives save/load correctly.
+- [ ] **Define rival construction scheduling.** Decide how rivals choose which eligible facility to upgrade at each funding boundary and whether an agency may have more than one Space Centre facility under construction at the same time.
 - [ ] **Use facility levels as capability gates.** Launches, expeditions, technology purchases, crew activity, mission planning, and strategic behaviour should check the relevant simulated rival facilities as well as the rival's tech and mission progression.
-- [ ] **Show rival Space Centre development to the player.** Add facility levels and any upgrade currently under construction to the Rival Agencies interface so the player can see how each competing programme is developing.
+- [ ] **Show rival Space Centre development to the player.** Add facility levels, construction progress, and any upgrade currently under construction to the Rival Agencies interface so the player can see how each competing programme is developing.
+
+#### Rival facility construction rules
+
+| Upgrade | Cost | Construction time | May start |
+| --- | ---: | ---: | --- |
+| **Level 1 → Level 2** | 100,000 Funds | 180 days | At a campaign funding boundary, if the rival has sufficient Funds |
+| **Level 2 → Level 3** | 250,000 Funds | 270 days | At a campaign funding boundary, if the rival has sufficient Funds |
 
 All nine stock Career facilities have three upgrade levels: Level 1, Level 2, and Level 3. The table below records the stock progression and the intended role for the rival simulation.
 

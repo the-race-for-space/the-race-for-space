@@ -62,16 +62,17 @@ This file tracks current development ideas and polish work only. Completed items
 
 - [ ] **Add a Live Mission Progress phase after launch.** Normal rival missions and Launch Science Expeditions should no longer complete their gameplay result immediately when launch preparation reaches 100%. At launch, create a persistent live-mission record and move it into the Rival Agencies `Live Mission Progress` section.
 - [ ] **Use only Contract or Science as the live Mission Type.** In the player-facing live mission list, a normal funding/objective mission is `Contract` and a science expedition is `Science`. Keep the values short and do not expose internal mission-class names in this column.
-- [ ] **Use a fixed live-mission duration lookup by target location.** Mission Type should not independently change duration. A Contract and a Science mission targeting the same location should use the same configured live duration. Each supported Kerbin biome and celestial body has one manually assigned travel time in the tables below.
+- [ ] **Use a fixed live-mission duration lookup by target location.** Mission Type should not independently change duration. A Contract and a Science mission targeting the same location should use the same configured live duration. Each supported Kerbin biome, KSC location biome, and celestial body has one manually assigned travel time in the tables below.
 - [ ] **Treat the duration tables as authoritative balance data.** Do not calculate travel time from physical distance, orbital distance, launch windows, phase angles, live planet positions, or vessel state. The simulation should look up the configured value for the target location and use it directly.
 - [ ] **Keep location durations configurable and stable.** Use stable project-owned location IDs so these manual travel times can be balanced later without changing mission logic or save interpretation. Unknown locations should fail safely rather than borrowing an unrelated travel time.
 - [ ] **Give every launched mission persistent timing and difficulty data.** Store the launch date, configured base duration, elapsed time, expected completion date, mission type, target, assigned Kerbals, mission difficulty from 1 to 10, and any science subject/reward data required by science expeditions.
 - [ ] **Do not complete a rival mission at launch.** Reaching 100% `Launch Progress` only starts the live mission. A Contract remains incomplete, and a Science expedition grants no Science, until the configured live duration has finished and the mission passes its final success check.
-- [ ] **Use mission difficulty to determine final Success Chance.** Every live Contract and Science mission uses a difficulty rating from 1 to 10. Contract missions use the contract's difficulty. Science missions derive difficulty from the science target using the lookup scope below. Difficulty 1 has a 90% Success Chance, and each additional difficulty level reduces Success Chance by 5 percentage points, down to 45% at difficulty 10. Use `Success Chance = 95% - (Difficulty × 5%)` for valid difficulty values 1–10.
+- [ ] **Use mission difficulty to determine final Success Chance.** Every live Contract and Science mission uses a difficulty rating from 1 to 10. Contract missions use the contract's difficulty. Science missions derive difficulty from the science target using the lookup tables below. Difficulty 1 has a 90% Success Chance, and each additional difficulty level reduces Success Chance by 5 percentage points, down to 45% at difficulty 10. Use `Success Chance = 95% - (Difficulty × 5%)` for valid difficulty values 1–10.
 - [ ] **Use biome-specific science difficulty only on Kerbin.** Kerbin surface Science missions use the target Kerbin biome to choose their 1–10 difficulty. Maintain one compact Kerbin biome difficulty table for Shores, Water, Grasslands, Highlands, Mountains, Deserts, Badlands, Tundra, Ice Caps, Northern Ice Shelf, and Southern Ice Shelf. Do not create equivalent per-biome difficulty tables for other celestial bodies.
+- [ ] **Use fixed KSC location-biome science settings.** Science missions targeting KSC location biomes use a fixed 5-day live duration and Difficulty 1. Keep the KSC locations listed explicitly in the table below so these special local science targets do not inherit the wider Shores duration.
 - [ ] **Use one science difficulty per non-Kerbin body.** Mun, Minmus, the planets, their moons, and other non-Kerbin science destinations each use one body-wide 1–10 difficulty regardless of the target biome. The biome may still be tracked as part of the exact science subject and shown in the UI, but it does not modify Success Chance outside Kerbin.
-- [ ] **Keep science difficulty configuration compact.** The science difficulty balance data should consist of the Kerbin biome entries plus one entry for each non-Kerbin celestial body. Do not maintain a database containing every biome on every moon and planet.
-- [ ] **Define Kerbin non-biome science difficulty when needed.** If a Kerbin Science mission targets a situation where the stock subject is not biome-specific, define a single Kerbin general/space difficulty rather than inventing a biome value.
+- [ ] **Use the Kerbin Orbit science setting for orbital science around Kerbin.** Kerbin Orbit uses a 10-day live duration and Difficulty 3 for science missions that use the Kerbin-orbit target rather than a surface biome or KSC location biome.
+- [ ] **Keep science difficulty configuration compact.** The science difficulty balance data should consist of regular Kerbin biome entries, the fixed KSC location-biome rule, Kerbin Orbit, and one entry for each non-Kerbin celestial body. Do not maintain a database containing every biome on every moon and planet.
 - [ ] **Resolve the mission with one outcome roll after its duration ends.** When the expected completion date is reached, make one random check against the mission's Success Chance. A successful check completes the result; otherwise the mission fails. The result must not be rolled or known before the live duration has elapsed.
 - [ ] **Apply rewards only after a successful live mission.** On a successful Contract mission, mark the objective complete and apply any related satellite/infrastructure result. On a successful Science mission, award the expedition's Science to the rival, record the subject as completed, and consume the matching player science subject. No successful gameplay result is granted before this point.
 - [ ] **Lose the spacecraft when a live mission fails.** A failed Contract or Science mission grants no objective completion, satellite/infrastructure result, or Science reward, and its simulated spacecraft is lost.
@@ -105,58 +106,98 @@ This file tracks current development ideas and polish work only. Completed items
 
 ##### Science difficulty lookup scope
 
-Difficulty values are still to be assigned. Keep this lookup deliberately small.
+The configured values below are authoritative balance data. Keep this lookup deliberately small.
 
 | Scope | Difficulty entries |
 | --- | --- |
-| **Kerbin** | One difficulty per regular Kerbin biome: Shores, Water, Grasslands, Highlands, Mountains, Deserts, Badlands, Tundra, Ice Caps, Northern Ice Shelf, Southern Ice Shelf. Add one Kerbin general/space entry only if a non-biome science situation requires it. |
+| **KSC location biomes** | Every listed KSC location biome uses 5 days and Difficulty 1. |
+| **Kerbin surface** | One difficulty per regular Kerbin biome. |
+| **Kerbin Orbit** | One orbital setting: 10 days and Difficulty 3. |
 | **All other bodies** | One body-wide difficulty per target body. No per-biome difficulty entries. |
 
-Non-Kerbin body entries to balance: Sun, Moho, Eve, Gilly, Mun, Minmus, Duna, Ike, Dres, Jool, Laythe, Vall, Tylo, Bop, Pol, and Eeloo.
+##### Kerbin biome live-duration and science-difficulty database
 
-##### Kerbin biome live-duration database
+These are manually assigned campaign travel times and science difficulties. The runtime should use these values directly rather than calculating physical distance.
 
-These are manually assigned campaign travel times. They preserve the earlier KSC-relative biome ordering but the runtime should not calculate or store physical distance.
+| Travel Rank | Kerbin Biome | Base Live Duration | Science Difficulty |
+| ---: | --- | ---: | ---: |
+| 1 | Shores | 10 days | 1 |
+| 2 | Water | 10 days | 1 |
+| 3 | Grasslands | 10 days | 1 |
+| 4 | Highlands | 10 days | 1 |
+| 5 | Mountains | 20 days | 3 |
+| 6 | Deserts | 30 days | 2 |
+| 7 | Badlands | 70 days | 4 |
+| 8 | Tundra | 80 days | 3 |
+| 9 | Ice Caps | 90 days | 4 |
+| 10 | Northern Ice Shelf | 100 days | 4 |
+| 10 | Southern Ice Shelf | 100 days | 4 |
 
-| Travel Rank | Kerbin Biome | Base Live Duration |
-| ---: | --- | ---: |
-| 1 | Shores | 10 days |
-| 2 | Water | 10 days |
-| 3 | Grasslands | 10 days |
-| 4 | Highlands | 10 days |
-| 5 | Mountains | 20 days |
-| 6 | Deserts | 30 days |
-| 7 | Badlands | 70 days |
-| 8 | Tundra | 80 days |
-| 9 | Ice Caps | 90 days |
-| 10 | Northern Ice Shelf | 100 days |
-| 10 | Southern Ice Shelf | 100 days |
+##### KSC location-biome science database
 
-##### Celestial body live-duration database
+All KSC location-biome Science missions use a fixed 5-day live duration and Difficulty 1.
 
-These are manually assigned campaign travel times from Kerbin. The values are authoritative balance data; no stock reference orbit or transfer calculation is required at runtime.
+| KSC Location Biome | Base Live Duration | Science Difficulty |
+| --- | ---: | ---: |
+| KSC | 5 days | 1 |
+| Administration | 5 days | 1 |
+| Astronaut Complex | 5 days | 1 |
+| Crawlerway | 5 days | 1 |
+| Flag Pole | 5 days | 1 |
+| Launch Pad | 5 days | 1 |
+| Mission Control | 5 days | 1 |
+| R&D | 5 days | 1 |
+| R&D Central Building | 5 days | 1 |
+| R&D Corner Lab | 5 days | 1 |
+| R&D Main Building | 5 days | 1 |
+| R&D Observatory | 5 days | 1 |
+| R&D Side Lab | 5 days | 1 |
+| R&D Small Lab | 5 days | 1 |
+| R&D Tanks | 5 days | 1 |
+| R&D Wind Tunnel | 5 days | 1 |
+| Runway | 5 days | 1 |
+| SPH | 5 days | 1 |
+| SPH Main Building | 5 days | 1 |
+| SPH Round Tank | 5 days | 1 |
+| SPH Tanks | 5 days | 1 |
+| SPH Water Tower | 5 days | 1 |
+| Tracking Station | 5 days | 1 |
+| Tracking Station Dish East | 5 days | 1 |
+| Tracking Station Dish North | 5 days | 1 |
+| Tracking Station Dish South | 5 days | 1 |
+| Tracking Station Hub | 5 days | 1 |
+| VAB | 5 days | 1 |
+| VAB Main Building | 5 days | 1 |
+| VAB Pod Memorial | 5 days | 1 |
+| VAB Round Tank | 5 days | 1 |
+| VAB South Complex | 5 days | 1 |
+| VAB Tanks | 5 days | 1 |
 
-| Travel Rank | Target | Base Live Duration |
-| ---: | --- | ---: |
-| 1 | Kerbin Orbit | 10 days |
-| 2 | Mun | 30 days |
-| 3 | Minmus | 50 days |
-| 4 | Sun | 78 days |
-| 5 | Moho | 124 days |
-| 6 | Eve | 171 days |
-| 7 | Gilly | 174 days |
-| 8 | Duna | 303 days |
-| 9 | Ike | 303 days |
-| 10 | Dres | 604 days |
-| 11 | Jool | 1,123 days |
-| 12 | Laythe | 1,124 days |
-| 13 | Vall | 1,124 days |
-| 14 | Tylo | 1,125 days |
-| 15 | Bop | 1,128 days |
-| 16 | Pol | 1,131 days |
-| 17 | Eeloo | 1,587 days |
+##### Celestial body live-duration and science-difficulty database
 
-The tables are intended as configuration data rather than hard-coded branching. A future implementation should keep stable location IDs and read the duration directly from project-owned campaign settings or a dedicated project-owned lookup.
+These are manually assigned campaign travel times from Kerbin and body-wide Science difficulties. The values are authoritative balance data; no stock reference orbit, transfer calculation, or non-Kerbin biome difficulty lookup is required at runtime.
+
+| Travel Rank | Target | Base Live Duration | Science Difficulty |
+| ---: | --- | ---: | ---: |
+| 1 | Kerbin Orbit | 10 days | 3 |
+| 2 | Mun | 30 days | 4 |
+| 3 | Minmus | 50 days | 4 |
+| 4 | Sun | 78 days | 5 |
+| 5 | Moho | 124 days | 9 |
+| 6 | Eve | 171 days | 10 |
+| 7 | Gilly | 174 days | 5 |
+| 8 | Duna | 303 days | 7 |
+| 9 | Ike | 303 days | 5 |
+| 10 | Dres | 604 days | 5 |
+| 11 | Jool | 1,123 days | 7 |
+| 12 | Laythe | 1,124 days | 8 |
+| 13 | Vall | 1,124 days | 8 |
+| 14 | Tylo | 1,125 days | 8 |
+| 15 | Bop | 1,128 days | 8 |
+| 16 | Pol | 1,131 days | 8 |
+| 17 | Eeloo | 1,587 days | 10 |
+
+The tables are intended as configuration data rather than hard-coded branching. A future implementation should keep stable location IDs and read the duration and Science difficulty directly from project-owned campaign settings or a dedicated project-owned lookup.
 
 #### Rival stock tech tree
 

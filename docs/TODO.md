@@ -62,11 +62,9 @@ This file tracks current development ideas and polish work only. Completed items
 
 - [ ] **Add a Live Mission Progress phase after launch.** Normal rival missions and Launch Science Expeditions should no longer complete their gameplay result immediately when launch preparation reaches 100%. At launch, create a persistent live-mission record and move it into the Rival Agencies `Live Mission Progress` section.
 - [ ] **Use only Contract or Science as the live Mission Type.** In the player-facing live mission list, a normal funding/objective mission is `Contract` and a science expedition is `Science`. Keep the values short and do not expose internal mission-class names in this column.
-- [ ] **Derive live mission duration from target distance.** Mission Type should not independently change duration. A Contract and a Science mission targeting the same location should use the same base live duration. Duration comes from a deterministic background location table so it does not change with current planetary phase or vessel state.
-- [ ] **Use KSC-relative distance for Kerbin surface targets.** Rank the eleven regular Kerbin biomes by a representative nearest-practical great-circle distance from the Kerbal Space Center. Use the static distance table below for campaign simulation rather than performing biome-map searches during rival updates. KSC facility micro-biomes are excluded.
-- [ ] **Convert Kerbin surface distance to live duration at one day per 100 km.** Use `max(1, ceil(referenceDistanceKm / 100))` Kerbin days for surface Contract and Science missions. The reference distances are intentionally rounded campaign values rather than claims that every point in a biome is the same distance from KSC.
-- [ ] **Use fixed Hohmann-style travel estimates for off-world targets.** Use stock orbital scale to assign one-way travel-time baselines from Kerbin. Planet durations are based on a simple Hohmann-transfer estimate between Kerbin's and the target planet's stock semi-major axes; moon durations add a local parent-system transfer estimate. Round up to whole Kerbin days for the background database.
-- [ ] **Do not use live planet positions to change duration.** Ignore launch windows, phase angle, eccentric anomaly, and the bodies' instantaneous separation when resolving rival live-mission length. These abstractions keep rival progress deterministic and save-compatible.
+- [ ] **Use a fixed live-mission duration lookup by target location.** Mission Type should not independently change duration. A Contract and a Science mission targeting the same location should use the same configured live duration. Each supported Kerbin biome and celestial body has one manually assigned travel time in the tables below.
+- [ ] **Treat the duration tables as authoritative balance data.** Do not calculate travel time from physical distance, orbital distance, launch windows, phase angles, live planet positions, or vessel state. The simulation should look up the configured value for the target location and use it directly.
+- [ ] **Keep location durations configurable and stable.** Use stable project-owned location IDs so these manual travel times can be balanced later without changing mission logic or save interpretation. Unknown locations should fail safely rather than borrowing an unrelated travel time.
 - [ ] **Give every launched mission persistent timing data.** Store the launch date, configured base duration, elapsed time, expected completion date, mission type, target, assigned Kerbals, and any science subject/reward data required by science expeditions.
 - [ ] **Resolve mission success or failure at the end of the mission.** When the configured mission duration expires, make one outcome roll using that mission's authoritative success chance and failure chance. The result is not known to the player before the mission completes.
 - [ ] **Apply gameplay rewards only after a successful live mission.** Successful normal missions may complete their objective or add the relevant satellite/infrastructure state. Successful science expeditions award Science and consume the matching player science subject. A failed mission must not grant the successful mission result.
@@ -75,49 +73,49 @@ This file tracks current development ideas and polish work only. Completed items
 - [ ] **Define simultaneous live-mission limits.** Decide how many launched normal missions and science expeditions a rival may have active at once and whether Mission Control, Astronaut Complex, or another facility limits those live missions.
 - [ ] **Persist live missions across save/load and time warp.** Live mission completion and outcome resolution must be deterministic from stored dates/state and must correctly catch up if the player time-warps past a completion date or reloads after it.
 
-##### Kerbin biome distance database
+##### Kerbin biome live-duration database
 
-These are proposed background simulation values. They rank the regular Kerbin biomes from the KSC using representative nearest-practical distances, not the geometric centre of each irregular biome.
+These are manually assigned campaign travel times. They preserve the earlier KSC-relative biome ordering but the runtime should not calculate or store physical distance.
 
-| Distance Rank | Kerbin Biome | Reference Distance From KSC | Base Live Duration |
-| ---: | --- | ---: | ---: |
-| 1 | Shores | 0 km | 1 day |
-| 2 | Water | 25 km | 1 day |
-| 3 | Grasslands | 30 km | 1 day |
-| 4 | Highlands | 75 km | 1 day |
-| 5 | Mountains | 120 km | 2 days |
-| 6 | Deserts | 300 km | 3 days |
-| 7 | Badlands | 700 km | 7 days |
-| 8 | Tundra | 800 km | 8 days |
-| 9 | Ice Caps | 900 km | 9 days |
-| 10 | Northern Ice Shelf | 950 km | 10 days |
-| 10 | Southern Ice Shelf | 950 km | 10 days |
+| Travel Rank | Kerbin Biome | Base Live Duration |
+| ---: | --- | ---: |
+| 1 | Shores | 10 days |
+| 2 | Water | 10 days |
+| 3 | Grasslands | 10 days |
+| 4 | Highlands | 10 days |
+| 5 | Mountains | 20 days |
+| 6 | Deserts | 30 days |
+| 7 | Badlands | 70 days |
+| 8 | Tundra | 80 days |
+| 9 | Ice Caps | 90 days |
+| 10 | Northern Ice Shelf | 100 days |
+| 10 | Southern Ice Shelf | 100 days |
 
-##### Stock body distance database
+##### Celestial body live-duration database
 
-`Reference Orbit` is the stock semi-major-axis scale used to anchor the estimate. Planet values are relative to the Sun; moon values are relative to their parent body. `Base Live Duration` is the proposed one-way campaign travel time from Kerbin, rounded up to a whole Kerbin day. The Sun entry represents a low-Sun-space mission estimate rather than a surface landing.
+These are manually assigned campaign travel times from Kerbin. The values are authoritative balance data; no stock reference orbit or transfer calculation is required at runtime.
 
-| Distance Rank | Target | Parent | Reference Orbit | Base Live Duration |
-| ---: | --- | --- | ---: | ---: |
-| 1 | Kerbin Orbit | Kerbin | — | 1 day |
-| 2 | Mun | Kerbin | 12,000 km | 2 days |
-| 3 | Minmus | Kerbin | 47,000 km | 10 days |
-| 4 | Sun | — | Central body | 78 days |
-| 5 | Moho | Sun | 5,263,138 km | 124 days |
-| 6 | Eve | Sun | 9,832,685 km | 171 days |
-| 7 | Gilly | Eve | 31,500 km | 174 days |
-| 8 | Duna | Sun | 20,726,155 km | 303 days |
-| 9 | Ike | Duna | 3,200 km | 303 days |
-| 10 | Dres | Sun | 40,839,348 km | 604 days |
-| 11 | Jool | Sun | 68,773,560 km | 1,123 days |
-| 12 | Laythe | Jool | 27,184 km | 1,124 days |
-| 13 | Vall | Jool | 43,152 km | 1,124 days |
-| 14 | Tylo | Jool | 68,500 km | 1,125 days |
-| 15 | Bop | Jool | 128,500 km | 1,128 days |
-| 16 | Pol | Jool | 179,890 km | 1,131 days |
-| 17 | Eeloo | Sun | 90,118,820 km | 1,587 days |
+| Travel Rank | Target | Base Live Duration |
+| ---: | --- | ---: |
+| 1 | Kerbin Orbit | 10 days |
+| 2 | Mun | 30 days |
+| 3 | Minmus | 50 days |
+| 4 | Sun | 78 days |
+| 5 | Moho | 124 days |
+| 6 | Eve | 171 days |
+| 7 | Gilly | 174 days |
+| 8 | Duna | 303 days |
+| 9 | Ike | 303 days |
+| 10 | Dres | 604 days |
+| 11 | Jool | 1,123 days |
+| 12 | Laythe | 1,124 days |
+| 13 | Vall | 1,124 days |
+| 14 | Tylo | 1,125 days |
+| 15 | Bop | 1,128 days |
+| 16 | Pol | 1,131 days |
+| 17 | Eeloo | 1,587 days |
 
-The table is intended as configuration data rather than hard-coded branching. A future implementation should keep stable location IDs and read the duration value from project-owned campaign settings or a dedicated project-owned lookup, while raw KSP body/biome APIs remain behind `KspIntegration/` where practical.
+The tables are intended as configuration data rather than hard-coded branching. A future implementation should keep stable location IDs and read the duration directly from project-owned campaign settings or a dedicated project-owned lookup.
 
 #### Rival stock tech tree
 
@@ -263,7 +261,7 @@ The stock Flag Pole, Crawlerway, water tower, tanks, and other KSC scenery are n
 
 #### Rival Agencies UI text example
 
-Mission duration and success-chance values in this mock-up use the proposed distance table where possible; success-chance values remain illustrative until those balance rules are defined.
+Mission duration and success-chance values in this mock-up use the configured location-duration table where possible; success-chance values remain illustrative until those balance rules are defined.
 
 ```text
 Rival Agencies                                      Next Funding: Year 2, Day 120
@@ -281,8 +279,8 @@ Total Next Payout:    42,000
 
 Item                    Location              Mission Type   Duration   Progress      ETA       Success Chance
 ──────────────────────  ────────────────────  ─────────────  ─────────  ────────────  ────────  ──────────────
-Kerbin Crewed Orbit     Kerbin Orbit          Contract       1 day      Day 0 / 1     1 day     80%
-Mystery Goo             Kerbin / Highlands    Science        1 day      Day 0 / 1     1 day     90%
+Kerbin Crewed Orbit     Kerbin Orbit          Contract       10 days    Day 0 / 10    10 days   80%
+Mystery Goo             Kerbin / Highlands    Science        10 days    Day 0 / 10    10 days   90%
 
 
 ┌─ Current Launch Programme ─────────────────────────────────────────────────────────┐

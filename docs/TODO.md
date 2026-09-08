@@ -140,3 +140,26 @@ This file tracks current development ideas and polish work only. Completed items
 ```
 
 `EVA Report` and `Surface Sample` are not unlocked by a stock tech-tree node; rival access to those subjects should be gated separately by expedition/mission capability rules.
+
+### Rival Space Centre progression
+
+- [ ] **Simulate each rival building and upgrading its own Space Centre.** Give every rival persistent facility levels based on the nine separately upgradable stock Career facilities. Rivals should begin with Level 1 facilities and spend their own Funds to improve them through Level 2 and Level 3 rather than receiving all programme capabilities automatically.
+- [ ] **Make rival facility upgrades take campaign time.** Define upgrade costs, construction durations, upgrade-selection priorities, and whether more than one facility can be under construction at the same time.
+- [ ] **Use facility levels as capability gates.** Launches, expeditions, technology purchases, crew activity, mission planning, and strategic behaviour should check the relevant simulated rival facilities as well as the rival's tech and mission progression.
+- [ ] **Show rival Space Centre development to the player.** Add facility levels and any upgrade currently under construction to the Rival Agencies interface so the player can see how each competing programme is developing.
+
+All nine stock Career facilities have three upgrade levels: Level 1, Level 2, and Level 3. The table below records the stock progression and an initial role for the rival simulation; the exact rival effects can be balanced during implementation.
+
+| Facility | Stock Level 1 | Stock Level 2 | Stock Level 3 | Proposed rival simulation role |
+| --- | --- | --- | --- | --- |
+| **Administration Building** | 1 active strategy; 25% maximum commitment | 3 active strategies; 60% maximum commitment | 5 active strategies; 100% maximum commitment | Controls how many strategic policies a rival can run and how strongly it can favour funding, science, launch speed, or other programme priorities. |
+| **Astronaut Complex** | Roster limit 5; no off-Kerbin EVA | Roster limit 12; off-Kerbin EVA and flag planting available | Unlimited roster | Controls rival crew capacity and whether crewed expeditions can use EVA, surface activity, and related crew-only science. |
+| **Mission Control** | Maximum 2 active contracts; no flight planning | Maximum 7 active contracts; flight planning available when navigation requirements are met | Unlimited active contracts | Controls the number and complexity of simultaneous rival programme commitments and enables more advanced planned missions. |
+| **Research and Development** | May unlock tech nodes costing up to 100 Science | May unlock tech nodes costing up to 500 Science; surface sampling/resource transfer capability becomes available with the other requirements met | No tech-node Science-cost limit | Directly gates the rival stock tech tree. Level 1 permits nodes through 90 Science, Level 2 permits nodes through 300 Science, and Level 3 permits the 550- and 1000-Science nodes. Also gates Surface Sample expeditions. |
+| **Vehicle Assembly Building (VAB)** | 30-part craft limit; no action groups | 255-part craft limit; basic action groups | Unlimited parts; full action groups | Represents rocket design and integration complexity. Higher levels allow heavier/more complex launch classes and advanced mission architectures. |
+| **Spaceplane Hangar (SPH)** | 30-part craft limit; no action groups | 255-part craft limit; basic action groups | Unlimited parts; full action groups | Represents aircraft and spaceplane design capability. Higher levels unlock more capable Kerbin aviation expeditions and advanced winged missions. |
+| **Launch Pad** | Small launch vehicle size/mass limit; about 18 t maximum mass | Medium launch vehicle limits; about 140 t maximum mass | Unlimited stock size/mass | Controls the maximum simulated rocket/payload class a rival can launch. Large probes, crewed spacecraft, stations, and base hardware can require higher pad levels. |
+| **Runway** | Small aircraft size/mass limit; about 18 t maximum mass | Medium aircraft limits; about 140 t maximum mass | Unlimited stock size/mass | Controls the maximum simulated aircraft/spaceplane class available for Kerbin aviation and runway-launched missions. |
+| **Tracking Station** | Basic orbital tracking | Patched-conic/navigation capability | Adds unowned-object tracking and full stock tracking capability | Controls navigation reach and mission-planning sophistication. Higher levels can gate Mun/Minmus transfers, difficult rendezvous, interplanetary missions, and asteroid/comet-related expeditions. |
+
+The stock Flag Pole, Crawlerway, water tower, tanks, and other KSC scenery are not separately upgradable programme facilities, so they do not need independent rival simulation states.

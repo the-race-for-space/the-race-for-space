@@ -73,7 +73,15 @@ This file tracks current development ideas and polish work only. Completed items
 - [ ] **Lose the spacecraft when a live mission fails.** A failed Contract or Science mission grants no objective completion, satellite/infrastructure result, or Science reward, and its simulated spacecraft is lost.
 - [ ] **Apply a 25% Kerbal-loss chance on failed crewed missions.** If a failed mission has one or more Kerbals assigned, make a 25% crew-loss check. When this triggers, record a Kerbal loss for the rival. Multi-Kerbal loss handling should not exceed the explicitly defined rule until it is balanced separately.
 - [ ] **Charge 50,000 Funds insurance after a Kerbal loss.** A Kerbal loss caused by a failed live mission creates a 50,000 Funds insurance payout for the rival. Do not deduct it immediately; subtract the 50,000 Funds from that rival's income at the next campaign funding boundary and persist the pending deduction through save/load.
-- [ ] **Define simultaneous live-mission limits.** Decide how many launched normal missions and science expeditions a rival may have active at once and whether Mission Control, Astronaut Complex, or another facility limits those live missions.
+- [ ] **Track each rival's employed Kerbal roster.** Persist the number of living Kerbals employed by each rival, the number currently assigned to live missions, and therefore the number available for new launches. Kerbals assigned to a live mission remain unavailable until that mission resolves.
+- [ ] **Require Kerbals for crewed Contracts and all Science missions.** Any Contract defined as crewed must reserve its required Kerbals at launch. Every Science mission requires at least one Kerbal and must reserve its configured crew requirement at launch. Uncrewed Contracts do not consume Kerbal roster capacity.
+- [ ] **Use the Astronaut Complex as the roster cap.** The rival may never employ more living Kerbals than its current Astronaut Complex level permits: Level 1 = 3 Kerbals, Level 2 = 8 Kerbals, Level 3 = no limit.
+- [ ] **Hire missing Kerbals only when a mission is ready to launch.** When Launch Progress reaches 100%, first check whether enough Kerbals are available. If not, and the rival is below its Astronaut Complex roster cap and can pay the cost, hire the missing Kerbal or Kerbals for 100,000 Funds each, add them to the employed roster, and assign them immediately to the launch.
+- [ ] **Wait at 100% Launch Progress when crew cannot be provided.** If a crew-required mission is ready but the rival is already at its Astronaut Complex roster cap, does not have enough available Kerbals, or cannot afford a required 100,000-Funds hire, keep the mission ready at 100% Launch Progress and do not launch it. Launch as soon as enough existing Kerbals return or an eligible hire can be made.
+- [ ] **Return surviving Kerbals after live missions resolve.** When a live mission ends, surviving assigned Kerbals return to the rival's available roster. On a failed crewed mission, apply the existing 25% Kerbal-loss rule first; any Kerbals not lost become available again.
+- [ ] **Charge 10,000 Funds payroll per living employed Kerbal at every funding boundary.** Count all living Kerbals on the rival's roster, including Kerbals currently on live missions. Deduct `10,000 Funds × employed Kerbals` from that rival's funding income at each campaign funding boundary and persist the roster/payroll state through save/load.
+- [ ] **Show roster and payroll as part of the rival's programme economy.** The Rival Agencies UI should show employed Kerbals versus the current Astronaut Complex limit, Kerbals currently on missions, Kerbals available, the next Kerbal payroll deduction, and any pending insurance deduction so the player can understand why gross funding and net funding differ.
+- [ ] **Define any additional simultaneous uncrewed-mission limits.** Kerbal-requiring mission capacity is limited by the available roster. Decide separately whether uncrewed Contract missions also need an overall simultaneous-mission cap from Mission Control or another facility.
 - [ ] **Persist live missions across save/load and time warp.** Live mission completion and outcome resolution must be deterministic from stored dates/state and must correctly catch up if the player time-warps past a completion date or reloads after it.
 
 ##### Mission difficulty success table
@@ -249,7 +257,7 @@ All nine stock Career facilities have three upgrade levels: Level 1, Level 2, an
 | Facility | Stock Level 1 | Stock Level 2 | Stock Level 3 | Rival simulation role |
 | --- | --- | --- | --- | --- |
 | **Administration Building** | 1 active strategy; 25% maximum commitment | 3 active strategies; 60% maximum commitment | 5 active strategies; 100% maximum commitment | Sets the rival's base funding income: Level 1 = 10,000 Funds, Level 2 = 20,000 Funds, Level 3 = 40,000 Funds. |
-| **Astronaut Complex** | Roster limit 5; no off-Kerbin EVA | Roster limit 12; off-Kerbin EVA and flag planting available | Unlimited roster | Limits the rival's simulated Kerbal roster: Level 1 = 3 Kerbals, Level 2 = 8 Kerbals, Level 3 = no limit. |
+| **Astronaut Complex** | Roster limit 5; no off-Kerbin EVA | Roster limit 12; off-Kerbin EVA and flag planting available | Unlimited roster | Limits the rival's simulated Kerbal roster: Level 1 = 3 Kerbals, Level 2 = 8 Kerbals, Level 3 = no limit. A crew-required mission that reaches 100% Launch Progress may hire missing Kerbals for 100,000 Funds each only if this rival roster cap permits it; otherwise launch waits for a Kerbal to return. |
 | **Mission Control** | Maximum 2 active contracts; no flight planning | Maximum 7 active contracts; flight planning available when navigation requirements are met | Unlimited active contracts | Limits the number of rival satellites that may be launched/maintained: Level 1 = 3 satellites, Level 2 = 8 satellites, Level 3 = no limit. |
 | **Research and Development** | May unlock tech nodes costing up to 100 Science | May unlock tech nodes costing up to 500 Science; surface sampling/resource transfer capability becomes available with the other requirements met | No tech-node Science-cost limit | Directly gates the rival stock tech tree. Level 1 permits nodes through 90 Science, Level 2 permits nodes through 300 Science, and Level 3 permits the 550- and 1000-Science nodes. Also gates Surface Sample expeditions. |
 | **Vehicle Assembly Building (VAB)** | 30-part craft limit; no action groups | 255-part craft limit; basic action groups | Unlimited parts; full action groups | Modifies rival launch development and can be used as a mission-body capability gate: Level 1 = Launch Progress Chance +15%; Level 2 = additional Launch Progress Chance +3%; Level 3 = additional Launch Progress Chance +3%. |
@@ -262,15 +270,18 @@ The stock Flag Pole, Crawlerway, water tower, tanks, and other KSC scenery are n
 
 ### Rival Agencies UI redesign
 
-- [ ] **Redesign only the Rival Agencies tab around current rival activity.** Preserve the existing rival Funds, next mission, launch preparation, launch-progress cost, launch ETA, funding income, completed objectives, satellite-network income, and total next payout while adding live missions, science-launch preparation, research, tech-tree, facility, and construction information.
+- [ ] **Redesign only the Rival Agencies tab around current rival activity.** Preserve the existing rival Funds, next mission, launch preparation, launch-progress cost, launch ETA, funding income, completed objectives, satellite-network income, and total next payout while adding live missions, science-launch preparation, research, tech-tree, facility, construction, Kerbal roster, and payroll information.
 - [ ] **Rename preparation progress to Launch Progress.** The existing normal rival mission `Mission Progress` display and the former science `Expedition Progress` display should both use `Launch Progress`, because reaching 100% launches the mission rather than immediately completing its gameplay result.
 - [ ] **Make normal launch Progress Chance a main visible stat.** Show `Progress Chance - each 5 days` as the authoritative combined value from the VAB and Launch Pad. With both at Level 1 the default is 30% (15% + 15%); Level 2 on either facility adds +3%, and Level 3 on either facility adds another +3%. The UI should display the calculated total rather than reconstructing it independently.
 - [ ] **Rename the Science Expedition card to Launch Science Expedition.** Show `Launch Progress`, `Progress Chance - daily`, and `Estimated Launch` beside the target. The authoritative science-launch chance is the combined SPH + Runway value: 40% at the default Level 1/Level 1 facilities, giving an average 25-day launch-preparation time from 0%.
 - [ ] **Show science-expedition capability above the launch target.** The Launch Science Expedition section should show unlocked experiments and current Expedition Range before the current experiment/body/situation/biome target.
+- [ ] **Show crew readiness on launch-preparation cards.** For any crew-required Contract or Science launch, show the required Kerbals and whether existing crew are available. At 100% Launch Progress, display `Ready`, `Hire At Launch`, or `Waiting For Kerbal` as appropriate; a mission must not move into Live Mission Progress until its crew has actually been assigned.
 - [ ] **Add Live Mission Progress immediately below Programme Status.** This should be the highest-priority detailed section in the rival card and list every launched normal mission and launched science expedition currently underway.
 - [ ] **Show Live Mission Progress as a compact row-and-column list.** Use the columns `Item`, `Location`, `Mission Type`, `Duration`, `Progress`, `ETA`, and `Success Chance`. `Item` is the contract name for a normal mission or the experiment name for a science expedition. `Location` is the body and biome where relevant. `Mission Type` must be only `Contract` or `Science`. Do not show Status, Outcome, or Failure Chance in this list.
 - [ ] **Keep science mission identity readable in the live-mission list.** For science rows, use the experiment as `Item`, include the body/biome in `Location`, and use `Science` as the Mission Type. For objective/funding rows, use the contract name as `Item` and `Contract` as the Mission Type. The detailed science reward and subject state remain part of the simulation even though the compact live list does not need extra columns for them.
 - [ ] **Use mission difficulty as the source for the live Success Chance column.** Display the calculated Success Chance from the mission's 1–10 difficulty rating; do not independently calculate or invent a different UI percentage.
+- [ ] **Show Kerbal staffing in Programme Status.** Display `Kerbals Employed` against the Astronaut Complex roster limit, `Kerbals On Mission`, `Kerbals Available`, and `Next Kerbal Payroll` so crew capacity is visible before the player scans individual missions.
+- [ ] **Show rival funding deductions explicitly.** In the Funding section, show gross next income first, then negative lines for `Kerbal Payroll` and any `Pending Insurance`, followed by the resulting `Total Next Payout` so recurring staffing costs are visible rather than hidden inside the total.
 - [ ] **Prioritize the rival card as Programme Status → Live Mission Progress → launch preparation → construction → facilities → Tech Tree/Research → Funding.** Place Current Launch Programme and Launch Science Expedition together after live missions so the player can distinguish missions already underway from missions still being prepared.
 - [ ] **Use title case instead of all-caps UI headings and wording.** Rival Agencies headings, section titles, facility levels, construction states, research states, and other display wording should use normal title case rather than all-capital text. Standard acronyms such as ETA, VAB, and SPH may remain uppercase.
 - [ ] **Show one rival card cleanly and reuse the layout for additional rivals.** The card should be readable as a self-contained programme dashboard so the same component can be repeated for however many rivals are configured.
@@ -290,16 +301,18 @@ Rival Agencies                                      Next Funding: Year 2, Day 12
 Programme Status
 
 Funds:               186,500              Stored Science:          72
-Kerbals on Mission:        2 / 8           Satellites:               4 / 8
-Total Next Payout:    42,000
+Kerbals Employed:          3 / 8           Satellites:               4 / 8
+Kerbals On Mission:        3               Kerbals Available:        0
+Next Kerbal Payroll:  30,000 Funds
+Total Next Payout:    12,000
 
 
 ════════════════════════ Live Mission Progress ═══════════════════════════════════════
 
 Item                    Location              Mission Type   Duration   Progress      ETA       Success Chance
 ──────────────────────  ────────────────────  ─────────────  ─────────  ────────────  ────────  ──────────────
-Kerbin Crewed Orbit     Kerbin Orbit          Contract       10 days    Day 0 / 10    10 days   80%
-Mystery Goo             Kerbin / Highlands    Science        10 days    Day 0 / 10    10 days   90%
+Kerbin Crewed Orbit     Kerbin Orbit          Contract       10 days    Day 4 / 10    6 days    80%
+Mystery Goo             Kerbin / Highlands    Science        10 days    Day 2 / 10    8 days    90%
 
 
 ┌─ Current Launch Programme ─────────────────────────────────────────────────────────┐
@@ -308,6 +321,7 @@ Mystery Goo             Kerbin / Highlands    Science        10 days    Day 0 / 
 │ Progress Chance - each 5 days:   36%                                                │
 │ Progress Cost:                   25,000 Funds                                       │
 │ Estimated Launch:                80 days                                            │
+│ Kerbals Required:                0                                                  │
 └─────────────────────────────────────────────────────────────────────────────────────┘
 
 ┌─ Launch Science Expedition ────────────────────────────────────────────────────────┐
@@ -324,7 +338,9 @@ Mystery Goo             Kerbin / Highlands    Science        10 days    Day 0 / 
 │ Progress Chance - daily:          40%                                               │
 │ Estimated Launch:                 15 days                                           │
 │ Science Reward:                   2.4 Science                                       │
-│ Kerbals Assigned:                 1                                                 │
+│ Kerbals Required:                 1                                                 │
+│ Kerbals Available:                0                                                 │
+│ Crew At Launch:                   Hire At Launch - 100,000 Funds                    │
 └─────────────────────────────────────────────────────────────────────────────────────┘
 
 
@@ -345,6 +361,7 @@ Administration Building     Level 2
 
 Astronaut Complex           Level 2
   └─ Maximum rival Kerbals: 8
+     New hire: 100,000 Funds per Kerbal when required at launch
 
 Mission Control             Level 2
   └─ Maximum satellites: 8
@@ -417,6 +434,9 @@ Completed Objective Funding
 Satellite Network Funding
   Kerbin Satellites: 4 / 8                        8,000
 
+Gross Next Income                                42,000
+Kerbal Payroll (3 × 10,000)                     -30,000
+Pending Insurance                                     0
                                                    ──────
-Total Next Payout                                 42,000
+Total Next Payout                                 12,000
 ```

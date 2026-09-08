@@ -61,14 +61,63 @@ This file tracks current development ideas and polish work only. Completed items
 #### Live rival mission simulation
 
 - [ ] **Add a Live Mission Progress phase after launch.** Normal rival missions and Launch Science Expeditions should no longer complete their gameplay result immediately when launch preparation reaches 100%. At launch, create a persistent live-mission record and move it into the Rival Agencies `Live Mission Progress` section.
-- [ ] **Give every launched mission a fixed mission duration.** Store the launch date, configured mission length, elapsed time, expected completion date, mission type, target, assigned Kerbals, and any science subject/reward data required by science expeditions.
+- [ ] **Use only Contract or Science as the live Mission Type.** In the player-facing live mission list, a normal funding/objective mission is `Contract` and a science expedition is `Science`. Keep the values short and do not expose internal mission-class names in this column.
+- [ ] **Derive live mission duration from target distance.** Mission Type should not independently change duration. A Contract and a Science mission targeting the same location should use the same base live duration. Duration comes from a deterministic background location table so it does not change with current planetary phase or vessel state.
+- [ ] **Use KSC-relative distance for Kerbin surface targets.** Rank the eleven regular Kerbin biomes by a representative nearest-practical great-circle distance from the Kerbal Space Center. Use the static distance table below for campaign simulation rather than performing biome-map searches during rival updates. KSC facility micro-biomes are excluded.
+- [ ] **Convert Kerbin surface distance to live duration at one day per 100 km.** Use `max(1, ceil(referenceDistanceKm / 100))` Kerbin days for surface Contract and Science missions. The reference distances are intentionally rounded campaign values rather than claims that every point in a biome is the same distance from KSC.
+- [ ] **Use fixed Hohmann-style travel estimates for off-world targets.** Use stock orbital scale to assign one-way travel-time baselines from Kerbin. Planet durations are based on a simple Hohmann-transfer estimate between Kerbin's and the target planet's stock semi-major axes; moon durations add a local parent-system transfer estimate. Round up to whole Kerbin days for the background database.
+- [ ] **Do not use live planet positions to change duration.** Ignore launch windows, phase angle, eccentric anomaly, and the bodies' instantaneous separation when resolving rival live-mission length. These abstractions keep rival progress deterministic and save-compatible.
+- [ ] **Give every launched mission persistent timing data.** Store the launch date, configured base duration, elapsed time, expected completion date, mission type, target, assigned Kerbals, and any science subject/reward data required by science expeditions.
 - [ ] **Resolve mission success or failure at the end of the mission.** When the configured mission duration expires, make one outcome roll using that mission's authoritative success chance and failure chance. The result is not known to the player before the mission completes.
 - [ ] **Apply gameplay rewards only after a successful live mission.** Successful normal missions may complete their objective or add the relevant satellite/infrastructure state. Successful science expeditions award Science and consume the matching player science subject. A failed mission must not grant the successful mission result.
-- [ ] **Define mission-duration balance rules.** Decide the mission lengths for Pre-Orbit work, Kerbin orbital missions, Mun/Minmus missions, interplanetary missions, satellite launches, bases/stations, and science expeditions.
 - [ ] **Define mission success/failure balance rules.** Decide the base success chance and failure chance for each mission class and what modifies those chances, such as destination difficulty, crewed/uncrewed status, technology, facility level, or prior agency achievements.
 - [ ] **Define failure consequences.** Decide whether failure only withholds the mission result or can also affect Funds, satellites, Kerbals, future launch preparation, or other agency state. Do not assume crew loss or asset loss until these rules are explicitly set.
 - [ ] **Define simultaneous live-mission limits.** Decide how many launched normal missions and science expeditions a rival may have active at once and whether Mission Control, Astronaut Complex, or another facility limits those live missions.
 - [ ] **Persist live missions across save/load and time warp.** Live mission completion and outcome resolution must be deterministic from stored dates/state and must correctly catch up if the player time-warps past a completion date or reloads after it.
+
+##### Kerbin biome distance database
+
+These are proposed background simulation values. They rank the regular Kerbin biomes from the KSC using representative nearest-practical distances, not the geometric centre of each irregular biome.
+
+| Distance Rank | Kerbin Biome | Reference Distance From KSC | Base Live Duration |
+| ---: | --- | ---: | ---: |
+| 1 | Shores | 0 km | 1 day |
+| 2 | Water | 25 km | 1 day |
+| 3 | Grasslands | 30 km | 1 day |
+| 4 | Highlands | 75 km | 1 day |
+| 5 | Mountains | 120 km | 2 days |
+| 6 | Deserts | 300 km | 3 days |
+| 7 | Badlands | 700 km | 7 days |
+| 8 | Tundra | 800 km | 8 days |
+| 9 | Ice Caps | 900 km | 9 days |
+| 10 | Northern Ice Shelf | 950 km | 10 days |
+| 10 | Southern Ice Shelf | 950 km | 10 days |
+
+##### Stock body distance database
+
+`Reference Orbit` is the stock semi-major-axis scale used to anchor the estimate. Planet values are relative to the Sun; moon values are relative to their parent body. `Base Live Duration` is the proposed one-way campaign travel time from Kerbin, rounded up to a whole Kerbin day. The Sun entry represents a low-Sun-space mission estimate rather than a surface landing.
+
+| Distance Rank | Target | Parent | Reference Orbit | Base Live Duration |
+| ---: | --- | --- | ---: | ---: |
+| 1 | Kerbin Orbit | Kerbin | — | 1 day |
+| 2 | Mun | Kerbin | 12,000 km | 2 days |
+| 3 | Minmus | Kerbin | 47,000 km | 10 days |
+| 4 | Sun | — | Central body | 78 days |
+| 5 | Moho | Sun | 5,263,138 km | 124 days |
+| 6 | Eve | Sun | 9,832,685 km | 171 days |
+| 7 | Gilly | Eve | 31,500 km | 174 days |
+| 8 | Duna | Sun | 20,726,155 km | 303 days |
+| 9 | Ike | Duna | 3,200 km | 303 days |
+| 10 | Dres | Sun | 40,839,348 km | 604 days |
+| 11 | Jool | Sun | 68,773,560 km | 1,123 days |
+| 12 | Laythe | Jool | 27,184 km | 1,124 days |
+| 13 | Vall | Jool | 43,152 km | 1,124 days |
+| 14 | Tylo | Jool | 68,500 km | 1,125 days |
+| 15 | Bop | Jool | 128,500 km | 1,128 days |
+| 16 | Pol | Jool | 179,890 km | 1,131 days |
+| 17 | Eeloo | Sun | 90,118,820 km | 1,587 days |
+
+The table is intended as configuration data rather than hard-coded branching. A future implementation should keep stable location IDs and read the duration value from project-owned campaign settings or a dedicated project-owned lookup, while raw KSP body/biome APIs remain behind `KspIntegration/` where practical.
 
 #### Rival stock tech tree
 
@@ -203,8 +252,8 @@ The stock Flag Pole, Crawlerway, water tower, tanks, and other KSC scenery are n
 - [ ] **Rename the Science Expedition card to Launch Science Expedition.** Show `Launch Progress`, `Progress Chance - daily`, and `Estimated Launch` beside the target. The authoritative science-launch chance is the combined SPH + Runway value: 40% at the default Level 1/Level 1 facilities, giving an average 25-day launch-preparation time from 0%.
 - [ ] **Show science-expedition capability above the launch target.** The Launch Science Expedition section should show unlocked experiments and current Expedition Range before the current experiment/body/situation/biome target.
 - [ ] **Add Live Mission Progress immediately below Programme Status.** This should be the highest-priority detailed section in the rival card and list every launched normal mission and launched science expedition currently underway.
-- [ ] **Show Live Mission Progress as a compact row-and-column list.** Use the columns `Item`, `Location`, `Mission Type`, `Duration`, `Progress`, `ETA`, and `Success Chance`. `Item` is the contract name for a normal mission or the experiment name for a science expedition. `Location` is the body and biome where relevant. Do not show Status, Outcome, or Failure Chance in this list.
-- [ ] **Keep science mission identity readable in the live-mission list.** For science rows, use the experiment as `Item`, include the body/biome in `Location`, and use `Science Expedition` as the Mission Type. The detailed science reward and subject state remain part of the simulation even though the compact live list does not need extra columns for them.
+- [ ] **Show Live Mission Progress as a compact row-and-column list.** Use the columns `Item`, `Location`, `Mission Type`, `Duration`, `Progress`, `ETA`, and `Success Chance`. `Item` is the contract name for a normal mission or the experiment name for a science expedition. `Location` is the body and biome where relevant. `Mission Type` must be only `Contract` or `Science`. Do not show Status, Outcome, or Failure Chance in this list.
+- [ ] **Keep science mission identity readable in the live-mission list.** For science rows, use the experiment as `Item`, include the body/biome in `Location`, and use `Science` as the Mission Type. For objective/funding rows, use the contract name as `Item` and `Contract` as the Mission Type. The detailed science reward and subject state remain part of the simulation even though the compact live list does not need extra columns for them.
 - [ ] **Prioritize the rival card as Programme Status → Live Mission Progress → launch preparation → construction → facilities → Tech Tree/Research → Funding.** Place Current Launch Programme and Launch Science Expedition together after live missions so the player can distinguish missions already underway from missions still being prepared.
 - [ ] **Use title case instead of all-caps UI headings and wording.** Rival Agencies headings, section titles, facility levels, construction states, research states, and other display wording should use normal title case rather than all-capital text. Standard acronyms such as ETA, VAB, and SPH may remain uppercase.
 - [ ] **Show one rival card cleanly and reuse the layout for additional rivals.** The card should be readable as a self-contained programme dashboard so the same component can be repeated for however many rivals are configured.
@@ -214,7 +263,7 @@ The stock Flag Pole, Crawlerway, water tower, tanks, and other KSC scenery are n
 
 #### Rival Agencies UI text example
 
-Mission duration and success-chance values in this mock-up are illustrative until the balance rules above are defined.
+Mission duration and success-chance values in this mock-up use the proposed distance table where possible; success-chance values remain illustrative until those balance rules are defined.
 
 ```text
 Rival Agencies                                      Next Funding: Year 2, Day 120
@@ -230,10 +279,10 @@ Total Next Payout:    42,000
 
 ════════════════════════ Live Mission Progress ═══════════════════════════════════════
 
-Item                    Location              Mission Type        Duration   Progress      ETA       Success Chance
-──────────────────────  ────────────────────  ──────────────────  ─────────  ────────────  ────────  ──────────────
-Kerbin Crewed Orbit     Kerbin                Objective Mission   20 days    Day 8 / 20    12 days   80%
-Mystery Goo             Kerbin / Highlands    Science Expedition  12 days    Day 5 / 12    7 days    90%
+Item                    Location              Mission Type   Duration   Progress      ETA       Success Chance
+──────────────────────  ────────────────────  ─────────────  ─────────  ────────────  ────────  ──────────────
+Kerbin Crewed Orbit     Kerbin Orbit          Contract       1 day      Day 0 / 1     1 day     80%
+Mystery Goo             Kerbin / Highlands    Science        1 day      Day 0 / 1     1 day     90%
 
 
 ┌─ Current Launch Programme ─────────────────────────────────────────────────────────┐

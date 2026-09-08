@@ -67,7 +67,11 @@ This file tracks current development ideas and polish work only. Completed items
 - [ ] **Keep location durations configurable and stable.** Use stable project-owned location IDs so these manual travel times can be balanced later without changing mission logic or save interpretation. Unknown locations should fail safely rather than borrowing an unrelated travel time.
 - [ ] **Give every launched mission persistent timing and difficulty data.** Store the launch date, configured base duration, elapsed time, expected completion date, mission type, target, assigned Kerbals, mission difficulty from 1 to 10, and any science subject/reward data required by science expeditions.
 - [ ] **Do not complete a rival mission at launch.** Reaching 100% `Launch Progress` only starts the live mission. A Contract remains incomplete, and a Science expedition grants no Science, until the configured live duration has finished and the mission passes its final success check.
-- [ ] **Use mission difficulty to determine final Success Chance.** Every live Contract and Science mission uses a difficulty rating from 1 to 10. Contract missions use the contract's difficulty; science expedition definitions should carry an equivalent difficulty rating on the same scale. Difficulty 1 has a 90% Success Chance, and each additional difficulty level reduces Success Chance by 5 percentage points, down to 45% at difficulty 10. Use `Success Chance = 95% - (Difficulty × 5%)` for valid difficulty values 1–10.
+- [ ] **Use mission difficulty to determine final Success Chance.** Every live Contract and Science mission uses a difficulty rating from 1 to 10. Contract missions use the contract's difficulty. Science missions derive difficulty from the science target using the lookup scope below. Difficulty 1 has a 90% Success Chance, and each additional difficulty level reduces Success Chance by 5 percentage points, down to 45% at difficulty 10. Use `Success Chance = 95% - (Difficulty × 5%)` for valid difficulty values 1–10.
+- [ ] **Use biome-specific science difficulty only on Kerbin.** Kerbin surface Science missions use the target Kerbin biome to choose their 1–10 difficulty. Maintain one compact Kerbin biome difficulty table for Shores, Water, Grasslands, Highlands, Mountains, Deserts, Badlands, Tundra, Ice Caps, Northern Ice Shelf, and Southern Ice Shelf. Do not create equivalent per-biome difficulty tables for other celestial bodies.
+- [ ] **Use one science difficulty per non-Kerbin body.** Mun, Minmus, the planets, their moons, and other non-Kerbin science destinations each use one body-wide 1–10 difficulty regardless of the target biome. The biome may still be tracked as part of the exact science subject and shown in the UI, but it does not modify Success Chance outside Kerbin.
+- [ ] **Keep science difficulty configuration compact.** The science difficulty balance data should consist of the Kerbin biome entries plus one entry for each non-Kerbin celestial body. Do not maintain a database containing every biome on every moon and planet.
+- [ ] **Define Kerbin non-biome science difficulty when needed.** If a Kerbin Science mission targets a situation where the stock subject is not biome-specific, define a single Kerbin general/space difficulty rather than inventing a biome value.
 - [ ] **Resolve the mission with one outcome roll after its duration ends.** When the expected completion date is reached, make one random check against the mission's Success Chance. A successful check completes the result; otherwise the mission fails. The result must not be rolled or known before the live duration has elapsed.
 - [ ] **Apply rewards only after a successful live mission.** On a successful Contract mission, mark the objective complete and apply any related satellite/infrastructure result. On a successful Science mission, award the expedition's Science to the rival, record the subject as completed, and consume the matching player science subject. No successful gameplay result is granted before this point.
 - [ ] **Lose the spacecraft when a live mission fails.** A failed Contract or Science mission grants no objective completion, satellite/infrastructure result, or Science reward, and its simulated spacecraft is lost.
@@ -98,6 +102,17 @@ This file tracks current development ideas and polish work only. Completed items
 | 8 | 55% | 45% |
 | 9 | 50% | 50% |
 | 10 | 45% | 55% |
+
+##### Science difficulty lookup scope
+
+Difficulty values are still to be assigned. Keep this lookup deliberately small.
+
+| Scope | Difficulty entries |
+| --- | --- |
+| **Kerbin** | One difficulty per regular Kerbin biome: Shores, Water, Grasslands, Highlands, Mountains, Deserts, Badlands, Tundra, Ice Caps, Northern Ice Shelf, Southern Ice Shelf. Add one Kerbin general/space entry only if a non-biome science situation requires it. |
+| **All other bodies** | One body-wide difficulty per target body. No per-biome difficulty entries. |
+
+Non-Kerbin body entries to balance: Sun, Moho, Eve, Gilly, Mun, Minmus, Duna, Ike, Dres, Jool, Laythe, Vall, Tylo, Bop, Pol, and Eeloo.
 
 ##### Kerbin biome live-duration database
 
@@ -263,7 +278,7 @@ All nine stock Career facilities have three upgrade levels: Level 1, Level 2, an
 | **Vehicle Assembly Building (VAB)** | 30-part craft limit; no action groups | 255-part craft limit; basic action groups | Unlimited parts; full action groups | Modifies rival launch development and can be used as a mission-body capability gate: Level 1 = Launch Progress Chance +15%; Level 2 = additional Launch Progress Chance +3%; Level 3 = additional Launch Progress Chance +3%. |
 | **Spaceplane Hangar (SPH)** | 30-part craft limit; no action groups | 255-part craft limit; basic action groups | Unlimited parts; full action groups | Modifies Launch Science Expedition preparation: Level 1 = Science Launch Progress Chance +20%; Level 2 = additional +3%; Level 3 = additional +3%. |
 | **Launch Pad** | Small launch vehicle size/mass limit; about 18 t maximum mass | Medium launch vehicle limits; about 140 t maximum mass | Unlimited stock size/mass | Modifies rival launch development: Level 1 = Launch Progress Chance +15%; Level 2 = additional Launch Progress Chance +3%; Level 3 = additional Launch Progress Chance +3%. |
-| **Runway** | Small aircraft size/mass limit; about 18 t maximum mass | Medium aircraft limits; about 140 t maximum mass | Unlimited stock size/mass | Modifies Launch Science Expedition preparation: Level 1 = Science Launch Progress Chance +20%; Level 2 = additional +3%; Level 3 = additional +3%. |
+| **Runway** | Small aircraft size/mass limit; about 18 t maximum mass | Medium aircraft limits; basic action groups | Unlimited stock size/mass | Modifies Launch Science Expedition preparation: Level 1 = Science Launch Progress Chance +20%; Level 2 = additional +3%; Level 3 = additional +3%. |
 | **Tracking Station** | Basic orbital tracking | Patched-conic/navigation capability | Adds unowned-object tracking and full stock tracking capability | Limits rival launch destinations: Level 1 = Kerbin only; Level 2 = Kerbin orbit and Kerbin's moons; Level 3 = no destination limit, allowing missions to other planets. |
 
 The stock Flag Pole, Crawlerway, water tower, tanks, and other KSC scenery are not separately upgradable programme facilities, so they do not need independent rival simulation states.

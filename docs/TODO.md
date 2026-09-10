@@ -82,7 +82,7 @@ This file tracks current development ideas and polish work only. Completed items
 - [ ] **Charge 50,000 Funds insurance for each Kerbal lost.** Every Kerbal lost on a failed live mission adds 50,000 Funds to the rival's pending insurance deduction. Multiple losses stack; for example, two Kerbals lost creates a 100,000-Funds deduction at the next campaign funding boundary.
 - [ ] **Start every rival with one employed Kerbal.** New rival programmes begin with one living employed Kerbal. Older saves that predate the rival roster fields should also default each rival to one employed Kerbal when the new state is introduced.
 - [ ] **Track each rival's employed Kerbal roster.** Persist the number of living Kerbals employed by each rival. Derive the number currently assigned to live missions and therefore the number available for new launches from active live-mission assignments. Kerbals assigned to a live mission remain unavailable until that mission resolves.
-- [ ] **Require Kerbals for crewed Contracts and all Science missions.** Any Contract defined as crewed must reserve its required Kerbals at launch. Every Science mission requires at least one Kerbal and must reserve its configured crew requirement at launch. Uncrewed Contracts do not consume Kerbal roster capacity.
+- [ ] **Use fixed Contract crew requirements.** Every crewed Contract launch requires exactly 1 Kerbal. Every uncrewed/probe Contract and every satellite-network launch requires 0 Kerbals. Science missions continue to require at least one Kerbal under their Science rules.
 - [ ] **Use the Astronaut Complex as the roster cap.** The rival may never employ more living Kerbals than its current Astronaut Complex level permits: Level 1 = 3 Kerbals, Level 2 = 8 Kerbals, Level 3 = no limit.
 - [ ] **Hire missing Kerbals only when a mission is ready to launch.** When Launch Progress reaches 100%, first check whether enough Kerbals are available. If not, and the rival is below its Astronaut Complex roster cap and can pay the cost, hire the missing Kerbal or Kerbals for 100,000 Funds each, add them to the employed roster, and assign them immediately to the launch.
 - [ ] **Wait at 100% Launch Progress when crew cannot be provided.** If a crew-required mission is ready but the rival is already at its Astronaut Complex roster cap, does not have enough available Kerbals, or cannot afford a required 100,000-Funds hire, keep the mission ready at 100% Launch Progress and do not launch it. Launch as soon as enough existing Kerbals return or an eligible hire can be made.
@@ -106,6 +106,43 @@ This file tracks current development ideas and polish work only. Completed items
 | 8 | 55% | 45% |
 | 9 | 50% | 50% |
 | 10 | 45% | 55% |
+
+##### Contract difficulty and crew database
+
+These rules are authoritative for the current Contract catalogue. Every crewed Contract requires exactly 1 Kerbal; every uncrewed/probe Contract and satellite-network launch requires 0 Kerbals.
+
+For all four five-stage Pre-Orbit lines, use the same difficulty progression:
+
+| Stage | Difficulty |
+| --- | ---: |
+| I | 1 |
+| II | 1 |
+| III | 2 |
+| IV | 2 |
+| V | 3 |
+
+`Directed Power`, `Mass`, and `Biome` use 0 Kerbals at every stage. `Control` uses 1 Kerbal at every stage.
+
+For orbital Contracts, the Probe difficulty is the base value for that body. The matching Crewed Orbit is always `Probe Difficulty + 1` and requires 1 Kerbal. The matching satellite-network launch uses the same difficulty as the Probe Orbit and requires 0 Kerbals.
+
+| Body | Probe Difficulty | Probe Kerbals | Crewed Difficulty | Crewed Kerbals | Network Difficulty | Network Kerbals |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Kerbin | 4 | 0 | 5 | 1 | 4 | 0 |
+| Mun | 5 | 0 | 6 | 1 | 5 | 0 |
+| Minmus | 5 | 0 | 6 | 1 | 5 | 0 |
+| Duna | 7 | 0 | 8 | 1 | 7 | 0 |
+| Moho | 7 | 0 | 8 | 1 | 7 | 0 |
+| Eve | 8 | 0 | 9 | 1 | 8 | 0 |
+| Gilly | 7 | 0 | 8 | 1 | 7 | 0 |
+| Ike | 7 | 0 | 8 | 1 | 7 | 0 |
+| Dres | 7 | 0 | 8 | 1 | 7 | 0 |
+| Jool | 7 | 0 | 8 | 1 | 7 | 0 |
+| Laythe | 7 | 0 | 8 | 1 | 7 | 0 |
+| Vall | 7 | 0 | 8 | 1 | 7 | 0 |
+| Tylo | 7 | 0 | 8 | 1 | 7 | 0 |
+| Bop | 7 | 0 | 8 | 1 | 7 | 0 |
+| Pol | 7 | 0 | 8 | 1 | 7 | 0 |
+| Eeloo | 8 | 0 | 9 | 1 | 8 | 0 |
 
 ##### Science difficulty lookup scope
 
@@ -521,6 +558,7 @@ This section records the agreed implementation direction for the rival-programme
 - [ ] **Choose Science Expedition targets randomly from the valid set.** Do not optimise expedition selection by Science reward, duration or difficulty in the initial model.
 - [ ] **Choose research only at funding boundaries, one project at a time.** If there is no active research project, select from affordable eligible nodes at the funding event. Choose the cheapest Science-cost tier and select randomly among equal-cost nodes; deduct the Science cost when the project is selected. Science gained between funding events waits until the next boundary.
 - [ ] **Choose facility construction randomly from affordable eligible upgrades.** At a funding boundary, if no construction project is active, select randomly from upgrades the rival can fully afford. If no upgrade is affordable, do nothing.
+- [ ] **Use fixed Contract crew counts and difficulty rules.** All crewed Contracts require 1 Kerbal; all uncrewed/probe Contracts and satellite-network launches require 0. Pre-Orbit stages I-V use difficulty `1, 1, 2, 2, 3` in every line. Each orbital Crewed mission is one difficulty higher than its matching Probe mission, and each satellite-network launch matches its body's Probe difficulty. Use the authoritative Contract table above for the body-specific Probe values.
 
 ### Recommended runtime state ownership
 
@@ -709,14 +747,14 @@ The lookup supplies values when a mission launches; the live mission then keeps 
 
 ### Contract definition additions
 
-Add explicit Contract difficulty and crew requirement data to objective definitions rather than deriving it from display wording. Recommended fields are:
+Add explicit Contract difficulty and crew requirement data to objective definitions rather than deriving either value from display wording. Recommended fields are:
 
 ```text
-Difficulty            // 1-10; exact Contract values still to be decided
-RequiredKerbalCount
+Difficulty            // 1-10 from the authoritative Contract table/rules above
+RequiredKerbalCount    // 1 for crewed Contracts; 0 for uncrewed/probe/network launches
 ```
 
-Keep the existing crew-category enum where it remains useful, but use the explicit required count for rival crew reservation so future multi-Kerbal objectives do not need another data-model redesign. Contract difficulty assignment remains an intentionally open balance pass to circle back to later.
+Keep the existing crew-category enum where it remains useful, but use `RequiredKerbalCount` for rival crew reservation. The difficulty values and crew counts are now defined and are no longer an open balance decision.
 
 ### Funding calculation structure
 
@@ -780,7 +818,7 @@ The recommended design should fit within the existing project modules. Expected 
 | `KspIntegration/KspScienceAdapter.cs` | Keep stock KSP Science subject access/depletion at the integration boundary. |
 | `Objectives/ObjectiveDefinition.cs` and catalogue | Carry Contract difficulty and required rival crew counts. |
 | `UI/CommandCenterWindow.cs` | Render the approved Rival Agencies dashboard from read-only state, including signed next payout values. |
-| `tests/` | Cover location lookup, success chance, deterministic outcome/casualty rolls, partial/complete shared-Science races, one-Kerbal defaults, roster/hiring/payroll, negative funding, unlimited uncrewed live missions, random affordable construction selection, funding-boundary research selection, live mission resolution, and persistence round-trips. |
+| `tests/` | Cover location lookup, success chance, deterministic outcome/casualty rolls, Contract difficulty/crew mapping, partial/complete shared-Science races, one-Kerbal defaults, roster/hiring/payroll, negative funding, unlimited uncrewed live missions, random affordable construction selection, funding-boundary research selection, live mission resolution, and persistence round-trips. |
 | `docs/STRUCTURE.md` / `docs/CODE_OVERVIEW.md` | Document final ownership/flow after implementation. |
 
 Do not introduce new managers, services, factories, interfaces, class hierarchies, external dependencies, or top-level source modules unless a concrete implementation problem proves the current architecture cannot support the required behaviour.
@@ -789,7 +827,6 @@ Do not introduce new managers, services, factories, interfaces, class hierarchie
 
 The decisions below are intentionally still open and can be handled in later passes. Items already decided above should not be re-added to this list unless the design changes.
 
-- [ ] **Assign Contract difficulty and required crew values.** Set the 1-10 difficulty and any explicit multi-Kerbal requirement for the Contract catalogue; this is the next balance pass we agreed to circle back to.
 - [ ] **Decide the exact destination-gating responsibilities of Tracking Station versus VAB/Launch Pad.** Avoid overlapping gates unless both facilities intentionally need to restrict destination access.
 - [ ] **Define the exact Surface Sample unlock gate.** Decide the required R&D/facility and mission-progression conditions.
 - [ ] **Define detailed Science situation progression.** Decide when Landed, Splashed, Flying, Low Space and High Space subjects become available for each relevant body.

@@ -517,6 +517,7 @@ Researched
       └─ Temperature Scan
 
   ✓ Survivability
+      └─ Atmospheric Pressure Scan
 
   ✓ Stability
 

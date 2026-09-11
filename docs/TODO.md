@@ -41,44 +41,52 @@ This file tracks current development ideas and polish work only. Completed items
 - [ ] **Add a rival Launch Science Expedition system.** Allow each rival agency to prepare one science expedition independently of its normal launch programme. Science-expedition launch preparation and normal mission launch preparation should be able to progress at the same time.
 - [ ] **Give each rival its own stored Science balance.** Science earned from successful rival science expeditions should be recorded against that agency and remain available for later technology purchases.
 - [ ] **Model a rival version of the stock tech tree.** Give each rival agency its own technology progression based on the stock KSP tech tree, with Science spent to unlock tech nodes.
-- [ ] **Use rival technology to gate agency capabilities.** A rival should only be able to select launches, destinations, experiments, and other activities supported by the technologies it has unlocked.
+- [ ] **Use rival technology to gate Science experiments only initially.** The rival stock tech tree determines which stock Science experiments are available for Launch Science Expeditions. Do not add a separate rival-tech requirement to Contract launches or destinations in the initial implementation; Contract availability, campaign progression, Tracking Station access, relevant facility limits, Kerbal availability, and Funds remain the Contract-side gates. The tech system may be expanded to gate additional rival capabilities later.
 - [ ] **Create Launch Science Expeditions from stock experiments.** Rival science expeditions should represent completing specific stock science experiments in valid situations and locations. Preparing an expedition to 100% launches it; Science is awarded only if the resulting live science mission later succeeds.
-- [ ] **Choose expeditions only from unlocked experiments and locations.** A rival may select a Launch Science Expedition only when the experiment has been unlocked by its technology and the body, situation, and biome are inside its achieved expedition access. The selected science subject must also be one the rival has not already completed.
+- [ ] **Choose expeditions only from unlocked experiments and locations.** A rival may select a Launch Science Expedition only when the experiment has been unlocked by its technology and the body, situation, and biome are inside its achieved expedition access. The selected science subject must also still have Science available and must not already be completed, prepared, or in Live Mission Progress for that same rival. Different rival agencies may race the same still-available subject.
 - [ ] **Choose the next valid Science Expedition randomly.** Whenever a rival needs a new Science launch target, build the set of currently valid, unlocked, not-rival-completed Science subjects and select randomly from that set rather than ranking subjects by reward or difficulty.
 - [ ] **Keep Science Expeditions free of an additional Funds cost initially.** Preparing or launching a Science Expedition does not charge a separate expedition Funds cost. The expedition still consumes time, Kerbal capacity/payroll, any hiring cost required at launch, and live-mission risk.
-- [ ] **Use the Tracking Station as the only facility destination gate.** VAB and Launch Pad levels modify normal Launch Progress Chance but do not restrict destination access. Tracking Station Level 1 permits Pre-Orbit and Kerbin-orbit Contracts; Level 2 is required for Mun and Minmus missions; Level 3 permits missions to other planets and their moons. Mission-progress and tech requirements still apply inside the destinations permitted by the Tracking Station.
-- [ ] **Unlock Kerbin Science situations from the start and Probe Orbit.** Kerbin `Landed`, `Splashed`, `Flying Low`, and `Flying High` situations begin available to valid unlocked experiments. Completing the Probe Orbit Contract unlocks both `Low Space` and `High Space` Science around Kerbin.
-- [ ] **Unlock non-Kerbin Science situations through orbit and landing progression.** For another celestial body, completing that body's Probe Orbit Contract unlocks both `Low Space` and `High Space` Science there. A successful body-specific landing Contract, once landing Contracts are implemented, unlocks `Landed`, `Splashed`, `Flying Low`, and `Flying High` Science situations on that body wherever those stock situations are physically valid.
+- [ ] **Require one Kerbal for current Science Expeditions while keeping crew requirements data-driven.** Every current Launch Science Expedition requires 1 Kerbal. Keep an explicit `RequiredKerbalCount`/`RequiredKerbals` value in mission data so later Contracts or mission types can require more than one Kerbal without redesigning the roster or live-mission model.
+- [ ] **Use the Tracking Station as the only facility destination gate.** VAB and Launch Pad levels modify normal Launch Progress Chance but do not restrict destination access. Tracking Station Level 1 permits Pre-Orbit and Kerbin-orbit Contracts; Level 2 is required for Mun and Minmus missions; Level 3 permits missions to other planets and their moons. Mission progression and Science-experiment tech requirements still apply where relevant inside the destinations permitted by the Tracking Station.
+- [ ] **Unlock all Kerbin surface biomes for rival Science from campaign start.** Every regular stock Kerbin surface biome and every supported KSC location biome may be selected from the start when the chosen experiment is unlocked and valid for the requested situation. Do not require completion of the Biome Contract line to make Kerbin Science biomes available.
+- [ ] **Unlock Kerbin Science situations from the start and Probe Orbit.** Kerbin `Landed`, `Splashed`, `Flying Low`, and `Flying High` situations begin available to valid unlocked experiments across the available Kerbin biomes. Completing the Probe Orbit Contract unlocks both `Low Space` and `High Space` Science around Kerbin.
+- [ ] **Unlock non-Kerbin Science situations through orbit and landing progression.** For another supported celestial body, completing that body's Probe Orbit Contract unlocks both `Low Space` and `High Space` Science there. A successful body-specific landing Contract, once landing Contracts are implemented, unlocks `Landed`, `Splashed`, `Flying Low`, and `Flying High` Science situations on that body wherever those stock situations are physically valid. The Sun is not an eligible rival Science destination until corresponding Sun mission/Contract content is explicitly added later.
 - [ ] **Gate Surface Sample with R&D Level 2 and surface access.** Surface Sample expeditions require Research and Development Level 2 and the target body's surface Science access to have been unlocked through the applicable starting Kerbin access or successful landing progression. R&D Level 2 alone does not unlock an otherwise inaccessible body's surface.
+- [ ] **Gate EVA Report with Astronaut Complex Level 2 plus situation access.** EVA Report does not require a rival tech-tree node, but it requires Astronaut Complex Level 2 and the target body/situation to be otherwise available through the normal expedition-access rules.
 - [ ] **Track a clear rival Expedition Range.** Represent the locations currently available to the rival in a player-readable range such as `Kerbin only`, `Kerbin, Mun and Minmus`, or `Planets available`, while still enforcing the more detailed body/situation/biome mission gates internally.
 - [ ] **Progress Launch Science Expeditions once per Kerbin day.** Each science-launch preparation receives one progress check every Kerbin day. A successful check adds 10 percentage points to `Launch Progress`, so ten successful checks are required to advance from 0% to 100% and launch the expedition.
 - [ ] **Derive science-launch Progress Chance from the SPH and Runway.** The Spaceplane Hangar and Runway each contribute 20% at Level 1, giving a default combined `Progress Chance - daily` of 40%. Each Level 2 facility adds another +3% and each Level 3 facility adds another +3%. Store and expose the authoritative calculated total so the simulation, UI, and ETA use the same value.
 - [ ] **Estimate science-expedition launch time from remaining successful checks.** Calculate the average remaining launch-preparation duration as `remaining 10% Launch Progress steps / daily success chance`. At 0% progress and the default 40% daily chance, ten successful checks are required and the expected launch time is 25 Kerbin days. This is an average estimate rather than a guaranteed launch date.
 - [ ] **Move a science expedition into Live Mission Progress at 100% Launch Progress.** Reaching 100% should create a launched live science mission with its own mission duration, completion date, success chance, and failure chance. Do not award Science or consume the player's matching science subject at the moment of launch.
-- [ ] **Use the remaining shared Science value when a rival succeeds.** At successful live-mission completion, re-check the exact stock Science subject. If the player has already fully exhausted it, the rival receives 0 Science. If the player has partially depleted it, award the rival only the remaining Science and then exhaust the subject. If the rival succeeds before the player takes any of it, award the available Science and consume the matching player subject. Launching an expedition never reserves the Science value.
+- [ ] **Use one shared Science pool across the player and every rival.** Launching an expedition does not reserve a subject across agencies, so different rivals and the player may race the same subject. The first successful completion chronologically receives the Science still available from that stock subject and exhausts the remaining pool. A later successful rival mission for that same subject receives 0 Science but still records that subject as completed for that rival. If completions have the exact same stored completion universal time, resolve the tie in stable agency-ID order so save/reload and collection order cannot change the winner.
+- [ ] **Use the remaining shared Science value when a rival succeeds.** At successful live-mission completion, re-check the exact stock Science subject. If the player or another rival has already fully exhausted it, the rival receives 0 Science. If the player has partially depleted it, award the rival only the remaining Science and then exhaust the subject. If the rival succeeds before the player takes any of it, award the available Science and consume the matching player subject.
 - [ ] **Select a new valid Launch Science Expedition after the previous expedition launches.** Launch preparation can begin for another valid science subject while the previously launched expedition is still running as a live mission.
 - [ ] **Show rival science-launch capability and current target to the player.** The Rival Agencies interface should show the rival's unlocked science experiments, current Expedition Range, current experiment/body/situation/biome target, `Launch Progress`, `Progress Chance - daily`, estimated launch, Science reward, and Kerbals assigned.
 - [ ] **Select one rival research project only at funding boundaries.** If the rival has no active research project when a campaign funding boundary is processed, find eligible tech nodes that the rival can afford with its stored Science. Choose from the cheapest eligible Science-cost tier, selecting randomly when several nodes have the same cost, deduct the chosen node's Science cost immediately, and start that one research project. Science earned between funding boundaries must wait for the next funding event before it can start new research.
 - [ ] **Allow only one active rival research project at a time.** Do not start another tech project until the current research project has completed and a later funding boundary selects the next project.
 - [ ] **Use a fixed 90-day rival research period.** A selected tech project takes 90 campaign days to research and becomes unlocked at the first campaign funding boundary on or after the 90-day research period has elapsed. Persist the project, Science cost, start date, and eligible completion funding date through save/load.
+- [ ] **Treat Start as already researched.** Every new rival begins with the stock `Start` node already researched, giving access to its initial experiments. Older saves that predate rival tech state should receive the same `Start` researched compatibility default rather than waiting 90 days to research a zero-cost root node.
 - [ ] **Show the next rival research project under Stored Science.** In the Rival Agencies Tech Tree section, show the selected tech, its Science cost, research status, and funding-date completion/ETA directly beneath the rival's Stored Science value. Use `Paid` to show that the Science cost has already been deducted.
 
 #### Live rival mission simulation
 
 - [ ] **Add a Live Mission Progress phase after launch.** Normal rival missions and Launch Science Expeditions should no longer complete their gameplay result immediately when launch preparation reaches 100%. At launch, create a persistent live-mission record and move it into the Rival Agencies `Live Mission Progress` section.
 - [ ] **Use only Contract or Science as the live Mission Type.** In the player-facing live mission list, a normal funding/objective mission is `Contract` and a science expedition is `Science`. Keep the values short and do not expose internal mission-class names in this column.
-- [ ] **Use a fixed live-mission duration lookup by target location.** Mission Type should not independently change duration. A Contract and a Science mission targeting the same location should use the same configured live duration. Each supported Kerbin biome, KSC location biome, and celestial body has one manually assigned travel time in the tables below.
+- [ ] **Use a fixed live-mission duration lookup by target location.** Mission Type should not independently change duration. A Contract and a Science mission targeting the same location should use the same configured live duration. Each supported Kerbin biome, KSC/local Pre-Orbit target, and celestial body has one manually assigned travel time in the tables/rules below.
+- [ ] **Use explicit Pre-Orbit live durations.** Directed Power, Mass, and Control Contract live missions use a fixed 5-day local/KSC live duration. Biome I-V Contract live missions use the configured duration of their exact target biome: Grasslands 10 days, Highlands 10 days, Mountains 20 days, Deserts 30 days, and Ice Caps 90 days. Contract difficulty still comes from the Contract difficulty table rather than the Science-difficulty value for the location.
 - [ ] **Treat the duration tables as authoritative balance data.** Do not calculate travel time from physical distance, orbital distance, launch windows, phase angles, live planet positions, or vessel state. The simulation should look up the configured value for the target location and use it directly.
 - [ ] **Keep location durations configurable and stable.** Use stable project-owned location IDs so these manual travel times can be balanced later without changing mission logic or save interpretation. Unknown locations should fail safely rather than borrowing an unrelated travel time.
 - [ ] **Give every launched mission persistent timing and difficulty data.** Store the launch date, configured base duration, expected completion date, mission type, target, assigned Kerbals, mission difficulty from 1 to 10, deterministic outcome seed, and any science subject/reward data required by science expeditions. Derive elapsed time, progress, and ETA from the stored dates rather than persisting changing presentation values.
+- [ ] **Do not launch the same one-off target twice for one rival.** While a rival already has a one-off Contract in Live Mission Progress, exclude that objective from the rival's next Contract-target selection. Likewise, do not prepare or launch the same Science subject twice within one rival while that subject is already in its Science preparation or live-mission state. Satellite-network Contracts are repeatable and are exempt from the one-off duplicate-target rule because multiple satellite launches are part of their purpose.
 - [ ] **Do not complete a rival mission at launch.** Reaching 100% `Launch Progress` only starts the live mission. A Contract remains incomplete, and a Science expedition grants no Science, until the configured live duration has finished and the mission passes its final success check.
+- [ ] **Let launched Contract missions finish even if sponsor funding expires.** Once a Contract has moved into Live Mission Progress, later expiry of its Objective Funding Contract does not cancel the live mission. Resolve it normally at its stored completion time; a successful result still records the objective and may unlock later progression, but an already-expired sponsor Contract provides no funding. If the funding Contract expires while the rival is still preparing it and the mission has not launched, abandon that preparation and select another valid target.
 - [ ] **Resolve live missions on the normal five-second simulation refresh.** Contract and Science live missions should be checked during the normal repeating rival/campaign refresh and resolve on the first refresh at or after their stored completion universal time. They must not wait for a campaign funding boundary. If time warp or a reload skips past the completion time, resolve them on the next refresh using their stored deterministic state.
 - [ ] **Use mission difficulty to determine final Success Chance.** Every live Contract and Science mission uses a difficulty rating from 1 to 10. Contract missions use the contract's difficulty. Science missions derive difficulty from the science target using the lookup tables below. Difficulty 1 has a 90% Success Chance, and each additional difficulty level reduces Success Chance by 5 percentage points, down to 45% at difficulty 10. Use `Success Chance = 95% - (Difficulty × 5%)` for valid difficulty values 1–10.
 - [ ] **Use biome-specific science difficulty only on Kerbin.** Kerbin surface Science missions use the target Kerbin biome to choose their 1–10 difficulty. Maintain one compact Kerbin biome difficulty table for Shores, Water, Grasslands, Highlands, Mountains, Deserts, Badlands, Tundra, Ice Caps, Northern Ice Shelf, and Southern Ice Shelf. Do not create equivalent per-biome difficulty tables for other celestial bodies.
 - [ ] **Use fixed KSC location-biome science settings.** Science missions targeting KSC location biomes use a fixed 5-day live duration and Difficulty 1. Keep the KSC locations listed explicitly in the table below so these special local science targets do not inherit the wider Shores duration.
-- [ ] **Use one science difficulty per non-Kerbin body.** Mun, Minmus, the planets, their moons, and other non-Kerbin science destinations each use one body-wide 1–10 difficulty regardless of the target biome. The biome may still be tracked as part of the exact science subject and shown in the UI, but it does not modify Success Chance outside Kerbin.
+- [ ] **Use one science difficulty per supported non-Kerbin body.** Mun, Minmus, the planets, and their moons with implemented mission content each use one body-wide 1–10 difficulty regardless of the target biome. The biome may still be tracked as part of the exact science subject and shown in the UI, but it does not modify Success Chance outside Kerbin. Do not include the Sun as a selectable rival Science body until Sun mission/Contract content exists.
 - [ ] **Use the Kerbin Orbit science setting for orbital science around Kerbin.** Kerbin Orbit uses a 10-day live duration and Difficulty 3 for science missions that use the Kerbin-orbit target rather than a surface biome or KSC location biome.
-- [ ] **Keep science difficulty configuration compact.** The science difficulty balance data should consist of regular Kerbin biome entries, the fixed KSC location-biome rule, Kerbin Orbit, and one entry for each non-Kerbin celestial body. Do not maintain a database containing every biome on every moon and planet.
+- [ ] **Keep science difficulty configuration compact.** The science difficulty balance data should consist of regular Kerbin biome entries, the fixed KSC location-biome rule, Kerbin Orbit, and one entry for each supported non-Kerbin celestial body. Do not maintain a database containing every biome on every moon and planet.
 - [ ] **Resolve the mission with one deterministic outcome roll after its duration ends.** When the expected completion date is reached, generate the mission's Success Chance roll from its persisted outcome seed. A successful check completes the result; otherwise the mission fails. The result must not be pre-rolled or exposed before the live duration has elapsed, and save/reload must not change it.
 - [ ] **Apply rewards only after a successful live mission.** On a successful Contract mission, mark the objective complete and apply any related satellite/infrastructure result. On a successful Science mission, apply the shared-subject rule above, record the subject as completed for the rival, and award only the Science still available from that subject at completion. No successful gameplay result is granted before this point.
 - [ ] **Lose the spacecraft when a live mission fails.** A failed Contract or Science mission grants no objective completion, satellite/infrastructure result, or Science reward, and its simulated spacecraft is lost.
@@ -86,11 +94,12 @@ This file tracks current development ideas and polish work only. Completed items
 - [ ] **Charge 50,000 Funds insurance for each Kerbal lost.** Every Kerbal lost on a failed live mission adds 50,000 Funds to the rival's pending insurance deduction. Multiple losses stack; for example, two Kerbals lost creates a 100,000-Funds deduction at the next campaign funding boundary.
 - [ ] **Start every rival with one employed Kerbal.** New rival programmes begin with one living employed Kerbal. Older saves that predate the rival roster fields should also default each rival to one employed Kerbal when the new state is introduced.
 - [ ] **Track each rival's employed Kerbal roster.** Persist the number of living Kerbals employed by each rival. Derive the number currently assigned to live missions and therefore the number available for new launches from active live-mission assignments. Kerbals assigned to a live mission remain unavailable until that mission resolves.
-- [ ] **Use fixed Contract crew requirements.** Every crewed Contract launch requires exactly 1 Kerbal. Every uncrewed/probe Contract and every satellite-network launch requires 0 Kerbals. Science missions continue to require at least one Kerbal under their Science rules.
+- [ ] **Use data-driven Contract crew requirements.** Every current crewed Contract requires exactly 1 Kerbal, while every current uncrewed/probe Contract and every satellite-network launch requires 0 Kerbals. Keep `RequiredKerbalCount` explicit on Contract definitions because future Contracts may require more than one Kerbal; do not reduce crew requirements back to a simple crewed/uncrewed boolean in rival simulation.
 - [ ] **Use the Astronaut Complex as the roster cap.** The rival may never employ more living Kerbals than its current Astronaut Complex level permits: Level 1 = 3 Kerbals, Level 2 = 8 Kerbals, Level 3 = no limit.
 - [ ] **Hire missing Kerbals only when a mission is ready to launch.** When Launch Progress reaches 100%, first check whether enough Kerbals are available. If not, and the rival is below its Astronaut Complex roster cap and can pay the cost, hire the missing Kerbal or Kerbals for 100,000 Funds each, add them to the employed roster, and assign them immediately to the launch.
 - [ ] **Wait at 100% Launch Progress when crew cannot be provided.** If a crew-required mission is ready but the rival is already at its Astronaut Complex roster cap, does not have enough available Kerbals, or cannot afford a required 100,000-Funds hire, keep the mission ready at 100% Launch Progress and do not launch it. Launch as soon as enough existing Kerbals return or an eligible hire can be made.
 - [ ] **Do not impose a simultaneous limit on uncrewed live missions.** Uncrewed Contract missions do not consume Kerbal roster capacity and do not have a separate Mission Control or global simultaneous-live-mission cap. Their normal launch preparation, target eligibility, satellite capacity, and Funds requirements remain the relevant limits.
+- [ ] **Reserve Mission Control satellite capacity for launched satellite-producing missions.** Mission Control's Level 1/2/unlimited cap applies to the rival's total satellites across all bodies. Before launching a mission that would create a satellite on success, count existing rival satellites plus active live missions that would create a satellite. A launched Probe Orbit or satellite-network mission therefore reserves one future satellite slot until it resolves; failure releases the reservation and success converts it into the actual satellite count. Launch preparation alone does not reserve a slot, but capacity must be re-checked at 100% before launch. Never delete pre-existing satellites when loading an older save that already exceeds the current facility cap; simply block new satellite-producing launches until capacity permits them.
 - [ ] **Charge 10,000 Funds payroll per living employed Kerbal at every funding boundary.** Count all living Kerbals on the rival's roster, including Kerbals currently on live missions. Deduct `10,000 Funds × employed Kerbals` from that rival's funding income at each campaign funding boundary.
 - [ ] **Allow funding deductions to drive rival Funds below zero.** At a funding boundary, calculate the rival's gross income and subtract Kerbal payroll plus the full pending insurance amount. Apply the resulting signed net funding to the rival's Funds balance without flooring the payment or Funds at zero. Once pending insurance is applied, clear that pending amount; there is no unpaid-insurance carry-forward. A negative Funds balance prevents spending that requires sufficient Funds until later income recovers the balance.
 - [ ] **Show roster and payroll as part of the rival's programme economy.** The Rival Agencies UI should show employed Kerbals versus the current Astronaut Complex limit, Kerbals currently on missions, Kerbals available, the next Kerbal payroll deduction, and any pending insurance deduction so the player can understand why gross funding and net funding differ.
@@ -113,7 +122,7 @@ This file tracks current development ideas and polish work only. Completed items
 
 ##### Contract difficulty and crew database
 
-These rules are authoritative for the current Contract catalogue. Every crewed Contract requires exactly 1 Kerbal; every uncrewed/probe Contract and satellite-network launch requires 0 Kerbals.
+These rules are authoritative for the current Contract catalogue. Every current crewed Contract requires exactly 1 Kerbal; every current uncrewed/probe Contract and satellite-network launch requires 0 Kerbals. `RequiredKerbalCount` remains an explicit Contract field so later Contracts may require more than one Kerbal.
 
 For all four five-stage Pre-Orbit lines, use the same difficulty progression:
 
@@ -127,7 +136,7 @@ For all four five-stage Pre-Orbit lines, use the same difficulty progression:
 
 `Directed Power`, `Mass`, and `Biome` use 0 Kerbals at every stage. `Control` uses 1 Kerbal at every stage.
 
-For orbital Contracts, the Probe difficulty is the base value for that body. The matching Crewed Orbit is always `Probe Difficulty + 1` and requires 1 Kerbal. The matching satellite-network launch uses the same difficulty as the Probe Orbit and requires 0 Kerbals.
+For orbital Contracts, the Probe difficulty is the base value for that body. The matching Crewed Orbit is always `Probe Difficulty + 1` and currently requires 1 Kerbal. The matching satellite-network launch uses the same difficulty as the Probe Orbit and requires 0 Kerbals.
 
 | Body | Probe Difficulty | Probe Kerbals | Crewed Difficulty | Crewed Kerbals | Network Difficulty | Network Kerbals |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
@@ -157,7 +166,7 @@ The configured values below are authoritative balance data. Keep this lookup del
 | **KSC location biomes** | Every listed KSC location biome uses 5 days and Difficulty 1. |
 | **Kerbin surface** | One difficulty per regular Kerbin biome. |
 | **Kerbin Orbit** | One orbital setting: 10 days and Difficulty 3. |
-| **All other bodies** | One body-wide difficulty per target body. No per-biome difficulty entries. |
+| **Supported non-Kerbin bodies** | One body-wide difficulty per target body with implemented mission content. No per-biome difficulty entries. The Sun is excluded until corresponding content exists. |
 
 ##### Kerbin biome live-duration and science-difficulty database
 
@@ -219,27 +228,26 @@ All KSC location-biome Science missions use a fixed 5-day live duration and Diff
 
 ##### Celestial body live-duration and science-difficulty database
 
-These are manually assigned campaign travel times from Kerbin and body-wide Science difficulties. The values are authoritative balance data; no stock reference orbit, transfer calculation, or non-Kerbin biome difficulty lookup is required at runtime.
+These are manually assigned campaign travel times from Kerbin and body-wide Science difficulties. The values are authoritative balance data; no stock reference orbit, transfer calculation, or non-Kerbin biome difficulty lookup is required at runtime. The Sun is deliberately excluded until Sun mission/Contract content is added.
 
 | Travel Rank | Target | Base Live Duration | Science Difficulty |
 | ---: | --- | ---: | ---: |
 | 1 | Kerbin Orbit | 10 days | 3 |
 | 2 | Mun | 30 days | 4 |
 | 3 | Minmus | 50 days | 4 |
-| 4 | Sun | 78 days | 5 |
-| 5 | Moho | 124 days | 9 |
-| 6 | Eve | 171 days | 10 |
-| 7 | Gilly | 174 days | 5 |
-| 8 | Duna | 303 days | 7 |
-| 9 | Ike | 303 days | 5 |
-| 10 | Dres | 604 days | 5 |
-| 11 | Jool | 1,123 days | 7 |
-| 12 | Laythe | 1,124 days | 8 |
-| 13 | Vall | 1,124 days | 8 |
-| 14 | Tylo | 1,125 days | 8 |
-| 15 | Bop | 1,128 days | 8 |
-| 16 | Pol | 1,131 days | 8 |
-| 17 | Eeloo | 1,587 days | 10 |
+| 4 | Moho | 124 days | 9 |
+| 5 | Eve | 171 days | 10 |
+| 6 | Gilly | 174 days | 5 |
+| 7 | Duna | 303 days | 7 |
+| 8 | Ike | 303 days | 5 |
+| 9 | Dres | 604 days | 5 |
+| 10 | Jool | 1,123 days | 7 |
+| 11 | Laythe | 1,124 days | 8 |
+| 12 | Vall | 1,124 days | 8 |
+| 13 | Tylo | 1,125 days | 8 |
+| 14 | Bop | 1,128 days | 8 |
+| 15 | Pol | 1,131 days | 8 |
+| 16 | Eeloo | 1,587 days | 10 |
 
 The tables are intended as configuration data rather than hard-coded branching. A future implementation should keep stable location IDs and read the duration and Science difficulty directly from project-owned campaign settings or a dedicated project-owned lookup.
 
@@ -332,7 +340,7 @@ The tables are intended as configuration data rather than hard-coded branching. 
 └─ Experimental Electrics
 ```
 
-`EVA Report` and `Surface Sample` are not unlocked by a stock tech-tree node. Surface Sample specifically requires R&D Level 2 plus the applicable surface-access progression; EVA Report remains gated separately by the relevant expedition/mission capability rules.
+`Start` is already researched for every rival. Rival tech gates stock Science experiments only in the initial implementation; it does not independently gate Contract launches or destinations. `EVA Report` and `Surface Sample` are not unlocked by a stock tech-tree node. Surface Sample requires R&D Level 2 plus the applicable surface-access progression. EVA Report requires Astronaut Complex Level 2 plus the applicable body/situation access.
 
 ### Rival Space Centre progression
 
@@ -342,7 +350,7 @@ The tables are intended as configuration data rather than hard-coded branching. 
 - [ ] **Charge rival Funds when construction starts.** Upgrading a facility from Level 1 to Level 2 costs 100,000 Funds. Upgrading from Level 2 to Level 3 costs 250,000 Funds. Construction may only begin if the rival can pay the full upgrade cost.
 - [ ] **Use fixed rival facility construction times.** Level 1 to Level 2 takes 180 campaign days. Level 2 to Level 3 takes 270 campaign days. Record the construction start date, completion date, source level, and target level so progress survives save/load correctly.
 - [ ] **Choose one affordable facility upgrade randomly at a funding boundary.** If a rival has no active construction project when its construction-scheduling step runs at a funding boundary, build the set of eligible facility upgrades whose full cost the rival can currently afford and choose one randomly. If none are affordable, start no construction. Continue to enforce only one active facility construction project at a time.
-- [ ] **Use facility levels as capability gates.** Launches, expeditions, technology purchases, crew activity, mission planning, and strategic behaviour should check the relevant simulated rival facilities as well as the rival's tech and mission progression.
+- [ ] **Use facility levels as capability gates.** Launches, expeditions, technology purchases, crew activity, mission planning, and strategic behaviour should check the relevant simulated rival facilities. Rival tech adds experiment availability to Science Expeditions but does not independently gate Contracts in the initial model.
 - [ ] **Show rival Space Centre development to the player.** Add facility levels, construction progress, and any upgrade currently under construction to the Rival Agencies interface so the player can see how each competing programme is developing.
 
 #### Rival facility construction rules
@@ -357,14 +365,14 @@ All nine stock Career facilities have three upgrade levels: Level 1, Level 2, an
 | Facility | Stock Level 1 | Stock Level 2 | Stock Level 3 | Rival simulation role |
 | --- | --- | --- | --- | --- |
 | **Administration Building** | 1 active strategy; 25% maximum commitment | 3 active strategies; 60% maximum commitment | 5 active strategies; 100% maximum commitment | Sets the rival's base funding income: Level 1 = 10,000 Funds, Level 2 = 20,000 Funds, Level 3 = 40,000 Funds. |
-| **Astronaut Complex** | Roster limit 5; no off-Kerbin EVA | Roster limit 12; off-Kerbin EVA and flag planting available | Unlimited roster | Limits the rival's simulated Kerbal roster: Level 1 = 3 Kerbals, Level 2 = 8 Kerbals, Level 3 = no limit. A crew-required mission that reaches 100% Launch Progress may hire missing Kerbals for 100,000 Funds each only if this rival roster cap permits it; otherwise launch waits for a Kerbal to return. |
-| **Mission Control** | Maximum 2 active contracts; no flight planning | Maximum 7 active contracts; flight planning available when navigation requirements are met | Unlimited active contracts | Limits the number of rival satellites that may be launched/maintained: Level 1 = 3 satellites, Level 2 = 8 satellites, Level 3 = no limit. It does not impose a simultaneous-live-mission limit on uncrewed Contracts. |
+| **Astronaut Complex** | Roster limit 5; no off-Kerbin EVA | Roster limit 12; off-Kerbin EVA and flag planting available | Unlimited roster | Limits the rival's simulated Kerbal roster: Level 1 = 3 Kerbals, Level 2 = 8 Kerbals, Level 3 = no limit. A crew-required mission that reaches 100% Launch Progress may hire missing Kerbals for 100,000 Funds each only if this rival roster cap permits it; otherwise launch waits for a Kerbal to return. EVA Report additionally requires Level 2. |
+| **Mission Control** | Maximum 2 active contracts; no flight planning | Maximum 7 active contracts; flight planning available when navigation requirements are met | Unlimited active contracts | Limits the rival's total satellites across all bodies: Level 1 = 3 satellites, Level 2 = 8 satellites, Level 3 = no limit. Existing satellites plus launched satellite-producing live missions count against the cap; it does not impose a general simultaneous-live-mission limit on uncrewed Contracts. |
 | **Research and Development** | May unlock tech nodes costing up to 100 Science | May unlock tech nodes costing up to 500 Science; surface sampling/resource transfer capability becomes available with the other requirements met | No tech-node Science-cost limit | Directly gates the rival stock tech tree. Level 1 permits nodes through 90 Science, Level 2 permits nodes through 300 Science, and Level 3 permits the 550- and 1000-Science nodes. Surface Sample additionally requires R&D Level 2 and unlocked surface access for the target body. |
 | **Vehicle Assembly Building (VAB)** | 30-part craft limit; no action groups | 255-part craft limit; basic action groups | Unlimited parts; full action groups | Modifies normal rival Launch Progress Chance only: Level 1 = +15%; Level 2 = additional +3%; Level 3 = additional +3%. It does not gate destinations. |
 | **Spaceplane Hangar (SPH)** | 30-part craft limit; no action groups | 255-part craft limit; basic action groups | Unlimited parts; full action groups | Modifies Launch Science Expedition preparation: Level 1 = Science Launch Progress Chance +20%; Level 2 = additional +3%; Level 3 = additional +3%. |
 | **Launch Pad** | Small launch vehicle size/mass limit; about 18 t maximum mass | Medium launch vehicle limits; about 140 t maximum mass | Unlimited stock size/mass | Modifies normal rival Launch Progress Chance only: Level 1 = +15%; Level 2 = additional +3%; Level 3 = additional +3%. It does not gate destinations. |
 | **Runway** | Small aircraft size/mass limit; about 18 t maximum mass | Medium aircraft limits; about 140 t maximum mass | Unlimited stock size/mass | Modifies Launch Science Expedition preparation: Level 1 = Science Launch Progress Chance +20%; Level 2 = additional +3%; Level 3 = additional +3%. |
-| **Tracking Station** | Basic orbital tracking | Patched-conic/navigation capability | Adds unowned-object tracking and full stock tracking capability | Sole rival destination facility gate: Level 1 permits Pre-Orbit and Kerbin-orbit Contracts; Level 2 permits Mun and Minmus missions; Level 3 permits other planets and their moons. Other tech and mission-progression gates still apply. |
+| **Tracking Station** | Basic orbital tracking | Patched-conic/navigation capability | Adds unowned-object tracking and full stock tracking capability | Sole rival destination facility gate: Level 1 permits Pre-Orbit and Kerbin-orbit Contracts; Level 2 permits Mun and Minmus missions; Level 3 permits other planets and their moons. Mission progression and Science-experiment tech gates still apply where relevant. |
 
 The stock Flag Pole, Crawlerway, water tower, tanks, and other KSC scenery are not separately upgradable programme facilities, so they do not need independent rival simulation states.
 
@@ -551,23 +559,33 @@ This section records the agreed implementation direction for the rival-programme
 - [ ] **Persist an outcome seed for every launched live mission.** Create and store a deterministic seed when the mission launches. When its duration ends, use that seed to generate the one Success Chance roll. Use deterministic derivatives of the same stored mission seed for any per-Kerbal 25% loss checks on failure so reload/time warp cannot change casualties. Do not store a pre-rolled success/failure result.
 - [ ] **Allow one rival facility construction project at a time initially.** Represent construction as a collection-capable state so the schema can support more than one project later, but enforce a maximum of one active construction project for the initial implementation.
 - [ ] **Use a fixed project-owned stock rival tech catalogue.** Mirror the approved stock tech progression in project-owned definitions instead of reading the installed KSP tech tree dynamically. Rival tech behaviour should therefore remain deterministic and should not silently change because another mod replaces the player's tech tree.
+- [ ] **Use rival tech only for Science-experiment availability initially.** Do not make Contract launches or destinations depend on rival tech in this implementation. The existing Contract/sponsor progression plus Tracking Station, facilities, roster, and Funds determine Contract eligibility; rival tech determines which Science experiments are selectable and may be expanded later.
 - [ ] **Store new rival balance data in the existing `CampaignSettings.cfg`.** Extend the current settings/config loader rather than introducing another balance file. Mission-location durations/difficulties, Kerbal costs, facility values, construction values, research timing, and other tuneable rival rules should use explicit named settings or config nodes.
-- [ ] **Use first completion wins for shared Science subjects, including partial depletion.** Launching an expedition does not reserve a subject. At rival success, read the subject's remaining Science. Award only the amount still available and then exhaust it. If the player already fully exhausted the subject, the rival receives 0 Science; if the player partially depleted it, the rival receives only the remainder.
+- [ ] **Use first completion wins for one shared Science pool.** Launching an expedition does not reserve a subject across agencies. The player and all rivals may race the same subject; the first successful completion receives the remaining Science and exhausts it. Later successful rival completions receive 0 Science for the exhausted subject but still record it as completed for that rival. Resolve exact completion-time ties deterministically by stable agency ID.
 - [ ] **Start each rival with one employed Kerbal.** The initial rival roster and the compatibility default for older saves missing roster state are both one living employed Kerbal.
+- [ ] **Keep crew requirements data-driven.** Current crewed Contracts and current Science Expeditions require 1 Kerbal, and current uncrewed/probe/network launches require 0. Keep explicit required-Kerbal counts because later Contracts may require more than one without changing the roster/live-mission architecture.
 - [ ] **Do not impose a simultaneous uncrewed-live-mission limit.** Uncrewed Contracts may coexist without a Mission Control/global live-mission slot system; other normal eligibility, funding, satellite and preparation rules still apply.
+- [ ] **Prevent duplicate one-off targets within one rival.** A rival may not prepare/launch the same one-off objective again while that objective is already live, and may not prepare/launch the same Science subject twice within its own programme. Repeatable satellite-network missions remain exempt. Different rivals may still race the same objective or Science subject.
+- [ ] **Reserve satellite capacity for launched satellite-producing missions.** Mission Control caps the rival's total satellite population across all bodies. Existing satellites plus active live Probe/network missions that would add satellites on success count against the cap; preparation does not reserve capacity, failure releases a live reservation, and success turns the reservation into an actual satellite. Older saves that already exceed the cap keep their satellites but cannot add more until capacity permits.
+- [ ] **Use fixed Pre-Orbit live durations.** Directed Power, Mass, and Control use 5-day live missions. Biome Contracts use their exact target-biome duration from the Kerbin table. Their Contract difficulty still comes from the Contract database rather than the Science-difficulty field.
+- [ ] **Let launched missions survive sponsor expiry without funding.** A live Contract continues to its result even if its sponsor Contract expires after launch. Success still records the objective/progression result, but an expired Contract pays no later funding. A Contract that expires before launch invalidates the preparation target and is replaced.
 - [ ] **Roll crew losses independently per Kerbal.** Every Kerbal assigned to a failed crewed mission has an independent 25% loss chance. Surviving Kerbals return to availability.
 - [ ] **Charge insurance per lost Kerbal.** Every lost Kerbal adds 50,000 Funds to pending insurance; losses stack additively until the next funding boundary applies the deduction.
 - [ ] **Allow rival Funds to become negative from funding deductions.** Gross funding minus payroll and the entire pending insurance amount is applied as a signed funding result. Do not floor the payout or Funds at zero and do not carry unpaid insurance forward after it has been applied.
 - [ ] **Do not charge a separate Funds cost for Science Expeditions initially.** Science launch preparation has no additional expedition fee beyond normal staffing/hiring/payroll and mission risk.
 - [ ] **Choose Science Expedition targets randomly from the valid set.** Do not optimise expedition selection by Science reward, duration or difficulty in the initial model.
+- [ ] **Unlock all Kerbin Science biomes from the start.** Regular Kerbin surface biomes and supported KSC location biomes are available immediately when the experiment/situation is valid; the Biome Contract line is not a Science-access gate.
+- [ ] **Ignore the Sun as a rival Science destination until content exists.** Do not select or configure active rival Sun expeditions merely because stock KSP has Sun Science subjects. Add Sun Science only alongside explicit Sun mission/Contract progression later.
+- [ ] **Gate EVA Report with Astronaut Complex Level 2 plus normal situation access.** EVA Report does not need a tech node; Surface Sample keeps its separate R&D Level 2 plus surface-access rule.
+- [ ] **Treat Start as already researched.** New rivals and old-save compatibility defaults begin with the zero-cost Start node researched.
 - [ ] **Choose research only at funding boundaries, one project at a time.** If there is no active research project, select from affordable eligible nodes at the funding event. Choose the cheapest Science-cost tier and select randomly among equal-cost nodes; deduct the Science cost when the project is selected. Science gained between funding events waits until the next boundary.
 - [ ] **Choose facility construction randomly from affordable eligible upgrades.** At a funding boundary, if no construction project is active, select randomly from upgrades the rival can fully afford. If no upgrade is affordable, do nothing.
-- [ ] **Use fixed Contract crew counts and difficulty rules.** All crewed Contracts require 1 Kerbal; all uncrewed/probe Contracts and satellite-network launches require 0. Pre-Orbit stages I-V use difficulty `1, 1, 2, 2, 3` in every line. Each orbital Crewed mission is one difficulty higher than its matching Probe mission, and each satellite-network launch matches its body's Probe difficulty. Use the authoritative Contract table above for the body-specific Probe values.
+- [ ] **Use fixed Contract crew counts and difficulty rules.** Current crewed Contracts require 1 Kerbal; current uncrewed/probe Contracts and satellite-network launches require 0. Pre-Orbit stages I-V use difficulty `1, 1, 2, 2, 3` in every line. Each orbital Crewed mission is one difficulty higher than its matching Probe mission, and each satellite-network launch matches its body's Probe difficulty. Use the authoritative Contract table above for the body-specific Probe values.
 - [ ] **Use the Tracking Station as the sole destination facility gate.** Level 1 permits Pre-Orbit and Kerbin-orbit Contracts, Level 2 permits Mun and Minmus missions, and Level 3 permits other planets and moons. VAB and Launch Pad affect Launch Progress Chance only and do not duplicate the Tracking Station destination gate.
 - [ ] **Gate Surface Sample with R&D Level 2 plus surface access.** The rival must have R&D Level 2 and must already have the target body's surface Science access before Surface Sample becomes a valid expedition subject.
-- [ ] **Use mission progression to unlock Science situations.** Kerbin begins with Landed, Splashed, Flying Low and Flying High available; completing Probe Orbit unlocks Kerbin Low Space and High Space. On other bodies, successful Probe Orbit unlocks Low Space and High Space, while a successful landing Contract unlocks Landed, Splashed, Flying Low and Flying High wherever those stock situations are valid.
+- [ ] **Use mission progression to unlock Science situations.** Kerbin begins with Landed, Splashed, Flying Low and Flying High available; completing Probe Orbit unlocks Kerbin Low Space and High Space. On other supported bodies, successful Probe Orbit unlocks Low Space and High Space, while a successful landing Contract unlocks Landed, Splashed, Flying Low and Flying High wherever those stock situations are valid.
 - [ ] **Resolve live missions independently of funding boundaries.** Live Contract and Science missions are checked on the normal five-second simulation refresh and resolve on the first refresh at or after their completion universal time. Funding dates do not delay live-mission outcomes.
-- [ ] **Use the agreed funding-boundary processing sequence.** When a funding boundary is crossed, first catch up any live missions whose completion universal time is on or before that boundary, then complete due research and facility construction, update funding eligibility, calculate income, apply payroll and insurance and credit the signed payout, choose new research, choose new affordable facility construction, and finally run the sponsor review for the next funding period. Preserve chronological universal-time ordering during time-warp/reload catch-up so only missions completed on or before that boundary can affect it.
+- [ ] **Use the agreed funding-boundary processing sequence.** When a funding boundary is crossed, first advance/catch up all scheduled rival events whose universal time is on or before that boundary, including due normal 5-day Launch Progress checks, due daily Science Launch Progress checks, and due live-mission completions. Then complete due research and facility construction, update funding eligibility, calculate income, apply payroll and insurance and credit the signed payout, choose new research, choose new affordable facility construction, and finally run the sponsor review for the next funding period. Preserve chronological universal-time ordering during time-warp/reload catch-up so only events that actually occurred on or before that boundary can affect it.
 
 ### Recommended runtime state ownership
 
@@ -581,7 +599,7 @@ Recommended `RivalProgramState` contents:
 | Science launch preparation | `ScienceLaunchPreparationState` | One current expedition being prepared independently of normal Contract launch preparation. |
 | Live missions | `List<RivalLiveMissionState>` | Contains all launched Contract and Science missions still awaiting resolution; no separate uncrewed slot-count state is required. |
 | Completed rival Science subjects | `HashSet<ScienceSubjectKey>` | Prevents a rival repeating its own completed subjects. |
-| Researched tech | `HashSet<string>` | Stable project-owned tech IDs. |
+| Researched tech | `HashSet<string>` | Stable project-owned tech IDs; `Start` is present by default. |
 | Current research | `RivalResearchProjectState` | Zero or one active research project. |
 | Facility levels | `Dictionary<RivalFacilityType, int>` | Nine rival Space Centre facilities. |
 | Facility construction | `List<RivalFacilityConstructionState>` | Initially enforce zero or one active entry. |
@@ -614,7 +632,7 @@ ScienceLaunchPreparationState
   RequiredKerbals
 ```
 
-`PlannedScienceReward` is presentation/planning data from the subject at selection/launch; the actual award at successful mission completion is limited to the Science still remaining in the shared stock subject. Do not persist Progress Chance, Estimated Launch, Expedition Range, unlocked-experiment display text, Kerbals Available, a Science Expedition Funds cost, or the `Ready`/`Hire At Launch`/`Waiting For Kerbal` UI state. Derive those values from authoritative facility, tech, mission, roster, Funds, and launch-preparation state.
+`RequiredKerbals` is 1 for every current Science Expedition but remains explicit for future content. `PlannedScienceReward` is presentation/planning data from the subject at selection/launch; the actual award at successful mission completion is limited to the Science still remaining in the shared stock subject. Do not persist Progress Chance, Estimated Launch, Expedition Range, unlocked-experiment display text, Kerbals Available, a Science Expedition Funds cost, or the `Ready`/`Hire At Launch`/`Waiting For Kerbal` UI state. Derive those values from authoritative facility, tech, mission, roster, Funds, and launch-preparation state.
 
 ### Live mission state
 
@@ -624,7 +642,7 @@ Use a simple data class rather than an inheritance hierarchy:
 RivalLiveMissionState
   MissionSequence
   MissionType                 // Contract or Science
-  ContractId                  // Contract missions
+  ContractId                  // Objective or satellite-network target ID for Contract missions
   ScienceSubject              // Science missions
   LocationId
   LaunchUniversalTime
@@ -639,9 +657,9 @@ RivalLiveMissionState
 
 Snapshot `DurationDays`, `Difficulty`, and `SuccessChancePercent` when the mission launches. A later balance/config edit must not alter a mission already in flight. Derive elapsed progress and ETA from current universal time, launch time, and completion time rather than persisting changing progress/ETA values.
 
-At 100% normal or Science Launch Progress, the simulation should check/assign crew, create the live-mission record, reset the relevant preparation state, and begin the next eligible preparation. Objective completion, satellite/infrastructure results, and Science rewards occur only when the live mission later resolves successfully. Uncrewed live missions do not consume a separate mission-slot resource.
+At 100% normal or Science Launch Progress, the simulation should re-check target validity, crew requirements, and any Mission Control satellite capacity required by the launch, then create the live-mission record, reset the relevant preparation state, and begin the next eligible preparation. Objective completion, satellite/infrastructure results, and Science rewards occur only when the live mission later resolves successfully. Uncrewed live missions do not consume a separate mission-slot resource.
 
-Live missions are evaluated during the normal five-second simulation refresh rather than as a funding-boundary action. When a refresh crosses a mission's completion universal time, resolve that mission immediately using its stored deterministic state; time warp and reload catch up on the next refresh.
+Live missions are evaluated during the normal five-second simulation refresh rather than as a funding-boundary action. When a refresh crosses a mission's completion universal time, resolve that mission immediately using its stored deterministic state; time warp and reload catch up on the next refresh. Live one-off Contract targets and Science subjects remain excluded from that rival's duplicate target selection until the live mission resolves. A live Contract is not cancelled merely because its sponsor funding expires after launch.
 
 For a failed crewed mission, use deterministic rolls derived from `OutcomeSeed` to perform one independent 25% casualty check for each assigned Kerbal. Each loss removes one employed Kerbal and adds 50,000 Funds to pending insurance; survivors return to availability.
 
@@ -659,7 +677,7 @@ Roster Limit         = current Astronaut Complex level rule
 
 Do not persist a separate waiting-for-crew boolean. A 100%-prepared crew-required mission is `Ready`, `Hire At Launch`, or `Waiting For Kerbal` based on the current roster cap, available crew, required crew, and available Funds.
 
-Individual rival Kerbal names/identities are not required for the initial model; roster counts and assigned counts are sufficient unless a later design explicitly needs named rival Kerbals.
+Individual rival Kerbal names/identities are not required for the initial model; roster counts and assigned counts are sufficient unless a later design explicitly needs named rival Kerbals. All crew allocation logic must use the mission's explicit required count rather than assume that every future crewed mission requires one.
 
 ### Facility and construction state
 
@@ -677,7 +695,7 @@ Runway
 TrackingStation
 ```
 
-Store only facility levels. Derive funding, roster caps, satellite caps, destination gates, tech-cost gates, normal Launch Progress Chance, and Science Launch Progress Chance from those levels. Mission Control does not derive or store an uncrewed live-mission count limit. Tracking Station alone supplies the facility-level destination gate; VAB and Launch Pad do not duplicate that responsibility.
+Store only facility levels. Derive funding, roster caps, satellite caps, destination gates, tech-cost gates, normal Launch Progress Chance, and Science Launch Progress Chance from those levels. Mission Control does not derive or store an uncrewed live-mission count limit. Its satellite capacity is the total of existing rival satellites plus reservations represented by launched live missions that would create a satellite on success. Tracking Station alone supplies the facility-level destination gate; VAB and Launch Pad do not duplicate that responsibility.
 
 Recommended construction state:
 
@@ -706,7 +724,7 @@ RivalTechNodeDefinition
   UnlockedExperimentIds
 ```
 
-Use stable tech IDs as gameplay identity and keep researched IDs in a `HashSet<string>`. Do not modify the player's stock Research and Development state to represent rival technology.
+Use stable tech IDs as gameplay identity and keep researched IDs in a `HashSet<string>`. Copy the approved stock KSP 1.12 prerequisite relationships into this fixed project-owned catalogue rather than reading a modded player tech tree dynamically. `Start` is already researched for every new/default rival. Do not modify the player's stock Research and Development state to represent rival technology, and do not use rival tech nodes as an extra Contract/destination gate in the initial implementation.
 
 Recommended active research state:
 
@@ -726,6 +744,7 @@ Only funding boundaries may create a new research project, and only when no proj
 Read the approved location duration and Science difficulty tables from the existing campaign settings into a project-owned lookup keyed by stable location ID, for example:
 
 ```text
+kerbin:preorbit-local
 ksc:vab
 ksc:tracking-station
 kerbin:Shores
@@ -745,16 +764,19 @@ RivalMissionLocationSettings
   ScienceDifficulty
 ```
 
-Resolution order for Science targets:
+Resolution order for mission locations:
 
 ```text
-KSC location science  -> exact KSC location entry
-Kerbin surface        -> Kerbin biome entry
-Kerbin orbit          -> Kerbin Orbit entry
-Non-Kerbin science    -> body-wide entry; biome does not change difficulty
+Directed Power / Mass / Control Contract -> kerbin:preorbit-local (5 days; Contract difficulty stays definition-owned)
+Biome Contract                           -> exact Kerbin biome entry
+KSC location science                     -> exact KSC location entry
+Kerbin surface science                   -> Kerbin biome entry
+Kerbin orbit                             -> Kerbin Orbit entry
+Supported non-Kerbin mission/science     -> body-wide entry; biome does not change difficulty
+Sun                                      -> unavailable until explicit Sun content exists
 ```
 
-The lookup supplies values when a mission launches; the live mission then keeps its snapped values. Target eligibility is separately constrained by Tracking Station level, technology and completed mission progression.
+The lookup supplies values when a mission launches; the live mission then keeps its snapped values. Target eligibility is separately constrained by Tracking Station level, completed mission progression, and Science-experiment tech where applicable.
 
 ### Contract definition additions
 
@@ -762,10 +784,10 @@ Add explicit Contract difficulty and crew requirement data to objective definiti
 
 ```text
 Difficulty            // 1-10 from the authoritative Contract table/rules above
-RequiredKerbalCount    // 1 for crewed Contracts; 0 for uncrewed/probe/network launches
+RequiredKerbalCount    // current values 1 for crewed, 0 for uncrewed; future Contracts may use >1
 ```
 
-Keep the existing crew-category enum where it remains useful, but use `RequiredKerbalCount` for rival crew reservation. The difficulty values and crew counts are now defined and are no longer an open balance decision.
+Keep the existing crew-category enum where it remains useful, but use `RequiredKerbalCount` for rival crew reservation. Do not infer a required count from the crew-category enum at runtime; the explicit count is future-proofed for later multi-Kerbal Contracts. The current difficulty values and crew counts are now defined and are no longer an open balance decision.
 
 ### Funding calculation structure
 
@@ -787,7 +809,10 @@ Administration level supplies Base Income. Payroll and insurance are deductions.
 Use this deterministic funding-boundary sequence:
 
 ```text
-Catch up live missions with completion time <= funding boundary
+Catch up all rival scheduled events with event time <= funding boundary
+  - normal 5-day Launch Progress checks
+  - daily Science Launch Progress checks
+  - live Contract/Science mission completions
 -> Complete due research and facility construction
 -> Update funding eligibility
 -> Calculate income
@@ -797,7 +822,9 @@ Catch up live missions with completion time <= funding boundary
 -> Sponsor review for the next funding period
 ```
 
-Live missions still resolve on the normal five-second refresh. The catch-up step exists only for time warp/reload or any refresh that crosses a funding boundary, so event ordering remains chronological and a mission completed on or before the boundary can affect that funding event.
+Live missions still normally resolve on the five-second refresh. The catch-up step exists for time warp/reload or any refresh that crosses a funding boundary, and must preserve chronological universal-time ordering so no new facility level, funding payout, research result, or sponsor offer can retroactively affect a rival event whose timestamp came earlier.
+
+A live Objective Contract that was launched before its sponsor contract expired still resolves normally. If it succeeds after expiry, record the objective/progression result but do not revive or pay the expired funding contract.
 
 ### Persistence design
 
@@ -818,13 +845,15 @@ RIVAL
   COMPLETED_SCIENCE (repeated)
 ```
 
-Persist gameplay identity and authoritative mutable state, not presentation strings or values that can be safely derived. Older saves missing the new fields should receive safe defaults: zero stored Science, Level 1 facilities, one employed Kerbal, no live missions, no construction, no active research, no rival-completed Science subjects, and no pending insurance. Rival Funds are not clamped to zero when restoring or applying the new funding rules because negative rival balances are valid state.
+Persist gameplay identity and authoritative mutable state, not presentation strings or values that can be safely derived. Older saves missing the new fields should receive safe defaults: zero stored Science, Level 1 facilities, one employed Kerbal, `Start` researched, no live missions, no construction, no active research, no rival-completed Science subjects, and no pending insurance. Rival Funds are not clamped to zero when restoring or applying the new funding rules because negative rival balances are valid state. If an older save already contains more simulated rival satellites than its default Level 1 Mission Control cap, retain those satellites and use the cap only to prevent additional satellite-producing launches until capacity permits them.
 
 ### KSP science boundary
 
-Add a small science integration component inside the existing `KspIntegration/` module, for example `KspScienceAdapter`, responsible for resolving stock experiments/subjects, reading the relevant stock Science state/reward, and consuming the player's exact matching subject after a rival wins it. Rival simulation and persistence must operate on project-owned `ScienceSubjectKey` values rather than raw KSP `ResearchAndDevelopment` or `ScienceSubject` objects.
+Add a small science integration component inside the existing `KspIntegration/` module, for example `KspScienceAdapter`, responsible for resolving the approved stock experiments/subjects, reading the relevant stock Science state/reward, and consuming the player's exact matching subject after a rival wins it. Rival simulation and persistence must operate on project-owned `ScienceSubjectKey` values rather than raw KSP `ResearchAndDevelopment` or `ScienceSubject` objects.
 
-Under the first-completion-wins rule, the adapter must re-check the subject at live-mission completion. If the subject is fully depleted, return zero available Science. If partially depleted, return only the remaining value and then exhaust it after the rival's successful result. This check is authoritative over any planned reward snapshot recorded when the expedition was selected/launched.
+Under the shared first-completion-wins rule, the adapter must re-check the subject at live-mission completion. If the subject is fully depleted by the player or another earlier rival success, return zero available Science. If partially depleted, return only the remaining value and then exhaust it after the rival's successful result. This check is authoritative over any planned reward snapshot recorded when the expedition was selected/launched. Cross-rival races are therefore resolved against the same player-visible stock subject pool rather than separate rival-only copies.
+
+The initial adapter should ignore Sun subjects even if stock KSP exposes them, because Sun expedition progression is deferred until explicit mission/Contract content exists.
 
 ### Expected project changes
 
@@ -834,17 +863,17 @@ The recommended design should fit within the existing project modules. Expected 
 | --- | --- |
 | `Agencies/AgencyState.cs` | Attach/access composed rival-only programme state and permit valid negative rival Funds. |
 | `Agencies/RivalProgramState.cs` | New data-only rival state classes/enums. |
-| `Rivals/RivalSimulation.cs` | Launch preparation, five-second live mission resolution, per-Kerbal deterministic casualties, roster, facilities, construction, destination/situation gates, and funding-boundary research selection. |
-| `Rivals/RivalTechCatalogue.cs` | Fixed project-owned stock rival tech definitions. |
-| `Core/CampaignSettings.cs` | New rival balance/location settings. |
+| `Rivals/RivalSimulation.cs` | Launch preparation, duplicate-target checks, five-second live mission resolution, per-Kerbal deterministic casualties, roster, satellite-capacity reservations, facilities, construction, destination/situation gates, Science-only tech gating, and funding-boundary research selection. |
+| `Rivals/RivalTechCatalogue.cs` | Fixed project-owned stock rival tech definitions and prerequisite graph, with Start researched by default. |
+| `Core/CampaignSettings.cs` | New rival balance/location settings, including the Pre-Orbit local duration and supported body lookup. |
 | `KspIntegration/CampaignSettingsLoader.cs` | Parse the added settings from existing `CampaignSettings.cfg`. |
 | `GameData/TheRaceForSpace/Config/CampaignSettings.cfg` | Store tuneable rival balance and location values. |
-| `Persistence/RivalAgenciesSaveState.cs` | Persist the composed rival programme state under existing rival save records, including negative Funds. |
-| `Campaign/CampaignController.cs` | Coordinate the normal live-mission refresh plus the agreed chronological funding-boundary sequence, signed payroll/insurance, construction/research completion and selection, and shared funding calculations. |
-| `KspIntegration/KspScienceAdapter.cs` | Keep stock KSP Science subject access/depletion at the integration boundary. |
-| `Objectives/ObjectiveDefinition.cs` and catalogue | Carry Contract difficulty and required rival crew counts. |
+| `Persistence/RivalAgenciesSaveState.cs` | Persist the composed rival programme state under existing rival save records, including negative Funds and the new compatibility defaults. |
+| `Campaign/CampaignController.cs` | Coordinate normal five-second rival refresh plus chronological scheduled-event catch-up, the agreed funding-boundary sequence, signed payroll/insurance, construction/research completion and selection, and shared funding calculations. |
+| `KspIntegration/KspScienceAdapter.cs` | Keep stock KSP Science subject access/depletion at the integration boundary and apply the cross-agency first-completion pool. |
+| `Objectives/ObjectiveDefinition.cs` and catalogue | Carry Contract difficulty and explicit required rival crew counts, retaining support for future values above one. |
 | `UI/CommandCenterWindow.cs` | Render the approved Rival Agencies dashboard from read-only state, including signed next payout values. |
-| `tests/` | Cover location lookup, Tracking Station destination gates, Science situation progression, Surface Sample gating, success chance, deterministic five-second outcome/casualty catch-up, Contract difficulty/crew mapping, partial/complete shared-Science races, one-Kerbal defaults, roster/hiring/payroll, negative funding, unlimited uncrewed live missions, random affordable construction selection, the agreed chronological funding-boundary sequence, funding-boundary research selection, live mission resolution, and persistence round-trips. |
+| `tests/` | Cover Pre-Orbit duration mapping, duplicate one-off target prevention, Mission Control satellite reservations, supported-body/Sun exclusion, all-Kerbin-biome access, EVA and Surface Sample gates, Science-only tech gating, location lookup, Tracking Station destination gates, Science situation progression, success chance, deterministic five-second outcome/casualty catch-up, Contract difficulty/crew mapping, future multi-crew counts, partial/complete player/rival shared-Science races, exact-time deterministic Science ties, one-Kerbal defaults, roster/hiring/payroll, negative funding, unlimited uncrewed live missions, expired-Contract live completion without funding, random affordable construction selection, chronological funding-boundary event catch-up, funding-boundary research selection, live mission resolution, and persistence round-trips. |
 | `docs/STRUCTURE.md` / `docs/CODE_OVERVIEW.md` | Document final ownership/flow after implementation. |
 
 Do not introduce new managers, services, factories, interfaces, class hierarchies, external dependencies, or top-level source modules unless a concrete implementation problem proves the current architecture cannot support the required behaviour.

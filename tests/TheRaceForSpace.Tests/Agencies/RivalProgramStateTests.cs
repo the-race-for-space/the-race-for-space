@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using TheRaceForSpace.Agencies;
 using TheRaceForSpace.Tests.Core;
 using TheRaceForSpace.Tests.Persistence;
+using TheRaceForSpace.Tests.Rivals;
 
 namespace TheRaceForSpace.Tests.Agencies
 {
@@ -16,6 +17,7 @@ namespace TheRaceForSpace.Tests.Agencies
             StateKeepsExplicitCrewCounts();
             CampaignSettingsTests.RunAll();
             RivalProgrammePersistenceTests.RunAll();
+            RivalTechCatalogueTests.RunAll();
         }
 
         private static void RivalAgencyGetsApprovedDefaults()

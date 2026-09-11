@@ -28,6 +28,7 @@
     <Compile Include="../../src/TheRaceForSpace/Agencies/AgencyState.cs" Link="Production/Agencies/AgencyState.cs" />
     <Compile Include="../../src/TheRaceForSpace/Agencies/RivalProgramState.cs" Link="Production/Agencies/RivalProgramState.cs" />
     <Compile Include="../../src/TheRaceForSpace/Rivals/RivalSimulation.cs" Link="Production/Rivals/RivalSimulation.cs" />
+    <Compile Include="../../src/TheRaceForSpace/Rivals/RivalTechCatalogue.cs" Link="Production/Rivals/RivalTechCatalogue.cs" />
     <Compile Include="../../src/TheRaceForSpace/Tracking/OrbitingVesselSnapshot.cs" Link="Production/Tracking/OrbitingVesselSnapshot.cs" />
     <Compile Include="../../src/TheRaceForSpace/Tracking/ActiveVesselSnapshot.cs" Link="Production/Tracking/ActiveVesselSnapshot.cs" />
     <Compile Include="../../src/TheRaceForSpace/Tracking/OrbitalVesselTracker.cs" Link="Production/Tracking/OrbitalVesselTracker.cs" />

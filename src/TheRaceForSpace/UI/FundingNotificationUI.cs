@@ -5,31 +5,52 @@ using TheRaceForSpace.Agencies;
 using TheRaceForSpace.Campaign;
 using TheRaceForSpace.Core;
 using TheRaceForSpace.Funding;
+using TheRaceForSpace.KspIntegration;
+using TheRaceForSpace.Objectives;
 using UnityEngine;
 
 namespace TheRaceForSpace.UI
 {
     /// <summary>
-    /// Publishes one stock KSP inbox message when the player completes an Offered objective
-    /// funding target. Gameplay completion remains owned by the campaign and tracking systems.
+    /// Publishes stock KSP inbox messages for important campaign events. Gameplay state remains owned
+    /// by the campaign, rival, funding, and KSP-integration systems; this addon only observes live signals.
     /// </summary>
     [KSPAddon(KSPAddon.Startup.Instantly, true)]
     public sealed class FundingNotificationUI : MonoBehaviour
     {
-        private const string NotificationTitlePrefix = "Funding Target Completed — ";
-        private const string NotificationBodySuffix =
+        private const string PlayerCompletionTitlePrefix = "Funding Target Completed - ";
+        private const string PlayerCompletionBodySuffix =
             " has been achieved. Your agency is now eligible for a share of the remaining contract funding.";
+        private const string RivalCompletionTitlePrefix = "Rival Objective Completed - ";
+        private const string SponsorReviewTitle = "Sponsor Review Complete";
+        private const string FundingPayoutTitle = "Campaign Funding Received";
+
+        private sealed class PendingNotification
+        {
+            public PendingNotification(string title, string body)
+            {
+                Title = title;
+                Body = body;
+            }
+
+            public string Title { get; private set; }
+            public string Body { get; private set; }
+        }
 
         private static FundingNotificationUI _activeInstance;
 
-        private readonly Queue<string> _pendingObjectiveIds = new Queue<string>();
+        private readonly Queue<PendingNotification> _pendingNotifications =
+            new Queue<PendingNotification>();
+        private readonly HashSet<string> _knownOfferedTargetKeys =
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         private string _activeSaveFolder;
+        private CampaignController _offerSnapshotController;
         private bool _isDuplicateInstance;
 
         public void Awake()
         {
-            // Keep one session-level subscriber so an objective completion is observed regardless of
-            // which game scene is active when the campaign records it.
+            // Keep one session-level subscriber so campaign events are observed regardless of which
+            // game scene is active when a completion, funding boundary, or sponsor review occurs.
             if (_activeInstance != null && _activeInstance != this)
             {
                 _isDuplicateInstance = true;
@@ -39,6 +60,7 @@ namespace TheRaceForSpace.UI
 
             _activeInstance = this;
             AgencyState.ObjectiveCompletionRecorded += OnObjectiveCompletionRecorded;
+            CareerFundingAdapter.CampaignFundsAdded += OnCampaignFundsAdded;
         }
 
         public void Start()
@@ -48,8 +70,6 @@ namespace TheRaceForSpace.UI
                 return;
             }
 
-            // Objective completion can occur in Flight, Space Center, or during an orbital refresh.
-            // Persist this presentation subscriber across scene changes instead of recreating it.
             DontDestroyOnLoad(this);
         }
 
@@ -61,8 +81,8 @@ namespace TheRaceForSpace.UI
             }
 
             AgencyState.ObjectiveCompletionRecorded -= OnObjectiveCompletionRecorded;
-            _pendingObjectiveIds.Clear();
-            _activeSaveFolder = null;
+            CareerFundingAdapter.CampaignFundsAdded -= OnCampaignFundsAdded;
+            ResetCurrentSave();
             _activeInstance = null;
         }
 
@@ -86,20 +106,161 @@ namespace TheRaceForSpace.UI
                 return;
             }
 
+            CampaignController campaignController = ModRuntime.Controller;
+            if (campaignController != null && campaignController.NextFundingUniversalTime >= 0.0)
+            {
+                CaptureNewSponsorOffers(campaignController);
+            }
+
             TryPublishNextNotification();
         }
 
         private void OnObjectiveCompletionRecorded(AgencyState agency, string objectiveId)
         {
             if (agency == null
-                || !agency.IsPlayer
                 || string.IsNullOrEmpty(objectiveId)
                 || !EnsureCurrentSaveFolder())
             {
                 return;
             }
 
-            _pendingObjectiveIds.Enqueue(objectiveId);
+            CampaignController campaignController = ModRuntime.Controller;
+            if (agency.IsPlayer)
+            {
+                if (campaignController == null)
+                {
+                    return;
+                }
+
+                ObjectiveFundingContract contract = FindObjectiveFundingContract(
+                    campaignController,
+                    objectiveId);
+                if (contract == null)
+                {
+                    Debug.LogWarning(
+                        "[TheRaceForSpace] Funding notification skipped unknown objective '"
+                        + objectiveId
+                        + "'.");
+                    return;
+                }
+
+                // Preserve the existing rule: only an Offered, unexpired target is announced as a
+                // player funding completion. Persistence restoration uses the silent restore path.
+                if (!contract.IsOffered || contract.IsExpired)
+                {
+                    return;
+                }
+
+                EnqueueNotification(
+                    PlayerCompletionTitlePrefix + contract.Name,
+                    contract.Name + PlayerCompletionBodySuffix);
+                return;
+            }
+
+            string objectiveName = GetObjectiveDisplayName(objectiveId);
+            EnqueueNotification(
+                RivalCompletionTitlePrefix + agency.Name,
+                agency.Name + " has completed " + objectiveName + ".");
+        }
+
+        private void OnCampaignFundsAdded(double amount)
+        {
+            if (double.IsNaN(amount)
+                || double.IsInfinity(amount)
+                || amount <= 0.0
+                || !EnsureCurrentSaveFolder())
+            {
+                return;
+            }
+
+            EnqueueNotification(
+                FundingPayoutTitle,
+                "Your agency received "
+                + amount.ToString("N0")
+                + " Funds from the campaign funding system.");
+        }
+
+        private void CaptureNewSponsorOffers(CampaignController campaignController)
+        {
+            if (campaignController == null)
+            {
+                return;
+            }
+
+            if (!ReferenceEquals(_offerSnapshotController, campaignController))
+            {
+                // A freshly created/restored controller may already contain historical offer state.
+                // Establish that state silently so loading or quickloading cannot replay old reviews.
+                _knownOfferedTargetKeys.Clear();
+                CaptureCurrentOffers(campaignController, null);
+                _offerSnapshotController = campaignController;
+                return;
+            }
+
+            var newlyOfferedTargetNames = new List<string>();
+            CaptureCurrentOffers(campaignController, newlyOfferedTargetNames);
+            if (newlyOfferedTargetNames.Count == 0)
+            {
+                return;
+            }
+
+            string body = newlyOfferedTargetNames.Count == 1
+                ? "New funding target offered: " + newlyOfferedTargetNames[0] + "."
+                : "New funding targets offered: "
+                    + string.Join(", ", newlyOfferedTargetNames.ToArray())
+                    + ".";
+            EnqueueNotification(SponsorReviewTitle, body);
+        }
+
+        private void CaptureCurrentOffers(
+            CampaignController campaignController,
+            IList<string> newlyOfferedTargetNames)
+        {
+            for (int contractIndex = 0;
+                contractIndex < campaignController.ObjectiveFundingContracts.Count;
+                contractIndex++)
+            {
+                ObjectiveFundingContract contract =
+                    campaignController.ObjectiveFundingContracts[contractIndex];
+                if (contract == null || !contract.IsOffered)
+                {
+                    continue;
+                }
+
+                string offerKey = "objective:" + contract.Id;
+                if (_knownOfferedTargetKeys.Add(offerKey) && newlyOfferedTargetNames != null)
+                {
+                    newlyOfferedTargetNames.Add(contract.Name);
+                }
+            }
+
+            for (int contractIndex = 0;
+                contractIndex < campaignController.SatelliteNetworkFundingContracts.Count;
+                contractIndex++)
+            {
+                SatelliteNetworkFundingContract contract =
+                    campaignController.SatelliteNetworkFundingContracts[contractIndex];
+                if (contract == null || !contract.IsOffered)
+                {
+                    continue;
+                }
+
+                string offerKey = "satellite:" + contract.Id;
+                if (_knownOfferedTargetKeys.Add(offerKey) && newlyOfferedTargetNames != null)
+                {
+                    newlyOfferedTargetNames.Add(contract.Name);
+                }
+            }
+        }
+
+        private void EnqueueNotification(string title, string body)
+        {
+            if (string.IsNullOrEmpty(title) || string.IsNullOrEmpty(body))
+            {
+                return;
+            }
+
+            _pendingNotifications.Enqueue(new PendingNotification(title, body));
         }
 
         private bool EnsureCurrentSaveFolder()
@@ -115,72 +276,40 @@ namespace TheRaceForSpace.UI
                 return true;
             }
 
-            // A session-level addon can survive loading a different save. Never carry an unsent
-            // notification across that boundary because the objective ID may exist in both saves.
-            _pendingObjectiveIds.Clear();
+            // A session-level addon can survive loading another save. Never carry an unsent message
+            // or offer baseline across that boundary because stable IDs may legitimately exist in both.
+            _pendingNotifications.Clear();
+            _knownOfferedTargetKeys.Clear();
+            _offerSnapshotController = null;
             _activeSaveFolder = currentSaveFolder;
             return true;
         }
 
         private void ResetCurrentSave()
         {
-            if (_activeSaveFolder == null && _pendingObjectiveIds.Count == 0)
-            {
-                return;
-            }
-
-            _pendingObjectiveIds.Clear();
+            _pendingNotifications.Clear();
+            _knownOfferedTargetKeys.Clear();
+            _offerSnapshotController = null;
             _activeSaveFolder = null;
         }
 
         private void TryPublishNextNotification()
         {
-            if (_pendingObjectiveIds.Count == 0 || MessageSystem.Instance == null)
+            if (_pendingNotifications.Count == 0 || MessageSystem.Instance == null)
             {
                 return;
             }
 
-            CampaignController campaignController = ModRuntime.Controller;
-            if (campaignController == null)
-            {
-                return;
-            }
-
-            string objectiveId = _pendingObjectiveIds.Peek();
-            ObjectiveFundingContract contract = FindObjectiveFundingContract(
-                campaignController,
-                objectiveId);
-            if (contract == null)
-            {
-                _pendingObjectiveIds.Dequeue();
-                Debug.LogWarning(
-                    "[TheRaceForSpace] Funding notification skipped unknown objective '"
-                    + objectiveId
-                    + "'.");
-                return;
-            }
-
-            // Only an Offered, unexpired funding target represents a mission the player was actively
-            // pursuing for sponsor funding. Hidden/unoffered objective state is not announced as a
-            // completed funding target.
-            if (!contract.IsOffered || contract.IsExpired)
-            {
-                _pendingObjectiveIds.Dequeue();
-                return;
-            }
-
-            string title = NotificationTitlePrefix + contract.Name;
-            string message = contract.Name + NotificationBodySuffix;
+            PendingNotification notification = _pendingNotifications.Dequeue();
             MessageSystem.Instance.AddMessage(new MessageSystem.Message(
-                title,
-                message,
+                notification.Title,
+                notification.Body,
                 MessageSystemButton.MessageButtonColor.GREEN,
                 MessageSystemButton.ButtonIcons.MESSAGE));
 
-            _pendingObjectiveIds.Dequeue();
             Debug.Log(
-                "[TheRaceForSpace] Funding completion notification sent for '"
-                + contract.Id
+                "[TheRaceForSpace] Campaign notification sent: '"
+                + notification.Title
                 + "'.");
         }
 
@@ -202,6 +331,14 @@ namespace TheRaceForSpace.UI
             }
 
             return null;
+        }
+
+        private static string GetObjectiveDisplayName(string objectiveId)
+        {
+            ObjectiveDefinition objective = ObjectiveCatalogue.FindById(objectiveId);
+            return objective == null || string.IsNullOrEmpty(objective.Name)
+                ? objectiveId
+                : objective.Name;
         }
     }
 }

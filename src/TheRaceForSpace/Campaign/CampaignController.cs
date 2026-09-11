@@ -21,7 +21,6 @@ namespace TheRaceForSpace.Campaign
 
         private const double KerbinDaySeconds = 21600.0;
         private const int KerbinDaysPerYear = 426;
-        private const double RivalBaseIncomeFunds = 20000.0;
         private const int MaximumUncompletedNormalObjectiveOffers = 2;
         private const int MaximumUnfulfilledSatelliteOffers = 2;
 
@@ -162,9 +161,13 @@ namespace TheRaceForSpace.Campaign
         }
 
         /// <summary>
-        /// Guaranteed funds each rival receives on every shared funding date.
+        /// Default Level 1 rival base income retained for the current pre-redesign Rival Agencies UI.
+        /// Actual rival funding uses each agency's current Administration Building level.
         /// </summary>
-        public double RivalBaseIncomePerFundingPeriod { get { return RivalBaseIncomeFunds; } }
+        public double RivalBaseIncomePerFundingPeriod
+        {
+            get { return Math.Max(0.0, CampaignSettings.RivalAdministrationLevel1BaseIncomeFunds); }
+        }
 
         public double NextFundingUniversalTime { get { return _nextFundingUniversalTime; } }
 
@@ -514,9 +517,9 @@ namespace TheRaceForSpace.Campaign
         }
 
         /// <summary>
-        /// Processes every crossed global funding boundary. Rivals are advanced only to each
-        /// boundary before that boundary pays, so they cannot spend funding before receiving it.
-        /// Existing offers pay first; the sponsor review then fills vacancies for the next period.
+        /// Processes every crossed global funding boundary in the locked rival-development order.
+        /// Scheduled rival events are caught up first, while research/facility completion occurs only
+        /// after that catch-up so an upgrade at the same UT cannot retroactively affect an earlier event.
         /// </summary>
         private void ProcessDueFunding(double currentUniversalTime)
         {
@@ -524,24 +527,52 @@ namespace TheRaceForSpace.Campaign
             {
                 double payoutUniversalTime = _nextFundingUniversalTime;
 
+                // 1. Resolve every rival event that actually occurred on or before this boundary.
                 RefreshRivals(payoutUniversalTime);
+
+                // 2. Funding-boundary development completes after chronological mission catch-up.
+                for (int rivalIndex = 0; rivalIndex < _rivalAgencies.Count; rivalIndex++)
+                {
+                    AgencyState rivalAgency = _rivalAgencies[rivalIndex];
+                    RivalDevelopmentSimulation.CompleteDueResearch(rivalAgency, payoutUniversalTime);
+                    RivalDevelopmentSimulation.CompleteDueFacilityConstruction(
+                        rivalAgency,
+                        payoutUniversalTime);
+                }
+
+                // 3. Completions from the catch-up may unlock or start funding at this exact boundary.
                 UpdateFundingAvailability(payoutUniversalTime);
                 UpdateSatelliteTargetReachedState();
                 StartObjectiveFundingContracts(payoutUniversalTime);
 
+                // 4-5. Calculate all income before advancing contract lifecycles, then apply rival
+                // payroll/insurance as one signed result. Pending insurance is fully consumed here.
                 for (int agencyIndex = 0; agencyIndex < _agencies.Count; agencyIndex++)
                 {
                     AgencyState agency = _agencies[agencyIndex];
-                    double payout = CalculateSatelliteFundingForProgram(agency);
+                    double satelliteIncomeFunds = CalculateSatelliteFundingForProgram(agency);
+                    double objectiveIncomeFunds = CalculateObjectiveFundingForProgram(
+                        agency,
+                        payoutUniversalTime);
 
-                    if (!agency.IsPlayer)
+                    if (agency.IsPlayer)
                     {
-                        payout += RivalBaseIncomeFunds;
+                        AwardProgramFunds(
+                            agency,
+                            satelliteIncomeFunds + objectiveIncomeFunds);
+                        continue;
                     }
 
-                    AwardProgramFunds(agency, payout);
+                    RivalFundingBreakdown fundingBreakdown =
+                        RivalDevelopmentSimulation.CalculateFundingBreakdown(
+                            agency,
+                            objectiveIncomeFunds,
+                            satelliteIncomeFunds);
+                    ApplyRivalFundingBreakdown(agency, fundingBreakdown);
                 }
 
+                // Every active one-off sponsor Contract advances exactly once after its current
+                // boundary payout has been calculated for all agencies.
                 for (int contractIndex = 0; contractIndex < _objectiveFundingContracts.Count; contractIndex++)
                 {
                     ObjectiveFundingContract contract = _objectiveFundingContracts[contractIndex];
@@ -558,17 +589,6 @@ namespace TheRaceForSpace.Campaign
                         continue;
                     }
 
-                    for (int agencyIndex = 0; agencyIndex < _agencies.Count; agencyIndex++)
-                    {
-                        AgencyState agency = _agencies[agencyIndex];
-                        bool isEligible = HasAgencyCompletedObjectiveByTime(
-                            agency,
-                            contract.Id,
-                            payoutUniversalTime);
-                        double payout = contract.CalculateCurrentPayout(isEligible, eligibleAgencyCount);
-                        AwardProgramFunds(agency, payout);
-                    }
-
                     contract.AdvancePayout();
                     if (contract.IsExpired)
                     {
@@ -580,6 +600,20 @@ namespace TheRaceForSpace.Campaign
                     }
                 }
 
+                // 6-7. New projects may use the post-payout Science/Funds state, but their upgraded
+                // capability does not apply until a later eligible funding boundary completes them.
+                for (int rivalIndex = 0; rivalIndex < _rivalAgencies.Count; rivalIndex++)
+                {
+                    AgencyState rivalAgency = _rivalAgencies[rivalIndex];
+                    RivalDevelopmentSimulation.TryStartResearch(
+                        rivalAgency,
+                        payoutUniversalTime);
+                    RivalDevelopmentSimulation.TryStartFacilityConstruction(
+                        rivalAgency,
+                        payoutUniversalTime);
+                }
+
+                // 8. Sponsor review is deliberately last so new offers belong to the next period.
                 ReviewFundingOffers(payoutUniversalTime);
                 _nextFundingUniversalTime += _fundingIntervalSeconds;
             }
@@ -731,6 +765,24 @@ namespace TheRaceForSpace.Campaign
             agency.Funds += payout;
         }
 
+        private static void ApplyRivalFundingBreakdown(
+            AgencyState rivalAgency,
+            RivalFundingBreakdown fundingBreakdown)
+        {
+            if (rivalAgency == null
+                || rivalAgency.IsPlayer
+                || rivalAgency.RivalProgram == null
+                || fundingBreakdown == null)
+            {
+                return;
+            }
+
+            // Funding deductions are allowed to drive a rival below zero. Insurance is settled in
+            // full at this boundary rather than becoming an unpaid balance carried into the next one.
+            rivalAgency.Funds += fundingBreakdown.NetPayout;
+            rivalAgency.RivalProgram.PendingInsuranceFunds = 0.0;
+        }
+
         private void EvaluateSatelliteNetworkFundingContracts()
         {
             _hasFundingPayoutCache = false;
@@ -740,22 +792,12 @@ namespace TheRaceForSpace.Campaign
             for (int agencyIndex = 0; agencyIndex < _agencies.Count; agencyIndex++)
             {
                 AgencyState agency = _agencies[agencyIndex];
-                double nextPayoutFunds = 0.0;
-
                 for (int contractIndex = 0; contractIndex < _satelliteNetworkFundingContracts.Count; contractIndex++)
                 {
-                    double payout = CalculateSatelliteCurrentPayout(
-                        agency,
-                        _satelliteNetworkFundingContracts[contractIndex]);
-                    _satellitePayoutCache[agencyIndex, contractIndex] = payout;
-                    nextPayoutFunds += payout;
-                }
-
-                agency.NextPayoutFunds = nextPayoutFunds;
-
-                if (!agency.IsPlayer)
-                {
-                    agency.NextPayoutFunds += RivalBaseIncomeFunds;
+                    _satellitePayoutCache[agencyIndex, contractIndex] =
+                        CalculateSatelliteCurrentPayout(
+                            agency,
+                            _satelliteNetworkFundingContracts[contractIndex]);
                 }
             }
 
@@ -778,16 +820,47 @@ namespace TheRaceForSpace.Campaign
                     for (int agencyIndex = 0; agencyIndex < _agencies.Count; agencyIndex++)
                     {
                         AgencyState agency = _agencies[agencyIndex];
-                        double payout = contract.CalculateCurrentPayout(
-                            HasAgencyCompletedObjectiveByTime(
-                                agency,
-                                contract.Id,
-                                _nextFundingUniversalTime),
-                            eligibleAgencyCount);
-                        _objectivePayoutCache[agencyIndex, contractIndex] = payout;
-                        agency.NextPayoutFunds += payout;
+                        _objectivePayoutCache[agencyIndex, contractIndex] =
+                            contract.CalculateCurrentPayout(
+                                HasAgencyCompletedObjectiveByTime(
+                                    agency,
+                                    contract.Id,
+                                    _nextFundingUniversalTime),
+                                eligibleAgencyCount);
                     }
                 }
+            }
+
+            // NextPayoutFunds is the same calculation used when the funding boundary is actually
+            // applied. Rival projections therefore include Administration income, payroll, and any
+            // currently pending insurance, including a signed negative result when deductions exceed income.
+            for (int agencyIndex = 0; agencyIndex < _agencies.Count; agencyIndex++)
+            {
+                AgencyState agency = _agencies[agencyIndex];
+                double satelliteIncomeFunds = 0.0;
+                for (int contractIndex = 0; contractIndex < _satelliteNetworkFundingContracts.Count; contractIndex++)
+                {
+                    satelliteIncomeFunds += _satellitePayoutCache[agencyIndex, contractIndex];
+                }
+
+                double objectiveIncomeFunds = 0.0;
+                for (int contractIndex = 0; contractIndex < _objectiveFundingContracts.Count; contractIndex++)
+                {
+                    objectiveIncomeFunds += _objectivePayoutCache[agencyIndex, contractIndex];
+                }
+
+                if (agency.IsPlayer)
+                {
+                    agency.NextPayoutFunds = satelliteIncomeFunds + objectiveIncomeFunds;
+                    continue;
+                }
+
+                RivalFundingBreakdown fundingBreakdown =
+                    RivalDevelopmentSimulation.CalculateFundingBreakdown(
+                        agency,
+                        objectiveIncomeFunds,
+                        satelliteIncomeFunds);
+                agency.NextPayoutFunds = fundingBreakdown.NetPayout;
             }
 
             _hasFundingPayoutCache = true;
@@ -845,27 +918,61 @@ namespace TheRaceForSpace.Campaign
             return totalSatelliteCount;
         }
 
+        private double CalculateObjectiveFundingForProgram(
+            AgencyState agency,
+            double payoutUniversalTime)
+        {
+            if (agency == null || payoutUniversalTime < 0.0)
+            {
+                return 0.0;
+            }
+
+            double payout = 0.0;
+            for (int contractIndex = 0; contractIndex < _objectiveFundingContracts.Count; contractIndex++)
+            {
+                payout += CalculateObjectiveCurrentPayoutAtTime(
+                    agency,
+                    _objectiveFundingContracts[contractIndex],
+                    payoutUniversalTime);
+            }
+
+            return payout;
+        }
+
         private double CalculateObjectiveCurrentPayout(
             AgencyState agency,
             ObjectiveFundingContract objectiveFundingContract)
         {
+            return CalculateObjectiveCurrentPayoutAtTime(
+                agency,
+                objectiveFundingContract,
+                _nextFundingUniversalTime);
+        }
+
+        private double CalculateObjectiveCurrentPayoutAtTime(
+            AgencyState agency,
+            ObjectiveFundingContract objectiveFundingContract,
+            double payoutUniversalTime)
+        {
             if (agency == null
                 || objectiveFundingContract == null
                 || !objectiveFundingContract.IsOffered
-                || _nextFundingUniversalTime < 0.0)
+                || !objectiveFundingContract.HasStarted
+                || objectiveFundingContract.IsExpired
+                || payoutUniversalTime < 0.0)
             {
                 return 0.0;
             }
 
             int eligibleAgencyCount = GetObjectiveCompletionAgencyCountAtTime(
                 objectiveFundingContract.Id,
-                _nextFundingUniversalTime);
+                payoutUniversalTime);
 
             return objectiveFundingContract.CalculateCurrentPayout(
                 HasAgencyCompletedObjectiveByTime(
                     agency,
                     objectiveFundingContract.Id,
-                    _nextFundingUniversalTime),
+                    payoutUniversalTime),
                 eligibleAgencyCount);
         }
 

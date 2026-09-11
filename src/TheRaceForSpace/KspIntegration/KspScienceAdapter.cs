@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Text;
 using TheRaceForSpace.Agencies;
+using TheRaceForSpace.Core;
+using TheRaceForSpace.Rivals;
 using UnityEngine;
 
 namespace TheRaceForSpace.KspIntegration
@@ -59,12 +62,137 @@ namespace TheRaceForSpace.KspIntegration
     /// </summary>
     internal static class KspScienceAdapter
     {
+        private const string KerbinBodyName = "Kerbin";
+        private const string SunBodyName = "Sun";
         private const string LandedSituation = "Landed";
         private const string SplashedSituation = "Splashed";
         private const string FlyingLowSituation = "FlyingLow";
         private const string FlyingHighSituation = "FlyingHigh";
         private const string LowSpaceSituation = "LowSpace";
         private const string HighSpaceSituation = "HighSpace";
+
+        private static readonly string[] RivalScienceSituations =
+        {
+            LandedSituation,
+            SplashedSituation,
+            FlyingLowSituation,
+            FlyingHighSituation,
+            LowSpaceSituation,
+            HighSpaceSituation
+        };
+
+        /// <summary>
+        /// Captures all stock-valid subjects for the supplied rival-unlocked experiment IDs. This method
+        /// is called only when the chronological rival Science flow needs a target/revalidation snapshot;
+        /// it does not create another realtime scheduler. A null result means KSP's Science boundary is
+        /// not ready yet, while an empty list means it is ready but no supplied experiment has a subject.
+        /// </summary>
+        internal static IList<RivalScienceSubjectCandidate> CaptureScienceCandidates(
+            IList<string> experimentIds)
+        {
+            if (ResearchAndDevelopment.Instance == null || FlightGlobals.Bodies == null)
+            {
+                return null;
+            }
+
+            var candidates = new List<RivalScienceSubjectCandidate>();
+            if (experimentIds == null || experimentIds.Count == 0)
+            {
+                return candidates;
+            }
+
+            var bodyNames = GetSupportedBodyNames();
+            var bodyBiomes = new Dictionary<string, IList<KspScienceBiomeSnapshot>>(
+                StringComparer.OrdinalIgnoreCase);
+            var candidateKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            for (int bodyIndex = 0; bodyIndex < bodyNames.Count; bodyIndex++)
+            {
+                string bodyName = bodyNames[bodyIndex];
+                bodyBiomes[bodyName] = CaptureBodyBiomes(
+                    bodyName,
+                    string.Equals(bodyName, KerbinBodyName, StringComparison.OrdinalIgnoreCase));
+            }
+
+            for (int experimentIndex = 0; experimentIndex < experimentIds.Count; experimentIndex++)
+            {
+                string experimentId = experimentIds[experimentIndex];
+                if (string.IsNullOrEmpty(experimentId))
+                {
+                    continue;
+                }
+
+                for (int bodyIndex = 0; bodyIndex < bodyNames.Count; bodyIndex++)
+                {
+                    string bodyName = bodyNames[bodyIndex];
+                    IList<KspScienceBiomeSnapshot> biomes = bodyBiomes[bodyName];
+
+                    for (int situationIndex = 0;
+                        situationIndex < RivalScienceSituations.Length;
+                        situationIndex++)
+                    {
+                        string situation = RivalScienceSituations[situationIndex];
+                        ScienceSubjectKey nonBiomeSubject = new ScienceSubjectKey(
+                            experimentId,
+                            bodyName,
+                            situation,
+                            string.Empty);
+                        KspScienceSubjectSnapshot nonBiomeSnapshot;
+                        if (TryCaptureSubject(nonBiomeSubject, out nonBiomeSnapshot))
+                        {
+                            string locationId = GetScienceLocationId(
+                                bodyName,
+                                situation,
+                                null);
+                            AddScienceCandidate(
+                                candidates,
+                                candidateKeys,
+                                nonBiomeSnapshot,
+                                locationId);
+                            continue;
+                        }
+
+                        for (int biomeIndex = 0; biomeIndex < biomes.Count; biomeIndex++)
+                        {
+                            KspScienceBiomeSnapshot biome = biomes[biomeIndex];
+                            if (biome == null
+                                || string.IsNullOrEmpty(biome.BiomeName)
+                                || (biome.IsMiniBiome
+                                    && !string.Equals(
+                                        situation,
+                                        LandedSituation,
+                                        StringComparison.Ordinal)))
+                            {
+                                continue;
+                            }
+
+                            ScienceSubjectKey biomeSubject = new ScienceSubjectKey(
+                                experimentId,
+                                bodyName,
+                                situation,
+                                biome.BiomeName);
+                            KspScienceSubjectSnapshot biomeSnapshot;
+                            if (!TryCaptureSubject(biomeSubject, out biomeSnapshot))
+                            {
+                                continue;
+                            }
+
+                            string locationId = GetScienceLocationId(
+                                bodyName,
+                                situation,
+                                biome);
+                            AddScienceCandidate(
+                                candidates,
+                                candidateKeys,
+                                biomeSnapshot,
+                                locationId);
+                        }
+                    }
+                }
+            }
+
+            return candidates;
+        }
 
         /// <summary>
         /// Resolves one requested project-owned Science identity to the current stock subject state.
@@ -252,6 +380,177 @@ namespace TheRaceForSpace.KspIntegration
             }
 
             return snapshots;
+        }
+
+        private static IList<string> GetSupportedBodyNames()
+        {
+            var bodyNames = new List<string> { KerbinBodyName };
+            var seenBodyNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                KerbinBodyName
+            };
+
+            foreach (RivalMissionLocationSettings location in CampaignSettings.RivalMissionLocations)
+            {
+                if (location == null
+                    || string.IsNullOrEmpty(location.LocationId)
+                    || !location.LocationId.StartsWith("body:", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                string bodyName = location.LocationId.Substring("body:".Length);
+                if (!string.IsNullOrEmpty(bodyName)
+                    && !string.Equals(bodyName, SunBodyName, StringComparison.OrdinalIgnoreCase)
+                    && seenBodyNames.Add(bodyName))
+                {
+                    bodyNames.Add(bodyName);
+                }
+            }
+
+            bodyNames.Sort(StringComparer.OrdinalIgnoreCase);
+            return bodyNames;
+        }
+
+        private static void AddScienceCandidate(
+            IList<RivalScienceSubjectCandidate> candidates,
+            ISet<string> candidateKeys,
+            KspScienceSubjectSnapshot snapshot,
+            string locationId)
+        {
+            if (snapshot == null
+                || snapshot.Subject == null
+                || string.IsNullOrEmpty(locationId)
+                || CampaignSettings.GetRivalMissionLocationSettings(locationId) == null)
+            {
+                return;
+            }
+
+            string candidateKey = snapshot.Subject.ExperimentId
+                + "|" + snapshot.Subject.BodyName
+                + "|" + snapshot.Subject.Situation
+                + "|" + snapshot.Subject.BiomeName
+                + "|" + locationId;
+            if (!candidateKeys.Add(candidateKey))
+            {
+                return;
+            }
+
+            candidates.Add(new RivalScienceSubjectCandidate(
+                snapshot.Subject,
+                locationId,
+                snapshot.RemainingScience));
+        }
+
+        private static string GetScienceLocationId(
+            string bodyName,
+            string situation,
+            KspScienceBiomeSnapshot biome)
+        {
+            if (string.IsNullOrEmpty(bodyName) || string.IsNullOrEmpty(situation))
+            {
+                return null;
+            }
+
+            if (!string.Equals(bodyName, KerbinBodyName, StringComparison.OrdinalIgnoreCase))
+            {
+                string bodyLocationId = "body:" + bodyName;
+                return CampaignSettings.GetRivalMissionLocationSettings(bodyLocationId) == null
+                    ? null
+                    : bodyLocationId;
+            }
+
+            if (string.Equals(situation, LowSpaceSituation, StringComparison.Ordinal)
+                || string.Equals(situation, HighSpaceSituation, StringComparison.Ordinal))
+            {
+                return CampaignSettings.RivalKerbinOrbitLocationId;
+            }
+
+            if (biome == null)
+            {
+                // Stock non-biome Kerbin subjects have no more precise location identity. Shores is
+                // the stable local balance location used for those surface/flight expeditions.
+                return CampaignSettings.GetRivalMissionLocationSettings("kerbin:shores") == null
+                    ? null
+                    : "kerbin:shores";
+            }
+
+            string prefix = biome.IsMiniBiome ? "ksc:" : "kerbin:";
+            string locationId = ResolveConfiguredBiomeLocationId(prefix, biome.BiomeName);
+            if (locationId != null)
+            {
+                return locationId;
+            }
+
+            return ResolveConfiguredBiomeLocationId(prefix, biome.DisplayName);
+        }
+
+        private static string ResolveConfiguredBiomeLocationId(string prefix, string biomeName)
+        {
+            string slug = ToLocationSlug(biomeName);
+            if (string.IsNullOrEmpty(slug))
+            {
+                return null;
+            }
+
+            string locationId = prefix + slug;
+            if (CampaignSettings.GetRivalMissionLocationSettings(locationId) != null)
+            {
+                return locationId;
+            }
+
+            if (string.Equals(prefix, "ksc:", StringComparison.OrdinalIgnoreCase)
+                && slug.StartsWith("ksc-", StringComparison.OrdinalIgnoreCase))
+            {
+                locationId = prefix + slug.Substring("ksc-".Length);
+                if (CampaignSettings.GetRivalMissionLocationSettings(locationId) != null)
+                {
+                    return locationId;
+                }
+            }
+
+            return null;
+        }
+
+        private static string ToLocationSlug(string value)
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                return null;
+            }
+
+            var builder = new StringBuilder();
+            bool needsSeparator = false;
+            for (int characterIndex = 0; characterIndex < value.Length; characterIndex++)
+            {
+                char character = value[characterIndex];
+                if (char.IsLetterOrDigit(character))
+                {
+                    if (needsSeparator && builder.Length > 0 && builder[builder.Length - 1] != '-')
+                    {
+                        builder.Append('-');
+                    }
+                    builder.Append(char.ToLowerInvariant(character));
+                    needsSeparator = false;
+                    continue;
+                }
+
+                if (character == '&')
+                {
+                    if (builder.Length > 0 && builder[builder.Length - 1] != '-')
+                    {
+                        builder.Append('-');
+                    }
+                    builder.Append("and");
+                    needsSeparator = true;
+                    continue;
+                }
+
+                needsSeparator = true;
+            }
+
+            string slug = builder.ToString().Trim('-');
+            return string.IsNullOrEmpty(slug) ? null : slug;
         }
 
         private static bool TryResolveSubject(

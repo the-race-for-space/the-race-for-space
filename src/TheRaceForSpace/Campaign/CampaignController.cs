@@ -442,7 +442,21 @@ namespace TheRaceForSpace.Campaign
                 _agencies,
                 currentUniversalTime,
                 _objectiveFundingContracts,
-                _satelliteNetworkFundingContracts);
+                _satelliteNetworkFundingContracts,
+                CaptureRivalScienceCandidates,
+                KspScienceAdapter.ConsumeRemainingScience);
+        }
+
+        private static IList<RivalScienceSubjectCandidate> CaptureRivalScienceCandidates(
+            AgencyState agency)
+        {
+            if (agency == null || agency.IsPlayer)
+            {
+                return null;
+            }
+
+            return KspScienceAdapter.CaptureScienceCandidates(
+                RivalScienceSimulation.GetAvailableExperimentIds(agency));
         }
 
         private void UpdateFundingAvailability(double evaluationUniversalTime)

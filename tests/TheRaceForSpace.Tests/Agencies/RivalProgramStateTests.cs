@@ -21,6 +21,7 @@ namespace TheRaceForSpace.Tests.Agencies
             RivalDevelopmentSimulationTests.RunAll();
             RivalLiveMissionSimulationTests.RunAll();
             RivalScienceSimulationTests.RunAll();
+            RivalSimulationChronologyTests.RunAll();
         }
 
         private static void RivalAgencyGetsApprovedDefaults()

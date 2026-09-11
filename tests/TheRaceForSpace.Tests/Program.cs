@@ -47,18 +47,10 @@ namespace TheRaceForSpace.Tests
             Run("Generic objective completion state validates timestamps", GenericObjectiveCompletionStateValidatesTimestamps);
             Run("Rival mission target ids map to display names", RivalMissionTargetIdsMapToDisplayNames);
             Run("Rival launch costs match target type", RivalLaunchCostsMatchTargetType);
-            Run("Rival pre-orbit completion does not create satellite", RivalPreOrbitCompletionDoesNotCreateSatellite);
             Run("Rival ETA detects unaffordable mission", RivalEtaDetectsUnaffordableMission);
             Run("Unavailable rival target is abandoned", UnavailableRivalTargetIsAbandoned);
             Run("Invalid rival target id is abandoned", InvalidRivalTargetIdIsAbandoned);
-            Run("Rival selects the only offered target", RivalSelectsOnlyAvailableTarget);
-            Run("Rival completion uses replay timestamp", RivalCompletionUsesReplayTimestamp);
-            Run("Rival collection selects offered objective completion", RivalSimulationCollectionTests.SelectsOnlyAvailableObjectiveFromCollection);
             Run("Rival collection excludes locked objective completion", RivalSimulationCollectionTests.LockedObjectiveIsExcludedFromCollection);
-            Run("Rival satellite contract remains repeatable", RivalSimulationCollectionTests.SatelliteNetworkContractRemainsRepeatable);
-            Run("Rival completes arbitrary satellite contract", RivalSimulationCollectionTests.CompletesArbitrarySatelliteNetworkContract);
-            Run("Rival collection cost uses contract body", RivalSimulationCollectionTests.CollectionCostUsesContractBody);
-            Run("Rival objective completion uses objective definition", RivalSimulationCollectionTests.ObjectiveCompletionUsesObjectiveDefinition);
             Run("Funding contracts persist arbitrary ids", CollectionPersistenceTests.FundingContractsRoundTripArbitraryIds);
             Run("Rival persistence handles arbitrary body and target", CollectionPersistenceTests.RivalRoundTripsArbitraryBodyAndTargetId);
             Run("Malformed persistence nodes are safe", CollectionPersistenceTests.MalformedCollectionNodesAreHandledSafely);

@@ -57,15 +57,6 @@ namespace TheRaceForSpace.KspIntegration
                 CampaignSettings.RivalStartingFunds,
                 0.0,
                 double.MaxValue);
-
-            // The legacy global progress chance remains live until the later rival-simulation task
-            // replaces it with the configured VAB + Launch Pad facility calculation.
-            CampaignSettings.RivalProgressChance = ReadDouble(
-                rootNode,
-                "rivalProgressChancePercent",
-                CampaignSettings.RivalProgressChance * 100.0,
-                0.0,
-                100.0) / 100.0;
             CampaignSettings.NumberOfRivals = ReadInt(
                 rootNode,
                 "numberOfRivals",

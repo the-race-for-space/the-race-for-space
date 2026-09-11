@@ -600,10 +600,16 @@ namespace TheRaceForSpace.UI
             EnsurePayoutScratchBuffers();
             _fundingScrollPosition = GUILayout.BeginScrollView(_fundingScrollPosition);
 
+            AgencyState player = _campaignController.PlayerAgency;
+
+            // Current one-off objectives stay at the top. Completed one-off objectives are drawn
+            // after the recurring satellite programmes so unfinished work remains easiest to find.
             for (int i = 0; i < _campaignController.ObjectiveFundingContracts.Count; i++)
             {
                 ObjectiveFundingContract contract = _campaignController.ObjectiveFundingContracts[i];
-                if (contract.IsExpired || !contract.IsOffered)
+                if (contract.IsExpired
+                    || !contract.IsOffered
+                    || _campaignController.HasAgencyCompletedObjective(player, contract))
                 {
                     continue;
                 }
@@ -621,6 +627,20 @@ namespace TheRaceForSpace.UI
                 }
 
                 DrawSatelliteNetworkFundingCard(contract);
+                GUILayout.Space(8.0f);
+            }
+
+            for (int i = 0; i < _campaignController.ObjectiveFundingContracts.Count; i++)
+            {
+                ObjectiveFundingContract contract = _campaignController.ObjectiveFundingContracts[i];
+                if (contract.IsExpired
+                    || !contract.IsOffered
+                    || !_campaignController.HasAgencyCompletedObjective(player, contract))
+                {
+                    continue;
+                }
+
+                DrawObjectiveFundingCard(contract);
                 GUILayout.Space(8.0f);
             }
 

@@ -231,7 +231,11 @@ namespace TheRaceForSpace.UI
                     }
                 }
 
-                GUILayout.Label(contract.Name);
+                GUILayout.Label(
+                    contract.Name
+                    + " - "
+                    + contract.BaseRewardFunds.ToString("N0")
+                    + " Funds");
                 GUILayout.EndHorizontal();
 
                 if (isExpanded)
@@ -270,7 +274,11 @@ namespace TheRaceForSpace.UI
                 hasCompletedContracts = true;
                 GUILayout.BeginHorizontal();
                 GUILayout.Space(24.0f);
-                GUILayout.Label(contract.Name);
+                GUILayout.Label(
+                    contract.Name
+                    + " - "
+                    + contract.BaseRewardFunds.ToString("N0")
+                    + " Funds");
                 GUILayout.FlexibleSpace();
                 GUILayout.Label("Complete", CompleteLabelOptions);
                 GUILayout.EndHorizontal();

@@ -313,10 +313,11 @@ namespace TheRaceForSpace.Tests.Rivals
                     satelliteNetworkFundingContracts));
             TestAssert.Equal(20, RivalSimulation.CalculateLaunchProgressIncrementPercent(aster));
 
-            double originalProgressChance = CampaignSettings.RivalProgressChance;
+            double originalFacilityChance = CampaignSettings.RivalNormalLaunchFacilityLevel1Chance;
             try
             {
-                CampaignSettings.RivalProgressChance = 1.0;
+                // Each Level 1 launch facility contributes 50%, giving a deterministic combined 100% chance.
+                CampaignSettings.RivalNormalLaunchFacilityLevel1Chance = 0.50;
                 ObjectiveDefinition preOrbitObjective = ObjectiveCatalogue.FindById(
                     ObjectiveCatalogue.DirectedPower1Id);
                 var preOrbitContract = new ObjectiveFundingContract(
@@ -390,7 +391,7 @@ namespace TheRaceForSpace.Tests.Rivals
                         objectiveFundingContracts,
                         satelliteNetworkFundingContracts));
 
-                CampaignSettings.RivalProgressChance = double.Epsilon;
+                CampaignSettings.RivalNormalLaunchFacilityLevel1Chance = 0.0;
                 TestAssert.Equal(
                     null,
                     RivalSimulation.CalculateEstimatedLaunchDays(
@@ -403,7 +404,7 @@ namespace TheRaceForSpace.Tests.Rivals
             }
             finally
             {
-                CampaignSettings.RivalProgressChance = originalProgressChance;
+                CampaignSettings.RivalNormalLaunchFacilityLevel1Chance = originalFacilityChance;
             }
         }
 

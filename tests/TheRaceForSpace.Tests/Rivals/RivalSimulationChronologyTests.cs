@@ -20,6 +20,7 @@ namespace TheRaceForSpace.Tests.Rivals
             ReadyCrewContentionUsesReadyTimeAndContractTieBreak();
             EarlierReadyScienceWinsWhenCrewReturnsLater();
             SharedScienceTieUsesStableAgencyIdOrder();
+            SignedNegativeFundingProjectionCanMakeLaunchUnaffordable();
             LargeTimeJumpProcessesStoredEventsChronologically();
         }
 
@@ -288,6 +289,39 @@ namespace TheRaceForSpace.Tests.Rivals
             Require(cobalt.RivalProgram.CompletedScienceSubjects.Contains(subject),
                 "The later exact-time rival should still record success even when zero Science remains.");
             Equal(0.0, sharedRemainingScience);
+        }
+
+        private static void SignedNegativeFundingProjectionCanMakeLaunchUnaffordable()
+        {
+            CampaignSettings.ResetToDefaults();
+            double originalFacilityChance = CampaignSettings.RivalNormalLaunchFacilityLevel1Chance;
+            try
+            {
+                // With both Level 1 facilities contributing 50%, expected successful checks are five days apart.
+                CampaignSettings.RivalNormalLaunchFacilityLevel1Chance = 0.50;
+                var rival = new AgencyState("aster", "Aster", false)
+                {
+                    Funds = 8000.0,
+                    NextPayoutFunds = -5000.0,
+                    NextMissionTargetId = ObjectiveCatalogue.DirectedPower1Id,
+                    MissionProgressPercent = 60
+                };
+
+                int? estimatedDays = RivalSimulation.CalculateEstimatedLaunchDays(
+                    rival,
+                    0.0,
+                    6.0 * KerbinDaySeconds,
+                    90.0 * KerbinDaySeconds,
+                    new List<ObjectiveFundingContract>(),
+                    new List<SatelliteNetworkFundingContract>());
+
+                Require(!estimatedDays.HasValue,
+                    "A negative funding boundary before the second required progress step should make the launch unaffordable.");
+            }
+            finally
+            {
+                CampaignSettings.RivalNormalLaunchFacilityLevel1Chance = originalFacilityChance;
+            }
         }
 
         private static void LargeTimeJumpProcessesStoredEventsChronologically()

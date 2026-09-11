@@ -517,7 +517,6 @@ Researched
       └─ Temperature Scan
 
   ✓ Survivability
-      └─ Atmospheric Pressure Scan
 
   ✓ Stability
 
@@ -885,6 +884,43 @@ Do not introduce new managers, services, factories, interfaces, class hierarchie
 - [ ] **Retire the legacy global rival progress-chance config when the facility model is implemented.** Remove `rivalProgressChancePercent` from active `CampaignSettings.cfg` gameplay and stop reading it in `CampaignSettingsLoader` once normal Launch Progress Chance is derived from VAB + Launch Pad. Do not keep a user-facing setting that silently does nothing; the new facility-based chances become the single source of truth.
 
 The ready-time rule requires one authoritative readiness timestamp for each preparation path. Add a persisted ready universal time to the normal rival Contract preparation state and to `ScienceLaunchPreparationState`; clear it whenever that preparation target resets or launches. This timestamp is gameplay ordering state, not UI-only state.
+
+### Approved implementation architecture for the rival expansion
+
+This file split is the approved maintainability plan for implementing the rival-programme design. It refines the earlier expected-project-changes table without changing the existing top-level module architecture. Keep `Core/`, `Campaign/`, `Agencies/`, `Rivals/`, `Objectives/`, `Funding/`, `Tracking/`, `Persistence/`, `KspIntegration/`, and `UI/` as the project boundaries; do not add a new top-level source module for the rival expansion.
+
+- [ ] **Keep rival programme state together in `Agencies/RivalProgramState.cs`.** Put `RivalProgramState` and the closely related small data-only types/enums there, including Science launch preparation, live mission state, Science subject identity, facility/construction state, research state, and facility/mission enums. Do not create a separate source file for every tiny state type unless one later grows into a substantial independent responsibility.
+- [ ] **Keep `Rivals/RivalSimulation.cs` as the single rival chronological coordinator.** Preserve this as the public rival-simulation entry point and conductor. It owns the normal Contract preparation flow, determines the next due rival event in universal-time order, arbitrates Contract-vs-Science launch readiness/crew contention, and delegates substantial specialist behaviour to the files below. It must not become a second campaign controller or hide the funding-boundary sequence from `CampaignController`.
+- [ ] **Add `Rivals/RivalScienceSimulation.cs` for Science preparation rules.** Own valid Science subject selection, experiment/tech eligibility, body/situation/biome access, daily Launch Progress checks, depleted-target replacement, Surface Sample/EVA gates, Science launch ETA inputs, and transition readiness into a live Science mission. It works on project-owned Science/state values and does not hold raw KSP `ScienceSubject`/`ResearchAndDevelopment` objects.
+- [ ] **Add `Rivals/RivalLiveMissionSimulation.cs` for launched-mission behaviour.** Own creation and final resolution of persistent Contract/Science live missions, duration/difficulty lookup consumption, success chance, deterministic outcome/casualty rolls, Kerbal return/loss, pending insurance, satellite-producing success/failure, shared-Science success handling, and post-launch sponsor-expiry behaviour.
+- [ ] **Add `Rivals/RivalDevelopmentSimulation.cs` for funding-boundary programme development.** Own rival research completion/selection and Space Centre construction completion/selection because both are funding-boundary development activities. Keep small facility, roster-cap, payroll, launch-chance, and affordability calculations close to the owning behaviour instead of creating separate manager/service classes for each one.
+- [ ] **Keep `Rivals/RivalTechCatalogue.cs` as fixed definition data.** Store the project-owned stock KSP 1.12 rival tech nodes, prerequisite relationships, Science costs, display names, and experiment unlocks here. The catalogue is deterministic definition data; it does not schedule research or query the player's live tech tree.
+- [ ] **Add `KspIntegration/KspScienceAdapter.cs` as the only stock-Science boundary.** Resolve stock experiments/subjects, read remaining Science, and consume the player's matching subject here. Convert KSP objects into project-owned Science subject/value data before returning to rival simulation so raw KSP Science objects do not leak into `Rivals/` or persistence.
+- [ ] **Split per-rival persistence into `Persistence/RivalProgramSaveState.cs`.** Keep `RivalAgenciesSaveState.cs` responsible for the collection/top-level `RIVAL_AGENCIES` section and stable agency matching, while the new data-only save-state class owns capture/load/apply of one rival's expanded programme state. This is a source-file split inside the existing persistence subsystem, not a new save section or persistence manager.
+- [ ] **Split Rival Agencies drawing into `UI/CommandCenterWindow.Rivals.cs`.** Make `CommandCenterWindow` a partial class and move only the Rival Agencies tab drawing/helper methods into the second file. Keep one `CommandCenterWindow` MonoBehaviour, one window lifecycle, and read-only UI behaviour; do not create another UI controller or gameplay owner.
+
+The chronological event flow is more important than the physical file split. Specialist rival files must not create their own independent realtime schedulers or bulk catch-up loops. `RivalSimulation` should advance a rival toward a target universal time by repeatedly finding and processing the earliest due rival event, then re-evaluating the next event until the target time is reached. Events include normal 5-day Contract Launch Progress checks, daily Science Launch Progress checks, live-mission completions, and any launch that becomes possible because a preceding event returned crew/capacity. Exact-time ties must use the already documented deterministic tie rules.
+
+```text
+ModRuntime (existing 5-second campaign refresh)
+  -> CampaignController.Refresh(...)
+      -> RivalSimulation advances rivals chronologically to the requested UT
+          -> normal Contract preparation event
+          -> RivalScienceSimulation Science-preparation event
+          -> RivalLiveMissionSimulation live-mission event
+      -> funding boundary when crossed
+          -> RivalSimulation catches scheduled rival events up to the boundary UT
+          -> RivalDevelopmentSimulation completes due research/construction
+          -> funding eligibility and payout sequence remains visible in CampaignController
+          -> RivalDevelopmentSimulation selects new research/construction
+          -> sponsor review
+```
+
+Keep the existing runtime cadence unchanged: approximately 1 second for active player Flight Contract telemetry, 5 seconds for campaign/rival refresh, and 20 seconds for the broad loaded/unloaded player-vessel scan. Daily Science checks, 5-day rival Contract checks, live mission durations, 90-day research, and 180/270-day construction are universal-time scheduled events evaluated through the existing campaign refresh; they do not receive additional Unity polling loops.
+
+Do not split the implementation into narrow classes such as `RivalKerbalManager`, `RivalInsuranceManager`, `RivalLaunchChanceService`, `RivalDestinationGateService`, `RivalSatelliteReservationManager`, or `RivalRandomService`. Keep small calculations with the substantial feature that owns them. `CampaignController` remains the high-level campaign/funding coordinator, `ModRuntime` remains the scheduler, and the exact funding-day sequence should stay readable in `CampaignController` rather than being hidden behind a generic process-everything abstraction.
+
+After implementation, update `docs/STRUCTURE.md` and `docs/CODE_OVERVIEW.md` to document these final file responsibilities and the chronological rival event flow.
 
 ### Remaining design decisions
 

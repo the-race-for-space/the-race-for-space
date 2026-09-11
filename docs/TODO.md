@@ -878,6 +878,14 @@ The recommended design should fit within the existing project modules. Expected 
 
 Do not introduce new managers, services, factories, interfaces, class hierarchies, external dependencies, or top-level source modules unless a concrete implementation problem proves the current architecture cannot support the required behaviour.
 
+### Additional locked implementation edge rules
+
+- [ ] **Resolve Contract-vs-Science crew contention by ready time.** If both the normal Contract preparation and Science preparation need the same limited Kerbal capacity, launch whichever preparation first reached 100% `Launch Progress`. Persist the ready universal time for each crew-required preparation so save/load and time warp preserve this ordering. If both preparations reach 100% at exactly the same universal time, give the Contract launch priority, then re-evaluate the Science launch with the remaining crew/capacity.
+- [ ] **Abandon a depleted Science target before launch, but not after launch.** Re-check the selected stock Science subject while an expedition is still in preparation. If the player or another rival exhausts that subject before this rival launches, cancel that preparation and randomly select another currently valid subject. Once the expedition has launched into Live Mission Progress, do not cancel it because the pool is later exhausted; it still resolves normally and may succeed for 0 Science.
+- [ ] **Retire the legacy global rival progress-chance config when the facility model is implemented.** Remove `rivalProgressChancePercent` from active `CampaignSettings.cfg` gameplay and stop reading it in `CampaignSettingsLoader` once normal Launch Progress Chance is derived from VAB + Launch Pad. Do not keep a user-facing setting that silently does nothing; the new facility-based chances become the single source of truth.
+
+The ready-time rule requires one authoritative readiness timestamp for each preparation path. Add a persisted ready universal time to the normal rival Contract preparation state and to `ScienceLaunchPreparationState`; clear it whenever that preparation target resets or launches. This timestamp is gameplay ordering state, not UI-only state.
+
 ### Remaining design decisions
 
 The decisions below are intentionally still open and can be handled in later passes. Items already decided above should not be re-added to this list unless the design changes.

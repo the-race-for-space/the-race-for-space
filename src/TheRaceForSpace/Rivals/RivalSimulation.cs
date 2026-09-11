@@ -318,7 +318,7 @@ namespace TheRaceForSpace.Rivals
             }
 
             double availableFunds = Math.Max(0.0, agency.Funds);
-            double projectedPayoutFunds = Math.Max(0.0, agency.NextPayoutFunds);
+            double projectedPayoutFunds = agency.NextPayoutFunds;
             double expectedDaysPerSuccessfulStep =
                 (launchProgressIntervalSeconds / KerbinDaySeconds) / progressChance;
             double fundingIntervalDays = fundingIntervalSeconds / KerbinDaySeconds;
@@ -336,8 +336,9 @@ namespace TheRaceForSpace.Rivals
             {
                 double expectedStepDay = elapsedDays + expectedDaysPerSuccessfulStep;
 
-                while (projectedPayoutFunds > 0.0
-                    && fundingIntervalDays > 0.0
+                // The projected boundary result is signed. Apply every crossed boundary before the
+                // expected progress check even when payroll/insurance makes that result negative.
+                while (fundingIntervalDays > 0.0
                     && nextFundingInDays < expectedStepDay)
                 {
                     availableFunds += projectedPayoutFunds;
@@ -346,6 +347,7 @@ namespace TheRaceForSpace.Rivals
 
                 if (availableFunds < launchProgressCostFunds)
                 {
+                    // Waiting can only improve affordability when the projected signed payout is positive.
                     if (projectedPayoutFunds <= 0.0
                         || fundingIntervalDays <= 0.0
                         || double.IsPositiveInfinity(nextFundingInDays))

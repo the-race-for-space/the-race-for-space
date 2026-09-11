@@ -5,6 +5,7 @@ using TheRaceForSpace.Objectives;
 using TheRaceForSpace.Persistence;
 using TheRaceForSpace.Agencies;
 using TheRaceForSpace.Rivals;
+using TheRaceForSpace.Tests.Agencies;
 using TheRaceForSpace.Tests.Objectives;
 using TheRaceForSpace.Tests.Persistence;
 using TheRaceForSpace.Tests.Rivals;
@@ -62,6 +63,7 @@ namespace TheRaceForSpace.Tests
             Run("Rival persistence handles arbitrary body and target", CollectionPersistenceTests.RivalRoundTripsArbitraryBodyAndTargetId);
             Run("Malformed persistence nodes are safe", CollectionPersistenceTests.MalformedCollectionNodesAreHandledSafely);
             Run("Empty persistence nodes stay empty", CollectionPersistenceTests.EmptyCollectionNodesRestoreWithoutInventingState);
+            Run("Rival programme v0.6 logic", RivalProgramStateTests.RunAll);
 
             Console.WriteLine();
             Console.WriteLine(_failures == 0

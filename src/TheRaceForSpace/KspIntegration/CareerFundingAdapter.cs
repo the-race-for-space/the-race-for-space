@@ -1,3 +1,5 @@
+using System;
+
 namespace TheRaceForSpace.KspIntegration
 {
     /// <summary>
@@ -5,6 +7,8 @@ namespace TheRaceForSpace.KspIntegration
     /// </summary>
     public static class CareerFundingAdapter
     {
+        internal static event Action<double> CampaignFundsAdded;
+
         public static bool TryAddFunds(double amount)
         {
             if (double.IsNaN(amount) || double.IsInfinity(amount) || amount <= 0.0)
@@ -22,6 +26,15 @@ namespace TheRaceForSpace.KspIntegration
             }
 
             global::Funding.Instance.AddFunds(amount, TransactionReasons.ContractReward);
+
+            // Presentation may report only awards that were actually accepted by KSP Career funding.
+            // The campaign remains the owner of payout timing and amount calculations.
+            Action<double> campaignFundsAdded = CampaignFundsAdded;
+            if (campaignFundsAdded != null)
+            {
+                campaignFundsAdded(amount);
+            }
+
             return true;
         }
     }

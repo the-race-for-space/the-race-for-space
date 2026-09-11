@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using TheRaceForSpace.Agencies;
+using TheRaceForSpace.Tests.Core;
 
 namespace TheRaceForSpace.Tests.Agencies
 {
@@ -12,6 +13,7 @@ namespace TheRaceForSpace.Tests.Agencies
             PlayerAgencyDoesNotGetRivalProgrammeState();
             ScienceSubjectIdentityIsStable();
             StateKeepsExplicitCrewCounts();
+            CampaignSettingsTests.RunAll();
         }
 
         private static void RivalAgencyGetsApprovedDefaults()

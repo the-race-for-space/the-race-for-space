@@ -18,7 +18,7 @@ namespace TheRaceForSpace.UI
     /// Campaign progression and controller lifetime are owned by ModRuntime in the Core module.
     /// </summary>
     [KSPAddon(KSPAddon.Startup.EveryScene, false)]
-    public sealed class CommandCenterWindow : MonoBehaviour
+    public sealed partial class CommandCenterWindow : MonoBehaviour
     {
         private enum ActiveView
         {
@@ -96,9 +96,6 @@ namespace TheRaceForSpace.UI
         private static readonly GUILayoutOption[] FundingLabelOptions = { GUILayout.Width(245.0f) };
         private static readonly GUILayoutOption[] FundingAmountOptions = { GUILayout.Width(100.0f) };
         private static readonly GUILayoutOption[] FundingCardLeftOptions = { GUILayout.Width(450.0f) };
-        private static readonly GUILayoutOption[] RivalDetailsOptions = { GUILayout.Width(320.0f) };
-        private static readonly GUILayoutOption[] RivalIncomeLabelOptions = { GUILayout.Width(245.0f) };
-        private static readonly GUILayoutOption[] RivalIncomeAmountOptions = { GUILayout.Width(125.0f) };
         private static readonly GUILayoutOption[] ContractCatalogueFundingButtonOptions =
             { GUILayout.Width(195.0f), GUILayout.Height(40.0f) };
         private static readonly GUILayoutOption[] ContractCatalogueSectionToggleOptions =
@@ -831,30 +828,6 @@ namespace TheRaceForSpace.UI
             }
         }
 
-        private void DrawRivalAgencies()
-        {
-            GUILayout.Label("RIVAL AGENCIES - " + FormatNextFundingDate());
-            GUILayout.Space(8.0f);
-
-            _rivalsScrollPosition = GUILayout.BeginScrollView(_rivalsScrollPosition);
-
-            for (int agencyIndex = 0; agencyIndex < _campaignController.RivalAgencies.Count; agencyIndex++)
-            {
-                AgencyState agency = _campaignController.RivalAgencies[agencyIndex];
-                if (agencyIndex > 0)
-                {
-                    GUILayout.Space(10.0f);
-                }
-
-                DrawProgramCard(
-                    agency,
-                    _campaignController.GetEstimatedRivalMissionDays(agency),
-                    _campaignController.GetRivalMissionProgressCost(agency));
-            }
-
-            GUILayout.EndScrollView();
-        }
-
         private void DrawHelpGuide()
         {
             _helpScrollPosition = GUILayout.BeginScrollView(_helpScrollPosition);
@@ -1443,133 +1416,6 @@ namespace TheRaceForSpace.UI
             return objective == null || string.IsNullOrEmpty(objective.Name)
                 ? objectiveId
                 : objective.Name;
-        }
-
-        private void DrawProgramCard(
-            AgencyState agency,
-            int? launchEtaDays,
-            double launchProgressCostFunds)
-        {
-            GUILayout.BeginVertical("box");
-            DrawCenteredCardTitle(agency.Name);
-
-            GUILayout.BeginHorizontal();
-            GUILayout.BeginVertical(RivalDetailsOptions);
-            GUILayout.Label(string.Empty);
-            GUILayout.Label("Funds: " + agency.Funds.ToString("N0"));
-            GUILayout.Label(
-                "Next Mission Planned: "
-                + (string.IsNullOrEmpty(agency.NextMissionDisplayName) ? "Planning" : agency.NextMissionDisplayName));
-            GUILayout.Label("Mission Progress: " + agency.MissionProgressPercent + "%");
-            GUILayout.Label(
-                "Mission Progress Cost: "
-                + launchProgressCostFunds.ToString("N0")
-                + " ("
-                + TheRaceForSpace.Rivals.RivalSimulation.CalculateLaunchProgressIncrementPercent(agency)
-                + "% +)");
-
-            string launchEtaText = "Awaiting Funding";
-            if (launchEtaDays.HasValue)
-            {
-                if (launchEtaDays.Value <= 20)
-                {
-                    launchEtaText = "Next launch imminent";
-                }
-                else
-                {
-                    // Rival funding arrives in large scheduled steps, so displaying a rounded-up
-                    // ten-day estimate is clearer than implying day-level precision.
-                    int roundedLaunchEtaDays = ((launchEtaDays.Value + 9) / 10) * 10;
-                    launchEtaText = roundedLaunchEtaDays + " days";
-                }
-            }
-
-            GUILayout.Label("ETA till Completion: " + launchEtaText);
-            GUILayout.EndVertical();
-
-            GUILayout.Space(24.0f);
-            GUILayout.BeginVertical(RivalIncomeLabelOptions);
-            GUILayout.Label(string.Empty);
-            GUILayout.Label("Base Income");
-
-            for (int contractIndex = 0;
-                contractIndex < _campaignController.ObjectiveFundingContracts.Count;
-                contractIndex++)
-            {
-                ObjectiveFundingContract contract =
-                    _campaignController.ObjectiveFundingContracts[contractIndex];
-                if (contract.IsExpired
-                    || !_campaignController.IsObjectiveFundingContractAvailable(contract)
-                    || !_campaignController.HasAgencyCompletedObjective(agency, contract))
-                {
-                    continue;
-                }
-
-                GUILayout.Label(contract.Name + ": Completed");
-            }
-
-            for (int contractIndex = 0;
-                contractIndex < _campaignController.SatelliteNetworkFundingContracts.Count;
-                contractIndex++)
-            {
-                SatelliteNetworkFundingContract contract = _campaignController.SatelliteNetworkFundingContracts[contractIndex];
-                int satelliteCount = agency.GetSatelliteCount(contract.CelestialBodyName);
-                double nextPayout = _campaignController.GetSatelliteCurrentPayout(agency, contract);
-                if (satelliteCount <= 0 || nextPayout <= 0.0)
-                {
-                    continue;
-                }
-
-                GUILayout.Label(contract.CelestialBodyName + " Satellites " + satelliteCount);
-            }
-
-            GUILayout.Space(6.0f);
-            GUILayout.Label("Total Next Payout", _boldLabelStyle);
-            GUILayout.EndVertical();
-
-            GUILayout.Space(2.0f);
-            GUILayout.BeginVertical(RivalIncomeAmountOptions);
-            GUILayout.Label(string.Empty);
-            GUILayout.Label(_campaignController.RivalBaseIncomePerFundingPeriod.ToString("N0"));
-
-            for (int contractIndex = 0;
-                contractIndex < _campaignController.ObjectiveFundingContracts.Count;
-                contractIndex++)
-            {
-                ObjectiveFundingContract contract =
-                    _campaignController.ObjectiveFundingContracts[contractIndex];
-                if (contract.IsExpired
-                    || !_campaignController.IsObjectiveFundingContractAvailable(contract)
-                    || !_campaignController.HasAgencyCompletedObjective(agency, contract))
-                {
-                    continue;
-                }
-
-                double nextPayout = _campaignController.GetObjectiveCurrentPayout(agency, contract);
-                GUILayout.Label(nextPayout > 0.0 ? nextPayout.ToString("N0") : string.Empty);
-            }
-
-            for (int contractIndex = 0;
-                contractIndex < _campaignController.SatelliteNetworkFundingContracts.Count;
-                contractIndex++)
-            {
-                SatelliteNetworkFundingContract contract = _campaignController.SatelliteNetworkFundingContracts[contractIndex];
-                int satelliteCount = agency.GetSatelliteCount(contract.CelestialBodyName);
-                double nextPayout = _campaignController.GetSatelliteCurrentPayout(agency, contract);
-                if (satelliteCount <= 0 || nextPayout <= 0.0)
-                {
-                    continue;
-                }
-
-                GUILayout.Label(nextPayout.ToString("N0"));
-            }
-
-            GUILayout.Space(6.0f);
-            GUILayout.Label(agency.NextPayoutFunds.ToString("N0"), _boldLabelStyle);
-            GUILayout.EndVertical();
-
-            GUILayout.EndHorizontal();
-            GUILayout.EndVertical();
         }
 
         private void EnsurePayoutScratchBuffers()

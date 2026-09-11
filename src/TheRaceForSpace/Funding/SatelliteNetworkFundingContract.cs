@@ -59,6 +59,10 @@ namespace TheRaceForSpace.Funding
             IsAvailable = isAvailable;
             UnlockRequirement = unlockRequirement;
             UnlockRule = unlockRule;
+
+            SatelliteNetworkMissionProfile missionProfile = SatelliteNetworkMissionProfileCatalogue.Resolve(id);
+            Difficulty = missionProfile.Difficulty;
+            RequiredKerbalCount = missionProfile.RequiredKerbalCount;
         }
 
         public string Id { get; private set; }
@@ -71,6 +75,16 @@ namespace TheRaceForSpace.Funding
         public bool IsAvailable { get; private set; }
         public bool IsOffered { get; private set; }
         public bool HasReachedSatelliteTarget { get; private set; }
+
+        /// <summary>
+        /// Rival live-mission difficulty on the approved 1-10 scale for one network launch.
+        /// </summary>
+        public int Difficulty { get; private set; }
+
+        /// <summary>
+        /// Exact rival Kerbals required for one network launch. Current network launches are uncrewed.
+        /// </summary>
+        public int RequiredKerbalCount { get; private set; }
 
         /// <summary>
         /// Permanently unlocks this satellite contract for the current campaign. Satellite contracts
@@ -143,6 +157,59 @@ namespace TheRaceForSpace.Funding
 
             double ownershipRatio = programSatelliteCount / (double)normalizedTotalSatelliteCount;
             return RewardFunds * ownershipRatio;
+        }
+    }
+
+    internal struct SatelliteNetworkMissionProfile
+    {
+        public SatelliteNetworkMissionProfile(int difficulty, int requiredKerbalCount)
+        {
+            Difficulty = difficulty;
+            RequiredKerbalCount = requiredKerbalCount;
+        }
+
+        public int Difficulty { get; private set; }
+        public int RequiredKerbalCount { get; private set; }
+    }
+
+    /// <summary>
+    /// Authoritative rival mission metadata for one launch toward each current satellite-network target.
+    /// </summary>
+    internal static class SatelliteNetworkMissionProfileCatalogue
+    {
+        public static SatelliteNetworkMissionProfile Resolve(string contractId)
+        {
+            switch (contractId)
+            {
+                case FundingContractCatalogue.KerbinNetworkId:
+                    return new SatelliteNetworkMissionProfile(4, 0);
+
+                case FundingContractCatalogue.MunNetworkId:
+                case FundingContractCatalogue.MinmusNetworkId:
+                    return new SatelliteNetworkMissionProfile(5, 0);
+
+                case FundingContractCatalogue.DunaNetworkId:
+                case FundingContractCatalogue.MohoNetworkId:
+                case FundingContractCatalogue.GillyNetworkId:
+                case FundingContractCatalogue.IkeNetworkId:
+                case FundingContractCatalogue.DresNetworkId:
+                case FundingContractCatalogue.JoolNetworkId:
+                case FundingContractCatalogue.LaytheNetworkId:
+                case FundingContractCatalogue.VallNetworkId:
+                case FundingContractCatalogue.TyloNetworkId:
+                case FundingContractCatalogue.BopNetworkId:
+                case FundingContractCatalogue.PolNetworkId:
+                    return new SatelliteNetworkMissionProfile(7, 0);
+
+                case FundingContractCatalogue.EveNetworkId:
+                case FundingContractCatalogue.EelooNetworkId:
+                    return new SatelliteNetworkMissionProfile(8, 0);
+
+                default:
+                    // Keep ad-hoc test/custom contracts usable. New production network IDs must receive
+                    // an explicit approved profile above before rival live missions consume them.
+                    return new SatelliteNetworkMissionProfile(1, 0);
+            }
         }
     }
 }

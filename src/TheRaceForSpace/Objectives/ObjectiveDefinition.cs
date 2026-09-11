@@ -255,6 +255,10 @@ namespace TheRaceForSpace.Objectives
             _baseRewardFunds = Math.Max(0.0, baseRewardFunds);
             _rivalProgressCostFunds = Math.Max(0.0, rivalProgressCostFunds);
 
+            ObjectiveMissionProfile missionProfile = ObjectiveMissionProfileCatalogue.Resolve(id, crewRequirement);
+            Difficulty = missionProfile.Difficulty;
+            RequiredKerbalCount = missionProfile.RequiredKerbalCount;
+
             PreOrbitContractCriteria criteria = preOrbitCriteria ?? PreOrbitContractCriteria.None;
             RequiredSpeedMetersPerSecond = criteria.RequiredSpeedMetersPerSecond;
             RequiredMassTonnes = criteria.RequiredMassTonnes;
@@ -279,6 +283,18 @@ namespace TheRaceForSpace.Objectives
         public ObjectiveType ObjectiveType { get; private set; }
         public PreOrbitContractLine PreOrbitLine { get; private set; }
         public int PreOrbitLevel { get; private set; }
+
+        /// <summary>
+        /// Rival live-mission difficulty on the approved 1-10 scale.
+        /// Current production objective IDs are assigned explicitly by ObjectiveMissionProfileCatalogue.
+        /// </summary>
+        public int Difficulty { get; private set; }
+
+        /// <summary>
+        /// Number of rival Kerbals required to launch this Contract. This remains independent from the
+        /// broad crew-category enum so future Contracts can require more than one Kerbal.
+        /// </summary>
+        public int RequiredKerbalCount { get; private set; }
 
         public double BaseRewardFunds
         {
@@ -383,6 +399,121 @@ namespace TheRaceForSpace.Objectives
             }
 
             return configuredDescription;
+        }
+    }
+
+    internal struct ObjectiveMissionProfile
+    {
+        public ObjectiveMissionProfile(int difficulty, int requiredKerbalCount)
+        {
+            Difficulty = difficulty;
+            RequiredKerbalCount = requiredKerbalCount;
+        }
+
+        public int Difficulty { get; private set; }
+        public int RequiredKerbalCount { get; private set; }
+    }
+
+    /// <summary>
+    /// Authoritative rival mission metadata for the current objective catalogue. Stable IDs, rather
+    /// than display names or crew wording, define mission difficulty and exact crew requirement.
+    /// </summary>
+    internal static class ObjectiveMissionProfileCatalogue
+    {
+        public static ObjectiveMissionProfile Resolve(
+            string objectiveId,
+            ObjectiveCrewRequirement crewRequirement)
+        {
+            switch (objectiveId)
+            {
+                case ObjectiveCatalogue.DirectedPower1Id:
+                case ObjectiveCatalogue.DirectedPower2Id:
+                case ObjectiveCatalogue.Mass1Id:
+                case ObjectiveCatalogue.Mass2Id:
+                case ObjectiveCatalogue.Biome1Id:
+                case ObjectiveCatalogue.Biome2Id:
+                    return new ObjectiveMissionProfile(1, 0);
+
+                case ObjectiveCatalogue.Control1Id:
+                case ObjectiveCatalogue.Control2Id:
+                    return new ObjectiveMissionProfile(1, 1);
+
+                case ObjectiveCatalogue.DirectedPower3Id:
+                case ObjectiveCatalogue.DirectedPower4Id:
+                case ObjectiveCatalogue.Mass3Id:
+                case ObjectiveCatalogue.Mass4Id:
+                case ObjectiveCatalogue.Biome3Id:
+                case ObjectiveCatalogue.Biome4Id:
+                    return new ObjectiveMissionProfile(2, 0);
+
+                case ObjectiveCatalogue.Control3Id:
+                case ObjectiveCatalogue.Control4Id:
+                    return new ObjectiveMissionProfile(2, 1);
+
+                case ObjectiveCatalogue.DirectedPower5Id:
+                case ObjectiveCatalogue.Mass5Id:
+                case ObjectiveCatalogue.Biome5Id:
+                    return new ObjectiveMissionProfile(3, 0);
+
+                case ObjectiveCatalogue.Control5Id:
+                    return new ObjectiveMissionProfile(3, 1);
+
+                case ObjectiveCatalogue.ProbeOrbitId:
+                    return new ObjectiveMissionProfile(4, 0);
+
+                case ObjectiveCatalogue.CrewedOrbitId:
+                    return new ObjectiveMissionProfile(5, 1);
+
+                case ObjectiveCatalogue.MunProbeOrbitId:
+                case ObjectiveCatalogue.MinmusProbeOrbitId:
+                    return new ObjectiveMissionProfile(5, 0);
+
+                case ObjectiveCatalogue.MunCrewedOrbitId:
+                case ObjectiveCatalogue.MinmusCrewedOrbitId:
+                    return new ObjectiveMissionProfile(6, 1);
+
+                case ObjectiveCatalogue.DunaProbeOrbitId:
+                case ObjectiveCatalogue.MohoProbeOrbitId:
+                case ObjectiveCatalogue.GillyProbeOrbitId:
+                case ObjectiveCatalogue.IkeProbeOrbitId:
+                case ObjectiveCatalogue.DresProbeOrbitId:
+                case ObjectiveCatalogue.JoolProbeOrbitId:
+                case ObjectiveCatalogue.LaytheProbeOrbitId:
+                case ObjectiveCatalogue.VallProbeOrbitId:
+                case ObjectiveCatalogue.TyloProbeOrbitId:
+                case ObjectiveCatalogue.BopProbeOrbitId:
+                case ObjectiveCatalogue.PolProbeOrbitId:
+                    return new ObjectiveMissionProfile(7, 0);
+
+                case ObjectiveCatalogue.DunaCrewedOrbitId:
+                case ObjectiveCatalogue.MohoCrewedOrbitId:
+                case ObjectiveCatalogue.GillyCrewedOrbitId:
+                case ObjectiveCatalogue.IkeCrewedOrbitId:
+                case ObjectiveCatalogue.DresCrewedOrbitId:
+                case ObjectiveCatalogue.JoolCrewedOrbitId:
+                case ObjectiveCatalogue.LaytheCrewedOrbitId:
+                case ObjectiveCatalogue.VallCrewedOrbitId:
+                case ObjectiveCatalogue.TyloCrewedOrbitId:
+                case ObjectiveCatalogue.BopCrewedOrbitId:
+                case ObjectiveCatalogue.PolCrewedOrbitId:
+                    return new ObjectiveMissionProfile(8, 1);
+
+                case ObjectiveCatalogue.EveProbeOrbitId:
+                case ObjectiveCatalogue.EelooProbeOrbitId:
+                    return new ObjectiveMissionProfile(8, 0);
+
+                case ObjectiveCatalogue.EveCrewedOrbitId:
+                case ObjectiveCatalogue.EelooCrewedOrbitId:
+                    return new ObjectiveMissionProfile(9, 1);
+
+                default:
+                    // Preserve the existing public constructor for ad-hoc/future definitions while current
+                    // production catalogue IDs remain explicitly covered above. New production Contracts
+                    // should add their approved profile here before they enter the catalogue.
+                    return new ObjectiveMissionProfile(
+                        1,
+                        crewRequirement == ObjectiveCrewRequirement.Crewed ? 1 : 0);
+            }
         }
     }
 }

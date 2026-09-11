@@ -16,9 +16,6 @@ namespace TheRaceForSpace.Tests.Core
         {
             CampaignSettings.ResetToDefaults();
 
-            Require(CampaignSettings.RivalProgressChance == 0.30,
-                "Task 3 should keep the legacy rival progress chance active until later integration.");
-
             Require(CampaignSettings.RivalKerbalHireCostFunds == 100000.0,
                 "Rival Kerbal hire cost should default to 100,000 Funds.");
             Require(CampaignSettings.RivalKerbalPayrollFundsPerFundingBoundary == 10000.0,

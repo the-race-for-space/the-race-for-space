@@ -94,7 +94,6 @@ namespace TheRaceForSpace.Core
 
         public static double FundingIntervalDays { get; set; }
         public static double RivalStartingFunds { get; set; }
-        public static double RivalProgressChance { get; set; }
         public static int NumberOfRivals { get; set; }
 
         public static double RivalKerbalHireCostFunds { get; set; }
@@ -183,10 +182,6 @@ namespace TheRaceForSpace.Core
 
             FundingIntervalDays = 90.0;
             RivalStartingFunds = 300000.0;
-
-            // This legacy value remains active until the normal rival launch simulation is replaced
-            // by the VAB + Launch Pad calculation in the later integration task.
-            RivalProgressChance = 0.30;
             NumberOfRivals = 2;
 
             RivalKerbalHireCostFunds = 100000.0;

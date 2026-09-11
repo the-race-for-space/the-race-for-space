@@ -567,6 +567,7 @@ This section records the agreed implementation direction for the rival-programme
 - [ ] **Gate Surface Sample with R&D Level 2 plus surface access.** The rival must have R&D Level 2 and must already have the target body's surface Science access before Surface Sample becomes a valid expedition subject.
 - [ ] **Use mission progression to unlock Science situations.** Kerbin begins with Landed, Splashed, Flying Low and Flying High available; completing Probe Orbit unlocks Kerbin Low Space and High Space. On other bodies, successful Probe Orbit unlocks Low Space and High Space, while a successful landing Contract unlocks Landed, Splashed, Flying Low and Flying High wherever those stock situations are valid.
 - [ ] **Resolve live missions independently of funding boundaries.** Live Contract and Science missions are checked on the normal five-second simulation refresh and resolve on the first refresh at or after their completion universal time. Funding dates do not delay live-mission outcomes.
+- [ ] **Use the agreed funding-boundary processing sequence.** When a funding boundary is crossed, first catch up any live missions whose completion universal time is on or before that boundary, then complete due research and facility construction, update funding eligibility, calculate income, apply payroll and insurance and credit the signed payout, choose new research, choose new affordable facility construction, and finally run the sponsor review for the next funding period. Preserve chronological universal-time ordering during time-warp/reload catch-up so only missions completed on or before that boundary can affect it.
 
 ### Recommended runtime state ownership
 
@@ -783,6 +784,21 @@ RivalFundingBreakdown
 
 Administration level supplies Base Income. Payroll and insurance are deductions. `NetPayout` is signed and may be negative. Apply it directly to `AgencyState.Funds`, allowing the rival balance to fall below zero. Pending insurance is fully consumed/cleared when that funding boundary applies it; do not create unpaid-insurance carry-forward state. `NextPayoutFunds`, launch affordability/ETA projections, funding-boundary payment, and the Rival Agencies UI should consume the same calculation rather than independently reconstructing totals.
 
+Use this deterministic funding-boundary sequence:
+
+```text
+Catch up live missions with completion time <= funding boundary
+-> Complete due research and facility construction
+-> Update funding eligibility
+-> Calculate income
+-> Apply payroll and insurance; credit the signed payout
+-> Choose new research
+-> Choose new affordable facility construction
+-> Sponsor review for the next funding period
+```
+
+Live missions still resolve on the normal five-second refresh. The catch-up step exists only for time warp/reload or any refresh that crosses a funding boundary, so event ordering remains chronological and a mission completed on or before the boundary can affect that funding event.
+
 ### Persistence design
 
 Keep the existing top-level `RIVAL_AGENCIES` save section and extend each stable-ID `RIVAL` record. Do not create another ScenarioModule save section merely for the new rival systems.
@@ -824,11 +840,11 @@ The recommended design should fit within the existing project modules. Expected 
 | `KspIntegration/CampaignSettingsLoader.cs` | Parse the added settings from existing `CampaignSettings.cfg`. |
 | `GameData/TheRaceForSpace/Config/CampaignSettings.cfg` | Store tuneable rival balance and location values. |
 | `Persistence/RivalAgenciesSaveState.cs` | Persist the composed rival programme state under existing rival save records, including negative Funds. |
-| `Campaign/CampaignController.cs` | Coordinate the normal live-mission refresh plus signed funding-boundary payroll/insurance, construction and research completion/selection, and shared funding calculations. |
+| `Campaign/CampaignController.cs` | Coordinate the normal live-mission refresh plus the agreed chronological funding-boundary sequence, signed payroll/insurance, construction/research completion and selection, and shared funding calculations. |
 | `KspIntegration/KspScienceAdapter.cs` | Keep stock KSP Science subject access/depletion at the integration boundary. |
 | `Objectives/ObjectiveDefinition.cs` and catalogue | Carry Contract difficulty and required rival crew counts. |
 | `UI/CommandCenterWindow.cs` | Render the approved Rival Agencies dashboard from read-only state, including signed next payout values. |
-| `tests/` | Cover location lookup, Tracking Station destination gates, Science situation progression, Surface Sample gating, success chance, deterministic five-second outcome/casualty catch-up, Contract difficulty/crew mapping, partial/complete shared-Science races, one-Kerbal defaults, roster/hiring/payroll, negative funding, unlimited uncrewed live missions, random affordable construction selection, funding-boundary research selection, live mission resolution, and persistence round-trips. |
+| `tests/` | Cover location lookup, Tracking Station destination gates, Science situation progression, Surface Sample gating, success chance, deterministic five-second outcome/casualty catch-up, Contract difficulty/crew mapping, partial/complete shared-Science races, one-Kerbal defaults, roster/hiring/payroll, negative funding, unlimited uncrewed live missions, random affordable construction selection, the agreed chronological funding-boundary sequence, funding-boundary research selection, live mission resolution, and persistence round-trips. |
 | `docs/STRUCTURE.md` / `docs/CODE_OVERVIEW.md` | Document final ownership/flow after implementation. |
 
 Do not introduce new managers, services, factories, interfaces, class hierarchies, external dependencies, or top-level source modules unless a concrete implementation problem proves the current architecture cannot support the required behaviour.
@@ -837,7 +853,6 @@ Do not introduce new managers, services, factories, interfaces, class hierarchie
 
 The decisions below are intentionally still open and can be handled in later passes. Items already decided above should not be re-added to this list unless the design changes.
 
-- [ ] **Define the exact funding-boundary processing order.** Live Contract and Science mission outcomes are explicitly outside this funding-day sequence and resolve on the normal five-second simulation refresh. Still decide the deterministic ordering, on a funding boundary, for funding-target state updates, gross/base/objective/satellite income, payroll/insurance, due research completion and new research selection, due facility completion and new affordable construction selection, and sponsor offer review. When a five-second catch-up crosses both a mission completion time and a funding boundary, event processing should preserve chronological universal-time ordering so a mission that completed on/before the boundary can affect that boundary while a later mission cannot.
 - [ ] **Complete the base/station content balance pass.** Define crew counts, difficulty, qualification criteria, payouts, maintenance/loss rules and exact progression for Desert, Polar, Kerbin orbital, Mun and Minmus infrastructure content.
 
 ### Implementation approval gate

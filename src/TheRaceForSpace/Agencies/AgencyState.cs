@@ -25,6 +25,12 @@ namespace TheRaceForSpace.Agencies
             Id = string.IsNullOrEmpty(id) ? name : id;
             Name = name;
             IsPlayer = isPlayer;
+            NextMissionReadyUniversalTime = -1.0;
+
+            if (!isPlayer)
+            {
+                RivalProgram = new RivalProgramState();
+            }
         }
 
         /// <summary>
@@ -35,6 +41,12 @@ namespace TheRaceForSpace.Agencies
         public string Name { get; private set; }
         public bool IsPlayer { get; private set; }
 
+        /// <summary>
+        /// Rival-only programme state. Player agencies deliberately leave this null because KSP owns
+        /// the player's facilities, Kerbals, Science, and technology state.
+        /// </summary>
+        public RivalProgramState RivalProgram { get; private set; }
+
         // Rival Funds is their simulated spendable balance; the player's real balance remains owned by KSP.
         public double Funds { get; set; }
         public double NextPayoutFunds { get; set; }
@@ -43,6 +55,13 @@ namespace TheRaceForSpace.Agencies
         public string NextMissionDisplayName { get; set; }
         public int MissionProgressPercent { get; set; }
         public double NextMissionProgressCheckUniversalTime { get; set; }
+
+        /// <summary>
+        /// Universal time when the current normal rival Contract preparation first reached 100%.
+        /// A negative value means it is not waiting ready for launch. This is persisted ordering state
+        /// for deterministic Contract-vs-Science crew contention.
+        /// </summary>
+        public double NextMissionReadyUniversalTime { get; set; }
 
         // Persistence enumerates these project-owned collections directly so future objective IDs
         // and celestial bodies do not require another fixed field on AgencyState.

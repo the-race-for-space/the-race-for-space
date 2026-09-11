@@ -5,6 +5,7 @@ using TheRaceForSpace.Core;
 using TheRaceForSpace.Funding;
 using TheRaceForSpace.Objectives;
 using TheRaceForSpace.Rivals;
+using TheRaceForSpace.Tests.Agencies;
 
 namespace TheRaceForSpace.Tests.Objectives
 {
@@ -75,6 +76,7 @@ namespace TheRaceForSpace.Tests.Objectives
 
             PreOrbitBalanceUsesCampaignSettings();
             ContractMissionMetadataMatchesApprovedDatabase();
+            RivalProgramStateTests.RunAll();
         }
 
         private static void ContractMissionMetadataMatchesApprovedDatabase()

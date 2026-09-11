@@ -27,11 +27,9 @@ namespace TheRaceForSpace.Tests.Rivals
         private static void NormalPreparationUsesFacilitiesAndLaunchesLiveMission()
         {
             CampaignSettings.ResetToDefaults();
-            double originalLegacyChance = CampaignSettings.RivalProgressChance;
             double originalFacilityChance = CampaignSettings.RivalNormalLaunchFacilityLevel1Chance;
             try
             {
-                CampaignSettings.RivalProgressChance = 0.0;
                 CampaignSettings.RivalNormalLaunchFacilityLevel1Chance = 0.50;
 
                 ObjectiveFundingContract contract = CreateOfferedObjectiveContract(ObjectiveCatalogue.DirectedPower1Id);
@@ -73,7 +71,6 @@ namespace TheRaceForSpace.Tests.Rivals
             }
             finally
             {
-                CampaignSettings.RivalProgressChance = originalLegacyChance;
                 CampaignSettings.RivalNormalLaunchFacilityLevel1Chance = originalFacilityChance;
             }
         }

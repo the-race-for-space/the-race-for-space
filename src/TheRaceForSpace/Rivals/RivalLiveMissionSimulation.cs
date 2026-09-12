@@ -42,8 +42,8 @@ namespace TheRaceForSpace.Rivals
 
     /// <summary>
     /// KSP-independent creation and resolution rules for launched rival Contract and Science missions.
-    /// RivalSimulation will later own chronological scheduling; this class only operates on one requested
-    /// launch or due mission and never creates a realtime polling loop.
+    /// RivalSimulation owns chronological scheduling; this class only operates on one requested launch
+    /// or due mission and never creates a realtime polling loop.
     /// </summary>
     internal static class RivalLiveMissionSimulation
     {
@@ -255,8 +255,8 @@ namespace TheRaceForSpace.Rivals
         /// <summary>
         /// Resolves one due live mission. For a successful Science mission the supplied callback is the
         /// authoritative shared-pool boundary: it returns the Science actually remaining and consumes it.
-        /// A successful Science mission is left pending when no callback is supplied, preventing silent
-        /// completion with an unconsumed player Science subject before KspScienceAdapter is integrated.
+        /// A successful Science mission is left pending when no callback is supplied so the shared stock
+        /// Science pool can never be bypassed silently.
         /// </summary>
         internal static RivalLiveMissionResolution ResolveMission(
             AgencyState rivalAgency,

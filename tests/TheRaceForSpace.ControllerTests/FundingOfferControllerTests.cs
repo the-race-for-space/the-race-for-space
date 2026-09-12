@@ -15,7 +15,7 @@ namespace TheRaceForSpace.ControllerTests
         public static void PreOrbitContractsOpenFourInitialOffersAndLockRemaining()
         {
             ResetEnvironment();
-            CampaignSettings.RivalProgressChance = 0.0;
+            CampaignSettings.RivalNormalLaunchFacilityLevel1Chance = 0.0;
             Planetarium.CurrentUniversalTime = 0.0;
             KspVesselMonitor.SetUnavailable();
 
@@ -40,7 +40,7 @@ namespace TheRaceForSpace.ControllerTests
         public static void RivalPreOrbitCompletionUnlocksNextLevelForSponsorReview()
         {
             ResetEnvironment();
-            CampaignSettings.RivalProgressChance = 0.0;
+            CampaignSettings.RivalNormalLaunchFacilityLevel1Chance = 0.0;
             Planetarium.CurrentUniversalTime = 0.0;
             KspVesselMonitor.SetUnavailable();
 
@@ -75,7 +75,7 @@ namespace TheRaceForSpace.ControllerTests
         public static void UnlockedPreOrbitLevelsJoinSponsorReview()
         {
             ResetEnvironment();
-            CampaignSettings.RivalProgressChance = 0.0;
+            CampaignSettings.RivalNormalLaunchFacilityLevel1Chance = 0.0;
             Planetarium.CurrentUniversalTime = 0.0;
             KspVesselMonitor.SetUnavailable();
 
@@ -134,7 +134,7 @@ namespace TheRaceForSpace.ControllerTests
         public static void PreOrbitOffersDoNotConsumeNormalObjectiveLimit()
         {
             ResetEnvironment();
-            CampaignSettings.RivalProgressChance = 0.0;
+            CampaignSettings.RivalNormalLaunchFacilityLevel1Chance = 0.0;
             Planetarium.CurrentUniversalTime = 0.0;
             KspVesselMonitor.SetUnavailable();
 
@@ -167,7 +167,7 @@ namespace TheRaceForSpace.ControllerTests
             for (int testIndex = 0; testIndex < levelFiveIds.Length; testIndex++)
             {
                 ResetEnvironment();
-                CampaignSettings.RivalProgressChance = 0.0;
+                CampaignSettings.RivalNormalLaunchFacilityLevel1Chance = 0.0;
                 Planetarium.CurrentUniversalTime = 0.0;
                 KspVesselMonitor.SetUnavailable();
 
@@ -198,7 +198,7 @@ namespace TheRaceForSpace.ControllerTests
         public static void UnlockedFundingWaitsForFundingReview()
         {
             ResetEnvironment();
-            CampaignSettings.RivalProgressChance = 0.0;
+            CampaignSettings.RivalNormalLaunchFacilityLevel1Chance = 0.0;
             Planetarium.CurrentUniversalTime = 0.0;
             KspVesselMonitor.SetUnavailable();
 
@@ -261,7 +261,7 @@ namespace TheRaceForSpace.ControllerTests
         public static void FundingReviewDoesNotCascadeCompletedOffers()
         {
             ResetEnvironment();
-            CampaignSettings.RivalProgressChance = 0.0;
+            CampaignSettings.RivalNormalLaunchFacilityLevel1Chance = 0.0;
             Planetarium.CurrentUniversalTime = 0.0;
             KspVesselMonitor.SetUnavailable();
 
@@ -327,7 +327,7 @@ namespace TheRaceForSpace.ControllerTests
         public static void SatelliteFulfilmentWaitsForFundingReview()
         {
             ResetEnvironment();
-            CampaignSettings.RivalProgressChance = 0.0;
+            CampaignSettings.RivalNormalLaunchFacilityLevel1Chance = 0.0;
             Planetarium.CurrentUniversalTime = 0.0;
             KspVesselMonitor.SetUnavailable();
 
@@ -369,7 +369,7 @@ namespace TheRaceForSpace.ControllerTests
         public static void SatelliteReviewCapsUnfulfilledOffersAtTwo()
         {
             ResetEnvironment();
-            CampaignSettings.RivalProgressChance = 0.0;
+            CampaignSettings.RivalNormalLaunchFacilityLevel1Chance = 0.0;
             Planetarium.CurrentUniversalTime = 0.0;
             KspVesselMonitor.SetUnavailable();
 
@@ -395,7 +395,7 @@ namespace TheRaceForSpace.ControllerTests
         public static void CrossedFundingBoundariesEachRunSponsorReview()
         {
             ResetEnvironment();
-            CampaignSettings.RivalProgressChance = 0.0;
+            CampaignSettings.RivalNormalLaunchFacilityLevel1Chance = 0.0;
             Planetarium.CurrentUniversalTime = 0.0;
             KspVesselMonitor.SetUnavailable();
 

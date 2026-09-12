@@ -16,7 +16,7 @@ namespace TheRaceForSpace.ControllerTests
         public static void OpeningOffersBuildInitialPlanAndStableRefreshReusesIt()
         {
             ResetEnvironment();
-            CampaignSettings.RivalProgressChance = 0.0;
+            CampaignSettings.RivalNormalLaunchFacilityLevel1Chance = 0.0;
             Planetarium.CurrentUniversalTime = 0.0;
             KspVesselMonitor.SetUnavailable();
 
@@ -44,7 +44,7 @@ namespace TheRaceForSpace.ControllerTests
         public static void RivalUnlockDoesNotChangePlanUntilSponsorOffersContract()
         {
             ResetEnvironment();
-            CampaignSettings.RivalProgressChance = 0.0;
+            CampaignSettings.RivalNormalLaunchFacilityLevel1Chance = 0.0;
             Planetarium.CurrentUniversalTime = 0.0;
             KspVesselMonitor.SetUnavailable();
 
@@ -86,7 +86,7 @@ namespace TheRaceForSpace.ControllerTests
         public static void PlayerCompletionInvalidatesAndRemovesOnlyCompletedContract()
         {
             ResetEnvironment();
-            CampaignSettings.RivalProgressChance = 0.0;
+            CampaignSettings.RivalNormalLaunchFacilityLevel1Chance = 0.0;
             Planetarium.CurrentUniversalTime = 0.0;
             KspVesselMonitor.SetUnavailable();
 
@@ -114,7 +114,7 @@ namespace TheRaceForSpace.ControllerTests
         public static void PreOrbitExpiryInvalidatesPlanWithoutAnotherPreOrbitOffer()
         {
             ResetEnvironment();
-            CampaignSettings.RivalProgressChance = 0.0;
+            CampaignSettings.RivalNormalLaunchFacilityLevel1Chance = 0.0;
             Planetarium.CurrentUniversalTime = 0.0;
             KspVesselMonitor.SetUnavailable();
 

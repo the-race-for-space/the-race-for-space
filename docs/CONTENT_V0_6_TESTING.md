@@ -25,7 +25,7 @@ Use a disposable Career save where possible.
 4. Start KSP and confirm there are no repeated The Race for Space exceptions in `KSP.log`.
 5. Create a fresh Career save for fresh-state checks. Keep a second disposable save for timewarp, failure, and save-edit-assisted checks if needed.
 
-The automated suite already covers deterministic rule-level cases such as exact-time Science tie ordering, casualty rolls, satellite reservations, crew contention, research selection, construction completion, negative funding, live-mission outcome signals, and chronological large-time jumps. The live checks below concentrate on KSP boundaries, persistence, presentation, and end-to-end behaviour.
+The automated suite already covers deterministic rule-level cases such as exact-time Science tie ordering, casualty rolls, satellite reservations, crew contention, research selection, construction completion, negative funding, live-mission outcome signals, genuine research/facility completion signals, and chronological large-time jumps. The live checks below concentrate on KSP boundaries, persistence, presentation, and end-to-end behaviour.
 
 ---
 
@@ -280,10 +280,14 @@ Confirm:
 - it unlocks only at the first funding boundary on or after that ready time;
 - it does not unlock early merely because universal time passed the 90-day point between funding boundaries;
 - completion clears the current project and adds the tech to Researched Tech;
+- exactly one stock inbox message is created with a title such as `Aster Research - COMPLETE`;
+- the message names the completed technology;
+- when that technology unlocks one or more Science experiments, the message includes `New Science experiment unlocked:` or `New Science experiments unlocked:` with the display names;
+- technologies with no experiment unlock omit that extra line;
 - **Show Locked Techs** displays only unresearched technologies, each on one line with cost, experiment unlocks, and prerequisites;
 - a new research project can be selected later according to the post-boundary stored Science state.
 
-Save and reload while research is active and confirm the project, paid cost, start time, ready time, and eligible completion funding date are unchanged even though some of those stored fields are intentionally not repeated in the compact UI.
+Save and reload while research is active and confirm the project, paid cost, start time, ready time, and eligible completion funding date are unchanged even though some of those stored fields are intentionally not repeated in the compact UI. A research project still active at save time should produce exactly one completion notification when it later completes; already-researched historical tech state must not replay a notification on load.
 
 ---
 
@@ -299,10 +303,15 @@ Confirm:
 - the UI shows source level, target level, paid Funds, remaining time, and expected completion date without a separate elapsed-time row;
 - Level 1 to 2 construction uses the configured duration;
 - the new facility level activates only at the first funding boundary where construction is due;
+- exactly one stock inbox message is created with a title such as `Aster Facility Upgrade - COMPLETE`;
+- the message names the completed facility and new level;
+- the next line begins with `Bonus:` and describes the capability granted by the finalized new level;
+- examples include `Bonus: Satellite capacity increased to 8.`, `Bonus: Destination access expanded to the Mun and Minmus.`, and `Bonus: Normal Launch Progress Chance increased by 3 percentage points.` using the current configured values;
+- Astronaut Complex Level 2 also mentions EVA Report access, and Research and Development Level 2 also mentions Surface Sample access;
 - the completed level affects subsequent authoritative capability calculations;
 - the same completed level is used by funding calculations at that boundary according to the locked controller ordering.
 
-Save and reload during construction and confirm all construction timing/cost state survives.
+Save and reload during construction and confirm all construction timing/cost state survives. A construction project still active at save time should produce exactly one completion notification when it later completes; an already-completed/restored facility level must not replay a notification on load.
 
 ---
 
@@ -326,9 +335,10 @@ Confirm:
 - each valid resolved Live Mission produces one result notification even when timewarp crosses its completion time;
 - progress checks crossed by the jump are not lost;
 - research and construction complete only at eligible funding boundaries;
+- each genuine research/facility completion crossed by the timewarp produces one corresponding notification;
 - every crossed funding boundary processes its payout and sponsor review;
 - the final next-funding date is the first boundary after current universal time;
-- no duplicated payout, launch, mission resolution, result notification, construction completion, or research completion occurs.
+- no duplicated payout, launch, mission resolution, result notification, development notification, construction completion, or research completion occurs.
 
 The automated suite covers a deterministic large-time-jump case; this live check validates the KSP timewarp/runtime integration around it.
 
@@ -354,7 +364,7 @@ Confirm preservation of:
 - every live mission's sequence, type, target/subject, location, launch time, duration, completion time, difficulty, Success Chance, assigned crew, planned Science, and outcome seed;
 - completed rival Science subjects.
 
-After reload, confirm historical objective completion data alone does not replay a rival Live Mission notification. A mission that was still live at save time should produce exactly one notification only when it later resolves.
+After reload, confirm historical objective completion data alone does not replay a rival Live Mission notification, historical researched-tech IDs do not replay research notifications, and historical facility levels do not replay construction notifications. A mission/research/construction project that was still active at save time should produce exactly one appropriate notification only when it later resolves/completes.
 
 A mission with a stored deterministic outcome seed should resolve to the same outcome after reload as it would have before reload.
 
@@ -391,13 +401,16 @@ Confirm stock KSP messages are produced for these live events:
 - a failed uncrewed Live Mission reports failure without crew text;
 - a failed crewed Live Mission with no casualties says the assigned Kerbal(s) escaped and survived;
 - a failed crewed Live Mission with casualties reports the number lost/surviving and the exact **Insurance Penalty to Pay**;
+- a rival research completion uses `<Rival> Research - COMPLETE`, names the technology, and lists newly unlocked Science experiments where applicable;
+- a rival facility completion uses `<Rival> Facility Upgrade - COMPLETE`, names the facility/new level, and includes its `Bonus:` capability line;
 - a successful player campaign funding payout shows the received Funds amount.
 
 Also confirm:
 
 - a successful rival Contract mission produces only the Live Mission result notification and does not also produce the retired **Rival Objective Completed** message;
+- each genuine research or facility completion produces only one notification even if later funding boundaries are processed;
 - loading an existing save does not replay historical sponsor-review offers;
-- restoring historical objective completion state does not create a rival Live Mission result notification;
+- restoring historical objective, researched-tech, or facility-level state does not create live completion notifications;
 - no funding-received message appears when no positive Career funding award was actually applied.
 
 ---
@@ -452,8 +465,8 @@ Save used:
 [ ] 8. Mission Control satellite capacity
 [ ] 9. Mission failure / casualties / insurance / notification
 [ ] 10. Rival funding / negative Funds
-[ ] 11. Rival research
-[ ] 12. Rival facility construction
+[ ] 11. Rival research / completion notification
+[ ] 12. Rival facility construction / completion notification
 [ ] 13. Large timewarp / crossed funding boundaries
 [ ] 14. Save/load persistence
 [ ] 15. UI polish / notifications

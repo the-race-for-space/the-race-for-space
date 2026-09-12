@@ -20,6 +20,7 @@ namespace TheRaceForSpace.Rivals
             bool objectiveRecorded,
             string satelliteBodyName,
             int lostKerbalCount,
+            double insurancePenaltyFunds,
             double scienceAwarded)
         {
             Mission = mission;
@@ -28,6 +29,7 @@ namespace TheRaceForSpace.Rivals
             ObjectiveRecorded = objectiveRecorded;
             SatelliteBodyName = satelliteBodyName;
             LostKerbalCount = lostKerbalCount;
+            InsurancePenaltyFunds = insurancePenaltyFunds;
             ScienceAwarded = scienceAwarded;
         }
 
@@ -37,6 +39,7 @@ namespace TheRaceForSpace.Rivals
         public bool ObjectiveRecorded { get; private set; }
         public string SatelliteBodyName { get; private set; }
         public int LostKerbalCount { get; private set; }
+        public double InsurancePenaltyFunds { get; private set; }
         public double ScienceAwarded { get; private set; }
     }
 
@@ -53,6 +56,8 @@ namespace TheRaceForSpace.Rivals
         private const string KscLocationPrefix = "ksc:";
 
         private static readonly Random SharedRandom = new Random();
+
+        internal static event Action<AgencyState, RivalLiveMissionResolution> LiveMissionResolved;
 
         internal static double CalculateSuccessChancePercent(int difficulty)
         {
@@ -337,6 +342,7 @@ namespace TheRaceForSpace.Rivals
             string satelliteBodyName = null;
             double scienceAwarded = 0.0;
             int lostKerbalCount = 0;
+            double insurancePenaltyFunds = 0.0;
 
             if (succeeded)
             {
@@ -373,20 +379,32 @@ namespace TheRaceForSpace.Rivals
             }
             else
             {
-                lostKerbalCount = ApplyDeterministicCasualties(programme, mission);
+                lostKerbalCount = ApplyDeterministicCasualties(
+                    programme,
+                    mission,
+                    out insurancePenaltyFunds);
             }
 
             // Removing the mission automatically returns every surviving assigned Kerbal to availability;
             // only casualties permanently reduce KerbalsEmployed.
             programme.LiveMissions.Remove(mission);
-            return new RivalLiveMissionResolution(
+            var resolution = new RivalLiveMissionResolution(
                 mission,
                 true,
                 succeeded,
                 objectiveRecorded,
                 satelliteBodyName,
                 lostKerbalCount,
+                insurancePenaltyFunds,
                 scienceAwarded);
+
+            Action<AgencyState, RivalLiveMissionResolution> liveMissionResolved = LiveMissionResolved;
+            if (liveMissionResolved != null)
+            {
+                liveMissionResolved(rivalAgency, resolution);
+            }
+
+            return resolution;
         }
 
         internal static int GetSatelliteCapacityUsed(
@@ -602,8 +620,10 @@ namespace TheRaceForSpace.Rivals
 
         private static int ApplyDeterministicCasualties(
             RivalProgramState programme,
-            RivalLiveMissionState mission)
+            RivalLiveMissionState mission,
+            out double insurancePenaltyFunds)
         {
+            insurancePenaltyFunds = 0.0;
             int employedKerbals = Math.Max(0, programme.KerbalsEmployed);
             int atRiskKerbals = Math.Min(Math.Max(0, mission.AssignedKerbalCount), employedKerbals);
             double lossChancePercent = ClampChance(CampaignSettings.RivalKerbalLossChance) * 100.0;
@@ -624,11 +644,11 @@ namespace TheRaceForSpace.Rivals
             }
 
             programme.KerbalsEmployed = Math.Max(0, employedKerbals - lostKerbals);
-            double insuranceFunds = lostKerbals
+            insurancePenaltyFunds = lostKerbals
                 * NormalizeNonNegative(CampaignSettings.RivalInsuranceFundsPerLostKerbal);
             programme.PendingInsuranceFunds = AddNonNegativeFinite(
                 programme.PendingInsuranceFunds,
-                insuranceFunds);
+                insurancePenaltyFunds);
             return lostKerbals;
         }
 
@@ -813,6 +833,7 @@ namespace TheRaceForSpace.Rivals
                 false,
                 null,
                 0,
+                0.0,
                 0.0);
         }
 

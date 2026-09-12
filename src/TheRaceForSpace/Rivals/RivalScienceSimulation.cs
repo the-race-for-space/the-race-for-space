@@ -28,9 +28,9 @@ namespace TheRaceForSpace.Rivals
     }
 
     /// <summary>
-    /// KSP-independent rival Launch Science Expedition rules. RivalSimulation will later own the
-    /// chronological event loop; this class selects/revalidates one preparation and processes one
-    /// requested daily progress check at a time.
+    /// KSP-independent rival Launch Science Expedition rules. RivalSimulation owns the chronological
+    /// event loop; this class selects/revalidates one preparation and processes one requested daily
+    /// progress check at a time.
     /// </summary>
     internal static class RivalScienceSimulation
     {
@@ -269,8 +269,9 @@ namespace TheRaceForSpace.Rivals
         }
 
         /// <summary>
-        /// Returns the canonical currently-valid candidate for the persisted preparation subject. This is
-        /// the location Task 10 can pass to the live-mission engine when launch arbitration permits launch.
+        /// Returns the canonical currently-valid candidate for the persisted preparation subject. The
+        /// coordinator can pass this candidate's location to the live-mission engine when launch
+        /// arbitration permits launch.
         /// </summary>
         internal static RivalScienceSubjectCandidate FindCurrentPreparationCandidate(
             AgencyState rivalAgency,
@@ -301,7 +302,7 @@ namespace TheRaceForSpace.Rivals
 
         /// <summary>
         /// Processes at most one stored daily Science Launch Progress check. Catch-up ordering belongs to
-        /// RivalSimulation, which will call this once for each chronological due event in Task 10.
+        /// RivalSimulation, which calls this once for each chronological due event.
         /// </summary>
         internal static bool ProcessProgressCheck(
             AgencyState rivalAgency,

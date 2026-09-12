@@ -17,6 +17,7 @@ namespace TheRaceForSpace.Tests.Rivals
             KerbinSurfaceAndKscScienceStartUnlocked();
             SituationAndDestinationAccessFollowProgression();
             SelectionUsesOnlyValidUniqueSubjectsWithoutSpendingFunds();
+            CurrentPreparationRevalidationKeepsCanonicalLocation();
             DailyProgressUsesScienceFacilitiesAndSetsReadyTime();
             EstimatedLaunchTimeUsesRemainingChecksAndChance();
             DepletedPreparationIsReplacedBeforeLaunch();
@@ -250,6 +251,55 @@ namespace TheRaceForSpace.Tests.Rivals
             Near(123456.0, rival.Funds);
             Require(RivalScienceSimulation.TrySelectNextPreparation(rival, 1.0, candidates) == null,
                 "A rival may prepare only one Science Expedition at a time.");
+        }
+
+        private static void CurrentPreparationRevalidationKeepsCanonicalLocation()
+        {
+            CampaignSettings.ResetToDefaults();
+            var rival = new AgencyState("aster", "Aster", false);
+            ScienceSubjectKey preparedSubject = new ScienceSubjectKey(
+                RivalTechCatalogue.CrewReportExperimentId,
+                "Kerbin",
+                "FlyingLow",
+                string.Empty);
+            rival.RivalProgram.ScienceLaunchPreparation = new ScienceLaunchPreparationState
+            {
+                Subject = preparedSubject,
+                PlannedScienceReward = 7.5,
+                LaunchProgressPercent = 40,
+                NextProgressCheckUniversalTime = KerbinDaySeconds,
+                RequiredKerbals = 1,
+                ReadyUniversalTime = -1.0
+            };
+
+            var candidates = new List<RivalScienceSubjectCandidate>
+            {
+                Candidate(
+                    RivalTechCatalogue.MysteryGooExperimentId,
+                    "Kerbin",
+                    "Landed",
+                    "Mountains",
+                    "kerbin:mountains",
+                    5.0),
+                new RivalScienceSubjectCandidate(preparedSubject, "kerbin:highlands", 7.5),
+                Candidate(
+                    RivalTechCatalogue.MysteryGooExperimentId,
+                    "Kerbin",
+                    "Landed",
+                    "Grasslands",
+                    "kerbin:grasslands",
+                    5.0),
+                new RivalScienceSubjectCandidate(preparedSubject, "kerbin:grasslands", 7.5),
+                new RivalScienceSubjectCandidate(preparedSubject, "kerbin:mountains", 7.5)
+            };
+
+            RivalScienceSubjectCandidate currentCandidate =
+                RivalScienceSimulation.FindCurrentPreparationCandidate(rival, candidates);
+            Require(currentCandidate != null,
+                "The current preparation subject should remain valid during direct revalidation.");
+            Equal("kerbin:grasslands", currentCandidate.LocationId);
+            Require(currentCandidate.Subject.Equals(preparedSubject),
+                "Direct revalidation should return the persisted preparation subject.");
         }
 
         private static void DailyProgressUsesScienceFacilitiesAndSetsReadyTime()

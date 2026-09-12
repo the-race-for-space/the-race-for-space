@@ -78,6 +78,12 @@ namespace TheRaceForSpace.ControllerTests
             Run(
                 "Rival due development completes before signed funding",
                 RivalFundingBoundaryIntegrationTests.DueDevelopmentCompletesBeforeSignedFundingIsApplied);
+            Run(
+                "Rival ready crew recruitment spends funding before construction",
+                RivalFundingBoundaryIntegrationTests.ReadyCrewRecruitmentUsesFundingBeforeFacilityConstruction);
+            Run(
+                "Rival roster-blocked recruitment does not reserve construction funds",
+                RivalFundingBoundaryIntegrationTests.RosterBlockedRecruitmentDoesNotReserveConstructionFunds);
 
             Run(
                 "Active pre-orbit plan opens with four cached contracts and reuses stable refresh",
@@ -131,7 +137,7 @@ namespace TheRaceForSpace.ControllerTests
                 FundingOfferControllerTests.FundingReviewDoesNotCascadeCompletedOffers);
             Run(
                 "Satellite fulfilment waits for sponsor review",
-                FundingOfferControllerTests.SatelliteFulfilmentWaitsForFundingReview);
+                FundingOfferControllerTests.SatelliteFulfilmentWaitsForSponsorReview);
             Run(
                 "Satellite sponsor review caps unfinished offers",
                 FundingOfferControllerTests.SatelliteReviewCapsUnfulfilledOffersAtTwo);

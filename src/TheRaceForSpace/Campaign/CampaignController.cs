@@ -503,7 +503,9 @@ namespace TheRaceForSpace.Campaign
 
         private void StartObjectiveFundingContracts(double evaluationUniversalTime)
         {
-            for (int contractIndex = 0; contractIndex < _objectiveFundingContracts.Count; contractIndex++)
+            for (int contractIndex = 0;
+                contractIndex < _objectiveFundingContracts.Count;
+                contractIndex++)
             {
                 ObjectiveFundingContract contract = _objectiveFundingContracts[contractIndex];
                 if (contract.IsOffered
@@ -571,7 +573,7 @@ namespace TheRaceForSpace.Campaign
                     ApplyRivalFundingBreakdown(agency, fundingBreakdown);
                 }
 
-                // Every active one-off sponsor Contract advances exactly once after its current
+                // 6. Every active one-off sponsor Contract advances exactly once after its current
                 // boundary payout has been calculated for all agencies.
                 for (int contractIndex = 0; contractIndex < _objectiveFundingContracts.Count; contractIndex++)
                 {
@@ -600,20 +602,34 @@ namespace TheRaceForSpace.Campaign
                     }
                 }
 
-                // 6-7. New projects may use the post-payout Science/Funds state, but their upgraded
-                // capability does not apply until a later eligible funding boundary completes them.
+                // 7. Research uses Stored Science rather than Funds, so keep its existing post-payout
+                // selection point before the crew-vs-construction Funds priority is resolved.
                 for (int rivalIndex = 0; rivalIndex < _rivalAgencies.Count; rivalIndex++)
                 {
-                    AgencyState rivalAgency = _rivalAgencies[rivalIndex];
                     RivalDevelopmentSimulation.TryStartResearch(
-                        rivalAgency,
-                        payoutUniversalTime);
-                    RivalDevelopmentSimulation.TryStartFacilityConstruction(
-                        rivalAgency,
+                        _rivalAgencies[rivalIndex],
                         payoutUniversalTime);
                 }
 
-                // 8. Sponsor review is deliberately last so new offers belong to the next period.
+                // 8. A mission that was already ready but could not afford missing crew gets first use
+                // of newly available post-payout Funds. Only genuinely recruitable ready launches are
+                // retried here; roster-blocked missions do not reserve Funds or stop later construction.
+                RivalSimulation.RetryRecruitableReadyLaunches(
+                    _agencies,
+                    payoutUniversalTime,
+                    _objectiveFundingContracts,
+                    _satelliteNetworkFundingContracts,
+                    CaptureRivalScienceCandidates);
+
+                // 9. New construction may spend only the Funds left after ready-mission recruitment.
+                for (int rivalIndex = 0; rivalIndex < _rivalAgencies.Count; rivalIndex++)
+                {
+                    RivalDevelopmentSimulation.TryStartFacilityConstruction(
+                        _rivalAgencies[rivalIndex],
+                        payoutUniversalTime);
+                }
+
+                // 10. Sponsor review is deliberately last so new offers belong to the next period.
                 ReviewFundingOffers(payoutUniversalTime);
                 _nextFundingUniversalTime += _fundingIntervalSeconds;
             }

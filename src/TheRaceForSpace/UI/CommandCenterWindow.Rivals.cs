@@ -231,12 +231,9 @@ namespace TheRaceForSpace.UI
         {
             RivalProgramState programme = agency.RivalProgram;
             ScienceLaunchPreparationState preparation = programme.ScienceLaunchPreparation;
-            IList<string> availableExperimentIds = RivalScienceSimulation.GetAvailableExperimentIds(agency);
 
             GUILayout.BeginVertical("box");
             GUILayout.Label("Launch Science Expedition", _boldLabelStyle);
-            GUILayout.Label("Unlocked Experiments: " + FormatExperimentList(availableExperimentIds));
-            GUILayout.Label("Expedition Range: " + RivalScienceSimulation.GetExpeditionRange(agency));
 
             if (preparation == null || preparation.Subject == null)
             {
@@ -249,10 +246,17 @@ namespace TheRaceForSpace.UI
             double progressChance = RivalDevelopmentSimulation.GetScienceLaunchProgressChance(agency) * 100.0;
             double? estimatedLaunchDays = RivalScienceSimulation.CalculateEstimatedLaunchDays(agency);
 
-            GUILayout.Label("Experiment: " + GetScienceExperimentDisplayName(preparation.Subject.ExperimentId));
-            GUILayout.Label("Body: " + EmptyAsNone(preparation.Subject.BodyName));
-            GUILayout.Label("Situation: " + FormatScienceSituation(preparation.Subject.Situation));
-            GUILayout.Label("Biome: " + EmptyAsNone(preparation.Subject.BiomeName));
+            GUILayout.Label(
+                "Experiment: "
+                + GetScienceExperimentDisplayName(preparation.Subject.ExperimentId)
+                + ", "
+                + EmptyAsNone(preparation.Subject.BodyName));
+            GUILayout.Label(
+                "Situation: "
+                + FormatScienceSituation(preparation.Subject.Situation)
+                + (string.IsNullOrEmpty(preparation.Subject.BiomeName)
+                    ? string.Empty
+                    : ", " + preparation.Subject.BiomeName));
             GUILayout.Label("Launch Progress: " + progressPercent + "%");
             GUILayout.Label(
                 "Progress Chance - daily: "
@@ -816,27 +820,6 @@ namespace TheRaceForSpace.UI
             int remainingDays = (int)Math.Ceiling(
                 Math.Max(0.0, targetUniversalTime - currentUniversalTime) / KerbinDaySeconds);
             return remainingDays + (remainingDays == 1 ? " day" : " days");
-        }
-
-        private static string FormatExperimentList(IList<string> experimentIds)
-        {
-            if (experimentIds == null || experimentIds.Count == 0)
-            {
-                return "None";
-            }
-
-            var displayNames = new System.Text.StringBuilder(128);
-            for (int experimentIndex = 0; experimentIndex < experimentIds.Count; experimentIndex++)
-            {
-                if (experimentIndex > 0)
-                {
-                    displayNames.Append(", ");
-                }
-
-                displayNames.Append(GetScienceExperimentDisplayName(experimentIds[experimentIndex]));
-            }
-
-            return displayNames.ToString();
         }
 
         private static string GetScienceExperimentDisplayName(string experimentId)

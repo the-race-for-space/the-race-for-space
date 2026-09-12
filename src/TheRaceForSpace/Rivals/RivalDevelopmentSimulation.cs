@@ -47,6 +47,9 @@ namespace TheRaceForSpace.Rivals
 
         private static readonly Random SharedRandom = new Random();
 
+        internal static event Action<AgencyState, RivalTechNodeDefinition> ResearchCompleted;
+        internal static event Action<AgencyState, RivalFacilityConstructionState> FacilityConstructionCompleted;
+
         internal static int GetFacilityLevel(AgencyState rivalAgency, RivalFacilityType facility)
         {
             RivalProgramState programme;
@@ -384,10 +387,22 @@ namespace TheRaceForSpace.Rivals
                 }
 
                 int currentLevel = GetFacilityLevel(rivalAgency, construction.Facility);
-                programme.FacilityLevels[construction.Facility] =
-                    Math.Max(currentLevel, construction.TargetLevel);
+                int completedLevel = Math.Max(currentLevel, construction.TargetLevel);
+                programme.FacilityLevels[construction.Facility] = completedLevel;
                 programme.FacilityConstruction.RemoveAt(constructionIndex);
                 changed = true;
+
+                // Presentation observes only a genuine capability increase after the authoritative
+                // facility level and active-construction state have both been finalized.
+                if (completedLevel > currentLevel)
+                {
+                    Action<AgencyState, RivalFacilityConstructionState> facilityConstructionCompleted =
+                        FacilityConstructionCompleted;
+                    if (facilityConstructionCompleted != null)
+                    {
+                        facilityConstructionCompleted(rivalAgency, construction);
+                    }
+                }
             }
 
             return changed;
@@ -611,14 +626,22 @@ namespace TheRaceForSpace.Rivals
             }
 
             RivalTechNodeDefinition techNode = RivalTechCatalogue.GetById(research.TechId);
-            if (techNode != null)
+            bool researchRecorded = techNode != null
+                && programme.ResearchedTechIds.Add(techNode.Id);
+
+            // An unknown/already-restored tech can only come from malformed/migrated state. Clear a
+            // due invalid project rather than permanently blocking future valid research, but do not
+            // present that cleanup as a newly completed research project.
+            programme.CurrentResearch = null;
+            if (researchRecorded)
             {
-                programme.ResearchedTechIds.Add(techNode.Id);
+                Action<AgencyState, RivalTechNodeDefinition> researchCompleted = ResearchCompleted;
+                if (researchCompleted != null)
+                {
+                    researchCompleted(rivalAgency, techNode);
+                }
             }
 
-            // An unknown tech ID can only come from malformed/migrated state. Clear a due invalid project
-            // rather than permanently blocking the rival from selecting future valid research.
-            programme.CurrentResearch = null;
             return true;
         }
 

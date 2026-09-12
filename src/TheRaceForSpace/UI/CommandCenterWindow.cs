@@ -871,14 +871,23 @@ namespace TheRaceForSpace.UI
                 "Funding is given for the number of satellite in orbit of the body. This is a fixed contract and will always pay out. Once the maximum number of satellites is meet which ever agencies has the biggest share of satellites will get the bigger share of the payout.");
 
             GUILayout.Space(8.0f);
-            GUILayout.Label("PreOrbit Contracts", _boldLabelStyle);
+            GUILayout.Label("Pre-Orbit Kerbin Contracts", _boldLabelStyle);
             GUILayout.Label(
-                "The campaign begins with Directed Power I, Mass I, Control I and Biome I offered. The remaining sixteen pre-orbit contracts use the normal Offered, Unlocked, Locked and Expired states. Any agency, including a rival, completing a level unlocks the next level in that same line. Every pre-orbit contract that is Offered and unfinished for you is active independently, so one flight may satisfy more than one offered contract. Completing level five in any one line unlocks Probe Orbit for the campaign.");
+                "Before funding is offered to be the first Kerbal Agency to orbit the planet we have to prove our capabilities. There are four different funding contracts that lead to being offered to go to orbit. Start with any funding line offered Directed Power I, Mass I, Control I and Biome I. Once you reach level 5 in any of these funding you will have access to space exploration funding for a Kerbal Orbit.");
 
             GUILayout.Space(8.0f);
             GUILayout.Label("Unlocking New Funding Target", _boldLabelStyle);
             GUILayout.Label(
                 "New funding targets can be unlocked by meeting the requirements of the funding targets currently available. Look down the list below to see all of the available funding targets:");
+
+            GUILayout.Space(12.0f);
+            GUILayout.Label("Funding Sharing Example", _boldLabelStyle);
+            GUILayout.Label(
+                "For example, imagine a funding target has a payout of 100,000 Funds.\n\n"
+                + "If your agency is the only agency to have completed the objective when the first funding date arrives, you receive the full 100,000 Funds.\n\n"
+                + "After that payout, interest falls and the next total payout is reduced by 10% to 90,000 Funds.\n\n"
+                + "If a rival agency has also completed the objective before that next funding date, both eligible agencies share the 90,000 Funds. Your agency receives 45,000 Funds and the rival receives 45,000 Funds.\n\n"
+                + "This means completing objectives early gives you more opportunities to receive funding before rival agencies begin sharing the remaining payouts.");
             GUILayout.EndVertical();
 
             GUILayout.EndScrollView();

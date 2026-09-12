@@ -15,6 +15,8 @@ namespace TheRaceForSpace.UI
     /// </summary>
     public sealed partial class CommandCenterWindow
     {
+        private const int RivalSelectorSlotCount = 4;
+
         private static readonly GUILayoutOption[] RivalStatusColumnOptions = { GUILayout.Width(405.0f) };
         private static readonly GUILayoutOption[] RivalLiveItemOptions = { GUILayout.Width(155.0f) };
         private static readonly GUILayoutOption[] RivalLiveLocationOptions = { GUILayout.Width(145.0f) };
@@ -26,36 +28,90 @@ namespace TheRaceForSpace.UI
         private static readonly GUILayoutOption[] RivalFacilityNameOptions = { GUILayout.Width(190.0f) };
         private static readonly GUILayoutOption[] RivalFundingLabelOptions = { GUILayout.Width(320.0f) };
         private static readonly GUILayoutOption[] RivalFundingAmountOptions = { GUILayout.Width(125.0f) };
+        private static readonly GUILayoutOption[] RivalSelectorButtonOptions =
+            { GUILayout.Width(140.0f), GUILayout.Height(26.0f) };
         private static readonly GUILayoutOption[] RivalTechTreeButtonOptions =
             { GUILayout.Width(180.0f), GUILayout.Height(26.0f) };
 
         private readonly Dictionary<string, bool> _rivalLockedTechsExpandedByAgencyId =
             new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
+        private string _selectedRivalAgencyId;
 
         private void DrawRivalAgencies()
         {
             GUILayout.Label("Rival Agencies - " + FormatNextFundingDate());
             GUILayout.Space(8.0f);
 
-            _rivalsScrollPosition = GUILayout.BeginScrollView(_rivalsScrollPosition);
-
-            if (_campaignController.RivalAgencies.Count == 0)
-            {
-                GUILayout.Label("No rival agencies are configured.");
-            }
-
-            double currentUniversalTime = GetRivalUiCurrentUniversalTime();
-            for (int agencyIndex = 0; agencyIndex < _campaignController.RivalAgencies.Count; agencyIndex++)
+            int selectorCount = Math.Min(
+                RivalSelectorSlotCount,
+                _campaignController.RivalAgencies.Count);
+            AgencyState selectedAgency = null;
+            for (int agencyIndex = 0; agencyIndex < selectorCount; agencyIndex++)
             {
                 AgencyState agency = _campaignController.RivalAgencies[agencyIndex];
-                if (agencyIndex > 0)
+                if (agency != null
+                    && string.Equals(
+                        agency.Id,
+                        _selectedRivalAgencyId,
+                        StringComparison.OrdinalIgnoreCase))
                 {
-                    GUILayout.Space(12.0f);
+                    selectedAgency = agency;
+                    break;
                 }
-
-                DrawRivalProgramCard(agency, currentUniversalTime);
             }
 
+            if (selectedAgency == null)
+            {
+                for (int agencyIndex = 0; agencyIndex < selectorCount; agencyIndex++)
+                {
+                    AgencyState agency = _campaignController.RivalAgencies[agencyIndex];
+                    if (agency == null)
+                    {
+                        continue;
+                    }
+
+                    selectedAgency = agency;
+                    _selectedRivalAgencyId = agency.Id;
+                    break;
+                }
+            }
+
+            if (selectedAgency == null)
+            {
+                GUILayout.Label("No rival agencies are configured.");
+                return;
+            }
+
+            GUILayout.BeginHorizontal();
+            for (int agencyIndex = 0; agencyIndex < selectorCount; agencyIndex++)
+            {
+                AgencyState agency = _campaignController.RivalAgencies[agencyIndex];
+                if (agency == null)
+                {
+                    continue;
+                }
+
+                bool isSelected = string.Equals(
+                    agency.Id,
+                    _selectedRivalAgencyId,
+                    StringComparison.OrdinalIgnoreCase);
+                bool previousGuiEnabled = GUI.enabled;
+                GUI.enabled = !isSelected;
+                if (GUILayout.Button(
+                    GetRivalSelectorLabel(agency, agencyIndex),
+                    RivalSelectorButtonOptions))
+                {
+                    _selectedRivalAgencyId = agency.Id;
+                    selectedAgency = agency;
+                    _rivalsScrollPosition = Vector2.zero;
+                }
+                GUI.enabled = previousGuiEnabled;
+            }
+            GUILayout.EndHorizontal();
+            GUILayout.Space(8.0f);
+
+            _rivalsScrollPosition = GUILayout.BeginScrollView(_rivalsScrollPosition);
+            DrawRivalProgramCard(selectedAgency, GetRivalUiCurrentUniversalTime());
             GUILayout.EndScrollView();
         }
 
@@ -803,6 +859,30 @@ namespace TheRaceForSpace.UI
                 default:
                     return string.Empty;
             }
+        }
+
+        private static string GetRivalSelectorLabel(AgencyState agency, int agencyIndex)
+        {
+            if (agency == null || string.IsNullOrWhiteSpace(agency.Name))
+            {
+                return "Rival " + (agencyIndex + 1);
+            }
+
+            string trimmedName = agency.Name.Trim();
+            const string GenericRivalPrefix = "Rival Agency ";
+            if (trimmedName.StartsWith(GenericRivalPrefix, StringComparison.OrdinalIgnoreCase))
+            {
+                string rivalNumber = trimmedName.Substring(GenericRivalPrefix.Length).Trim();
+                if (!string.IsNullOrEmpty(rivalNumber))
+                {
+                    return "Rival " + rivalNumber;
+                }
+            }
+
+            int firstSpaceIndex = trimmedName.IndexOf(' ');
+            return firstSpaceIndex > 0
+                ? trimmedName.Substring(0, firstSpaceIndex)
+                : trimmedName;
         }
 
         private bool IsRivalLockedTechsExpanded(string agencyId)

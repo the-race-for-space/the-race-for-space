@@ -422,10 +422,10 @@ Each rival card reads authoritative state in this order:
 Programme Status
 Live Mission Progress
 Current Launch Programme | Launch Science Expedition
+Funding
 Construction
 Facilities
 Tech Tree / Research
-Funding
 ```
 
 The UI does not simulate a progress check, roll an outcome, spend Funds, award Science, complete construction, or choose research.

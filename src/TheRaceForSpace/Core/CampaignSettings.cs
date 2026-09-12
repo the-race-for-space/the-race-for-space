@@ -181,7 +181,7 @@ namespace TheRaceForSpace.Core
                 (double[])DefaultPreOrbitRivalProgressCostFundsByLevel.Clone();
 
             FundingIntervalDays = 90.0;
-            RivalStartingFunds = 300000.0;
+            RivalStartingFunds = 400000.0;
             NumberOfRivals = 2;
 
             RivalKerbalHireCostFunds = 100000.0;

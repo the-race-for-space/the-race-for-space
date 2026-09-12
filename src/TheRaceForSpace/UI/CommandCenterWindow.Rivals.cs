@@ -243,6 +243,8 @@ namespace TheRaceForSpace.UI
             }
 
             int progressPercent = Math.Max(0, Math.Min(100, preparation.LaunchProgressPercent));
+            int requiredKerbals = Math.Max(0, preparation.RequiredKerbals);
+            int availableKerbals = RivalDevelopmentSimulation.GetKerbalsAvailable(agency);
             double progressChance = RivalDevelopmentSimulation.GetScienceLaunchProgressChance(agency) * 100.0;
             double? estimatedLaunchDays = RivalScienceSimulation.CalculateEstimatedLaunchDays(agency);
 
@@ -264,11 +266,12 @@ namespace TheRaceForSpace.UI
                 + "%");
             GUILayout.Label("Estimated Launch: " + FormatEstimatedLaunchDays(estimatedLaunchDays));
             GUILayout.Label("Science Reward: " + preparation.PlannedScienceReward.ToString("0.#"));
-            GUILayout.Label("Kerbals Assigned: 0 (" + Math.Max(0, preparation.RequiredKerbals) + " required)");
-            DrawRivalPreparationCrewState(
-                agency,
-                Math.Max(0, preparation.RequiredKerbals),
-                progressPercent);
+            GUILayout.Label(
+                "Kerbal Assigned: "
+                + availableKerbals
+                + " available / "
+                + requiredKerbals
+                + " required");
 
             GUILayout.EndVertical();
         }

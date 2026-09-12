@@ -29,7 +29,7 @@ namespace TheRaceForSpace.UI
         private static readonly GUILayoutOption[] RivalTechTreeButtonOptions =
             { GUILayout.Width(180.0f), GUILayout.Height(26.0f) };
 
-        private readonly Dictionary<string, bool> _rivalFullTechTreeExpandedByAgencyId =
+        private readonly Dictionary<string, bool> _rivalLockedTechsExpandedByAgencyId =
             new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
 
         private void DrawRivalAgencies()
@@ -457,16 +457,16 @@ namespace TheRaceForSpace.UI
             }
 
             GUILayout.Space(6.0f);
-            bool fullTreeExpanded = IsRivalFullTechTreeExpanded(agency.Id);
+            bool lockedTechsExpanded = IsRivalLockedTechsExpanded(agency.Id);
             if (GUILayout.Button(
-                fullTreeExpanded ? "Hide Full Tech Tree" : "Show Full Tech Tree",
+                lockedTechsExpanded ? "Hide Locked Techs" : "Show Locked Techs",
                 RivalTechTreeButtonOptions))
             {
-                _rivalFullTechTreeExpandedByAgencyId[agency.Id] = !fullTreeExpanded;
-                fullTreeExpanded = !fullTreeExpanded;
+                _rivalLockedTechsExpandedByAgencyId[agency.Id] = !lockedTechsExpanded;
+                lockedTechsExpanded = !lockedTechsExpanded;
             }
 
-            if (!fullTreeExpanded)
+            if (!lockedTechsExpanded)
             {
                 return;
             }
@@ -475,12 +475,13 @@ namespace TheRaceForSpace.UI
             for (int techIndex = 0; techIndex < RivalTechCatalogue.All.Count; techIndex++)
             {
                 RivalTechNodeDefinition tech = RivalTechCatalogue.All[techIndex];
-                if (tech != null)
+                if (tech == null
+                    || RivalTechCatalogue.ContainsTechId(programme.ResearchedTechIds, tech.Id))
                 {
-                    DrawRivalTechNode(
-                        tech,
-                        RivalTechCatalogue.ContainsTechId(programme.ResearchedTechIds, tech.Id));
+                    continue;
                 }
+
+                DrawRivalLockedTechNode(tech);
             }
         }
 
@@ -535,6 +536,56 @@ namespace TheRaceForSpace.UI
                 }
                 GUILayout.Label(_listTextBuilder.ToString());
             }
+        }
+
+        private void DrawRivalLockedTechNode(RivalTechNodeDefinition tech)
+        {
+            _listTextBuilder.Length = 0;
+            _listTextBuilder.Append("[ ] ");
+            _listTextBuilder.Append(tech.DisplayName);
+            _listTextBuilder.Append(" - ");
+            _listTextBuilder.Append(tech.ScienceCost.ToString("0.#"));
+
+            if (tech.UnlockedExperimentIds.Count > 0)
+            {
+                _listTextBuilder.Append(" - Experiment: ");
+                for (int experimentIndex = 0;
+                    experimentIndex < tech.UnlockedExperimentIds.Count;
+                    experimentIndex++)
+                {
+                    if (experimentIndex > 0)
+                    {
+                        _listTextBuilder.Append(", ");
+                    }
+
+                    _listTextBuilder.Append(
+                        GetScienceExperimentDisplayName(tech.UnlockedExperimentIds[experimentIndex]));
+                }
+            }
+
+            if (tech.PrerequisiteTechIds.Count > 0)
+            {
+                _listTextBuilder.Append(" (Requires ");
+                for (int prerequisiteIndex = 0;
+                    prerequisiteIndex < tech.PrerequisiteTechIds.Count;
+                    prerequisiteIndex++)
+                {
+                    if (prerequisiteIndex > 0)
+                    {
+                        _listTextBuilder.Append(tech.AnyPrerequisiteUnlocks ? " or " : ", ");
+                    }
+
+                    RivalTechNodeDefinition prerequisite =
+                        RivalTechCatalogue.GetById(tech.PrerequisiteTechIds[prerequisiteIndex]);
+                    _listTextBuilder.Append(
+                        prerequisite == null
+                            ? tech.PrerequisiteTechIds[prerequisiteIndex]
+                            : prerequisite.DisplayName);
+                }
+                _listTextBuilder.Append(")");
+            }
+
+            GUILayout.Label(_listTextBuilder.ToString());
         }
 
         private void DrawRivalFunding(AgencyState agency)
@@ -755,11 +806,11 @@ namespace TheRaceForSpace.UI
             }
         }
 
-        private bool IsRivalFullTechTreeExpanded(string agencyId)
+        private bool IsRivalLockedTechsExpanded(string agencyId)
         {
             bool expanded;
             return !string.IsNullOrEmpty(agencyId)
-                && _rivalFullTechTreeExpandedByAgencyId.TryGetValue(agencyId, out expanded)
+                && _rivalLockedTechsExpandedByAgencyId.TryGetValue(agencyId, out expanded)
                 && expanded;
         }
 

@@ -424,7 +424,6 @@ namespace TheRaceForSpace.UI
 
                 GUILayout.BeginVertical("box");
                 GUILayout.Label("Next Research Project: " + displayName, _boldLabelStyle);
-                GUILayout.Label("Science Cost: " + research.ScienceCostPaid.ToString("0.#") + " - Paid");
                 GUILayout.Label("Status: " + researchStatus);
                 GUILayout.Label("Started: " + FormatKerbinDate(research.StartUniversalTime));
                 GUILayout.Label(

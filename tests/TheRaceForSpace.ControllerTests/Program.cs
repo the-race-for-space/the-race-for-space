@@ -75,6 +75,9 @@ namespace TheRaceForSpace.ControllerTests
             Run(
                 "Controller projected payout cache rebuilds on refresh",
                 CampaignControllerTests.ProjectedPayoutCacheRebuildsOnRefresh);
+            Run(
+                "Rival due development completes before signed funding",
+                RivalFundingBoundaryIntegrationTests.DueDevelopmentCompletesBeforeSignedFundingIsApplied);
 
             Run(
                 "Active pre-orbit plan opens with four cached contracts and reuses stable refresh",

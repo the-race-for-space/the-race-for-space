@@ -274,11 +274,13 @@ namespace TheRaceForSpace.ControllerTests
 
             controller.Refresh();
 
+            // Each default rival receives 10,000 Administration income and pays 10,000 payroll for
+            // its one starting Kerbal, so the signed boundary result is zero rather than the old fixed income.
             Equal(
-                20000.0,
+                0.0,
                 controller.FindAgencyById(CampaignController.AsterAgencyId).Funds);
             Equal(
-                20000.0,
+                0.0,
                 controller.FindAgencyById(CampaignController.CobaltAgencyId).Funds);
             Equal(FundingIntervalSeconds * 2.0, controller.NextFundingUniversalTime);
             Equal(

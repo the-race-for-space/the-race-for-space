@@ -70,6 +70,7 @@ namespace TheRaceForSpace.KspIntegration
         private const string FlyingHighSituation = "FlyingHigh";
         private const string LowSpaceSituation = "LowSpace";
         private const string HighSpaceSituation = "HighSpace";
+        private const double ScienceVerificationTolerance = 0.0001;
 
         private static readonly string[] RivalScienceSituations =
         {
@@ -260,8 +261,8 @@ namespace TheRaceForSpace.KspIntegration
         }
 
         /// <summary>
-        /// Exhausts the exact stock subject and returns the Science that was still available immediately
-        /// before exhaustion. The player's banked R&D Science total is deliberately not changed.
+        /// Exhausts the exact registered stock subject and returns the Science that was still available
+        /// immediately before exhaustion. The player's banked R&D Science total is deliberately not changed.
         /// </summary>
         internal static double ConsumeRemainingScience(ScienceSubjectKey requestedSubject)
         {
@@ -287,17 +288,37 @@ namespace TheRaceForSpace.KspIntegration
                 return 0.0;
             }
 
-            // SubmitScienceData cannot be used here: that path awards Science to the player's R&D
-            // balance. A rival win must only consume the shared stock subject, so mutate the subject
-            // fields that KSP itself persists under the R&D ScenarioModule and leave player Science alone.
+            // SubmitScienceData cannot be used here because it awards Science and fires the player's
+            // normal stock Science-received path. A rival win must instead exhaust the registered R&D
+            // subject directly while leaving the player's already-banked Science unchanged.
             scienceSubject.science = scienceSubject.scienceCap;
             scienceSubject.scientificValue = 0.0f;
+
+            // Re-read through R&D rather than trusting the object returned by GetExperimentSubject.
+            // Untouched subjects may not previously exist in the player's archive, and the competitive
+            // Science rule only works if KSP's registered subject is the object that was exhausted.
+            ScienceSubject registeredSubject = ResearchAndDevelopment.GetSubjectByID(scienceSubject.id);
+            double verifiedRemainingScience;
+            double verifiedScienceCap;
+            if (registeredSubject == null
+                || !TryCalculateRemainingScience(
+                    registeredSubject,
+                    out verifiedRemainingScience,
+                    out verifiedScienceCap)
+                || verifiedRemainingScience > ScienceVerificationTolerance)
+            {
+                Debug.LogError(
+                    "[TheRaceForSpace] Rival Science could not verify exhaustion of stock subject '"
+                    + scienceSubject.id
+                    + "'. No Science will be awarded to the rival.");
+                return 0.0;
+            }
 
             if (remainingScience > 0.0)
             {
                 Debug.Log(
-                    "[TheRaceForSpace] Rival Science exhausted stock subject '"
-                    + scienceSubject.id
+                    "[TheRaceForSpace] Rival Science exhausted registered stock subject '"
+                    + registeredSubject.id
                     + "' with "
                     + remainingScience.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture)
                     + " Science remaining.");
@@ -624,13 +645,66 @@ namespace TheRaceForSpace.KspIntegration
 
             if (createRegisteredSubject)
             {
-                scienceSubject = ResearchAndDevelopment.GetExperimentSubject(
+                ScienceSubject resolvedSubject = ResearchAndDevelopment.GetExperimentSubject(
                     experiment,
                     situation,
                     body,
                     biomeTag,
                     biomeDisplayName);
-                return scienceSubject != null;
+                if (resolvedSubject == null || string.IsNullOrEmpty(resolvedSubject.id))
+                {
+                    return false;
+                }
+
+                // KSP may return a valid subject object before that untouched subject is present in the
+                // persistent R&D subject collection. Rival Science must consume the registered instance;
+                // otherwise the player can later generate a fresh subject and earn the same Science.
+                scienceSubject = ResearchAndDevelopment.GetSubjectByID(resolvedSubject.id);
+                if (scienceSubject == null)
+                {
+                    List<ScienceSubject> registeredSubjects = ResearchAndDevelopment.GetSubjects();
+                    if (registeredSubjects == null)
+                    {
+                        Debug.LogError(
+                            "[TheRaceForSpace] R&D subject collection was unavailable while registering '"
+                            + resolvedSubject.id
+                            + "'.");
+                        return false;
+                    }
+
+                    bool alreadyPresent = false;
+                    for (int subjectIndex = 0; subjectIndex < registeredSubjects.Count; subjectIndex++)
+                    {
+                        ScienceSubject candidate = registeredSubjects[subjectIndex];
+                        if (candidate != null
+                            && string.Equals(
+                                candidate.id,
+                                resolvedSubject.id,
+                                StringComparison.Ordinal))
+                        {
+                            alreadyPresent = true;
+                            break;
+                        }
+                    }
+
+                    if (!alreadyPresent)
+                    {
+                        registeredSubjects.Add(resolvedSubject);
+                    }
+
+                    scienceSubject = ResearchAndDevelopment.GetSubjectByID(resolvedSubject.id);
+                }
+
+                if (scienceSubject == null)
+                {
+                    Debug.LogError(
+                        "[TheRaceForSpace] Could not register stock Science subject '"
+                        + resolvedSubject.id
+                        + "' in R&D. Rival Science consumption was cancelled.");
+                    return false;
+                }
+
+                return true;
             }
 
             // GetExperimentSubject registers a subject in R&D when it does not already exist. Target

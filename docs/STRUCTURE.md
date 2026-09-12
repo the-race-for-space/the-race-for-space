@@ -118,11 +118,14 @@ For every crossed funding boundary, `CampaignController.ProcessDueFunding()` use
 5. apply rival Administration income, payroll, and insurance as the signed `RivalFundingBreakdown` result;
 6. advance active one-off funding lifecycles once;
 7. start eligible new rival research;
-8. start eligible new rival facility construction;
-9. run the sponsor review last;
-10. advance to the next boundary and repeat if timewarp crossed more than one.
+8. retry already-ready Contract/Science launches that still need missing Kerbals and can recruit them now, using stored ready-time ordering;
+9. start eligible new rival facility construction using only the Funds left after that recruitment;
+10. run the sponsor review last;
+11. advance to the next boundary and repeat if timewarp crossed more than one.
 
-This order is intentionally controller-owned because it coordinates funding, rival development, objective progression, and sponsor state.
+A ready mission only receives this funding-boundary priority when recruitment is genuinely possible at that point. A roster-cap-blocked mission does not reserve Funds and therefore cannot prevent a facility upgrade that may be needed to expand the roster.
+
+This order is intentionally controller-owned because it coordinates funding, rival development, objective progression, mission readiness, and sponsor state.
 
 ---
 
@@ -256,7 +259,10 @@ Responsibilities:
 - launches live missions instead of directly completing objectives;
 - processes the earliest due stored event repeatedly until the target UT is reached;
 - sorts exact-time rival processing by stable agency ID for deterministic shared-Science races;
+- retries only genuinely recruitable already-ready launches after a funding payout so missing-crew hiring can precede optional facility spending without rerunning unrelated rival events;
 - delegates raw Science capture/consumption through callbacks supplied by `CampaignController`/`KspScienceAdapter`.
+
+The recruitment retry still uses the original stored ready times for Contract-vs-Science priority, but the launched mission is timestamped at the funding boundary when recruitment actually became affordable.
 
 It does **not** own another Unity timer or polling loop.
 
@@ -503,7 +509,7 @@ It reports:
 
 Rival objective completion alone is no longer a separate notification path; a successful rival Contract is reported once as its Live Mission result. Development notifications observe the authoritative completion signals and do not complete projects or alter facility/research state themselves.
 
-It establishes an offer baseline silently when a controller/save is first observed so loading a save does not replay historical sponsor-review messages. Persistence restoration also uses silent objective/development state restoration and therefore cannot fabricate a Live Mission, research, or facility-completion notification.
+It establishes an offer baseline silently when a controller/save is first observed so loading a save does not replay historical sponsor-review offers. Persistence restoration also uses silent objective/development state restoration and therefore cannot fabricate a Live Mission, research, or facility-completion notification.
 
 ---
 
@@ -563,6 +569,8 @@ Offered funding target
   -> CampaignController later processes funding consequences
 ```
 
+When a 100%-ready Contract or Science mission is waiting specifically because missing crew cannot yet be afforded, a funding boundary may make recruitment possible. `CampaignController` then asks `RivalSimulation` to retry those recruitable ready launches after the payout and before new facility construction. The original ready time still decides crew contention, while the actual mission launch time is the funding boundary.
+
 ## Rival development completion
 
 ```text
@@ -593,6 +601,7 @@ The tests cover domain rules including:
 - Science target/progress rules;
 - live mission outcomes, outcome observer signals, casualties, insurance liability, and satellite reservations;
 - crew contention and ready-time ordering;
+- funding-boundary recruitment priority over facility construction, including roster-cap non-reservation;
 - large time jumps / chronological rival events;
 - negative rival funding;
 - research/construction rules and genuine-completion observer signals;

@@ -7,6 +7,7 @@ using TheRaceForSpace.Core;
 using TheRaceForSpace.Funding;
 using TheRaceForSpace.KspIntegration;
 using TheRaceForSpace.Objectives;
+using TheRaceForSpace.Rivals;
 using UnityEngine;
 
 namespace TheRaceForSpace.UI
@@ -21,7 +22,6 @@ namespace TheRaceForSpace.UI
         private const string PlayerCompletionTitlePrefix = "Funding Target Completed - ";
         private const string PlayerCompletionBodySuffix =
             " has been achieved. Your agency is now eligible for a share of the remaining contract funding.";
-        private const string RivalCompletionTitlePrefix = "Rival Objective Completed - ";
         private const string SponsorReviewTitle = "Sponsor Review Complete";
         private const string FundingPayoutTitle = "Campaign Funding Received";
 
@@ -60,6 +60,7 @@ namespace TheRaceForSpace.UI
 
             _activeInstance = this;
             AgencyState.ObjectiveCompletionRecorded += OnObjectiveCompletionRecorded;
+            RivalLiveMissionSimulation.LiveMissionResolved += OnRivalLiveMissionResolved;
             CareerFundingAdapter.CampaignFundsAdded += OnCampaignFundsAdded;
         }
 
@@ -81,6 +82,7 @@ namespace TheRaceForSpace.UI
             }
 
             AgencyState.ObjectiveCompletionRecorded -= OnObjectiveCompletionRecorded;
+            RivalLiveMissionSimulation.LiveMissionResolved -= OnRivalLiveMissionResolved;
             CareerFundingAdapter.CampaignFundsAdded -= OnCampaignFundsAdded;
             ResetCurrentSave();
             _activeInstance = null;
@@ -117,7 +119,10 @@ namespace TheRaceForSpace.UI
 
         private void OnObjectiveCompletionRecorded(AgencyState agency, string objectiveId)
         {
+            // Rival completions are announced from the authoritative Live Mission result instead so
+            // failures, Science missions, crew survival, casualties, and insurance all use one message path.
             if (agency == null
+                || !agency.IsPlayer
                 || string.IsNullOrEmpty(objectiveId)
                 || !EnsureCurrentSaveFolder())
             {
@@ -125,42 +130,56 @@ namespace TheRaceForSpace.UI
             }
 
             CampaignController campaignController = ModRuntime.Controller;
-            if (agency.IsPlayer)
+            if (campaignController == null)
             {
-                if (campaignController == null)
-                {
-                    return;
-                }
-
-                ObjectiveFundingContract contract = FindObjectiveFundingContract(
-                    campaignController,
-                    objectiveId);
-                if (contract == null)
-                {
-                    Debug.LogWarning(
-                        "[TheRaceForSpace] Funding notification skipped unknown objective '"
-                        + objectiveId
-                        + "'.");
-                    return;
-                }
-
-                // Preserve the existing rule: only an Offered, unexpired target is announced as a
-                // player funding completion. Persistence restoration uses the silent restore path.
-                if (!contract.IsOffered || contract.IsExpired)
-                {
-                    return;
-                }
-
-                EnqueueNotification(
-                    PlayerCompletionTitlePrefix + contract.Name,
-                    contract.Name + PlayerCompletionBodySuffix);
                 return;
             }
 
-            string objectiveName = GetObjectiveDisplayName(objectiveId);
+            ObjectiveFundingContract contract = FindObjectiveFundingContract(
+                campaignController,
+                objectiveId);
+            if (contract == null)
+            {
+                Debug.LogWarning(
+                    "[TheRaceForSpace] Funding notification skipped unknown objective '"
+                    + objectiveId
+                    + "'.");
+                return;
+            }
+
+            // Preserve the existing rule: only an Offered, unexpired target is announced as a
+            // player funding completion. Persistence restoration uses the silent restore path.
+            if (!contract.IsOffered || contract.IsExpired)
+            {
+                return;
+            }
+
             EnqueueNotification(
-                RivalCompletionTitlePrefix + agency.Name,
-                agency.Name + " has completed " + objectiveName + ".");
+                PlayerCompletionTitlePrefix + contract.Name,
+                contract.Name + PlayerCompletionBodySuffix);
+        }
+
+        private void OnRivalLiveMissionResolved(
+            AgencyState agency,
+            RivalLiveMissionResolution resolution)
+        {
+            if (agency == null
+                || agency.IsPlayer
+                || resolution == null
+                || !resolution.WasValid
+                || resolution.Mission == null
+                || !EnsureCurrentSaveFolder())
+            {
+                return;
+            }
+
+            string title = GetRivalShortName(agency)
+                + " Live Mission - "
+                + (resolution.Succeeded ? "SUCCESS" : "FAILED");
+            string body = resolution.Succeeded
+                ? BuildRivalMissionSuccessBody(agency, resolution)
+                : BuildRivalMissionFailureBody(agency, resolution);
+            EnqueueNotification(title, body);
         }
 
         private void OnCampaignFundsAdded(double amount)
@@ -178,6 +197,226 @@ namespace TheRaceForSpace.UI
                 "Your agency received "
                 + amount.ToString("N0")
                 + " Funds from the campaign funding system.");
+        }
+
+        private string BuildRivalMissionSuccessBody(
+            AgencyState agency,
+            RivalLiveMissionResolution resolution)
+        {
+            RivalLiveMissionState mission = resolution.Mission;
+            if (mission.MissionType == RivalMissionType.Science)
+            {
+                string body = agency.Name
+                    + " has successfully completed a "
+                    + GetScienceMissionDescription(mission)
+                    + ".";
+                return resolution.ScienceAwarded > 0.0
+                    ? body + "\nScience gained: " + resolution.ScienceAwarded.ToString("0.#") + "."
+                    : body + "\nNo Science remained to collect.";
+            }
+
+            return agency.Name
+                + " has successfully completed "
+                + GetContractMissionDisplayName(mission)
+                + ".";
+        }
+
+        private string BuildRivalMissionFailureBody(
+            AgencyState agency,
+            RivalLiveMissionResolution resolution)
+        {
+            RivalLiveMissionState mission = resolution.Mission;
+            string body = mission.MissionType == RivalMissionType.Science
+                ? agency.Name + "'s " + GetScienceMissionDescription(mission) + " has failed."
+                : agency.Name + "'s mission for " + GetContractMissionDisplayName(mission) + " has failed.";
+
+            int assignedKerbals = Math.Max(0, mission.AssignedKerbalCount);
+            if (assignedKerbals <= 0)
+            {
+                return body;
+            }
+
+            int lostKerbals = Math.Max(0, Math.Min(assignedKerbals, resolution.LostKerbalCount));
+            int survivingKerbals = assignedKerbals - lostKerbals;
+            if (lostKerbals == 0)
+            {
+                return assignedKerbals == 1
+                    ? body + "\nThe assigned Kerbal escaped and survived."
+                    : body
+                        + "\nAll "
+                        + assignedKerbals
+                        + " assigned Kerbals escaped and survived.";
+            }
+
+            if (assignedKerbals == 1)
+            {
+                body += "\nThe assigned Kerbal was lost.";
+            }
+            else if (lostKerbals == assignedKerbals)
+            {
+                body += "\nAll " + assignedKerbals + " assigned Kerbals were lost.";
+            }
+            else
+            {
+                body += "\n"
+                    + lostKerbals
+                    + " of "
+                    + assignedKerbals
+                    + " assigned Kerbals "
+                    + (lostKerbals == 1 ? "was" : "were")
+                    + " lost. "
+                    + survivingKerbals
+                    + " escaped and survived.";
+            }
+
+            if (resolution.InsurancePenaltyFunds > 0.0)
+            {
+                body += "\nInsurance Penalty to Pay: "
+                    + resolution.InsurancePenaltyFunds.ToString("N0")
+                    + " Funds.";
+            }
+
+            return body;
+        }
+
+        private string GetContractMissionDisplayName(RivalLiveMissionState mission)
+        {
+            if (mission == null || string.IsNullOrEmpty(mission.ContractId))
+            {
+                return "Contract mission";
+            }
+
+            ObjectiveDefinition objective = ObjectiveCatalogue.FindById(mission.ContractId);
+            if (objective != null && !string.IsNullOrEmpty(objective.Name))
+            {
+                return objective.Name;
+            }
+
+            CampaignController campaignController = ModRuntime.Controller;
+            if (campaignController != null)
+            {
+                for (int contractIndex = 0;
+                    contractIndex < campaignController.SatelliteNetworkFundingContracts.Count;
+                    contractIndex++)
+                {
+                    SatelliteNetworkFundingContract contract =
+                        campaignController.SatelliteNetworkFundingContracts[contractIndex];
+                    if (contract != null
+                        && string.Equals(
+                            contract.Id,
+                            mission.ContractId,
+                            StringComparison.OrdinalIgnoreCase))
+                    {
+                        return contract.Name;
+                    }
+                }
+            }
+
+            return mission.ContractId;
+        }
+
+        private static string GetScienceMissionDescription(RivalLiveMissionState mission)
+        {
+            ScienceSubjectKey subject = mission == null ? null : mission.ScienceSubject;
+            if (subject == null)
+            {
+                return "Science Expedition";
+            }
+
+            string description = "Science Expedition: "
+                + GetScienceExperimentDisplayName(subject.ExperimentId)
+                + ", "
+                + EmptyAsUnknown(subject.BodyName)
+                + " - "
+                + FormatScienceSituation(subject.Situation);
+            if (!string.IsNullOrEmpty(subject.BiomeName))
+            {
+                description += ", " + subject.BiomeName;
+            }
+
+            return description;
+        }
+
+        private static string GetRivalShortName(AgencyState agency)
+        {
+            if (agency == null || string.IsNullOrWhiteSpace(agency.Name))
+            {
+                return "Rival";
+            }
+
+            string trimmedName = agency.Name.Trim();
+            const string GenericRivalPrefix = "Rival Agency ";
+            if (trimmedName.StartsWith(GenericRivalPrefix, StringComparison.OrdinalIgnoreCase))
+            {
+                string rivalNumber = trimmedName.Substring(GenericRivalPrefix.Length).Trim();
+                return string.IsNullOrEmpty(rivalNumber) ? "Rival" : "Rival " + rivalNumber;
+            }
+
+            int firstSpaceIndex = trimmedName.IndexOf(' ');
+            return firstSpaceIndex > 0
+                ? trimmedName.Substring(0, firstSpaceIndex)
+                : trimmedName;
+        }
+
+        private static string GetScienceExperimentDisplayName(string experimentId)
+        {
+            switch (experimentId)
+            {
+                case RivalTechCatalogue.CrewReportExperimentId:
+                    return "Crew Report";
+                case RivalTechCatalogue.MysteryGooExperimentId:
+                    return "Mystery Goo Observation";
+                case RivalTechCatalogue.TemperatureScanExperimentId:
+                    return "Temperature Scan";
+                case RivalTechCatalogue.AtmosphericPressureScanExperimentId:
+                    return "Atmospheric Pressure Scan";
+                case RivalTechCatalogue.MaterialsStudyExperimentId:
+                    return "Materials Study";
+                case RivalTechCatalogue.EvaScienceExperimentId:
+                    return "EVA Science";
+                case RivalTechCatalogue.AtmosphereAnalysisExperimentId:
+                    return "Atmosphere Analysis";
+                case RivalTechCatalogue.InfraredTelescopeExperimentId:
+                    return "SENTINEL Infrared Telescope";
+                case RivalTechCatalogue.SeismicScanExperimentId:
+                    return "Seismic Scan";
+                case RivalTechCatalogue.MagnetometerReportExperimentId:
+                    return "Magnetometer Report";
+                case RivalTechCatalogue.GravityScanExperimentId:
+                    return "Gravity Scan";
+                case RivalScienceSimulation.EvaReportExperimentId:
+                    return "EVA Report";
+                case RivalScienceSimulation.SurfaceSampleExperimentId:
+                    return "Surface Sample";
+                default:
+                    return string.IsNullOrEmpty(experimentId) ? "Unknown Experiment" : experimentId;
+            }
+        }
+
+        private static string FormatScienceSituation(string situation)
+        {
+            switch (situation)
+            {
+                case "Landed":
+                    return "Landed";
+                case "Splashed":
+                    return "Splashed";
+                case "FlyingLow":
+                    return "Flying Low";
+                case "FlyingHigh":
+                    return "Flying High";
+                case "LowSpace":
+                    return "Low Space";
+                case "HighSpace":
+                    return "High Space";
+                default:
+                    return EmptyAsUnknown(situation);
+            }
+        }
+
+        private static string EmptyAsUnknown(string value)
+        {
+            return string.IsNullOrEmpty(value) ? "Unknown" : value;
         }
 
         private void CaptureNewSponsorOffers(CampaignController campaignController)
@@ -331,14 +570,6 @@ namespace TheRaceForSpace.UI
             }
 
             return null;
-        }
-
-        private static string GetObjectiveDisplayName(string objectiveId)
-        {
-            ObjectiveDefinition objective = ObjectiveCatalogue.FindById(objectiveId);
-            return objective == null || string.IsNullOrEmpty(objective.Name)
-                ? objectiveId
-                : objective.Name;
         }
     }
 }

@@ -51,7 +51,7 @@ Definitions live in `Objectives/ObjectiveCatalogue.cs` / `ObjectiveDefinition.cs
 The sponsorship attached to campaign goals.
 
 - `ObjectiveFundingContract` — one-off objective funding with declining payouts.
-- `SatelliteNetworkFundingContract` — repeatable network funding based on qualifying satellites.
+- `SatelliteNetworkFundingContract` — repeatable funding based on qualifying satellites.
 
 ## Launch Progress
 
@@ -101,6 +101,7 @@ Important responsibilities:
 - start/advance funding lifecycles;
 - calculate player/rival payouts;
 - complete/start rival research and construction at funding boundaries;
+- give recruitable already-ready missions first use of post-payout Funds before new construction;
 - persist updated state;
 - maintain the current active Pre-Orbit Flight Contract plan.
 
@@ -115,11 +116,12 @@ catch up rival events
   -> calculate/apply income, payroll, insurance
   -> advance active one-off payouts
   -> start new research
-  -> start new construction
+  -> retry already-ready launches that can recruit missing Kerbals
+  -> start new construction with remaining Funds
   -> sponsor review
 ```
 
-If multiple funding boundaries were crossed during timewarp, the controller processes them one at a time.
+The recruitment retry does not reserve money for a mission that still cannot hire because of the Astronaut Complex roster cap or insufficient Funds. If multiple funding boundaries were crossed during timewarp, the controller processes them one at a time.
 
 ---
 
@@ -210,7 +212,10 @@ It:
 - gives Contract priority on an exact ready-time tie;
 - finds the earliest stored event across rivals and processes events in chronological order;
 - uses stable agency ordering for exact-time shared-Science ties;
-- clears/replaces invalid preparations rather than letting bad state block progression forever.
+- clears/replaces invalid preparations rather than letting bad state block progression forever;
+- provides a narrow funding-boundary retry for already-ready launches that need missing Kerbals and can recruit them now, without rerunning unrelated progress checks or mission completions.
+
+That funding-boundary retry still orders contenders by their original ready UT and keeps Contract priority on an exact tie, but the live mission's launch time is the funding boundary when the hire became possible.
 
 It does not query raw KSP Science or own facility/research formulas.
 
@@ -507,6 +512,7 @@ Useful test areas now include:
 - Science filtering/preparation;
 - live mission results/casualties/satellite reservations;
 - crew contention;
+- funding-boundary recruitment priority over facility construction, including the roster-cap case;
 - large time jumps;
 - research/construction and their observer-only completion signals;
 - signed funding-boundary integration.

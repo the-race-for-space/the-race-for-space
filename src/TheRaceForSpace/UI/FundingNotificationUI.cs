@@ -61,6 +61,8 @@ namespace TheRaceForSpace.UI
             _activeInstance = this;
             AgencyState.ObjectiveCompletionRecorded += OnObjectiveCompletionRecorded;
             RivalLiveMissionSimulation.LiveMissionResolved += OnRivalLiveMissionResolved;
+            RivalDevelopmentSimulation.ResearchCompleted += OnRivalResearchCompleted;
+            RivalDevelopmentSimulation.FacilityConstructionCompleted += OnRivalFacilityConstructionCompleted;
             CareerFundingAdapter.CampaignFundsAdded += OnCampaignFundsAdded;
         }
 
@@ -83,6 +85,8 @@ namespace TheRaceForSpace.UI
 
             AgencyState.ObjectiveCompletionRecorded -= OnObjectiveCompletionRecorded;
             RivalLiveMissionSimulation.LiveMissionResolved -= OnRivalLiveMissionResolved;
+            RivalDevelopmentSimulation.ResearchCompleted -= OnRivalResearchCompleted;
+            RivalDevelopmentSimulation.FacilityConstructionCompleted -= OnRivalFacilityConstructionCompleted;
             CareerFundingAdapter.CampaignFundsAdded -= OnCampaignFundsAdded;
             ResetCurrentSave();
             _activeInstance = null;
@@ -180,6 +184,77 @@ namespace TheRaceForSpace.UI
                 ? BuildRivalMissionSuccessBody(agency, resolution)
                 : BuildRivalMissionFailureBody(agency, resolution);
             EnqueueNotification(title, body);
+        }
+
+        private void OnRivalResearchCompleted(
+            AgencyState agency,
+            RivalTechNodeDefinition techNode)
+        {
+            if (agency == null
+                || agency.IsPlayer
+                || techNode == null
+                || string.IsNullOrEmpty(techNode.DisplayName)
+                || !EnsureCurrentSaveFolder())
+            {
+                return;
+            }
+
+            string body = agency.Name
+                + " has completed research on "
+                + techNode.DisplayName
+                + ".";
+            if (techNode.UnlockedExperimentIds.Count > 0)
+            {
+                var experimentNames = new string[techNode.UnlockedExperimentIds.Count];
+                for (int experimentIndex = 0;
+                    experimentIndex < techNode.UnlockedExperimentIds.Count;
+                    experimentIndex++)
+                {
+                    experimentNames[experimentIndex] = GetScienceExperimentDisplayName(
+                        techNode.UnlockedExperimentIds[experimentIndex]);
+                }
+
+                body += techNode.UnlockedExperimentIds.Count == 1
+                    ? "\nNew Science experiment unlocked: "
+                    : "\nNew Science experiments unlocked: ";
+                body += string.Join(", ", experimentNames) + ".";
+            }
+
+            EnqueueNotification(
+                GetRivalShortName(agency) + " Research - COMPLETE",
+                body);
+        }
+
+        private void OnRivalFacilityConstructionCompleted(
+            AgencyState agency,
+            RivalFacilityConstructionState construction)
+        {
+            if (agency == null
+                || agency.IsPlayer
+                || construction == null
+                || !Enum.IsDefined(typeof(RivalFacilityType), construction.Facility)
+                || construction.TargetLevel < 2
+                || construction.TargetLevel > 3
+                || !EnsureCurrentSaveFolder())
+            {
+                return;
+            }
+
+            string body = agency.Name
+                + " has completed construction of "
+                + GetRivalFacilityDisplayName(construction.Facility)
+                + " Level "
+                + construction.TargetLevel
+                + ".";
+            string bonusDescription = GetRivalFacilityCompletionBonus(agency, construction);
+            if (!string.IsNullOrEmpty(bonusDescription))
+            {
+                body += "\nBonus: " + bonusDescription;
+            }
+
+            EnqueueNotification(
+                GetRivalShortName(agency) + " Facility Upgrade - COMPLETE",
+                body);
         }
 
         private void OnCampaignFundsAdded(double amount)
@@ -313,6 +388,123 @@ namespace TheRaceForSpace.UI
             }
 
             return mission.ContractId;
+        }
+
+        private static string GetRivalFacilityCompletionBonus(
+            AgencyState agency,
+            RivalFacilityConstructionState construction)
+        {
+            switch (construction.Facility)
+            {
+                case RivalFacilityType.Administration:
+                    return "Base funding increased to "
+                        + RivalDevelopmentSimulation.GetAdministrationBaseIncomeFunds(agency).ToString("N0")
+                        + " Funds per funding period.";
+
+                case RivalFacilityType.AstronautComplex:
+                    int rosterLimit = RivalDevelopmentSimulation.GetKerbalRosterLimit(agency);
+                    string rosterBonus = rosterLimit <= 0
+                        ? "Kerbal roster limit is now unlimited."
+                        : "Kerbal roster limit increased to " + rosterLimit + ".";
+                    if (construction.SourceLevel < 2 && construction.TargetLevel >= 2)
+                    {
+                        rosterBonus = rosterBonus.TrimEnd('.') + " and EVA Report access unlocked.";
+                    }
+                    return rosterBonus;
+
+                case RivalFacilityType.MissionControl:
+                    int satelliteLimit = RivalDevelopmentSimulation.GetSatelliteLimit(agency);
+                    return satelliteLimit <= 0
+                        ? "Satellite capacity is now unlimited."
+                        : "Satellite capacity increased to " + satelliteLimit + ".";
+
+                case RivalFacilityType.ResearchAndDevelopment:
+                    double scienceCostLimit = RivalDevelopmentSimulation.GetResearchScienceCostLimit(agency);
+                    string researchBonus = scienceCostLimit <= 0.0
+                        ? "Research Science-cost limit removed."
+                        : "Research Science-cost limit increased to "
+                            + scienceCostLimit.ToString("0.#")
+                            + ".";
+                    if (construction.SourceLevel < 2 && construction.TargetLevel >= 2)
+                    {
+                        researchBonus = researchBonus.TrimEnd('.') + " and Surface Sample access unlocked.";
+                    }
+                    return researchBonus;
+
+                case RivalFacilityType.VehicleAssemblyBuilding:
+                case RivalFacilityType.LaunchPad:
+                    double normalLaunchBonus = construction.TargetLevel >= 3
+                        ? CampaignSettings.RivalNormalLaunchFacilityLevel3BonusChance
+                        : CampaignSettings.RivalNormalLaunchFacilityLevel2BonusChance;
+                    return "Normal Launch Progress Chance increased by "
+                        + FormatPercentagePoints(normalLaunchBonus)
+                        + ".";
+
+                case RivalFacilityType.SpaceplaneHangar:
+                case RivalFacilityType.Runway:
+                    double scienceLaunchBonus = construction.TargetLevel >= 3
+                        ? CampaignSettings.RivalScienceLaunchFacilityLevel3BonusChance
+                        : CampaignSettings.RivalScienceLaunchFacilityLevel2BonusChance;
+                    return "Science Launch Progress Chance increased by "
+                        + FormatPercentagePoints(scienceLaunchBonus)
+                        + ".";
+
+                case RivalFacilityType.TrackingStation:
+                    int interplanetaryLevel = Math.Max(
+                        1,
+                        CampaignSettings.RivalTrackingStationInterplanetaryLevel);
+                    int kerbinMoonsLevel = Math.Max(
+                        1,
+                        CampaignSettings.RivalTrackingStationKerbinMoonsLevel);
+                    if (construction.TargetLevel >= interplanetaryLevel)
+                    {
+                        return "Destination access expanded to other supported planets and moons.";
+                    }
+                    if (construction.TargetLevel >= kerbinMoonsLevel)
+                    {
+                        return "Destination access expanded to the Mun and Minmus.";
+                    }
+                    return "Destination access expanded to Kerbin.";
+
+                default:
+                    return string.Empty;
+            }
+        }
+
+        private static string GetRivalFacilityDisplayName(RivalFacilityType facility)
+        {
+            switch (facility)
+            {
+                case RivalFacilityType.Administration:
+                    return "Administration Building";
+                case RivalFacilityType.AstronautComplex:
+                    return "Astronaut Complex";
+                case RivalFacilityType.MissionControl:
+                    return "Mission Control";
+                case RivalFacilityType.ResearchAndDevelopment:
+                    return "Research and Development";
+                case RivalFacilityType.VehicleAssemblyBuilding:
+                    return "Vehicle Assembly Building";
+                case RivalFacilityType.LaunchPad:
+                    return "Launch Pad";
+                case RivalFacilityType.SpaceplaneHangar:
+                    return "Spaceplane Hangar";
+                case RivalFacilityType.Runway:
+                    return "Runway";
+                case RivalFacilityType.TrackingStation:
+                    return "Tracking Station";
+                default:
+                    return facility.ToString();
+            }
+        }
+
+        private static string FormatPercentagePoints(double chance)
+        {
+            double percentagePoints = Math.Max(0.0, chance) * 100.0;
+            return percentagePoints.ToString("0.#")
+                + (Math.Abs(percentagePoints - 1.0) < 0.000001
+                    ? " percentage point"
+                    : " percentage points");
         }
 
         private static string GetScienceMissionDescription(RivalLiveMissionState mission)

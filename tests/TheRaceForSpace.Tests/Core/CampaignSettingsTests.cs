@@ -16,6 +16,8 @@ namespace TheRaceForSpace.Tests.Core
         {
             CampaignSettings.ResetToDefaults();
 
+            Require(CampaignSettings.RivalStartingFunds == 400000.0,
+                "Rival agencies should default to 400,000 Funds.");
             Require(CampaignSettings.RivalKerbalHireCostFunds == 100000.0,
                 "Rival Kerbal hire cost should default to 100,000 Funds.");
             Require(CampaignSettings.RivalKerbalPayrollFundsPerFundingBoundary == 10000.0,

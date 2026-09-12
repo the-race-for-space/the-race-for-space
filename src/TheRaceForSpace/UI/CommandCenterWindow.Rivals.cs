@@ -250,7 +250,7 @@ namespace TheRaceForSpace.UI
         private void DrawRivalContractPreparation(AgencyState agency)
         {
             GUILayout.BeginVertical("box");
-            GUILayout.Label("Current Launch Programme", _boldLabelStyle);
+            GUILayout.Label("Current Launch Program", _boldLabelStyle);
 
             string targetName = RivalSimulation.GetMissionTargetDisplayName(
                 agency.NextMissionTargetId,
@@ -264,13 +264,19 @@ namespace TheRaceForSpace.UI
             }
 
             int progressPercent = Math.Max(0, Math.Min(100, agency.MissionProgressPercent));
+            int progressIncrementPercent = RivalSimulation.CalculateLaunchProgressIncrementPercent(agency);
             int requiredKerbals = GetRivalContractRequiredKerbals(agency.NextMissionTargetId);
             double progressChance = RivalDevelopmentSimulation.GetNormalLaunchProgressChance(agency) * 100.0;
             double progressCost = _campaignController.GetRivalMissionProgressCost(agency);
             int? estimatedLaunchDays = _campaignController.GetEstimatedRivalMissionDays(agency);
 
             GUILayout.Label("Next Mission: " + targetName);
-            GUILayout.Label("Launch Progress: " + progressPercent + "%");
+            GUILayout.Label(
+                "Launch Progress: "
+                + progressPercent
+                + "% - (+"
+                + progressIncrementPercent
+                + "%)");
             GUILayout.Label(
                 "Progress Chance - each "
                 + FormatConfiguredInterval(CampaignSettings.RivalNormalLaunchProgressCheckIntervalDays)
@@ -301,6 +307,9 @@ namespace TheRaceForSpace.UI
             }
 
             int progressPercent = Math.Max(0, Math.Min(100, preparation.LaunchProgressPercent));
+            int progressIncrementPercent = Math.Max(
+                1,
+                CampaignSettings.RivalScienceLaunchProgressStepPercent);
             int requiredKerbals = Math.Max(0, preparation.RequiredKerbals);
             int availableKerbals = RivalDevelopmentSimulation.GetKerbalsAvailable(agency);
             string unavailableSuffix = progressPercent >= 100
@@ -322,7 +331,12 @@ namespace TheRaceForSpace.UI
                 + (string.IsNullOrEmpty(preparation.Subject.BiomeName)
                     ? string.Empty
                     : ", " + preparation.Subject.BiomeName));
-            GUILayout.Label("Launch Progress: " + progressPercent + "%");
+            GUILayout.Label(
+                "Launch Progress: "
+                + progressPercent
+                + "% - (+"
+                + progressIncrementPercent
+                + "%)");
             GUILayout.Label(
                 "Progress Chance - daily: "
                 + progressChance.ToString("0.#")

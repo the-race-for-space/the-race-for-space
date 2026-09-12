@@ -280,24 +280,38 @@ namespace TheRaceForSpace.Rivals
             RivalProgramState programme;
             if (!TryGetProgramme(rivalAgency, out programme)
                 || programme.ScienceLaunchPreparation == null
-                || programme.ScienceLaunchPreparation.Subject == null)
+                || programme.ScienceLaunchPreparation.Subject == null
+                || candidates == null)
             {
                 return null;
             }
 
-            IList<RivalScienceSubjectCandidate> eligibleCandidates =
-                BuildEligibleCandidates(rivalAgency, candidates, true);
-            for (int candidateIndex = 0; candidateIndex < eligibleCandidates.Count; candidateIndex++)
+            ScienceSubjectKey preparationSubject = programme.ScienceLaunchPreparation.Subject;
+            RivalScienceSubjectCandidate canonicalCandidate = null;
+
+            // Fast timewarp can call this once for every elapsed Science progress day. Revalidating one
+            // persisted subject must not rebuild, de-duplicate, and sort the full candidate catalogue.
+            for (int candidateIndex = 0; candidateIndex < candidates.Count; candidateIndex++)
             {
-                RivalScienceSubjectCandidate candidate = eligibleCandidates[candidateIndex];
-                if (candidate != null
-                    && programme.ScienceLaunchPreparation.Subject.Equals(candidate.Subject))
+                RivalScienceSubjectCandidate candidate = candidates[candidateIndex];
+                if (candidate == null
+                    || candidate.Subject == null
+                    || !preparationSubject.Equals(candidate.Subject)
+                    || !IsCandidateEligible(rivalAgency, candidate, true))
                 {
-                    return candidate;
+                    continue;
+                }
+
+                if (canonicalCandidate == null
+                    || StringComparer.OrdinalIgnoreCase.Compare(
+                        candidate.LocationId,
+                        canonicalCandidate.LocationId) < 0)
+                {
+                    canonicalCandidate = candidate;
                 }
             }
 
-            return null;
+            return canonicalCandidate;
         }
 
         /// <summary>

@@ -439,6 +439,26 @@ namespace TheRaceForSpace.Tests.Rivals
 
         private sealed class ZeroRandom : Random
         {
+            public override int Next()
+            {
+                return 0;
+            }
+
+            public override int Next(int maxValue)
+            {
+                return 0;
+            }
+
+            public override int Next(int minValue, int maxValue)
+            {
+                return minValue;
+            }
+
+            public override double NextDouble()
+            {
+                return 0.0;
+            }
+
             protected override double Sample()
             {
                 return 0.0;

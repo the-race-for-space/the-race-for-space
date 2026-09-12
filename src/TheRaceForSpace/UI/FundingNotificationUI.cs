@@ -179,7 +179,7 @@ namespace TheRaceForSpace.UI
 
             string title = GetRivalShortName(agency)
                 + " Live Mission - "
-                + (resolution.Succeeded ? "SUCCESS" : "FAILED");
+                + (resolution.Succeeded ? "Success" : "Failed");
             string body = resolution.Succeeded
                 ? BuildRivalMissionSuccessBody(agency, resolution)
                 : BuildRivalMissionFailureBody(agency, resolution);
@@ -221,7 +221,7 @@ namespace TheRaceForSpace.UI
             }
 
             EnqueueNotification(
-                GetRivalShortName(agency) + " Research - COMPLETE",
+                GetRivalShortName(agency) + " Research - Complete",
                 body);
         }
 
@@ -253,7 +253,7 @@ namespace TheRaceForSpace.UI
             }
 
             EnqueueNotification(
-                GetRivalShortName(agency) + " Facility Upgrade - COMPLETE",
+                GetRivalShortName(agency) + " Facility Upgrade - Complete",
                 body);
         }
 

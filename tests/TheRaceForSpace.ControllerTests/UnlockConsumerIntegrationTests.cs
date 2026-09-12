@@ -17,6 +17,10 @@ namespace TheRaceForSpace.ControllerTests
             aster.RecordObjectiveCompletion(ObjectiveCatalogue.ProbeOrbitId, 100.0);
             delta.RecordObjectiveCompletion(ObjectiveCatalogue.ProbeOrbitId, 200.0);
 
+            // Minmus is a Tracking Station Level 2 destination. Satisfy that independent gate so
+            // this regression isolates the funding-contract Offered requirement it is meant to test.
+            cobalt.RivalProgram.FacilityLevels[RivalFacilityType.TrackingStation] = 2;
+
             ObjectiveDefinition objective = ObjectiveCatalogue.FindById(
                 ObjectiveCatalogue.MinmusCrewedOrbitId);
             var contract = new ObjectiveFundingContract(

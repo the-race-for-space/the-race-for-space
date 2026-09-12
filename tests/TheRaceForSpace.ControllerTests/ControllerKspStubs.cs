@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using TheRaceForSpace.Funding;
 using TheRaceForSpace.Agencies;
+using TheRaceForSpace.Rivals;
 using TheRaceForSpace.Tracking;
 
 /// <summary>
@@ -51,6 +52,24 @@ namespace TheRaceForSpace.KspIntegration
         {
             TotalAddedFunds = 0.0;
             AddFundsCalls = 0;
+        }
+    }
+
+    /// <summary>
+    /// Test-only Science boundary. Controller tests focus on orchestration rather than stock KSP
+    /// Science discovery, so a ready boundary with no candidates keeps rival refresh deterministic.
+    /// </summary>
+    internal static class KspScienceAdapter
+    {
+        internal static IList<RivalScienceSubjectCandidate> CaptureScienceCandidates(
+            IList<string> experimentIds)
+        {
+            return new List<RivalScienceSubjectCandidate>();
+        }
+
+        internal static double ConsumeRemainingScience(ScienceSubjectKey subject)
+        {
+            return 0.0;
         }
     }
 

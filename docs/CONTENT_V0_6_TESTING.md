@@ -25,7 +25,7 @@ Use a disposable Career save where possible.
 4. Start KSP and confirm there are no repeated The Race for Space exceptions in `KSP.log`.
 5. Create a fresh Career save for fresh-state checks. Keep a second disposable save for timewarp, failure, and save-edit-assisted checks if needed.
 
-The automated suite already covers deterministic rule-level cases such as exact-time Science tie ordering, casualty rolls, satellite reservations, crew contention, research selection, construction completion, negative funding, and chronological large-time jumps. The live checks below concentrate on KSP boundaries, persistence, presentation, and end-to-end behaviour.
+The automated suite already covers deterministic rule-level cases such as exact-time Science tie ordering, casualty rolls, satellite reservations, crew contention, research selection, construction completion, negative funding, live-mission outcome signals, and chronological large-time jumps. The live checks below concentrate on KSP boundaries, persistence, presentation, and end-to-end behaviour.
 
 ---
 
@@ -43,15 +43,22 @@ For each rival, confirm:
 - there is no active research project or facility construction before the first eligible funding-boundary selection;
 - normal Contract launch preparation and Launch Science Expedition preparation are separate states.
 
-Confirm the card is presented in this order:
+Confirm the rival selector appears below the next-funding date:
+
+- only active rivals have buttons;
+- up to four rival slots are supported;
+- the selected rival uses white button text and unselected rivals use grey button text;
+- selecting another rival changes the detailed card to that agency only and returns the detail scroll to the top.
+
+Confirm the selected rival card is presented in this order:
 
 1. Programme Status
 2. Live Mission Progress
 3. Current Launch Programme / Launch Science Expedition
-4. Construction
-5. Facilities
-6. Tech Tree / Research
-7. Funding
+4. Funding
+5. Construction
+6. Facilities
+7. Tech Tree / Research
 
 At default Level 1 facilities, confirm the UI reports the same authoritative launch capability used by the simulation:
 
@@ -90,17 +97,15 @@ Observe a rival with at least one valid Science target.
 
 Confirm the **Launch Science Expedition** section shows:
 
-- unlocked experiments;
-- current Expedition Range;
-- Experiment;
-- Body;
-- Situation;
-- Biome where applicable;
+- **Experiment** as experiment name plus body, for example `Crew Report, Kerbin`;
+- **Situation** as situation plus biome where applicable, for example `Landed, Grasslands`;
 - Launch Progress;
 - Progress Chance - daily;
 - estimated launch time;
 - Science Reward;
-- required/available Kerbals.
+- **Kerbal Assigned** as available versus required crew, with `- none available` when a crewed expedition is at 100% progress and no Kerbal is available.
+
+Confirm the panel does not repeat the separate unlocked-experiment list or Expedition Range because those capabilities are already shown elsewhere in the rival dashboard.
 
 Confirm:
 
@@ -166,6 +171,8 @@ Confirm:
 - if the player partially depleted the subject first, the rival receives only the remaining value;
 - if another successful agency already exhausted it, a later successful rival receives 0 Science;
 - a successful rival still records the Science subject as completed for that rival even when 0 Science remains;
+- after a rival wins a stock Science subject, the player may still operate the experiment but receives 0 additional Science from that exact experiment/body/situation/biome subject;
+- save/reload keeps a rival-consumed stock subject exhausted;
 - no repeated exceptions are produced by the stock Science API interaction.
 
 Exact same-UT rival ties are covered automatically and should resolve in stable agency-ID order. Manual reproduction is optional.
@@ -192,7 +199,7 @@ Confirm:
 - the other preparation remains ready and waits rather than losing its progress;
 - when the Kerbal returns, the waiting ready preparation can launch.
 
-When a ready launch is short of crew, confirm the UI status distinguishes **Ready**, **Hire At Launch**, and **Waiting For Kerbal** correctly.
+For normal Contract preparation, confirm the UI status distinguishes **Ready**, **Hire At Launch**, and **Waiting For Kerbal** correctly. For Science preparation at 100%, confirm a zero-available crew state is shown as `Kerbal Assigned: 0 available / 1 required - none available` for a one-Kerbal expedition.
 
 If the Astronaut Complex roster limit and available Funds permit hiring, confirm missing Kerbals are hired only at the ready-to-launch point and the configured hire cost is charged then.
 
@@ -213,7 +220,7 @@ A live satellite-producing mission must reserve capacity before it resolves. Con
 
 ---
 
-# 9. Mission failure, casualties, and insurance
+# 9. Mission failure, casualties, insurance, and result notification
 
 Use a higher-difficulty crewed rival mission or a controlled test save to obtain a failure.
 
@@ -224,11 +231,13 @@ Confirm:
 - only lost Kerbals permanently reduce **Kerbals Employed**;
 - surviving assigned Kerbals return to availability when the live mission is removed;
 - each casualty adds the configured insurance liability to **Pending Insurance**;
-- pending insurance appears in the rival Funding section as a deduction;
+- the Live Mission failure notification states whether assigned Kerbal(s) escaped and survived or were lost;
+- a casualty notification states the exact **Insurance Penalty to Pay** generated by that mission; at the current default this is 50,000 Funds per lost Kerbal;
+- **Pending Insurance** is hidden in the Funding section while the deduction is 0 and appears only while an insurance payment is actually pending;
 - the insurance amount is settled in full at the next funding boundary and then clears;
 - insurance can contribute to a negative rival Funds balance.
 
-The exact deterministic casualty result for a stored mission seed is covered by automated tests; live testing should focus on state/UI consistency around the result.
+The exact deterministic casualty result and per-mission insurance amount are covered by automated tests; live testing should focus on state/UI/message consistency around the result.
 
 ---
 
@@ -242,7 +251,7 @@ Confirm the calculation includes:
 - Objective Funding income;
 - Satellite Network income;
 - Kerbal Payroll as a deduction;
-- Pending Insurance as a deduction;
+- Pending Insurance as a deduction only when non-zero;
 - signed **Total Next Payout**.
 
 Confirm:
@@ -266,14 +275,15 @@ Confirm:
 - only one research project is active at a time;
 - the selected project comes from the cheapest affordable eligible Science-cost tier;
 - its Science cost is deducted immediately when the project starts;
-- the UI shows the cost as **Paid**;
+- the active research card shows status and eligible completion timing without repeating the already-paid Science cost or research start date;
 - the project takes the configured 90 campaign days to become research-ready;
 - it unlocks only at the first funding boundary on or after that ready time;
 - it does not unlock early merely because universal time passed the 90-day point between funding boundaries;
 - completion clears the current project and adds the tech to Researched Tech;
+- **Show Locked Techs** displays only unresearched technologies, each on one line with cost, experiment unlocks, and prerequisites;
 - a new research project can be selected later according to the post-boundary stored Science state.
 
-Save and reload while research is active and confirm the project, paid cost, start time, ready time, and eligible completion funding date are unchanged.
+Save and reload while research is active and confirm the project, paid cost, start time, ready time, and eligible completion funding date are unchanged even though some of those stored fields are intentionally not repeated in the compact UI.
 
 ---
 
@@ -286,7 +296,7 @@ Confirm:
 - at most one construction project starts initially;
 - the upgrade cost is charged when construction starts;
 - the source facility level remains active during construction;
-- the UI shows source level, target level, paid Funds, elapsed time, remaining time, and expected completion date;
+- the UI shows source level, target level, paid Funds, remaining time, and expected completion date without a separate elapsed-time row;
 - Level 1 to 2 construction uses the configured duration;
 - the new facility level activates only at the first funding boundary where construction is due;
 - the completed level affects subsequent authoritative capability calculations;
@@ -313,11 +323,12 @@ Confirm:
 
 - stored rival events are processed in chronological order rather than at one arbitrary final timestamp;
 - live missions resolve at their stored completion time on the first simulation refresh after the jump;
+- each valid resolved Live Mission produces one result notification even when timewarp crosses its completion time;
 - progress checks crossed by the jump are not lost;
 - research and construction complete only at eligible funding boundaries;
 - every crossed funding boundary processes its payout and sponsor review;
 - the final next-funding date is the first boundary after current universal time;
-- no duplicated payout, launch, mission resolution, construction completion, or research completion occurs.
+- no duplicated payout, launch, mission resolution, result notification, construction completion, or research completion occurs.
 
 The automated suite covers a deterministic large-time-jump case; this live check validates the KSP timewarp/runtime integration around it.
 
@@ -343,13 +354,13 @@ Confirm preservation of:
 - every live mission's sequence, type, target/subject, location, launch time, duration, completion time, difficulty, Success Chance, assigned crew, planned Science, and outcome seed;
 - completed rival Science subjects.
 
-After reload, confirm historical objective completions do not replay as new completion notifications.
+After reload, confirm historical objective completion data alone does not replay a rival Live Mission notification. A mission that was still live at save time should produce exactly one notification only when it later resolves.
 
 A mission with a stored deterministic outcome seed should resolve to the same outcome after reload as it would have before reload.
 
 ---
 
-# 15. Task 14 UI polish
+# 15. UI polish and notifications
 
 ## Funding Targets ordering
 
@@ -373,13 +384,20 @@ Confirm each Contract row includes the Contract name and its configured funding 
 Confirm stock KSP messages are produced for these live events:
 
 - a sponsor review that makes one or more new funding targets Offered, naming the newly offered target(s);
-- a rival objective completion, naming the rival agency and objective;
-- a successful player campaign funding payout, showing the received Funds amount.
+- every valid rival Live Mission resolution, using a title such as `Aster Live Mission - SUCCESS` or `Aster Live Mission - FAILED`;
+- a successful rival Contract Live Mission names the completed mission/Contract;
+- a successful rival Science Live Mission names the experiment, body, situation, and biome where applicable, and reports the Science gained;
+- when a successful rival Science mission finds an already-depleted shared subject, the message says **No Science remained to collect**;
+- a failed uncrewed Live Mission reports failure without crew text;
+- a failed crewed Live Mission with no casualties says the assigned Kerbal(s) escaped and survived;
+- a failed crewed Live Mission with casualties reports the number lost/surviving and the exact **Insurance Penalty to Pay**;
+- a successful player campaign funding payout shows the received Funds amount.
 
 Also confirm:
 
+- a successful rival Contract mission produces only the Live Mission result notification and does not also produce the retired **Rival Objective Completed** message;
 - loading an existing save does not replay historical sponsor-review offers;
-- restoring historical objective completion state does not replay rival completion notifications;
+- restoring historical objective completion state does not create a rival Live Mission result notification;
 - no funding-received message appears when no positive Career funding award was actually applied.
 
 ---
@@ -424,7 +442,7 @@ Commit tested:
 KSP version: 1.12.x
 Save used:
 
-[ ] 1. Fresh v0.6 rival programme state
+[ ] 1. Fresh v0.6 rival programme state / selector
 [ ] 2. Rival Contract preparation / live mission
 [ ] 3. Launch Science Expedition preparation
 [ ] 4. Tracking Station destination gates
@@ -432,13 +450,13 @@ Save used:
 [ ] 6. Shared Science race
 [ ] 7. Crew capacity / contention / hiring
 [ ] 8. Mission Control satellite capacity
-[ ] 9. Mission failure / casualties / insurance
+[ ] 9. Mission failure / casualties / insurance / notification
 [ ] 10. Rival funding / negative Funds
 [ ] 11. Rival research
 [ ] 12. Rival facility construction
 [ ] 13. Large timewarp / crossed funding boundaries
 [ ] 14. Save/load persistence
-[ ] 15. Task 14 UI polish / notifications
+[ ] 15. UI polish / notifications
 [ ] 16. Task 15 Help window wording
 [ ] 17. General UI / log regression pass
 

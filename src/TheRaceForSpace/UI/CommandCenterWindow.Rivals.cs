@@ -88,13 +88,13 @@ namespace TheRaceForSpace.UI
             GUILayout.EndHorizontal();
 
             GUILayout.Space(12.0f);
+            DrawRivalFunding(agency);
+            GUILayout.Space(12.0f);
             DrawRivalConstruction(agency, currentUniversalTime);
             GUILayout.Space(12.0f);
             DrawRivalFacilities(agency);
             GUILayout.Space(12.0f);
             DrawRivalTechAndResearch(agency, currentUniversalTime);
-            GUILayout.Space(12.0f);
-            DrawRivalFunding(agency);
 
             GUILayout.EndVertical();
         }

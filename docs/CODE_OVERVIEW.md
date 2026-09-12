@@ -277,9 +277,10 @@ It also owns:
 - payroll;
 - facility construction selection/completion;
 - research selection/completion;
+- observer-only completion signals emitted only after a genuine new facility level or researched technology has been finalized;
 - `RivalFundingBreakdown` including signed net payout.
 
-`CampaignController` decides when these functions run at a funding boundary.
+Malformed/stale development state may still be cleared defensively, but that cleanup does not emit a completion signal. `CampaignController` decides when these functions run at a funding boundary.
 
 ## `Rivals/RivalTechCatalogue.cs`
 
@@ -446,14 +447,16 @@ It does not own a separate active-vessel sampler or a current Flight Attempt ide
 
 ## `UI/FundingNotificationUI.cs`
 
-Observes campaign signals and publishes stock KSP messages for:
+Observes authoritative gameplay signals and publishes stock KSP messages for:
 
 - eligible player objective completion;
-- rival objective completion;
+- rival Live Mission success/failure results;
+- rival research completion, including newly unlocked Science experiments where applicable;
+- rival facility construction completion, including a `Bonus:` line describing the capability granted by the new level;
 - sponsor reviews with new offers;
 - positive player campaign funding payouts.
 
-It maintains only presentation-side queue/baseline state and resets that state when the current save changes.
+The notification layer does not complete research/construction or recalculate whether an upgrade succeeded. Facility bonus text is presentation derived from the finalized facility level and the same configured capability values used by the rival simulation. It maintains only presentation-side queue/baseline state and resets that state when the current save changes.
 
 ---
 
@@ -505,7 +508,7 @@ Useful test areas now include:
 - live mission results/casualties/satellite reservations;
 - crew contention;
 - large time jumps;
-- research/construction;
+- research/construction and their observer-only completion signals;
 - signed funding-boundary integration.
 
 The automated suite cannot verify actual KSP/Unity APIs or IMGUI rendering. Use [`CONTENT_V0_6_TESTING.md`](CONTENT_V0_6_TESTING.md) for current live acceptance and [`KERBAL_CONTRACTS_V0_5_TESTING.md`](KERBAL_CONTRACTS_V0_5_TESTING.md) for the detailed retained Pre-Orbit cases.

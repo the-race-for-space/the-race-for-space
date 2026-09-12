@@ -463,10 +463,10 @@ Card order is:
 1. Programme Status
 2. Live Mission Progress
 3. Current Launch Programme / Launch Science Expedition
-4. Construction
-5. Facilities
-6. Tech Tree / Research
-7. Funding
+4. Funding
+5. Construction
+6. Facilities
+7. Tech Tree / Research
 
 It displays authoritative values from `AgencyState`, `RivalProgramState`, `CampaignController`, and specialist rival simulation helpers. Expansion state for the full tech tree is UI-only and is not persisted as gameplay state.
 

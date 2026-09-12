@@ -21,6 +21,7 @@ namespace TheRaceForSpace.Tests.Rivals
             NetworkSuccessTurnsReservationIntoSatellite();
             LaunchedContractSurvivesSponsorExpiry();
             FailedCrewedMissionUsesDeterministicCasualtiesAndInsurance();
+            ResolutionEventReportsCompletedMissionOutcome();
             ScienceSuccessUsesSharedPoolCompletionCallback();
             DueMissionOrderingUsesCompletionTimeThenSequence();
         }
@@ -337,6 +338,7 @@ namespace TheRaceForSpace.Tests.Rivals
             Require(firstResolution != null && firstResolution.WasValid && !firstResolution.Succeeded,
                 "Seed 6 should fail the Difficulty-10 Eve Science mission.");
             Equal(2, firstResolution.LostKerbalCount);
+            Near(100000.0, firstResolution.InsurancePenaltyFunds);
             Equal(1, firstRival.RivalProgram.KerbalsEmployed);
             Near(100000.0, firstRival.RivalProgram.PendingInsuranceFunds);
             Near(0.0, firstRival.RivalProgram.StoredScience);
@@ -351,9 +353,68 @@ namespace TheRaceForSpace.Tests.Rivals
                 new List<SatelliteNetworkFundingContract>(),
                 null);
             Equal(firstResolution.LostKerbalCount, secondResolution.LostKerbalCount);
+            Near(firstResolution.InsurancePenaltyFunds, secondResolution.InsurancePenaltyFunds);
             Near(
                 firstRival.RivalProgram.PendingInsuranceFunds,
                 secondRival.RivalProgram.PendingInsuranceFunds);
+        }
+
+        private static void ResolutionEventReportsCompletedMissionOutcome()
+        {
+            CampaignSettings.ResetToDefaults();
+            var rival = new AgencyState("aster", "Aster", false);
+            IList<ObjectiveFundingContract> objectiveContracts =
+                FundingContractCatalogue.CreateObjectiveFundingContracts();
+            IList<SatelliteNetworkFundingContract> networkContracts =
+                FundingContractCatalogue.CreateSatelliteNetworkFundingContracts();
+            ObjectiveFundingContract contract = OfferObjective(
+                objectiveContracts,
+                ObjectiveCatalogue.DirectedPower1Id);
+            RivalLiveMissionState mission = RivalLiveMissionSimulation.TryCreateContractMission(
+                rival,
+                contract.Id,
+                0.0,
+                objectiveContracts,
+                networkContracts,
+                1);
+            Require(mission != null, "The live mission outcome event test needs a launched Contract.");
+
+            AgencyState observedAgency = null;
+            RivalLiveMissionResolution observedResolution = null;
+            int eventCount = 0;
+            Action<AgencyState, RivalLiveMissionResolution> handler =
+                delegate(AgencyState resolvedAgency, RivalLiveMissionResolution resolvedMission)
+                {
+                    observedAgency = resolvedAgency;
+                    observedResolution = resolvedMission;
+                    eventCount++;
+                };
+
+            RivalLiveMissionSimulation.LiveMissionResolved += handler;
+            try
+            {
+                RivalLiveMissionResolution resolution = RivalLiveMissionSimulation.ResolveMission(
+                    rival,
+                    mission,
+                    mission.CompletionUniversalTime,
+                    networkContracts,
+                    null);
+
+                Require(resolution != null && resolution.Succeeded,
+                    "The deterministic Directed Power live mission should succeed.");
+                Equal(1, eventCount);
+                Require(object.ReferenceEquals(rival, observedAgency),
+                    "The completion signal should identify the rival agency that flew the mission.");
+                Require(object.ReferenceEquals(resolution, observedResolution),
+                    "The completion signal should expose the authoritative resolution snapshot.");
+                Require(object.ReferenceEquals(mission, observedResolution.Mission),
+                    "The resolution signal should retain the completed live mission snapshot.");
+                Near(0.0, observedResolution.InsurancePenaltyFunds);
+            }
+            finally
+            {
+                RivalLiveMissionSimulation.LiveMissionResolved -= handler;
+            }
         }
 
         private static void ScienceSuccessUsesSharedPoolCompletionCallback()

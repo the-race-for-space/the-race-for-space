@@ -95,17 +95,19 @@ namespace TheRaceForSpace.UI
                     agency.Id,
                     _selectedRivalAgencyId,
                     StringComparison.OrdinalIgnoreCase);
-                bool previousGuiEnabled = GUI.enabled;
-                GUI.enabled = !isSelected;
-                if (GUILayout.Button(
+                Color previousContentColor = GUI.contentColor;
+                GUI.contentColor = isSelected ? Color.white : Color.gray;
+                bool selectorPressed = GUILayout.Button(
                     GetRivalSelectorLabel(agency, agencyIndex),
-                    RivalSelectorButtonOptions))
+                    RivalSelectorButtonOptions);
+                GUI.contentColor = previousContentColor;
+
+                if (selectorPressed && !isSelected)
                 {
                     _selectedRivalAgencyId = agency.Id;
                     selectedAgency = agency;
                     _rivalsScrollPosition = Vector2.zero;
                 }
-                GUI.enabled = previousGuiEnabled;
             }
             GUILayout.EndHorizontal();
             GUILayout.Space(8.0f);

@@ -222,7 +222,7 @@ namespace TheRaceForSpace.ControllerTests
             string firstLevelObjectiveId)
         {
             ResetEnvironment();
-            CampaignSettings.RivalProgressChance = 0.0;
+            CampaignSettings.RivalNormalLaunchFacilityLevel1Chance = 0.0;
             Planetarium.CurrentUniversalTime = 0.0;
             KspVesselMonitor.SetUnavailable();
 

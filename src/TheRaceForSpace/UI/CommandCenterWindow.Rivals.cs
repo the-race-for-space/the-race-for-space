@@ -697,7 +697,10 @@ namespace TheRaceForSpace.UI
             DrawRivalFundingRow("Base Income", fundingBreakdown.BaseIncome, false);
             DrawRivalFundingRow("Gross Next Income", fundingBreakdown.GrossIncome, true);
             DrawRivalFundingRow("Kerbal Payroll", -fundingBreakdown.KerbalPayroll, false);
-            DrawRivalFundingRow("Pending Insurance", -fundingBreakdown.InsuranceDeduction, false);
+            if (fundingBreakdown.InsuranceDeduction > 0.0)
+            {
+                DrawRivalFundingRow("Pending Insurance", -fundingBreakdown.InsuranceDeduction, false);
+            }
             DrawRivalFundingRow("Total Next Payout", fundingBreakdown.NetPayout, true);
         }
 

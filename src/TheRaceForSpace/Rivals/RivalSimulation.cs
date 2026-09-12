@@ -204,6 +204,44 @@ namespace TheRaceForSpace.Rivals
         }
 
         /// <summary>
+        /// Retries only already-ready launches that require at least one new Kerbal and can recruit
+        /// that missing crew now. CampaignController invokes this after funding is applied and before
+        /// new facility construction so mission-critical recruitment has first use of post-payout Funds.
+        /// </summary>
+        internal static void RetryRecruitableReadyLaunches(
+            IList<AgencyState> agencies,
+            double fundingBoundaryUniversalTime,
+            IList<ObjectiveFundingContract> objectiveFundingContracts,
+            IList<SatelliteNetworkFundingContract> satelliteNetworkFundingContracts,
+            Func<AgencyState, IList<RivalScienceSubjectCandidate>> captureScienceCandidates)
+        {
+            if (agencies == null
+                || objectiveFundingContracts == null
+                || satelliteNetworkFundingContracts == null
+                || !IsFiniteNonNegative(fundingBoundaryUniversalTime))
+            {
+                return;
+            }
+
+            List<AgencyState> rivals = GetSortedRivals(agencies);
+            var context = new RivalSimulationContext(
+                fundingBoundaryUniversalTime,
+                objectiveFundingContracts,
+                satelliteNetworkFundingContracts,
+                captureScienceCandidates,
+                null,
+                SharedRandom);
+
+            RivalScheduledEvent scheduledEvent;
+            while (TryFindNextRecruitableReadyLaunch(rivals, context, out scheduledEvent))
+            {
+                // The stored ready time still decides Contract-vs-Science priority, but this launch
+                // actually becomes possible only after the funding boundary makes recruitment affordable.
+                ProcessScheduledEvent(scheduledEvent, fundingBoundaryUniversalTime, context);
+            }
+        }
+
+        /// <summary>
         /// Returns presentation text for a stable mission target ID using the live contract
         /// collections. Mission identity is never inferred from this display text.
         /// </summary>
@@ -533,6 +571,83 @@ namespace TheRaceForSpace.Rivals
                     scienceCandidates,
                     context.Random);
             }
+        }
+
+        private static bool TryFindNextRecruitableReadyLaunch(
+            IList<AgencyState> rivals,
+            RivalSimulationContext context,
+            out RivalScheduledEvent scheduledEvent)
+        {
+            scheduledEvent = default(RivalScheduledEvent);
+            bool hasEvent = false;
+
+            for (int rivalIndex = 0; rivalIndex < rivals.Count; rivalIndex++)
+            {
+                AgencyState agency = rivals[rivalIndex];
+                if (IsContractPreparationReady(agency)
+                    && agency.NextMissionReadyUniversalTime <= context.TargetUniversalTime
+                    && IsTargetAvailable(agency.NextMissionTargetId, agency, context)
+                    && HasSatelliteCapacityForTarget(agency, agency.NextMissionTargetId, context))
+                {
+                    int requiredKerbals = GetRequiredKerbalsForTarget(
+                        agency.NextMissionTargetId,
+                        context.ObjectiveFundingContracts,
+                        context.SatelliteNetworkFundingContracts);
+                    if (RivalDevelopmentSimulation.GetKerbalsRequiredToHire(agency, requiredKerbals) > 0
+                        && RivalDevelopmentSimulation.CanHireMissingKerbals(agency, requiredKerbals))
+                    {
+                        ConsiderScheduledEvent(
+                            new RivalScheduledEvent(
+                                agency,
+                                RivalScheduledEventType.ContractReadyLaunch,
+                                agency.NextMissionReadyUniversalTime,
+                                null),
+                            ref hasEvent,
+                            ref scheduledEvent);
+                    }
+                }
+
+                RivalProgramState programme = agency.RivalProgram;
+                ScienceLaunchPreparationState sciencePreparation = programme == null
+                    ? null
+                    : programme.ScienceLaunchPreparation;
+                if (sciencePreparation == null
+                    || sciencePreparation.LaunchProgressPercent < 100
+                    || !IsFiniteNonNegative(sciencePreparation.ReadyUniversalTime)
+                    || sciencePreparation.ReadyUniversalTime > context.TargetUniversalTime
+                    || context.CaptureScienceCandidates == null)
+                {
+                    continue;
+                }
+
+                IList<RivalScienceSubjectCandidate> scienceCandidates = context.GetScienceCandidates(agency);
+                RivalScienceSubjectCandidate currentCandidate =
+                    RivalScienceSimulation.FindCurrentPreparationCandidate(agency, scienceCandidates);
+                if (currentCandidate == null)
+                {
+                    continue;
+                }
+
+                int missingKerbals = RivalDevelopmentSimulation.GetKerbalsRequiredToHire(
+                    agency,
+                    sciencePreparation.RequiredKerbals);
+                if (missingKerbals > 0
+                    && RivalDevelopmentSimulation.CanHireMissingKerbals(
+                        agency,
+                        sciencePreparation.RequiredKerbals))
+                {
+                    ConsiderScheduledEvent(
+                        new RivalScheduledEvent(
+                            agency,
+                            RivalScheduledEventType.ScienceReadyLaunch,
+                            sciencePreparation.ReadyUniversalTime,
+                            null),
+                        ref hasEvent,
+                        ref scheduledEvent);
+                }
+            }
+
+            return hasEvent;
         }
 
         private static bool TryFindNextScheduledEvent(

@@ -136,8 +136,8 @@ namespace TheRaceForSpace.ControllerTests
                 "Funding review does not cascade completed offers",
                 FundingOfferControllerTests.FundingReviewDoesNotCascadeCompletedOffers);
             Run(
-                "Satellite fulfilment waits for sponsor review",
-                FundingOfferControllerTests.SatelliteFulfilmentWaitsForSponsorReview);
+                "Satellite fulfilment waits for funding review",
+                FundingOfferControllerTests.SatelliteFulfilmentWaitsForFundingReview);
             Run(
                 "Satellite sponsor review caps unfinished offers",
                 FundingOfferControllerTests.SatelliteReviewCapsUnfulfilledOffersAtTwo);

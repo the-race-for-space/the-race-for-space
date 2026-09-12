@@ -412,7 +412,6 @@ namespace TheRaceForSpace.UI
                     + " -> Level "
                     + construction.TargetLevel,
                     _boldLabelStyle);
-                GUILayout.Label("Elapsed: " + FormatDays(elapsedDays));
                 GUILayout.Label(
                     "Remaining: "
                     + FormatDays(remainingDays)

@@ -314,9 +314,10 @@ Responsibilities include:
 - payroll;
 - `RivalFundingBreakdown`;
 - facility upgrade cost/duration and completion;
-- research eligibility, selection, cost, and completion.
+- research eligibility, selection, cost, and completion;
+- observer-only `ResearchCompleted` and `FacilityConstructionCompleted` signals emitted after genuine new development state has been finalized.
 
-It does not decide **when** a funding boundary occurs; `CampaignController` calls it at the correct point in the boundary sequence.
+Malformed/duplicate development records may still be cleared defensively, but that cleanup does not emit a completion signal. It does not decide **when** a funding boundary occurs; `CampaignController` calls it at the correct point in the boundary sequence.
 
 ## `RivalTechCatalogue.cs`
 
@@ -392,7 +393,7 @@ Persistence classes transform project-owned mutable state to/from `ConfigNode` d
 - researched tech IDs and current research;
 - completed Science subjects.
 
-Old/malformed data is normalized defensively. Objective completions are restored silently so persistence cannot replay live notifications.
+Old/malformed data is normalized defensively. Objective completions are restored silently so persistence cannot replay live notifications. Restored facility levels and researched-tech IDs likewise do not emit development-completion signals; only an active project that actually completes during funding-boundary processing can do so.
 
 ---
 
@@ -495,12 +496,14 @@ It reports:
 
 - player completion of an Offered, unexpired Objective Funding Contract;
 - valid rival Live Mission results, including success/failure, Science gained, crew survival/casualties, and the exact insurance liability created by that mission;
+- rival research completion, including newly unlocked Science experiments where applicable;
+- rival facility construction completion, including a `Bonus:` line derived from the finalized facility capability/configuration;
 - sponsor reviews that create newly Offered targets;
 - positive player campaign funding payouts.
 
-Rival objective completion alone is no longer a separate notification path; a successful rival Contract is reported once as its Live Mission result. The notification layer observes the authoritative resolution snapshot and does not reroll outcomes or recalculate insurance.
+Rival objective completion alone is no longer a separate notification path; a successful rival Contract is reported once as its Live Mission result. Development notifications observe the authoritative completion signals and do not complete projects or alter facility/research state themselves.
 
-It establishes an offer baseline silently when a controller/save is first observed so loading a save does not replay historical sponsor-review messages. Persistence restoration also uses silent objective restoration and therefore cannot fabricate a Live Mission result notification.
+It establishes an offer baseline silently when a controller/save is first observed so loading a save does not replay historical sponsor-review messages. Persistence restoration also uses silent objective/development state restoration and therefore cannot fabricate a Live Mission, research, or facility-completion notification.
 
 ---
 
@@ -560,6 +563,17 @@ Offered funding target
   -> CampaignController later processes funding consequences
 ```
 
+## Rival development completion
+
+```text
+CampaignController funding boundary
+  -> RivalDevelopmentSimulation completes due research/construction
+  -> finalized researched-tech/facility state
+  -> ResearchCompleted / FacilityConstructionCompleted observer signal
+  -> FundingNotificationUI presentation
+  -> remaining funding-boundary processing continues
+```
+
 ---
 
 # 12. Tests and acceptance
@@ -581,7 +595,7 @@ The tests cover domain rules including:
 - crew contention and ready-time ordering;
 - large time jumps / chronological rival events;
 - negative rival funding;
-- research/construction rules;
+- research/construction rules and genuine-completion observer signals;
 - funding-boundary integration order.
 
 They cannot prove raw KSP APIs or on-screen IMGUI behaviour. Use:

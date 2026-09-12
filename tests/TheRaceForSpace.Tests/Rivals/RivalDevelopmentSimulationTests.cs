@@ -17,6 +17,7 @@ namespace TheRaceForSpace.Tests.Rivals
             FacilityConstructionSelectsChargesWaitsAndCompletes();
             ResearchSelectsCheapestEligibleTierAndCompletes();
             ResearchRespectsFacilityLimitsAndFundingBoundaryCompletion();
+            CompletionSignalsReportOnlyRealDevelopment();
         }
 
         private static void FacilityCapabilitiesFollowApprovedLevels()
@@ -341,6 +342,125 @@ namespace TheRaceForSpace.Tests.Rivals
                 "The first funding boundary on or after readiness should complete research.");
 
             CampaignSettings.ResetToDefaults();
+        }
+
+        private static void CompletionSignalsReportOnlyRealDevelopment()
+        {
+            CampaignSettings.ResetToDefaults();
+            var rival = new AgencyState("signal", "Signal Agency", false);
+            RivalProgramState programme = rival.RivalProgram;
+            SetAllFacilities(programme, 3);
+            programme.FacilityLevels[RivalFacilityType.TrackingStation] = 1;
+
+            var construction = new RivalFacilityConstructionState
+            {
+                Facility = RivalFacilityType.TrackingStation,
+                SourceLevel = 1,
+                TargetLevel = 2,
+                StartUniversalTime = 0.0,
+                CompletionUniversalTime = 100.0,
+                CostPaidFunds = 100000.0
+            };
+            programme.FacilityConstruction.Add(construction);
+            programme.CurrentResearch = new RivalResearchProjectState
+            {
+                TechId = "engineering101",
+                ScienceCostPaid = 5.0,
+                StartUniversalTime = 0.0,
+                ResearchReadyUniversalTime = 100.0,
+                EligibleCompletionFundingUniversalTime = 100.0
+            };
+
+            int researchEventCount = 0;
+            int facilityEventCount = 0;
+            AgencyState observedResearchAgency = null;
+            RivalTechNodeDefinition observedTech = null;
+            RivalFacilityConstructionState observedConstruction = null;
+            bool researchStateWasFinalized = false;
+            bool constructionStateWasFinalized = false;
+
+            Action<AgencyState, RivalTechNodeDefinition> researchHandler =
+                delegate(AgencyState completedAgency, RivalTechNodeDefinition techNode)
+                {
+                    researchEventCount++;
+                    observedResearchAgency = completedAgency;
+                    observedTech = techNode;
+                    researchStateWasFinalized = completedAgency.RivalProgram.CurrentResearch == null
+                        && completedAgency.RivalProgram.ResearchedTechIds.Contains(techNode.Id);
+                };
+            Action<AgencyState, RivalFacilityConstructionState> constructionHandler =
+                delegate(AgencyState completedAgency, RivalFacilityConstructionState completedConstruction)
+                {
+                    facilityEventCount++;
+                    observedConstruction = completedConstruction;
+                    constructionStateWasFinalized = RivalDevelopmentSimulation.GetFacilityLevel(
+                            completedAgency,
+                            completedConstruction.Facility) == completedConstruction.TargetLevel
+                        && !completedAgency.RivalProgram.FacilityConstruction.Contains(completedConstruction);
+                };
+
+            RivalDevelopmentSimulation.ResearchCompleted += researchHandler;
+            RivalDevelopmentSimulation.FacilityConstructionCompleted += constructionHandler;
+            try
+            {
+                Require(!RivalDevelopmentSimulation.CompleteDueResearch(rival, 99.0),
+                    "Research should not signal before its eligible completion boundary.");
+                Require(!RivalDevelopmentSimulation.CompleteDueFacilityConstruction(rival, 99.0),
+                    "Construction should not signal before its completion boundary.");
+                Equal(0, researchEventCount);
+                Equal(0, facilityEventCount);
+
+                Require(RivalDevelopmentSimulation.CompleteDueResearch(rival, 100.0),
+                    "Due research should complete for the signal test.");
+                Require(RivalDevelopmentSimulation.CompleteDueFacilityConstruction(rival, 100.0),
+                    "Due construction should complete for the signal test.");
+                Equal(1, researchEventCount);
+                Equal(1, facilityEventCount);
+                Require(object.ReferenceEquals(rival, observedResearchAgency),
+                    "The research completion signal should identify the rival agency.");
+                Equal("engineering101", observedTech == null ? null : observedTech.Id);
+                Require(object.ReferenceEquals(construction, observedConstruction),
+                    "The facility completion signal should retain the completed construction snapshot.");
+                Require(researchStateWasFinalized,
+                    "Research observers should see the finalized researched-tech state.");
+                Require(constructionStateWasFinalized,
+                    "Facility observers should see the finalized level and cleared construction state.");
+
+                Require(!RivalDevelopmentSimulation.CompleteDueResearch(rival, 100.0),
+                    "Completed research must not signal again at the same boundary.");
+                Require(!RivalDevelopmentSimulation.CompleteDueFacilityConstruction(rival, 100.0),
+                    "Completed construction must not signal again at the same boundary.");
+
+                programme.CurrentResearch = new RivalResearchProjectState
+                {
+                    TechId = "missing-tech",
+                    ScienceCostPaid = 1.0,
+                    StartUniversalTime = 100.0,
+                    ResearchReadyUniversalTime = 200.0,
+                    EligibleCompletionFundingUniversalTime = 200.0
+                };
+                programme.FacilityConstruction.Add(new RivalFacilityConstructionState
+                {
+                    Facility = RivalFacilityType.TrackingStation,
+                    SourceLevel = 1,
+                    TargetLevel = 2,
+                    StartUniversalTime = 100.0,
+                    CompletionUniversalTime = 200.0,
+                    CostPaidFunds = 100000.0
+                });
+
+                Require(RivalDevelopmentSimulation.CompleteDueResearch(rival, 200.0),
+                    "Malformed due research should still be cleared safely.");
+                Require(RivalDevelopmentSimulation.CompleteDueFacilityConstruction(rival, 200.0),
+                    "A stale due construction record should still be cleared safely.");
+                Equal(1, researchEventCount);
+                Equal(1, facilityEventCount);
+            }
+            finally
+            {
+                RivalDevelopmentSimulation.ResearchCompleted -= researchHandler;
+                RivalDevelopmentSimulation.FacilityConstructionCompleted -= constructionHandler;
+            }
         }
 
         private static void SetAllFacilities(RivalProgramState programme, int level)

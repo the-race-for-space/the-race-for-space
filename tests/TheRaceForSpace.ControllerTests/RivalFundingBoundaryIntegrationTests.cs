@@ -33,7 +33,7 @@ namespace TheRaceForSpace.ControllerTests
             aster.RivalProgram.FacilityConstruction.Clear();
             aster.RivalProgram.FacilityConstruction.Add(new RivalFacilityConstructionState
             {
-                Facility = RivalFacilityType.AdministrationBuilding,
+                Facility = RivalFacilityType.Administration,
                 SourceLevel = 1,
                 TargetLevel = 2,
                 StartUniversalTime = 0.0,
@@ -53,7 +53,7 @@ namespace TheRaceForSpace.ControllerTests
             Planetarium.CurrentUniversalTime = FundingIntervalSeconds;
             controller.Refresh(false);
 
-            Equal(2, aster.RivalProgram.FacilityLevels[RivalFacilityType.AdministrationBuilding]);
+            Equal(2, aster.RivalProgram.FacilityLevels[RivalFacilityType.Administration]);
             Equal(0, aster.RivalProgram.FacilityConstruction.Count);
             Require(aster.RivalProgram.CurrentResearch == null,
                 "Research due at the funding boundary should complete before new research selection.");

@@ -1,475 +1,543 @@
 # Code Overview
 
-This is the quickest guide to the current codebase.
+This is a practical walkthrough of the current **Content v0.6** codebase. Read [`STRUCTURE.md`](STRUCTURE.md) for stricter ownership rules and `AGENTS.md` before making changes.
 
-Use this when you want to understand **what happens where** without reading every class.
+## The big picture
 
-For ownership rules, see [`STRUCTURE.md`](STRUCTURE.md).
+The mod has three broad kinds of work:
 
-## Core flow
+1. **Read KSP** through `KspIntegration`.
+2. **Evaluate/advance project-owned gameplay state** through Tracking, Rivals, Funding, Objectives, Agencies, and Campaign.
+3. **Present the result** through UI.
+
+`ModRuntime` supplies the existing runtime heartbeat. `CampaignController` coordinates campaign-wide ordering. No UI component and no rival specialist creates an independent realtime simulation loop.
 
 ```text
-KSP / Unity
-    |
-    v
-ModRuntime
-    |
-    +--> KspVesselMonitor
-    |       |
-    |       +--> ActiveVesselSnapshot
-    |       |       +--> vessel display name
-    |       |       +--> persistent part IDs
-    |       |       +--> reference/control part persistent ID
-    |       |       |
-    |       |       +--> FlightContractTracker
-    |       |               +--> remembered FlightAttemptState records
-    |       |                         |
-    |       |                         v
-    |       |                 FlightContractProgressSaveState
-    |       +--> OrbitalVesselTracker
-    |
-    v
-CampaignController
-    |
-    +--> Agencies
-    +--> Objectives
-    +--> Funding
-    +--> Rivals
-    |
-    +--> Persistence
-    +--> CommandCenterWindow reads campaign/funding state
-    +--> FlightActiveUI reads offered/live Flight Contract state
-    +--> FundingNotificationUI publishes new player completions through KSP MessageSystem
+KSP APIs
+  |
+  +--> KspVesselMonitor --------> Tracking ------------------+
+  |                                                         |
+  +--> KspScienceAdapter -------> Rival Science ------------+--> CampaignController
+  |                                                         |       |
+  +--> CareerFundingAdapter / persistence / config ---------+       +--> Persistence
+                                                                  |
+                                                                  +--> UI reads state
 ```
 
-`ModRuntime` decides **when** work happens.
+---
 
-`KspVesselMonitor` reads **KSP state**.
+# Core concepts
 
-The trackers decide **what the vessel state means**.
+## Campaign
 
-`CampaignController` coordinates **campaign progression**.
+One KSP save's overall progression, funding, agencies, offered contracts, and shared timing.
 
-The UI only **displays or reports** the current state.
+Main coordinator: `Campaign/CampaignController.cs`.
 
-## Main terms
+## Agency
 
-### Campaign
+The player or one simulated rival.
 
-The complete progression state for one KSP save.
+Common state lives in `Agencies/AgencyState.cs`. Rival-only programme state is composed through `Agencies/RivalProgramState.cs`.
 
-### Agency
+## Objective
 
-The player or a simulated rival.
+A code-defined gameplay achievement such as Directed Power I, Probe Orbit, or Mun Crewed Orbit.
 
-### Objective
+Definitions live in `Objectives/ObjectiveCatalogue.cs` / `ObjectiveDefinition.cs`.
 
-A gameplay goal that an agency can complete.
+## Funding Contract
 
-Examples:
+The sponsorship attached to campaign goals.
 
-- Directed Power I
-- Control III
-- Probe Orbit
-- Mun Crewed Orbit
+- `ObjectiveFundingContract` — one-off objective funding with declining payouts.
+- `SatelliteNetworkFundingContract` — repeatable network funding based on qualifying satellites.
 
-### Objective Funding Contract
+## Launch Progress
 
-One-off funding attached to an objective. It uses the declining ten-payment funding sequence.
+Preparation progress for a rival mission. Reaching 100% means **ready to launch**, not “objective completed”.
 
-### Satellite Network Funding Contract
+Normal Contract preparation fields remain on `AgencyState`. Science preparation lives in `RivalProgramState`.
 
-Continuing funding based on qualifying satellites around a celestial body.
+## Live Mission
 
-### Pre-Orbit Contract
+A launched rival Contract or Science mission stored until its completion universal time. Outcome, crew assignment, Difficulty, success chance, location, duration, and seed are snapshotted at launch.
 
-One of the current twenty Kerbin contracts in the Directed Power, Mass, Control, or Biome lines.
+## Science Expedition
 
-### Flight Contract
+A rival mission for one stock Science subject. Rival gameplay uses `ScienceSubjectKey`; raw KSP Science subjects never leave `KspIntegration/KspScienceAdapter.cs`.
 
-Generic active-vessel contract infrastructure. The current Pre-Orbit contracts use it, but future Mun, Minmus, or other active-vessel contracts can use it too.
+---
 
-### Flight Attempt
+# Runtime and campaign coordination
 
-One remembered set of active-vessel Flight Contract history, such as launch origin, maximum speed/altitude, orbit state, and Control progress. Several attempts can remain in memory and are now persisted together across save/load. Each attempt remembers the persistent-part lineage that owns that history, while KSP vessel ID is retained only as a fast lookup cache.
+## `Core/ModRuntime.cs`
 
-A docked KSP vessel may contain several Flight Attempt lineages at once. Their histories stay separate. The lineage containing KSP's current reference/control part is the one shown/evaluated as the active attempt; `Control From Here` can move that selection to another remembered lineage without combining their historical progress. Two attempts may therefore share the same last KSP vessel ID while remaining different histories because their part lineages are stored independently.
+Think of `ModRuntime` as the clock and runtime owner.
 
-A constructed or replacement craft that happens to reuse an old KSP vessel ID does not inherit that old history when its persistent parts do not overlap the remembered lineage. Vessel ID is a cache, not permanent craft identity.
+It:
 
-A remembered attempt is not deleted merely because it has been inactive for a long time. The existing broad loaded/unloaded vessel refresh supplies all persistent part IDs still present in the save, and an attempt is pruned only when none of its remembered lineage parts survive that successful refresh.
+- owns the current `CampaignController`;
+- samples active-vessel Flight Contract telemetry on the faster cadence;
+- runs broader campaign refreshes on the existing slower cadence;
+- connects player Flight Contract completion back into campaign state;
+- exposes current tracking state to UI.
 
-## Main classes
+It should not gain rival facility formulas, funding lifecycle rules, or direct UI logic.
 
-### `ModRuntime`
+## `Campaign/CampaignController.cs`
 
-Location: `Core/ModRuntime.cs`
+Think of `CampaignController` as the campaign traffic controller.
 
-Owns the live campaign runtime for the current KSP game.
+It owns the cross-system sequence, not every rule used in that sequence.
 
-It schedules:
+Important responsibilities:
 
-- frequent active-vessel Flight Contract samples;
-- normal campaign refreshes;
-- slower broad loaded/unloaded vessel scans.
+- create current agencies and funding contracts;
+- restore save state before gameplay advances;
+- refresh player orbital state;
+- invoke rival chronology with Science callbacks;
+- evaluate unlocks and sponsor reviews;
+- start/advance funding lifecycles;
+- calculate player/rival payouts;
+- complete/start rival research and construction at funding boundaries;
+- persist updated state;
+- maintain the current active Pre-Orbit Flight Contract plan.
 
-After a successful broad scan and after Flight Contract persistence has been restored, `ModRuntime` asks the tracker to prune lineages that no longer exist. If anything is removed, it refreshes the captured Flight Contract persistence state immediately so a later KSP save does not write obsolete histories.
+### Funding boundary sequence
 
-For presentation, `ModRuntime` also records whether the **latest active-vessel sample successfully updated the tracker** and stores the vessel display name from that exact snapshot. Restored selected Flight Attempt state is historical until this fresh sample succeeds, so `FlightActiveUI` can wait rather than briefly showing stale telemetry after load or a Flight scene transition.
+A funding day is deliberately ordered:
 
-### `CampaignController`
+```text
+catch up rival events
+  -> finish due research/construction
+  -> update eligibility/start funding
+  -> calculate/apply income, payroll, insurance
+  -> advance active one-off payouts
+  -> start new research
+  -> start new construction
+  -> sponsor review
+```
 
-Location: `Campaign/CampaignController.cs`
+If multiple funding boundaries were crossed during timewarp, the controller processes them one at a time.
 
-Coordinates the campaign.
+---
 
-It manages:
+# Agencies and persistent rival state
 
-- agencies;
-- funding-contract state;
-- unlock progression;
-- sponsor reviews;
-- shared funding dates;
-- rival updates;
-- the active Flight Contract list.
+## `Agencies/AgencyState.cs`
 
-### `AgencyState`
+Contains state used by both player and rivals:
 
-Location: `Agencies/AgencyState.cs`
-
-Stores mutable state for one agency.
-
-Examples:
-
-- completed objective times;
-- funds;
+- stable ID/name;
+- player/rival identity;
+- Funds and `NextPayoutFunds`;
+- objective completion timestamps;
 - satellite counts;
-- rival mission progress.
+- rival normal Contract target / Launch Progress / progress-check UT / ready UT.
 
-A genuinely new gameplay completion recorded through `RecordObjectiveCompletion()` raises an internal completion signal. Persistence uses `RestoreObjectiveCompletion()` instead, which restores the same saved state without raising that signal. This is what prevents old achievements from being announced again when a save is loaded.
+A new objective completion emits the live completion signal used by notifications. Persistence restoration uses `RestoreObjectiveCompletion` instead so loading a save stays silent.
 
-### `ObjectiveDefinition`
+## `Agencies/RivalProgramState.cs`
 
-Location: `Objectives/ObjectiveDefinition.cs`
+Contains the rest of the v0.6 rival programme:
 
-Defines one objective and its requirements.
+- Stored Science;
+- Science preparation;
+- live missions;
+- completed Science subjects;
+- researched tech IDs;
+- current research;
+- nine facility levels;
+- facility construction collection;
+- employed Kerbals;
+- pending insurance.
 
-### `ObjectiveCatalogue`
+This file also defines lightweight project-owned state classes. These are intentionally serializable/testable without KSP types.
 
-Location: `Objectives/ObjectiveCatalogue.cs`
+---
 
-Creates the current objective set and stable IDs.
+# Objective and funding definitions
 
-It includes the twenty Pre-Orbit objectives and the orbital objectives used by the wider campaign.
+## `Objectives/ObjectiveDefinition.cs`
 
-### `UnlockRuleEvaluator`
+Holds immutable objective metadata.
 
-Location: `Objectives/UnlockRuleEvaluator.cs`
+For rivals, every supported Contract objective now also has:
 
-Interprets objective unlock rules.
+- `Difficulty`;
+- `RequiredKerbalCount`.
 
-The same rule logic is reused by campaign progression, rivals, tracking, and read-only UI progress.
+Those values are used when a live rival Contract mission launches.
 
-### `ObjectiveFundingContract`
+Pre-Orbit definitions also contain the active-flight rule data used by `FlightContractTracker`.
 
-Location: `Funding/ObjectiveFundingContract.cs`
+## `Objectives/ObjectiveCatalogue.cs`
 
-Stores the lifecycle of one one-off objective funding contract.
+Owns stable objective IDs and the code-defined campaign objective list.
 
-### `SatelliteNetworkFundingContract`
+If you add a new objective, its stable ID and immutable gameplay definition normally start here.
 
-Location: `Funding/SatelliteNetworkFundingContract.cs`
+## `Objectives/UnlockRuleDefinition.cs` and `UnlockRuleEvaluator.cs`
 
-Stores recurring network funding for one celestial body.
+Represent and evaluate prerequisites without embedding special cases in UI.
 
-### `FundingContractCatalogue`
+Current conditions can depend on objective completions, agency scope/count, satellite counts, and universal time.
 
-Location: `Funding/FundingContractCatalogue.cs`
+## `Funding/FundingContractCatalogue.cs`
 
-Creates the code-owned funding contract set.
+Creates fresh funding-contract state for the objective catalogue and satellite networks using current `CampaignSettings` balance.
 
-### `FlightContractTracker`
+The catalogue defines content relationships; current offer/start/expiry state belongs to each funding-contract instance.
 
-Location: `Tracking/FlightContractTracker.cs`
+---
 
-Evaluates frequent active-vessel telemetry and selects the remembered attempt associated with the currently sampled craft.
+# Rival programme simulation
 
-Current Pre-Orbit uses:
+The v0.6 rival code is intentionally split by responsibility.
 
-- Directed Power — speed, altitude, and impact state;
-- Mass — final mass, distance, and landed/splashed state;
-- Control — altitude-band hold, crew, and safe landed/splashed recovery;
-- Biome — current biome and landed/splashed state.
+## `Rivals/RivalSimulation.cs`
 
-It can evaluate several offered contracts independently from the same flight and retains independent histories for several craft.
+This is the chronological coordinator.
 
-Normal unchanged-vessel samples use the direct vessel-ID dictionary when its cached attempt still owns the current reference/control part. If the vessel ID changes, conflicts with remembered lineage, or a docked vessel's reference part belongs to another remembered attempt, the tracker resolves the correct attempt from persistent-part lineage instead. If a reused vessel ID arrives with entirely unrelated persistent parts, the old cache entry is discarded and the new craft starts a fresh attempt while the old surviving lineage remains recoverable.
+It:
 
-When staging or another split removes parts, the continued attempt keeps only the persistent IDs still present on the actively controlled branch. A detached branch therefore cannot later inherit the parent's historical maxima or Control qualification merely because it has the same launch time. The launch-time/body fallback is used only for attempts that genuinely have no persistent-part lineage.
+- selects only valid Offered targets;
+- advances normal Contract Launch Progress at stored check times;
+- asks `RivalScienceSimulation` to maintain/advance Science preparation;
+- launches ready Contract or Science missions when crew/capacity gates allow;
+- persists ready UT and uses it for Contract-vs-Science crew arbitration;
+- gives Contract priority on an exact ready-time tie;
+- finds the earliest stored event across rivals and processes events in chronological order;
+- uses stable agency ordering for exact-time shared-Science ties;
+- clears/replaces invalid preparations rather than letting bad state block progression forever.
 
-Docking never merges remembered histories or automatically absorbs the other craft's parts into the selected attempt. A combined vessel may contain several remembered lineages. The lineage containing `ActiveVesselSnapshot.ReferencePartPersistentId` receives live telemetry. If the player uses KSP's `Control From Here` on the other docked craft, that other attempt becomes active while retaining its own earlier maxima/origin/state. After undocking, each branch is matched back to its own persistent-part lineage.
+It does not query raw KSP Science or own facility/research formulas.
 
-If KSP temporarily has no usable reference-part ID, the tracker keeps the current matching attempt when possible and otherwise uses the strongest existing persistent-part overlap so it does not invent one merged history from several docked craft.
+## `Rivals/RivalScienceSimulation.cs`
 
-The tracker also applies contract-specific topology rules after selecting the attempt. Mass completion is blocked whenever the current vessel contains persistent parts outside the selected attempt's lineage, so unrelated docked mass cannot satisfy the requirement. Control compares the set of externally attached persistent parts between observations: adding or removing those parts resets only an unfinished continuous hold, while already-qualified Control state survives. Ordinary staging is not treated as an external topology change because the selected attempt first narrows its own lineage to the controlled branch.
+Owns Science preparation rules.
 
-`PruneAttemptsMissingFromPartPopulation()` handles lifecycle cleanup. It is given the primitive persistent-part population from a successful broad KSP vessel refresh and removes only attempts whose complete remembered lineage is absent. If even one lineage part survives, the attempt remains. Attempts with no persistent-part lineage are retained conservatively because their disappearance cannot be proven from part IDs.
+It starts from experiment IDs unlocked by `RivalTechCatalogue` plus facility-only EVA Report / Surface Sample gates, then filters KSP-supplied subject candidates by:
 
-The tracker exposes its remembered attempt collection only to the persistence layer through internal members. Loading reconstructs every saved history and restores one selected attempt when the save recorded one.
+- current body/situation access;
+- Tracking Station range;
+- campaign progression;
+- facility requirements;
+- completed subjects;
+- live/preparing duplicates;
+- positive Science remaining at selection/revalidation time.
 
-### `FlightAttemptState`
+It chooses targets, processes configured daily progress checks, stores ready time, and calculates presentation ETA/range.
 
-Location: `Tracking/FlightAttemptState.cs`
+Current design notes:
 
-Stores the mutable state for one remembered Flight Attempt. It contains the attempt's current KSP vessel/body identity, launch origin/time, historical maxima, orbit state, current presentation telemetry, independent Control-contract state, its current set of remembered persistent-part IDs, and the transient set of currently attached parts that are outside that lineage. It does not evaluate contract rules itself.
+- all normal Kerbin surface/KSC biome access is available from campaign start when the experiment permits it;
+- Probe Orbit opens Kerbin Low/High Space Science access;
+- EVA Report requires Astronaut Complex Level 2;
+- Surface Sample requires R&D Level 2;
+- the Sun is excluded from rival Science content;
+- current Science expeditions require one Kerbal.
 
-The lineage set is seeded from the attempt's first snapshot and is narrowed when parts leave the actively continued branch. Newly attached parts are not automatically added, so docking cannot silently merge independent histories. Persistence can enumerate the stored lineage and Control state without exposing raw KSP objects. The external-attachment set is rebuilt from live KSP part IDs after load; the first usable observation establishes a baseline so loading alone does not reset a partial Control hold.
+## `Rivals/RivalLiveMissionSimulation.cs`
 
-### `ActiveVesselSnapshot`
+Turns ready preparations into launched mission snapshots and later resolves them.
 
-Location: `Tracking/ActiveVesselSnapshot.cs`
+It owns:
 
-Carries KSP-independent active-vessel values into the tracker. Alongside telemetry and launch context it includes a read-only list of KSP part persistent IDs represented only as primitive `uint` values plus `ReferencePartPersistentId`, the persistent ID of KSP's current reference/control part. The constructor copies the part-ID list so later KSP-side collection changes cannot mutate an already captured snapshot.
+- Contract/Science mission type;
+- location and duration;
+- Difficulty and success chance (`95% - 5% * Difficulty` for Difficulty 1-10);
+- deterministic `OutcomeSeed`;
+- assigned crew;
+- satellite-producing mission reservations;
+- objective/satellite results on successful Contracts;
+- shared-pool Science award on successful Science;
+- casualties and pending insurance on failed crewed missions.
 
-It also carries `VesselName`, the player-visible KSP vessel name from the same observation. That value is presentation context only: it is not used to match Flight Attempts and is intentionally not written to `FLIGHT_CONTRACT_PROGRESS`.
+A Science success calls back to the KSP Science boundary at completion time so it receives only what is still unclaimed then.
 
-### `OrbitalVesselTracker`
+## `Rivals/RivalDevelopmentSimulation.cs`
 
-Location: `Tracking/OrbitalVesselTracker.cs`
+Owns facilities and development.
 
-Uses the slower vessel scan for:
+Facility effects:
 
-- orbital objective completion;
-- satellite-network counts.
+- **Administration** — base rival income;
+- **Astronaut Complex** — Kerbal roster limit; Level 2 also enables EVA Report through Science rules;
+- **Mission Control** — total satellite capacity;
+- **Research and Development** — rival tech Science-cost ceiling; Level 2 also enables Surface Sample through Science rules;
+- **VAB + Launch Pad** — normal Contract Launch Progress chance;
+- **SPH + Runway** — Science Launch Progress chance;
+- **Tracking Station** — destination/expedition range.
 
-It works with both loaded and unloaded vessel snapshots.
+It also owns:
 
-### `KspVesselMonitor`
+- crew availability and launch-time hiring;
+- payroll;
+- facility construction selection/completion;
+- research selection/completion;
+- `RivalFundingBreakdown` including signed net payout.
 
-Location: `KspIntegration/KspVesselMonitor.cs`
+`CampaignController` decides when these functions run at a funding boundary.
 
-Reads KSP vessel state and converts it into project-owned snapshots.
+## `Rivals/RivalTechCatalogue.cs`
 
-For the frequent Flight Contract path it walks only the active loaded vessel's existing `parts` list and copies every non-zero `Part.persistentId` into `ActiveVesselSnapshot`. It also reads KSP's current reference transform part through `GetReferenceTransformPart()`, falling back to the vessel root part during transient topology changes, and passes only that part's persistent ID across the integration boundary. The existing `vessel.vesselName` string is copied into the same snapshot for presentation. Raw KSP `Part` and `Vessel` objects remain inside `KspIntegration`.
+Fixed project mirror of the KSP 1.12 tech nodes needed by rivals.
 
-For lifecycle pruning it reuses the existing slower broad loaded/unloaded vessel scan. Loaded vessels contribute live `Part.persistentId` values because their `ProtoVessel` can lag after topology changes; unloaded vessels contribute `ProtoPartSnapshot.persistentId` values. Those IDs are copied into a project-owned primitive snapshot that the tracker can inspect without raw KSP objects.
+Contains stable IDs, Science costs, prerequisite semantics, and experiment unlocks. Tech does not gate rival Contract destinations in v0.6.
 
-The deduplicated active telemetry status line includes both the number of persistent part IDs and the current reference-part ID, which gives an in-game diagnostic for staging/docking lineage selection.
+---
 
-This is where raw KSP vessel access belongs.
+# Stock Science boundary
 
-### `ModPersistenceScenario`
+## `KspIntegration/KspScienceAdapter.cs`
 
-Location: `KspIntegration/ModPersistenceScenario.cs`
+This is the only rival-Science code allowed to manipulate raw stock Science objects.
 
-Connects the project-owned save-state classes to KSP's `ScenarioModule` save/load system.
+It:
 
-`FLIGHT_CONTRACT_PROGRESS` now serializes every remembered Flight Attempt through repeated `ATTEMPT` nodes. Each node contains its historical telemetry and launch context, persistent-part lineage, selected-attempt marker, and per-attempt `CONTROL_STATE` children. This Step 6 format intentionally does not migrate the earlier development layout that stored one attempt directly on the root node.
+- finds stock experiments and celestial bodies;
+- maps supported situations/biomes into `ScienceSubjectKey` identities;
+- calculates currently remaining Science;
+- avoids registering every untouched candidate into the player's archives merely by inspecting it;
+- builds `RivalScienceSubjectCandidate` snapshots;
+- consumes the matching stock subject when a rival wins it.
 
-Step 8 does not add another save field or node. Once lifecycle pruning removes a dead/recovered attempt, the existing capture path simply stops serializing that `ATTEMPT`.
-
-Step 9 also leaves the schema unchanged. Current vessel display name and active-telemetry freshness are rebuilt from live KSP state and are not saved as historical attempt fields.
-
-### `RivalSimulation`
-
-Location: `Rivals/RivalSimulation.cs`
-
-Selects rival targets, spends rival funds, advances mission progress, and records simulated completions.
-
-### `CommandCenterWindow`
-
-Location: `UI/CommandCenterWindow.cs`
-
-Draws the full Command Center with Overview, Funding Targets, Rival Agencies, and Contract Catalogue views.
-
-It reads campaign and funding state but does not advance gameplay. Live Flight Contract requirement telemetry is deliberately left to `FlightActiveUI`.
-
-### `FlightActiveUI`
-
-Location: `UI/FlightActiveUI.cs`
-
-Draws the compact Flight-only **Offered Contracts** window.
-
-It has its own Flight-scene launcher button and reads the same controller/tracker state already owned by `ModRuntime`. Player-uncompleted Offered objective contracts appear first and can be expanded independently by stable contract ID. Offered contracts already completed by the player sit at the bottom marked `Complete` with no expand/collapse control.
-
-When active Pre-Orbit telemetry exists, the window shows `Active Flight Attempt: <vessel name> (launch UT <time> s)`. The vessel name comes from the exact successful snapshot that updated the tracker; launch UT comes from the selected remembered attempt and therefore changes when `Control From Here` selects another independently launched lineage inside the same docked KSP vessel. If a save restore or scene transition has historical selection but no fresh active-vessel sample yet, the UI shows a waiting state and suppresses expanded live values until the runtime confirms current telemetry.
-
-Expanded Pre-Orbit contracts show the live requirements already tracked for Directed Power, Mass, Control, and Biome. Other objective types use their normal objective description. The window does not query KSP vessels or create a second telemetry loop.
-
-### `FundingNotificationUI`
-
-Location: `UI/FundingNotificationUI.cs`
-
-Publishes the stock KSP inbox notice for a newly completed player Objective Funding Contract.
-
-The class subscribes once for the KSP session to `AgencyState.ObjectiveCompletionRecorded`. Player completions are queued by stable objective ID until KSP's `MessageSystem` is ready, then resolved back to the current `ObjectiveFundingContract`. A message is sent only when the matching funding target is currently Offered and unexpired. Rival completions are ignored.
-
-The approved notification format is:
+The important boundary is:
 
 ```text
-Funding Target Completed — Control II
-Control II has been achieved. Your agency is now eligible for a share of the remaining contract funding.
+KSP ScienceSubject / ScienceExperiment
+        stay inside KspIntegration
+                 |
+                 v
+ScienceSubjectKey + primitive snapshot data
+                 |
+                 v
+            Rivals/
 ```
 
-The message uses KSP's green message styling and normal message icon. It does not complete objectives, calculate funding, or add another polling/telemetry loop. Loading saved objective completions is silent, so historical achievements do not generate duplicate inbox entries.
+If future rival Science code needs more stock data, extend the project-owned snapshot or adapter method instead of passing the KSP object outward.
 
-## The two vessel paths
+---
 
-### 1. Flight Contract path
+# Player vessel tracking
 
-Use this when a contract needs frequent information from the actively controlled vessel.
+Version 0.6 retains the v0.5 tracking architecture.
+
+## `KspIntegration/KspVesselMonitor.cs`
+
+Direct KSP reader.
+
+Creates project-owned snapshots from loaded/unloaded vessels, active control lineage, persistent parts, body/biome/situation data, and relevant destruction/lifecycle events.
+
+## `Tracking/FlightContractTracker.cs`
+
+Evaluates the actively controlled vessel for Pre-Orbit Flight Contracts.
+
+Four current lines:
+
+- Directed Power;
+- Mass;
+- Control;
+- Biome.
+
+Tracking history belongs to remembered `FlightAttemptState` objects, not to the UI or live KSP vessel object.
+
+## `Tracking/FlightAttemptState.cs`
+
+Keeps histories independent across vessel switching and robust through staging, docking/undocking, save/load, and vessel-ID reuse by using remembered persistent-part lineage.
+
+Important conservative rules include:
+
+- unrelated docked lineage cannot provide qualifying Mass;
+- Control topology changes can reset an unfinished continuous hold;
+- a newly built unrelated craft does not inherit old history merely because KSP reused a vessel ID;
+- broad refresh evidence is required before stale attempt histories are pruned.
+
+## `Tracking/OrbitalVesselTracker.cs`
+
+Uses the slower broad vessel snapshots for orbital objectives and satellite counts.
+
+---
+
+# Persistence
+
+## `KspIntegration/ModPersistenceScenario.cs`
+
+KSP-facing ScenarioModule. It is the storage bridge, not the gameplay model.
+
+## `Persistence/CampaignFundingSaveState.cs`
+
+Transforms player/campaign funding state and next funding time.
+
+## `Persistence/FlightContractProgressSaveState.cs`
+
+Transforms remembered Flight Attempt state.
+
+## `Persistence/RivalAgenciesSaveState.cs`
+
+Collection wrapper for current rivals.
+
+## `Persistence/RivalProgramSaveState.cs`
+
+Transforms the full v0.6 rival programme:
+
+- signed Funds;
+- objectives and satellites;
+- normal Contract preparation;
+- Science preparation;
+- live missions/outcome seed;
+- Stored Science and completed Science subjects;
+- crew and pending insurance;
+- facilities/construction;
+- researched tech and current research.
+
+Persistence should normalize malformed values and silently restore historical completions. It should not run funding, missions, or notifications.
+
+---
+
+# UI
+
+## `UI/CommandCenterWindow.cs`
+
+Main window shell and general views:
+
+- Overview;
+- Funding Targets;
+- Contract Catalogue;
+- Help / Player Guide.
+
+It also owns common UI helpers used by the rival partial.
+
+Current v0.6 polish includes player-uncompleted Funding Targets first and the funding-sharing help example.
+
+## `UI/CommandCenterWindow.Rivals.cs`
+
+Rival Agencies presentation partial.
+
+Each rival card reads authoritative state in this order:
 
 ```text
-Active KSP vessel
-    |
-    v
-KspVesselMonitor
-    |
-    +--> condition telemetry
-    +--> vessel display name
-    +--> Part.persistentId values
-    +--> reference/control Part.persistentId
-    |
-    v
-ActiveVesselSnapshot
-    |
-    +--> FlightContractTracker selects/updates attempt
-    |
-    +--> ModRuntime marks presentation fresh
-    |
-    v
-FlightContractTracker
-    |
-    +--> vessel-ID cache when reference lineage matches
-    +--> reference-part ownership for docked assemblies
-    +--> persistent-part overlap when identity changes
-    +--> select/create current FlightAttemptState
-    +--> apply Mass / Control topology rules
-    +--> campaign completion evaluation
-    +--> read-only FlightActiveUI presentation
-    |
-    v
-FlightContractProgressSaveState
-    +--> repeated ATTEMPT save records
+Programme Status
+Live Mission Progress
+Current Launch Programme | Launch Science Expedition
+Construction
+Facilities
+Tech Tree / Research
+Funding
 ```
 
-The telemetry request is requirement-gated. If only Mass is active, there is no reason to query biome or enable Directed Power impact callbacks. Persistent part IDs and the reference-part ID are common attempt identity context, so they are captured whenever this already-active snapshot path runs. Vessel display name is copied from the same already-selected KSP vessel for presentation and does not add a scan.
+The UI does not simulate a progress check, roll an outcome, spend Funds, award Science, complete construction, or choose research.
 
-Only the active vessel is sampled at the normal fast-path cadence. Remembered inactive attempts are passive state. Most samples use the O(1) vessel-ID cache plus one reference-part membership check. The tracker scans the small in-memory attempt collection only when the current reference part belongs to a different history, vessel identity changes/conflicts, or a fallback overlap match is required.
+## `UI/FlightActiveUI.cs`
 
-When a split/staged branch continues the attempt, its lineage is narrowed to the persistent parts still on that branch. When several lineages are docked together they remain separate; only the selected reference lineage receives the current sample. An unfinished continuous Control hold resets when the observation gap is too long or when externally attached parts are added/removed, because continuity cannot be proven through those changes. Qualified Control state is preserved.
+Small Flight-only Offered Contracts window.
 
-The active-vessel persistent-part capture adds one pass over the active vessel's loaded part list per captured telemetry sample and one reference-part lookup. Mass anti-combination and Control topology comparison reuse those same captured IDs. Persisting remembered attempts copies already-owned tracker data into save-state objects; none of these rules scan inactive KSP vessels or add a new timer.
+It displays:
 
-Lifecycle cleanup uses the separate existing broad loaded/unloaded vessel path rather than the one-second Flight path. It therefore adds no new vessel discovery cadence and cannot prune an attempt merely because that craft has not been controlled recently.
+- unfinished Offered objective contracts first;
+- the base reward beside each contract;
+- player-completed Offered objective contracts at the bottom;
+- expand/collapse controls for unfinished items;
+- current Pre-Orbit telemetry inside expanded rows when fresh telemetry is available.
 
-UI visibility does not change the telemetry cadence; the tracker continues to be updated by `ModRuntime` whether the compact window is open or closed. The runtime freshness marker only controls whether the UI treats the current tracker selection as live presentation; it does not change gameplay evaluation.
+It does not own a separate active-vessel sampler or a current Flight Attempt identity header.
 
-### 2. Orbital Vessel path
+## `UI/FundingNotificationUI.cs`
 
-Use this when the mod needs to inspect the broader vessel population, including unloaded vessels.
+Observes campaign signals and publishes stock KSP messages for:
+
+- eligible player objective completion;
+- rival objective completion;
+- sponsor reviews with new offers;
+- positive player campaign funding payouts.
+
+It maintains only presentation-side queue/baseline state and resets that state when the current save changes.
+
+---
+
+# Configuration
+
+## `GameData/TheRaceForSpace/Config/CampaignSettings.cfg`
+
+Current high-level sections include:
 
 ```text
-Loaded + unloaded KSP vessels
-    |
-    v
-KspVesselMonitor
-    |
-    +--> OrbitingVesselSnapshot list
-    |
-    +--> surviving persistent-part population
-             |
-             +--> FlightContractTracker lifecycle pruning
-    |
-    v
-OrbitalVesselTracker
+THE_RACE_FOR_SPACE_SETTINGS
+  RIVAL_PROGRAMME
+    KERBALS
+    CONSTRUCTION
+    RESEARCH
+    FACILITIES
+    LAUNCH_PROGRESS
+    MISSION_LOCATIONS
+  PRE_ORBIT
+  body/network balance sections
 ```
 
-This is slower and runs less often. The persistent-part population is a by-product of the same successful broad walk; it is not a second global vessel scan.
+The legacy single `rivalProgressChancePercent` setting is gone.
 
-## Example: completing Mass II
+Normal rival Contract chance comes from VAB + Launch Pad. Science chance comes from SPH + Runway.
 
-1. `ObjectiveCatalogue` defines Mass II.
-2. `FundingContractCatalogue` creates its objective funding contract.
-3. `CampaignController` offers it after the correct progression and sponsor-review rules are met.
-4. It becomes part of `ActiveFlightContracts`.
-5. `FlightTelemetryPlan` requests Mass telemetry.
-6. `KspVesselMonitor` captures active-vessel mass, launch position, current position, situation, vessel display name, persistent part IDs, and the reference/control part ID.
-7. `FlightContractTracker` resolves the active craft's remembered Flight Attempt without merging any other docked lineage.
-8. `ModRuntime` marks the presentation fresh because this same snapshot successfully updated the selected attempt.
-9. If parts from another lineage are still attached, Mass completion is blocked rather than accepting the combined KSP vessel mass.
-10. Once the selected attempt is separate, the tracker checks its normal final vessel mass, distance, and landed/splashed requirements.
-11. On a valid Kerbin landing or splashdown, `AgencyState.RecordObjectiveCompletion()` records the result and raises the new-completion signal.
-12. `FundingNotificationUI` posts the stock funding-target completion message for Mass II.
-13. `CampaignController` updates unlocks and funding state.
-14. `FlightContractProgressSaveState` captures all remembered Flight Attempts for the normal KSP save path; the Command Center and FlightActiveUI read the resulting state for presentation.
+`KspIntegration/CampaignSettingsLoader.cs` owns parsing and validation. `Core/CampaignSettings.cs` owns the resulting values used by gameplay.
 
-This deliberately uses the stock vessel mass only when no parts outside the selected attempt lineage are attached. The tracker does not maintain a second approximate per-part mass model.
+---
 
-## Example: save while another craft is active
+# Tests
 
-1. Craft A records a Flight Attempt history, for example a 650 m/s maximum.
-2. The player switches to Craft B, which records its own independent history.
-3. The game is saved while B is selected.
-4. `FLIGHT_CONTRACT_PROGRESS` writes separate `ATTEMPT` nodes for A and B, including each persistent-part lineage.
-5. After reload, B is restored as the historical selected attempt, but `FlightActiveUI` waits until fresh active-vessel telemetry succeeds.
-6. Once KSP reports the currently controlled vessel, the tracker resolves that lineage and the UI shows its vessel name plus the selected attempt's original launch UT.
-7. Switching back to A matches A's surviving parts to A's saved lineage and restores its earlier 650 m/s history rather than starting over.
-8. The same lineage matching remains available through later docking and undocking.
+Run:
 
-## Example: recovered craft cleanup
+```bash
+bash tools/run-logic-tests.sh
+```
 
-1. Craft A and Craft B both have remembered Flight Attempt histories.
-2. Craft A remains parked or unloaded somewhere in the save.
-3. Craft B is recovered, terminated, or destroyed so none of B's remembered persistent parts remain in the KSP vessel population.
-4. The next successful broad vessel refresh still finds at least one of A's lineage parts but finds none of B's lineage parts.
-5. `FlightContractTracker` removes B's obsolete attempt and keeps A unchanged.
-6. `ModRuntime` refreshes the captured Flight Contract persistence state, so the next save contains A's `ATTEMPT` but no longer contains B's.
+This runs both KSP-independent suites.
 
-No elapsed-time threshold is involved.
+Useful test areas now include:
 
-## Example: constructed or replacement craft reuses a vessel ID
+- objective/funding/unlock rules;
+- Flight Contract tracking and save transforms;
+- CampaignController offer/funding order;
+- rival state/persistence;
+- tech catalogue;
+- Science filtering/preparation;
+- live mission results/casualties/satellite reservations;
+- crew contention;
+- large time jumps;
+- research/construction;
+- signed funding-boundary integration.
 
-1. Craft A records history under a KSP vessel ID and owns persistent parts `A1`, `A2`.
-2. A construction/topology process later presents a craft with the same vessel ID but persistent parts `B1`, `B2` and no overlap with A.
-3. The vessel-ID cache is rejected because the lineage is incompatible.
-4. The new craft starts a fresh Flight Attempt and receives only its own telemetry history.
-5. If A still exists elsewhere, returning to parts `A1`, `A2` recovers A's original history independently.
+The automated suite cannot verify actual KSP/Unity APIs or IMGUI rendering. Use [`CONTENT_V0_6_TESTING.md`](CONTENT_V0_6_TESTING.md) for current live acceptance and [`KERBAL_CONTRACTS_V0_5_TESTING.md`](KERBAL_CONTRACTS_V0_5_TESTING.md) for the detailed retained Pre-Orbit cases.
 
-This is why persistent part lineage is authoritative and vessel ID remains only a cache.
+---
 
-## Example: completing Probe Orbit
+# Where should I make this change?
 
-1. Any Pre-Orbit Level V completion unlocks Probe Orbit; the next sponsor review moves it from `Unlocked` to `Offered` through the normal objective offer flow.
-2. A qualifying uncrewed Probe or Relay enters Kerbin orbit.
-3. The slower vessel scan captures that vessel.
-4. `OrbitalVesselTracker` evaluates the orbital objective.
-5. The player's agency records Probe Orbit completion and emits the same completion signal.
-6. `FundingNotificationUI` posts the stock completion notice if Probe Orbit is still an Offered, unexpired funding target.
-7. Campaign progression and funding update on the normal controller path.
-
-## Where to make changes
-
-| You want to change... | Start here |
+| Goal | Start here |
 | --- | --- |
-| Objective definitions or thresholds | `Objectives/ObjectiveCatalogue.cs` |
-| Unlock rules | `Objectives/UnlockRuleEvaluator.cs` |
-| Active-vessel contract behaviour | `Tracking/FlightContractTracker.cs` |
-| Flight Attempt state | `Tracking/FlightAttemptState.cs` |
-| Active-vessel snapshot data | `Tracking/ActiveVesselSnapshot.cs` |
-| KSP telemetry or lineage collection | `KspIntegration/KspVesselMonitor.cs` |
-| Orbital tracking | `Tracking/OrbitalVesselTracker.cs` |
-| Sponsor review or campaign progression | `Campaign/CampaignController.cs` |
-| Funding calculations | `Funding/` |
-| Rival behaviour | `Rivals/RivalSimulation.cs` |
-| Save-state models | `Persistence/` |
-| KSP save/load hooks | `KspIntegration/ModPersistenceScenario.cs` |
-| Full Command Center | `UI/CommandCenterWindow.cs` |
-| Compact Flight contract window | `UI/FlightActiveUI.cs` |
-| Funding completion inbox messages | `UI/FundingNotificationUI.cs` |
+| Change runtime frequency | `Core/ModRuntime.cs` |
+| Add/change balance setting | `Core/CampaignSettings.cs`, loader, cfg |
+| Change sponsor/funding order | `Campaign/CampaignController.cs` |
+| Add objective | `Objectives/ObjectiveCatalogue.cs` / `ObjectiveDefinition.cs` |
+| Change unlock rule | `Objectives/UnlockRuleDefinition.cs` / evaluator |
+| Change funding lifecycle | `Funding/` |
+| Change rival target/event chronology | `Rivals/RivalSimulation.cs` |
+| Change rival Science rules | `Rivals/RivalScienceSimulation.cs` |
+| Change mission outcome/casualty/reservation | `Rivals/RivalLiveMissionSimulation.cs` |
+| Change rival facility/crew/research/construction | `Rivals/RivalDevelopmentSimulation.cs` |
+| Change rival tech | `Rivals/RivalTechCatalogue.cs` |
+| Read/change stock Science integration | `KspIntegration/KspScienceAdapter.cs` |
+| Change active-vessel snapshot acquisition | `KspIntegration/KspVesselMonitor.cs` |
+| Change Pre-Orbit evaluation/history | `Tracking/FlightContractTracker.cs` / `FlightAttemptState.cs` |
+| Change rival save format | `Persistence/RivalProgramSaveState.cs` |
+| Change Rival Agencies layout | `UI/CommandCenterWindow.Rivals.cs` |
+| Change Funding Targets / catalogue / help | `UI/CommandCenterWindow.cs` |
+| Change compact Flight presentation | `UI/FlightActiveUI.cs` |
+| Change stock inbox messages | `UI/FundingNotificationUI.cs` |
 
-## Three rules to remember
+Three practical rules prevent most architectural mistakes:
 
-1. **KSP API access stays in `KspIntegration` where practical.** Presentation classes may use KSP's stock UI APIs for their own display responsibility.
-2. **Gameplay logic should use project-owned state and snapshots.**
-3. **The UI displays or reports state; it does not advance the campaign.**
+1. Do not let raw KSP objects escape `KspIntegration`.
+2. Do not make UI authoritative for gameplay.
+3. When several systems need ordering, coordinate them in `CampaignController` or `ModRuntime` rather than duplicating the rule in each subsystem.

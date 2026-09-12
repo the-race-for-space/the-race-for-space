@@ -1,104 +1,78 @@
 # Linux / Steam Deck Testing
 
-This guide is for the normal Linux or Steam Deck development cycle for **The Race for Space 0.5**.
+This guide covers the normal Linux / Steam Deck development cycle for **The Race for Space Content v0.6 alpha**.
 
 Current branch:
 
 ```text
-Alpha/KerbalContracts-v0.5
+Alpha/Content-v0.6
 ```
 
-For the full gameplay acceptance checklist, use [`KERBAL_CONTRACTS_V0_5_TESTING.md`](KERBAL_CONTRACTS_V0_5_TESTING.md).
+Use [`CONTENT_V0_6_TESTING.md`](CONTENT_V0_6_TESTING.md) for the full v0.6 live-KSP acceptance checklist. Use [`KERBAL_CONTRACTS_V0_5_TESTING.md`](KERBAL_CONTRACTS_V0_5_TESTING.md) when you need the detailed retained Pre-Orbit vessel-tracking scenarios.
 
-## Daily test cycle - copy and paste this whole block
+## Daily test cycle
 
-This block is designed to work when Konsole opens in your home folder (`~`).
+This block assumes Konsole opens in the home folder:
 
 ```bash
 cd /home/deck/Projects/the-race-for-space/
 export KSP_ROOT="$HOME/.local/share/Steam/steamapps/common/Kerbal Space Program"
 
 git fetch origin
-git switch Alpha/KerbalContracts-v0.5
+git switch Alpha/Content-v0.6
 git pull --ff-only
 
 bash tools/run-logic-tests.sh
-bash tools/test-prototype.sh Alpha/KerbalContracts-v0.5
+bash tools/test-prototype.sh Alpha/Content-v0.6
 ```
 
-The first `cd` is required. The `git` commands and the scripts under `tools/` must be run from inside the repository.
+Do not deploy if the automated logic/controller tests fail.
 
-Do not deploy if the automated logic tests fail.
-
-## 1. Open the repository
-
-If your prompt shows something like:
-
-```text
-(deck@steamdeck ~)$
-```
-
-you are in your home folder, not in the repository.
-
-Run:
+## 1. Confirm the repository and branch
 
 ```bash
 cd /home/deck/Projects/the-race-for-space/
-```
-
-Confirm Git can see the repository:
-
-```bash
 git status --short
-```
-
-If this command works, you are in the correct folder. No output means the working tree is clean.
-
-## 2. Confirm the branch
-
-```bash
 git branch --show-current
 ```
 
-Expected:
+Expected branch:
 
 ```text
-Alpha/KerbalContracts-v0.5
+Alpha/Content-v0.6
 ```
 
-If needed, update the branch:
+If needed:
 
 ```bash
 git fetch origin
-git switch Alpha/KerbalContracts-v0.5
+git switch Alpha/Content-v0.6
 git pull --ff-only
 ```
 
-## 3. Set `KSP_ROOT`
+Do not create a replacement branch as part of testing.
 
-Common Steam Deck / Linux location:
+## 2. Set `KSP_ROOT`
+
+Common Steam Deck location:
 
 ```bash
 export KSP_ROOT="$HOME/.local/share/Steam/steamapps/common/Kerbal Space Program"
 ```
 
-Alternative common location:
+Alternative:
 
 ```bash
 export KSP_ROOT="$HOME/.steam/steam/steamapps/common/Kerbal Space Program"
 ```
 
-Confirm the main KSP assembly exists:
+Confirm KSP references:
 
 ```bash
 test -f "$KSP_ROOT/KSP_Data/Managed/Assembly-CSharp.dll" && echo "KSP references found"
 ```
 
-`KSP_ROOT` must point to the KSP installation folder, not directly to `GameData`.
-
-## 4. Run the automated tests
-
-From the repository folder:
+## 3. Run automated tests
 
 ```bash
 bash tools/run-logic-tests.sh
@@ -106,422 +80,190 @@ bash tools/run-logic-tests.sh
 
 A successful run ends with both suites passing.
 
-The automated tests cover KSP-independent behaviour such as:
+Current KSP-independent coverage includes:
 
-- objective and unlock-rule evaluation;
-- the four opening Pre-Orbit offers;
-- later Pre-Orbit unlock and sponsor-review behaviour;
-- independent evaluation of multiple offered Flight Contracts;
-- Directed Power, Mass, Control, and Biome rules;
-- Flight Attempt switching, staging/split lineage, docked reference-lineage reconciliation, and multi-attempt save/load;
-- Mass rejection while another lineage is attached and Control reset/preservation across topology changes;
-- conservative lifecycle pruning when a remembered lineage disappears while another craft survives;
-- constructed/replacement craft starting fresh when a reused KSP vessel ID has unrelated persistent-part lineage;
-- destruction removing only the impacted attempt while another remembered craft survives;
-- active-vessel snapshots preserving the display name used by FlightActiveUI presentation;
-- rival mission progress;
-- funding calculations;
-- persistence transformations;
-- `CampaignController` ordering.
+- funding contracts and unlock rules;
+- the four opening Pre-Orbit offers and sponsor-review progression;
+- Directed Power, Mass, Control, and Biome evaluation;
+- Flight Attempt switching, staging/splits, docking/undocking, lifecycle pruning, vessel-ID reuse, and persistence;
+- orbital objective/satellite tracking rules;
+- rival programme state and persistence;
+- rival tech catalogue and experiment unlocks;
+- Science candidate filtering, destination/facility gates, daily preparation, ETA, and depleted-target replacement;
+- live Contract/Science mission snapshots and Difficulty-based success;
+- deterministic outcomes, casualties, pending insurance, and satellite reservations;
+- crew availability/hiring/contention and exact ready-time Contract priority;
+- shared Science exact-time rival ordering;
+- facility capabilities, research, construction, and signed rival funding;
+- large time jumps / chronological event processing;
+- controller funding-boundary ordering.
 
-They cannot prove direct KSP API behaviour such as:
+The standalone suites cannot prove direct KSP/Unity behaviour such as:
 
+- stock `ScienceSubject` lookup/consumption;
+- real KSP body/biome/experiment availability;
+- Career Funds integration;
+- loaded/unloaded vessel capture in a real save;
 - vessel-destruction callbacks;
-- active-vessel `Part.persistentId`, reference/control-part, and `vesselName` capture;
-- loaded `Part.persistentId` plus unloaded `ProtoPartSnapshot.persistentId` population capture during the broad vessel refresh;
-- stock biome reporting;
-- loaded/unloaded vessel discovery inside a real KSP save;
-- Career-funds integration;
-- actual Command Center or FlightActiveUI layout, active-attempt header, and launcher lifecycle;
-- stock `MessageSystem` funding-completion notifications.
+- actual IMGUI layout and launcher lifecycle;
+- stock `MessageSystem` notifications;
+- save/load through a real KSP ScenarioModule lifecycle.
 
-Those require the in-game checks below.
+Those require the live checks in `CONTENT_V0_6_TESTING.md`.
 
-## 5. Build and deploy
-
-From the repository folder, use:
+## 4. Build and deploy
 
 ```bash
-bash tools/test-prototype.sh Alpha/KerbalContracts-v0.5
+bash tools/test-prototype.sh Alpha/Content-v0.6
 ```
 
-The helper builds the real mod against the local KSP assemblies and deploys:
+The helper builds against your local KSP 1.12.x assemblies and deploys:
 
 ```text
 $KSP_ROOT/GameData/TheRaceForSpace/Plugins/TheRaceForSpace.dll
 $KSP_ROOT/GameData/TheRaceForSpace/Config/CampaignSettings.cfg
 ```
 
-Confirm the files if needed:
+Confirm if needed:
 
 ```bash
 ls -l "$KSP_ROOT/GameData/TheRaceForSpace/Plugins/TheRaceForSpace.dll"
 ls -l "$KSP_ROOT/GameData/TheRaceForSpace/Config/CampaignSettings.cfg"
 ```
 
-A successful real KSP build is important after changes in `KspIntegration/` or the KSP-facing UI, because the standalone tests do not compile against the actual running KSP scene lifecycle.
+A real KSP build is especially important after changes under `KspIntegration/` or `UI/`, because those types are not compiled against the live KSP scene lifecycle by the standalone test harness.
 
-## 6. Quick in-game smoke test
+## 5. Quick v0.6 smoke test
 
-Use a disposable Career save created with the current build. The Step 6 `FLIGHT_CONTRACT_PROGRESS` layout intentionally does not migrate the earlier development single-attempt format.
+Use a disposable Career save created with the current build.
 
 ### Command Center
 
-1. Start KSP 1.12.x.
-2. Load or create a Career save.
-3. Open the Command Center with F8.
-4. Confirm the stock launcher button opens the same window.
-5. Hide the window, continue playing, and reopen it. Campaign progress should continue while the UI is hidden.
+1. Start KSP 1.12.x and load/create a Career save.
+2. Open the Command Center with F8.
+3. Confirm the stock launcher button opens the same window.
+4. Confirm **Overview**, **Funding Targets**, **Rival Agencies**, and **Contract Catalogue** are available.
+5. Open `?` Help and confirm the Pre-Orbit explanation and worked funding-sharing example render correctly.
+6. Hide/reopen the window and confirm campaign/rival progression is not tied to UI visibility.
 
 ### Opening campaign state
 
-Open **Contract Catalogue**.
+In **Contract Catalogue**, confirm:
 
-Confirm these four contracts are `Offered`:
+- Directed Power I is Offered;
+- Mass I is Offered;
+- Control I is Offered;
+- Biome I is Offered;
+- Levels II-V begin Locked;
+- newly unlocked targets wait for sponsor review before becoming Offered.
 
-- Directed Power I
-- Mass I
-- Control I
-- Biome I
-
-Confirm Levels II-V of all four lines are initially `Locked`.
-
-### FlightActiveUI lifecycle and contract list
-
-Before entering Flight, confirm the separate Flight contract launcher button is not present in Space Center or editor scenes.
-
-Launch a vessel and confirm:
-
-1. a separate Flight-only launcher button appears;
-2. it opens a small draggable window titled **Offered Contracts**;
-3. the Flight window opens and closes independently of the full Command Center;
-4. unfinished Offered objective contracts appear before player-completed Offered objective contracts;
-5. completed Offered contracts sit at the bottom marked `Complete` and have no expand/collapse control;
-6. unfinished contracts use independent `+` / `-` controls, so several contracts can remain expanded at the same time;
-7. the contract list scrolls rather than forcing the compact window to grow indefinitely;
-8. while an unfinished Pre-Orbit Flight Contract is active, the window shows either `Active Flight Attempt: Waiting for vessel telemetry...` during initial capture or `Active Flight Attempt: <vessel name> (launch UT <time> s)` after a successful sample.
-
-Return to Space Center and confirm the Flight-only launcher disappears. Re-enter Flight and confirm only one FlightActiveUI launcher button is present.
-
-### Live Flight Contract telemetry
-
-In Flight, open **Offered Contracts** and expand the active Pre-Orbit contracts.
-
-Immediately after entering Flight or reloading a save, a short `Active Flight Attempt: Waiting for vessel telemetry...` state is expected until the first successful active-vessel sample. Once normal telemetry is available, the header should resolve to the currently controlled vessel name and the selected remembered attempt's launch UT. Expanded Pre-Orbit rows should wait as well rather than briefly displaying restored historical values as if they were current.
-
-The expanded rows should then show the live values they need:
-
-- **Directed Power** - current speed, maximum speed, maximum altitude, and impact readiness/status.
-- **Mass** - current mass, distance from launch, and landed/splashed state.
-- **Control** - current altitude, hold progress, crew count, and safe recovery readiness.
-- **Biome** - current biome, target biome, match state, and landed/splashed state.
-
-The values should follow the existing `FlightContractTracker` updates at about the normal once-per-second telemetry cadence. Opening or closing FlightActiveUI must not create another active-vessel sampling loop.
-
-Persistent part-lineage IDs, the current reference/control-part ID, and the vessel display name are captured while this existing snapshot is built. After flying a normal controllable multi-part craft, the KSP log should contain a deduplicated Flight telemetry line similar to:
-
-```text
-[TheRaceForSpace] Flight telemetry: captured active vessel <id> on Kerbin with <n> persistent part IDs and reference part <part-id>.
-```
-
-For a normal loaded craft after any topology change has settled, `<n>` and `<part-id>` should both be greater than zero. The tracker uses those IDs to recover remembered Flight Attempts when KSP vessel identity changes or several remembered lineages are docked together.
-
-### Flight Attempt staging lineage
-
-For a focused staging check, use a controllable multi-stage craft while a Directed Power contract is active:
-
-1. reach a noticeable maximum speed before staging;
-2. stage so the actively controlled branch keeps only part of the original vessel;
-3. confirm the FlightActiveUI maximum speed does not reset when KSP changes the vessel identity;
-4. confirm the Active Flight Attempt header follows the currently controlled staged vessel while the remembered launch UT remains the original attempt's launch time;
-5. if the detached branch is separately controllable, switch to it and confirm it does **not** inherit the continuing branch's historical maximum;
-6. switch back to the continuing branch and confirm its original maximum is still present.
-
-This verifies the staging/split lineage rule.
-
-### Flight Attempt docking and undocking lineage
-
-Directed Power maximum speed is the easiest visible history value to compare:
-
-1. fly Craft A and establish a recognizable maximum speed; note its Active Flight Attempt vessel name and launch UT;
-2. switch to unrelated Craft B and establish a different lower maximum speed; confirm the header changes to B and its own launch UT;
-3. return to Craft A and confirm A's original maximum and launch UT are restored;
-4. dock A and B while controlling from a part that belongs to A;
-5. confirm the FlightActiveUI still shows A's history rather than merging or replacing it with B's history;
-6. use KSP's **Control From Here** on a suitable part belonging to B;
-7. after the next telemetry sample, confirm the active history changes to B's remembered values and its launch UT. The stock vessel display name may remain the same for the combined docked assembly, so the launch UT is the useful visible lineage discriminator;
-8. undock the vessels;
-9. switch to A and B separately and confirm each branch recovers its own pre-docking history and header values.
-
-### Mass and Control topology rules
-
-Use two independently remembered craft so their part lineages are already known to the tracker.
-
-For **Mass**:
-
-1. make Craft A satisfy the Mass distance requirement and retain enough mass on its own;
-2. dock unrelated Craft B to A and keep A's lineage selected with **Control From Here**;
-3. land or splash down the combined assembly while it still contains B's parts;
-4. confirm the Mass objective does **not** complete while another lineage is attached;
-5. undock B so A is again made only from A's remembered lineage;
-6. with A still meeting its normal mass, distance, and recovery requirements, confirm the Mass objective can complete.
-
-For **Control**:
-
-1. begin an unqualified Control hold on Craft A and let several seconds accumulate;
-2. dock another remembered craft to A while A remains selected and confirm the unfinished hold resets;
-3. begin a new hold while the docked topology remains unchanged;
-4. undock the other craft and confirm that unfinished hold resets again;
-5. complete a fresh uninterrupted hold so Control becomes qualified;
-6. dock or undock again and confirm the already-qualified Control state is **not** erased.
-
-Ordinary staging of A's own continuing lineage should not be treated as this external attachment change. These rules reuse the persistent IDs already captured by the normal telemetry sample; they do not add another vessel scan.
-
-### Multiple Flight Attempts across save/reload
-
-Continue with two craft that already have clearly different remembered Directed Power maxima:
-
-1. make sure Craft A and Craft B have both been sampled and each shows its own recognizable maximum;
-2. optionally dock them and use **Control From Here** so Craft B's lineage is selected while both histories are present in one KSP vessel;
-3. save the game while Craft B is selected;
-4. reload that save and open FlightActiveUI immediately. Historical selection may already be restored internally, but the header and expanded rows should remain in the waiting state until a fresh KSP active-vessel sample succeeds;
-5. after the fresh sample, confirm B's remembered maximum is restored rather than reset and the Active Flight Attempt header reflects the current vessel plus B's launch UT;
-6. switch to Craft A, or undock and then switch to A if the save was made while docked;
-7. confirm A's older independent maximum and launch UT are also restored from its saved part lineage;
-8. switch back to B and confirm B still has its own separate history;
-9. if practical, save/reload once more after the vessels have undocked and confirm both histories continue to resolve correctly.
-
-The important result is that saving while B is selected must no longer discard A, and the UI must not present a restored selection as live until KSP confirms the current craft. Two docked attempts may have the same last KSP vessel ID in `FLIGHT_CONTRACT_PROGRESS`; their saved `PART_LINEAGE` entries keep the histories distinct.
-
-### Constructed or replacement craft identity
-
-This is most useful when testing with a construction/topology mod that can substantially rebuild a vessel in flight. Skip it in a stock-only smoke test if there is no practical reproduction.
-
-1. establish a recognizable Flight Attempt history on Craft A;
-2. create or switch to a constructed/replacement craft whose persistent parts are entirely unrelated to A, even if KSP happens to reuse or transform vessel identity during the operation;
-3. confirm the new craft starts with its own Flight Attempt values rather than inheriting A's earlier maximum speed, origin, or Control state;
-4. if A's original lineage still exists elsewhere, return to it and confirm A's old history is still independently recoverable;
-5. confirm the Active Flight Attempt header follows whichever lineage the fresh sample selected.
-
-The important identity rule is persistent-part lineage, not the KSP vessel ID or display name.
-
-### Flight Attempt lifecycle pruning
-
-Use two remembered craft with clearly different histories. This check validates the slower lifecycle path rather than the one-second active telemetry path:
-
-1. leave Craft A intact somewhere in the save; it may be parked, unloaded, or otherwise inactive;
-2. recover, terminate, or fully destroy Craft B so none of B's remembered persistent parts remain as a KSP vessel;
-3. allow the normal broad vessel refresh to run; it is scheduled about every 20 seconds after a successful refresh;
-4. if useful, inspect `KSP.log` for one line similar to:
-
-   ```text
-   [TheRaceForSpace] Pruned 1 obsolete Flight Attempt(s) after vessel population refresh.
-   ```
-
-5. switch back to Craft A and confirm its previous history is still present;
-6. save the game and inspect `FLIGHT_CONTRACT_PROGRESS` in a disposable save if practical: A's `ATTEMPT` should remain, while B's obsolete `ATTEMPT` should no longer be written;
-7. leave A untouched for longer than one refresh and confirm it is **not** pruned merely because it is inactive;
-8. confirm docking or undocking alone does not prune either craft while their lineage parts still exist.
-
-The pruning rule has no age or inactivity timeout. It removes a remembered attempt only after a successful broad loaded/unloaded vessel refresh proves that none of its lineage parts exist anywhere in the current save.
-
-Open the full **Funding Targets** view while still in Flight and confirm it no longer shows `Live Flight` requirement rows. Funding Targets should remain focused on funding and contract-lifecycle information; `FlightActiveUI` is the dedicated real-time requirement display.
-
-Contract evaluation must continue even when both interfaces are closed. Hiding the UI must never stop `ModRuntime` from maintaining the active Flight Contract tracker.
-
-If either the Active Flight Attempt header or an expanded Pre-Orbit contract remains on:
-
-```text
-Waiting for vessel telemetry...
-```
-
-while a normal vessel is actively being flown for more than the initial loading moment, treat that as a runtime/tracking problem rather than a UI-layout problem.
-
-### One progression and notification check
-
-Complete one Level I Pre-Orbit objective.
+### Funding Targets and notifications
 
 Confirm:
 
-1. the completed contract no longer behaves as an active unfinished Flight Contract;
-2. in FlightActiveUI, an Offered contract completed by the player moves to the bottom and is marked `Complete` with no `+` / `-` control;
-3. KSP's stock message system receives one green message for the player completion;
-4. the message title uses `Funding Target Completed — <Contract Name>`;
-5. the message body uses `<Contract Name> has been achieved. Your agency is now eligible for a share of the remaining contract funding.`;
-6. the next level in that line becomes `Unlocked`;
-7. it does not become `Offered` until the next sponsor review;
-8. after the review, all currently unlocked Pre-Orbit contracts are offered, even if there are more than two.
+- Offered one-off objectives not yet completed by the player appear before player-completed one-off objectives;
+- satellite funding remains visible between those groups as the recurring programme section;
+- completing an eligible player objective can produce the stock funding-target completion message;
+- a rival objective completion can produce a rival message;
+- a sponsor review with new offers can produce a sponsor-review message;
+- a positive campaign payout to the player can produce a payout message;
+- loading a save does not replay historical objective/sponsor notifications.
 
-For example, completing Control II should produce:
+### Flight-only Offered Contracts
 
-```text
-Funding Target Completed — Control II
-Control II has been achieved. Your agency is now eligible for a share of the remaining contract funding.
-```
-
-The notification is for player Objective Funding Contract completions only. Rival completions must not create a player inbox message.
-
-## 7. Quick contract checks
-
-### Directed Power
-
-- Reach the required speed below 70 km.
-- Confirm normal landing/recovery does not complete it.
-- Impact Kerbin and confirm completion.
-- Exceed 70 km first and confirm the attempt remains invalid.
-- Enter orbit and confirm the attempt remains invalid.
-
-### Mass
-
-- Travel beyond the required distance.
-- Keep enough final mass.
-- Confirm completion after either `LANDED` or `SPLASHED` on Kerbin when no outside-lineage parts remain attached.
-- Confirm insufficient mass or distance still prevents completion in either final situation.
-- Confirm an unrelated docked lineage blocks completion even when the combined vessel mass is high enough.
-
-### Control
-
-- Use a crewed vessel.
-- Hold continuously inside the required altitude band.
-- Leave the band early and confirm the timer resets.
-- Dock or undock another lineage before qualification and confirm the timer resets.
-- After qualification, confirm a later docking/undocking change does not erase the qualified state.
-- Then land or splash down safely on Kerbin with crew and confirm completion.
-
-### Biome
-
-- Fly over the target biome and confirm no completion.
-- Finish either `LANDED` or `SPLASHED` while KSP reports the target biome and confirm completion.
-- Confirm merely passing through the target biome without finishing there does not count.
-
-## 8. Save/reload smoke test
-
-Save during Flight Contract activity, reload, and confirm:
-
-- campaign offers and objective completions remain correct;
-- rival state remains correct;
-- all remembered Flight Attempts whose lineage still exists survive, not just the craft that was selected when saving;
-- a previously pruned dead/recovered lineage does not reappear after save/reload;
-- each attempt's persistent-part lineage still selects the correct historical state after switching, staging, docking, or undocking;
-- Directed Power maximum history and orbit invalidation survive when relevant;
-- Control hold/qualification state survives per remembered attempt when relevant;
-- the attempt marked selected at save time is restored as historical selected state until live KSP telemetry resolves the currently controlled lineage;
-- FlightActiveUI remains in its waiting presentation until that fresh active-vessel sample succeeds, then shows the current vessel name plus the resolved attempt's launch UT;
-- live values such as current altitude, mass, biome, crew, vessel display name, reference part, runtime telemetry freshness, and current external attachment topology are refreshed from the vessel after load rather than copied from stale saved telemetry.
-
-`FLIGHT_CONTRACT_PROGRESS` uses repeated `ATTEMPT` nodes with nested `PART_LINEAGE` and `CONTROL_STATE` entries. The previous development single-attempt root format is intentionally not migrated; use a current-build disposable save when validating the current persistence format.
-
-The current vessel display name and runtime freshness marker are not persisted fields. The transient external-attachment topology is also rebuilt from the first usable live snapshot after load. That first observation establishes the baseline and should not by itself reset a restored partial Control hold; later docking/undocking changes should reset it normally.
-
-FlightActiveUI expansion state and visibility are temporary UI state and do not need to survive a scene/save reload.
-
-After completing an Objective Funding Contract and receiving its stock funding-completion notification, save and reload. Confirm the historical completion is restored **without** generating the same notification again. Notification history itself is not persisted; saved objective completion state is restored through the silent path instead.
-
-## 9. Orbital vessel check
-
-Put a qualifying Probe or Relay into Kerbin orbit.
+Enter Flight and open the separate Flight launcher window.
 
 Confirm:
 
-1. it is recognised while loaded;
-2. it remains counted after returning to Space Center or Tracking Station;
-3. the same vessel is not double-counted;
-4. a crewed Probe can still count toward a satellite network while not satisfying an uncrewed Probe Orbit requirement by itself.
+1. the window is titled **Offered Contracts**;
+2. unfinished Offered objectives appear before completed Offered objectives;
+3. each row includes the configured base funding reward;
+4. completed rows sit at the bottom marked `Complete`;
+5. unfinished rows have independent `+` / `-` controls;
+6. expanded Pre-Orbit rows wait for fresh vessel telemetry immediately after entering/reloading Flight rather than presenting stale restored data as current;
+7. expanded Directed Power/Mass/Control/Biome rows show their relevant live telemetry once capture succeeds;
+8. there is only one Flight launcher button;
+9. leaving Flight removes the Flight-only launcher.
 
-If Probe Orbit is currently Offered and this action newly completes it for the player, the same stock funding-completion notification should appear for Probe Orbit.
+The current v0.6 Flight window does not require a separate Flight Attempt identity header. Flight Attempt identity remains internal tracking state used to keep histories correct across craft/topology changes.
 
-This verifies the boundary between `KspVesselMonitor` and `OrbitalVesselTracker`. The same broad refresh now also supplies persistent part IDs for Flight Attempt pruning, so parked/unloaded craft should continue to be represented by their `ProtoPartSnapshot` IDs.
+### Rival Agencies dashboard
 
-## 10. Check the KSP log
+For each rival, confirm the sections appear in this order:
 
-After testing:
+1. Programme Status
+2. Live Mission Progress
+3. Current Launch Programme / Launch Science Expedition
+4. Construction
+5. Facilities
+6. Tech Tree / Research
+7. Funding
 
-```bash
-grep -i "Race for Space\|TheRaceForSpace\|Exception" "$KSP_ROOT/KSP.log" | tail -n 100
-```
+On a fresh save, confirm one employed Kerbal, zero Stored Science, Level 1 facilities, and `Start` as the initial rival tech state.
 
-Look for:
+Default Level 1 launch capability should show:
 
-- repeated exceptions;
-- `FlightActiveUI` exceptions, active-attempt header failures, or duplicate launcher behaviour;
-- `FundingNotificationUI` or `MessageSystem` errors;
-- Directed Power destruction-callback errors;
-- active Flight telemetry reporting zero persistent part IDs or reference part `0` for a normal settled controllable craft;
-- Flight Contract save/load errors or histories unexpectedly resetting after reload;
-- repeated pruning of the same already-removed attempt;
-- excessive repeated output.
+- normal Contract Launch Progress Chance: **30%** (VAB + Launch Pad);
+- Science Progress Chance: **40% daily** (SPH + Runway).
 
-A genuine recovery/destruction cleanup may produce one `Pruned <n> obsolete Flight Attempt(s)` diagnostic after the next successful broad refresh. It should not repeat every frame or every refresh once the attempt has been removed. A successful completion notification should likewise produce one diagnostic line for that objective ID, not repeated per-frame output.
+### Rival live mission smoke test
 
-## Troubleshooting
+Timewarp until a rival preparation reaches 100%.
 
-### `fatal: not a git repository`
+Confirm:
 
-This means the terminal is not inside the cloned repository.
+- 100% Launch Progress creates a **Live Mission** instead of instantly completing the target;
+- the row shows Contract/Science type, duration, progress, ETA, and success chance;
+- the objective/Science result is applied only when the stored completion time is reached;
+- large timewarp does not skip intermediate funding boundaries or stored mission events.
 
-Run:
+### Shared Science smoke test
 
-```bash
-cd /home/deck/Projects/the-race-for-space/
-```
+Observe at least one rival Science Expedition if practical.
 
-Then retry:
+Confirm:
 
-```bash
-git status --short
-```
+- the target corresponds to a real stock Science subject;
+- launching the expedition does not immediately consume the player's stock subject;
+- successful completion receives only the Science still remaining at completion;
+- the stock subject is then depleted by the rival award;
+- no repeated Science exceptions appear in `KSP.log`.
 
-Do not run `git fetch`, `git switch`, `git pull`, or `bash tools/...` from `~`.
+### Development/funding smoke test
 
-### `tools/run-logic-tests.sh: No such file or directory`
+Across one or more funding boundaries, confirm:
 
-This normally has the same cause: the terminal is outside the repository.
+- Administration contributes rival base income;
+- payroll/insurance are deductions;
+- rival Funds may be negative;
+- due research/construction completes before the boundary funding calculation;
+- new research/construction starts only after the boundary payout;
+- sponsor review happens after development/funding for that boundary.
 
-Run:
+### Save/load smoke test
 
-```bash
-cd /home/deck/Projects/the-race-for-space/
-ls tools
-```
+Save while at least one rival has non-default v0.6 state, such as a preparation, live mission, research, construction, or Stored Science.
 
-You should see the repository helper scripts.
+Reload and confirm the same values return without duplicating missions, payouts, Science awards, or notifications.
 
-## One-time Linux setup
+## 6. Read the log
 
-If this machine has not been prepared before:
-
-```bash
-mkdir -p "$HOME/Projects"
-cd "$HOME/Projects"
-git clone https://github.com/the-race-for-space/the-race-for-space.git
-cd /home/deck/Projects/the-race-for-space/
-
-git fetch origin
-git switch --track origin/Alpha/KerbalContracts-v0.5
-```
-
-Check tools:
+After the smoke test:
 
 ```bash
-git --version
-dotnet --version
+grep -n "TheRaceForSpace\|The Race for Space\|Exception" "$KSP_ROOT/KSP.log" | tail -n 200
 ```
 
-The standalone logic tests use .NET 8. The KSP mod itself targets .NET Framework 4.7.2 and may require compatible Mono 4.7.2 reference assemblies on Linux.
+Investigate repeated mod exceptions before treating the live pass as successful.
 
-## Full release-candidate pass
+## 7. Complete the acceptance record
 
-The quick checks above are for day-to-day development.
+Use [`CONTENT_V0_6_TESTING.md`](CONTENT_V0_6_TESTING.md) for the full pass and record:
 
-Before treating a build as a 0.5 release candidate, complete [`KERBAL_CONTRACTS_V0_5_TESTING.md`](KERBAL_CONTRACTS_V0_5_TESTING.md), including:
+- tested commit SHA;
+- KSP version;
+- platform;
+- pass/fail notes for the live sections;
+- any fixes made during acceptance.
 
-- all four Pre-Orbit lines;
-- multiple simultaneously offered levels;
-- Flight Attempt switching, staging, docking/undocking, topology rules, multi-attempt persistence, lifecycle pruning, and constructed/replacement craft identity;
-- Active Flight Attempt vessel-name/launch-UT presentation and fresh-sample waiting after save/load;
-- Level V -> Probe Orbit convergence;
-- funding and rival behaviour;
-- loaded/unloaded orbital vessel tracking;
-- Command Center presentation;
-- FlightActiveUI launcher lifecycle, ordering, expansion, and live requirement presentation;
-- player funding-completion inbox notifications and no replay after save/reload.
+Task 16 is not complete merely because `run-logic-tests.sh` is green; the KSP boundary checks must also be performed.

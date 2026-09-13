@@ -108,7 +108,19 @@ namespace TheRaceForSpace.KspIntegration
                 return candidates;
             }
 
+            List<string> stockExperimentIds = ResearchAndDevelopment.GetExperimentIDs();
+            if (stockExperimentIds == null)
+            {
+                return candidates;
+            }
+
             var bodyNames = GetSupportedBodyNames();
+            var resolvedBodies = new List<CelestialBody>(bodyNames.Count);
+            for (int bodyIndex = 0; bodyIndex < bodyNames.Count; bodyIndex++)
+            {
+                resolvedBodies.Add(FindBody(bodyNames[bodyIndex]));
+            }
+
             var bodyBiomes = new Dictionary<string, IList<KspScienceBiomeSnapshot>>(
                 StringComparer.OrdinalIgnoreCase);
             var candidateKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -116,7 +128,8 @@ namespace TheRaceForSpace.KspIntegration
             for (int experimentIndex = 0; experimentIndex < experimentIds.Count; experimentIndex++)
             {
                 string experimentId = experimentIds[experimentIndex];
-                if (string.IsNullOrEmpty(experimentId))
+                ScienceExperiment experiment;
+                if (!TryGetExperiment(experimentId, stockExperimentIds, out experiment))
                 {
                     continue;
                 }
@@ -124,6 +137,12 @@ namespace TheRaceForSpace.KspIntegration
                 for (int bodyIndex = 0; bodyIndex < bodyNames.Count; bodyIndex++)
                 {
                     string bodyName = bodyNames[bodyIndex];
+                    CelestialBody body = resolvedBodies[bodyIndex];
+                    if (body == null)
+                    {
+                        continue;
+                    }
+
                     bool isKerbin = string.Equals(
                         bodyName,
                         KerbinBodyName,
@@ -141,18 +160,35 @@ namespace TheRaceForSpace.KspIntegration
                         situationIndex < scienceSituations.Length;
                         situationIndex++)
                     {
-                        string situation = scienceSituations[situationIndex];
-                        ScienceSubjectKey nonBiomeSubject = new ScienceSubjectKey(
-                            experimentId,
-                            bodyName,
-                            situation,
-                            string.Empty);
-                        KspScienceSubjectSnapshot nonBiomeSnapshot;
-                        if (TryCaptureSubject(nonBiomeSubject, out nonBiomeSnapshot))
+                        string situationName = scienceSituations[situationIndex];
+                        ExperimentSituations situation;
+                        string canonicalSituation;
+                        if (!TryConvertSituation(
+                                situationName,
+                                out situation,
+                                out canonicalSituation)
+                            || !experiment.IsAvailableWhile(situation, body))
                         {
+                            continue;
+                        }
+
+                        if (!experiment.BiomeIsRelevantWhile(situation))
+                        {
+                            KspScienceSubjectSnapshot nonBiomeSnapshot;
+                            if (!TryCaptureResolvedSubject(
+                                    experiment,
+                                    body,
+                                    situation,
+                                    canonicalSituation,
+                                    null,
+                                    out nonBiomeSnapshot))
+                            {
+                                continue;
+                            }
+
                             string locationId = GetScienceLocationId(
                                 bodyName,
-                                situation,
+                                canonicalSituation,
                                 null);
                             AddScienceCandidate(
                                 candidates,
@@ -165,7 +201,7 @@ namespace TheRaceForSpace.KspIntegration
                         if (biomes == null
                             && !bodyBiomes.TryGetValue(bodyName, out biomes))
                         {
-                            biomes = CaptureBodyBiomes(bodyName, isKerbin);
+                            biomes = CaptureBodyBiomes(body, isKerbin);
                             bodyBiomes[bodyName] = biomes;
                         }
 
@@ -176,27 +212,28 @@ namespace TheRaceForSpace.KspIntegration
                                 || string.IsNullOrEmpty(biome.BiomeName)
                                 || (biome.IsMiniBiome
                                     && !string.Equals(
-                                        situation,
+                                        canonicalSituation,
                                         LandedSituation,
                                         StringComparison.Ordinal)))
                             {
                                 continue;
                             }
 
-                            ScienceSubjectKey biomeSubject = new ScienceSubjectKey(
-                                experimentId,
-                                bodyName,
-                                situation,
-                                biome.BiomeName);
                             KspScienceSubjectSnapshot biomeSnapshot;
-                            if (!TryCaptureSubject(biomeSubject, out biomeSnapshot))
+                            if (!TryCaptureResolvedSubject(
+                                    experiment,
+                                    body,
+                                    situation,
+                                    canonicalSituation,
+                                    biome,
+                                    out biomeSnapshot))
                             {
                                 continue;
                             }
 
                             string locationId = GetScienceLocationId(
                                 bodyName,
-                                situation,
+                                canonicalSituation,
                                 biome);
                             AddScienceCandidate(
                                 candidates,
@@ -237,28 +274,12 @@ namespace TheRaceForSpace.KspIntegration
                 return false;
             }
 
-            double remainingScience;
-            double scienceCap;
-            if (!TryCalculateRemainingScience(scienceSubject, out remainingScience, out scienceCap))
-            {
-                return false;
-            }
-
-            string experimentTitle = string.IsNullOrEmpty(experiment.experimentTitle)
-                ? experiment.id
-                : experiment.experimentTitle;
-            string subjectTitle = string.IsNullOrEmpty(scienceSubject.title)
-                ? experimentTitle
-                : scienceSubject.title;
-
-            snapshot = new KspScienceSubjectSnapshot(
+            return TryCreateSubjectSnapshot(
+                experiment,
+                scienceSubject,
                 canonicalSubject,
-                experimentTitle,
-                subjectTitle,
                 biomeDisplayName,
-                remainingScience,
-                scienceCap);
-            return true;
+                out snapshot);
         }
 
         internal static bool TryGetRemainingScience(
@@ -370,8 +391,14 @@ namespace TheRaceForSpace.KspIntegration
             string bodyName,
             bool includeMiniBiomes)
         {
+            return CaptureBodyBiomes(FindBody(bodyName), includeMiniBiomes);
+        }
+
+        private static IList<KspScienceBiomeSnapshot> CaptureBodyBiomes(
+            CelestialBody body,
+            bool includeMiniBiomes)
+        {
             var snapshots = new List<KspScienceBiomeSnapshot>();
-            CelestialBody body = FindBody(bodyName);
             if (body == null)
             {
                 return snapshots;
@@ -590,6 +617,107 @@ namespace TheRaceForSpace.KspIntegration
             return string.IsNullOrEmpty(slug) ? null : slug;
         }
 
+        private static bool TryCaptureResolvedSubject(
+            ScienceExperiment experiment,
+            CelestialBody body,
+            ExperimentSituations situation,
+            string canonicalSituation,
+            KspScienceBiomeSnapshot biome,
+            out KspScienceSubjectSnapshot snapshot)
+        {
+            snapshot = null;
+            if (experiment == null
+                || body == null
+                || string.IsNullOrEmpty(canonicalSituation))
+            {
+                return false;
+            }
+
+            string biomeTag = string.Empty;
+            string biomeDisplayName = string.Empty;
+            if (experiment.BiomeIsRelevantWhile(situation))
+            {
+                if (biome == null || string.IsNullOrEmpty(biome.BiomeName))
+                {
+                    return false;
+                }
+
+                biomeTag = biome.BiomeName;
+                biomeDisplayName = string.IsNullOrEmpty(biome.DisplayName)
+                    ? biomeTag
+                    : biome.DisplayName;
+            }
+            else if (biome != null)
+            {
+                return false;
+            }
+
+            var canonicalSubject = new ScienceSubjectKey(
+                experiment.id,
+                body.bodyName,
+                canonicalSituation,
+                biomeTag);
+
+            // Bulk enumeration already resolved the experiment, body, situation and biome. Constructing
+            // the temporary subject directly avoids repeating stock catalogue/biome lookups for every
+            // experiment-body-situation combination while preserving the shared stock subject identity.
+            ScienceSubject temporarySubject = new ScienceSubject(
+                experiment,
+                situation,
+                body,
+                biomeTag);
+            if (temporarySubject == null || string.IsNullOrEmpty(temporarySubject.id))
+            {
+                return false;
+            }
+
+            ScienceSubject scienceSubject = ResearchAndDevelopment.GetSubjectByID(temporarySubject.id)
+                ?? temporarySubject;
+            return TryCreateSubjectSnapshot(
+                experiment,
+                scienceSubject,
+                canonicalSubject,
+                biomeDisplayName,
+                out snapshot);
+        }
+
+        private static bool TryCreateSubjectSnapshot(
+            ScienceExperiment experiment,
+            ScienceSubject scienceSubject,
+            ScienceSubjectKey canonicalSubject,
+            string biomeDisplayName,
+            out KspScienceSubjectSnapshot snapshot)
+        {
+            snapshot = null;
+            if (experiment == null || scienceSubject == null || canonicalSubject == null)
+            {
+                return false;
+            }
+
+            double remainingScience;
+            double scienceCap;
+            if (!TryCalculateRemainingScience(scienceSubject, out remainingScience, out scienceCap))
+            {
+                return false;
+            }
+
+            string experimentTitle = string.IsNullOrEmpty(experiment.experimentTitle)
+                ? experiment.id
+                : experiment.experimentTitle;
+            string subjectTitle = string.IsNullOrEmpty(scienceSubject.title)
+                ? experimentTitle
+                : scienceSubject.title;
+
+            snapshot = new KspScienceSubjectSnapshot(
+                canonicalSubject,
+                experimentTitle,
+                subjectTitle,
+                biomeDisplayName ?? string.Empty,
+                remainingScience,
+                scienceCap);
+            return true;
+        }
+
         private static bool TryResolveSubject(
             ScienceSubjectKey requestedSubject,
             bool createRegisteredSubject,
@@ -745,14 +873,17 @@ namespace TheRaceForSpace.KspIntegration
             string requestedExperimentId,
             out ScienceExperiment experiment)
         {
-            experiment = null;
-            if (string.IsNullOrEmpty(requestedExperimentId))
-            {
-                return false;
-            }
-
             List<string> experimentIds = ResearchAndDevelopment.GetExperimentIDs();
-            if (experimentIds == null)
+            return TryGetExperiment(requestedExperimentId, experimentIds, out experiment);
+        }
+
+        private static bool TryGetExperiment(
+            string requestedExperimentId,
+            IList<string> experimentIds,
+            out ScienceExperiment experiment)
+        {
+            experiment = null;
+            if (string.IsNullOrEmpty(requestedExperimentId) || experimentIds == null)
             {
                 return false;
             }

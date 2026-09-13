@@ -82,6 +82,12 @@ namespace TheRaceForSpace.KspIntegration
             HighSpaceSituation
         };
 
+        private static readonly string[] RivalOrbitalScienceSituations =
+        {
+            LowSpaceSituation,
+            HighSpaceSituation
+        };
+
         /// <summary>
         /// Captures all stock-valid subjects for the supplied rival-unlocked experiment IDs. This method
         /// is called only when the chronological rival Science flow needs a target/revalidation snapshot;
@@ -107,14 +113,6 @@ namespace TheRaceForSpace.KspIntegration
                 StringComparer.OrdinalIgnoreCase);
             var candidateKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-            for (int bodyIndex = 0; bodyIndex < bodyNames.Count; bodyIndex++)
-            {
-                string bodyName = bodyNames[bodyIndex];
-                bodyBiomes[bodyName] = CaptureBodyBiomes(
-                    bodyName,
-                    string.Equals(bodyName, KerbinBodyName, StringComparison.OrdinalIgnoreCase));
-            }
-
             for (int experimentIndex = 0; experimentIndex < experimentIds.Count; experimentIndex++)
             {
                 string experimentId = experimentIds[experimentIndex];
@@ -126,13 +124,24 @@ namespace TheRaceForSpace.KspIntegration
                 for (int bodyIndex = 0; bodyIndex < bodyNames.Count; bodyIndex++)
                 {
                     string bodyName = bodyNames[bodyIndex];
-                    IList<KspScienceBiomeSnapshot> biomes = bodyBiomes[bodyName];
+                    bool isKerbin = string.Equals(
+                        bodyName,
+                        KerbinBodyName,
+                        StringComparison.OrdinalIgnoreCase);
+                    string[] scienceSituations = isKerbin
+                        ? RivalScienceSituations
+                        : RivalOrbitalScienceSituations;
+                    IList<KspScienceBiomeSnapshot> biomes = null;
 
+                    // Current v0.6 has no non-Kerbin landing/flight Contract progression gate, so the
+                    // domain rules reject those situations. Avoid resolving stock subjects that can never
+                    // be selected. Orbital biome enumeration remains available because some stock Science
+                    // experiments can still be biome-relevant in space.
                     for (int situationIndex = 0;
-                        situationIndex < RivalScienceSituations.Length;
+                        situationIndex < scienceSituations.Length;
                         situationIndex++)
                     {
-                        string situation = RivalScienceSituations[situationIndex];
+                        string situation = scienceSituations[situationIndex];
                         ScienceSubjectKey nonBiomeSubject = new ScienceSubjectKey(
                             experimentId,
                             bodyName,
@@ -151,6 +160,13 @@ namespace TheRaceForSpace.KspIntegration
                                 nonBiomeSnapshot,
                                 locationId);
                             continue;
+                        }
+
+                        if (biomes == null
+                            && !bodyBiomes.TryGetValue(bodyName, out biomes))
+                        {
+                            biomes = CaptureBodyBiomes(bodyName, isKerbin);
+                            bodyBiomes[bodyName] = biomes;
                         }
 
                         for (int biomeIndex = 0; biomeIndex < biomes.Count; biomeIndex++)

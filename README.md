@@ -29,9 +29,7 @@ Currently no support for other mods. e.g the Rivals only use the stock science a
 
 **AI Coding and Disclosure**
 
-Programed using AI. Is this Slop than? Well the end product is a decider of that one. I have not run into performance issues yet in my testing. Things function how I want them to and I have tried to do plenty of testing. But of course only one person can test so much.
-
-So is this slop than? No idea you tell me, I am biased since I made this and spent lots of time building it!
+Programed using AI. Is this Slop than? Well maybe, but I enjoy the end product so it is up to you. I have not run into performance issues yet in my testing. Things function how I want them to and I have attempted to do plenty of testing.
 
 **Performance Cost**
 
@@ -46,13 +44,3 @@ Once Every Second - This call every second checks whether the player has complet
 Every 5 Seconds - This is the main part of the simulation where the mod checks every 5 seconds if the following has happened. It checks if the system has reached an end of a day than science expeditions are updated. At the end of every 5 days launch progress is checked for missions. Every 90 days a funding event happens where construction/science and new funding appears and payouts are given.
 
 Every 20 seconds - We run an algorithm to check the number of player satellites in orbit of bodies this is in order to check if the player has complete any satellite funding contracts. This does not change very often so only needs to be done every 20 seconds. (This means it can take up to 20 seconds for a new player satellite to be counted once in orbit)
-
-**AI Lessons and my own Observations**
-
-I have been using AI quite extensively for my work these days, I have done a couple of other projectsrelated to non gaming things using AI.
-
-It is a tool, it will by no means beat humans when it comes to real creativity and ideas. It still makes stupid decisions and the more freedom you give it the more slop it will produce.
-
-AI needs to be controlled. It needs to have rigid input and the results needed to be checked and confirmed and tested because its output is just plainly unreliable. But as a tool it is able to produce things at a speed that humans can not keep up with.
-
-This has been a fun project to get to know how to use AI and I feel I have learned lots from it. I know with my amateur programming skills I would not have been able to create a project of this size and scope in the time completed with AI. Hopefully the end result of this mod is useful to someone.

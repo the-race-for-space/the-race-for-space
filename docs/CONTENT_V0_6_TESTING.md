@@ -342,6 +342,32 @@ Confirm:
 
 The automated suite covers a deterministic large-time-jump case; this live check validates the KSP timewarp/runtime integration around it.
 
+## Science max-warp performance check
+
+Use a disposable save with two active rivals preparing Science. A mature campaign state with several unlocked experiments and interplanetary destinations is preferable because it exercises the largest stock Science candidate pool.
+
+Test the same save at:
+
+1. normal speed;
+2. a medium rails-warp setting;
+3. maximum available rails warp for at least 30 Kerbin days of Science catch-up.
+
+During the run, observe the transitions as individual Kerbin days are crossed and confirm:
+
+- Science Launch Progress still receives exactly the stored daily opportunities that were crossed; no checks are skipped or duplicated;
+- progress reaching 100% retains the correct stored ready time and launches through the normal chronological arbitration path;
+- Contract-versus-Science crew priority and exact-time ordering remain unchanged;
+- shared Science subjects are still consumed only by the first successful completion and later contenders see the remaining/depleted stock value correctly;
+- non-Kerbin rivals still receive valid Low Space / High Space Science, including stock orbital biome Science where applicable;
+- non-Kerbin Landed, Splashed, Flying Low, and Flying High Science is not selected while current v0.6 progression has no non-Kerbin landing/flight gate;
+- normal-speed day boundaries do not produce a visible Science-related hitch;
+- maximum-warp Science catch-up does not produce the previous repeated multi-second or severe freeze on each elapsed Science day;
+- `KSP.log` contains no repeating Science-adapter exceptions during the run.
+
+A small momentary cost when a large time jump catches up many valid stored events can still occur; the acceptance target is that cost scales with real chronological work rather than repeatedly rebuilding or re-resolving the entire Science catalogue for every elapsed day.
+
+If a visible hitch remains, record the tested commit, warp rate, approximate universal time/day, number of active rivals, and whether the hitch occurs on every Science day or only around other events such as funding boundaries. This distinguishes remaining Science work from unrelated 20-second vessel scans or funding processing.
+
 ---
 
 # 14. Save/load persistence during active rival state
@@ -467,7 +493,7 @@ Save used:
 [ ] 10. Rival funding / negative Funds
 [ ] 11. Rival research / completion notification
 [ ] 12. Rival facility construction / completion notification
-[ ] 13. Large timewarp / crossed funding boundaries
+[ ] 13. Large timewarp / crossed funding boundaries / Science max-warp performance
 [ ] 14. Save/load persistence
 [ ] 15. UI polish / notifications
 [ ] 16. Task 15 Help window wording

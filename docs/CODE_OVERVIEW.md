@@ -244,6 +244,18 @@ Current design notes:
 - the Sun is excluded from rival Science content;
 - current Science expeditions require one Kerbal.
 
+### Science timewarp performance
+
+Science Launch Progress still advances through the normal chronological event loop one stored daily check at a time. This is intentional: batching several elapsed Science days into one calculation could change the exact ready UT, random-roll order, Contract-versus-Science crew contention, live-mission ordering, and shared Science race outcome.
+
+The performance strategy is therefore to keep each daily event cheap rather than skip or merge events:
+
+- revalidating an existing Science preparation scans only candidates for the persisted `ScienceSubjectKey` instead of rebuilding, de-duplicating, and sorting the complete eligible catalogue;
+- when several adapter locations represent the same prepared stock subject, revalidation keeps the same stable lowest `LocationId` canonicalization used by normal selection;
+- selecting a brand-new Science target still builds the full eligible/canonical candidate list because that work is required for unbiased valid selection.
+
+If high timewarp crosses many Kerbin days, `RivalSimulation` will still process every due stored Science progress event in chronological order. Performance fixes should preserve that rule unless a future design explicitly replaces the chronology semantics.
+
 ## `Rivals/RivalLiveMissionSimulation.cs`
 
 Turns ready preparations into launched mission snapshots and later resolves them.
@@ -309,6 +321,17 @@ It:
 - avoids registering every untouched candidate into the player's archives merely by inspecting it;
 - builds `RivalScienceSubjectCandidate` snapshots;
 - consumes the matching stock subject when a rival wins it.
+
+Bulk rival Science enumeration is performance-sensitive because it may run while timewarp is catching up many daily rival events. The current bulk path therefore:
+
+- enumerates all six supported situations for Kerbin, but only Low Space and High Space for non-Kerbin bodies because current v0.6 progression rejects non-Kerbin surface/flight Science;
+- resolves the stock experiment-ID catalogue once per capture and resolves each requested `ScienceExperiment` once;
+- resolves each supported `CelestialBody` once per capture;
+- captures biome metadata lazily and at most once per body during a capture;
+- reuses resolved experiment/body/situation/biome data while constructing candidate subjects instead of repeatedly calling the generic one-subject resolver;
+- retains non-Kerbin biome handling for valid orbital experiments that are biome-relevant in stock KSP.
+
+The generic one-off subject path remains available for arbitrary subject reads and consumption. In particular, rival Science consumption still resolves and exhausts the registered stock subject so the player and every rival continue sharing the exact same Science pool.
 
 The important boundary is:
 

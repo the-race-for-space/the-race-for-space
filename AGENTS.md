@@ -145,15 +145,31 @@ KSP objects can disappear or become invalid as scenes and vessels change.
 
 ## 10. Performance
 
-Avoid unnecessary work in frequent update paths.
+Consider the performance cost of an algorithm **before implementing it**, especially when it can run from a recurring refresh, per-vessel scan, per-rival event, daily progress check, or timewarp catch-up path.
+
+For any non-trivial loop or repeated algorithm, make a lightweight cost review first:
+
+- identify how often the code can run in real time and game time;
+- estimate the worst-case work as frequency × entities × elapsed/caught-up events × candidates/items;
+- account for high timewarp, save/load catch-up, and large universal-time jumps that can make many stored events execute during one refresh;
+- identify expensive inner-loop operations such as KSP/Unity API calls, catalogue scans, vessel scans, sorting, dictionary/list rebuilding, string work, persistence capture, and repeated allocations;
+- prune impossible candidates before expensive resolution work;
+- resolve or cache stable metadata outside inner loops when the lifetime and ownership are clear;
+- if only one persisted/current item must be checked, do not rebuild, de-duplicate, or sort an entire candidate collection to find it;
+- preserve chronological/gameplay correctness first; prefer making each repeated event cheap before batching events unless batching is proven behaviourally equivalent.
+
+A small amount of work can become a severe hitch when multiplied by many rivals, vessels, candidates, or elapsed Kerbin days. Code that is cheap at normal speed must also be considered under the largest realistic campaign state and maximum timewarp/catch-up conditions.
+
+General rules:
 
 - Do not scan all vessels every frame.
 - Use the existing controlled refresh cadences.
 - Avoid repeated allocations in hot loops when a simple reusable buffer already fits the design.
-- Do not optimise speculative bottlenecks at the cost of clarity.
-- Comment optimisations that make the code less obvious.
+- Do not optimise speculative bottlenecks at the cost of clarity, but do not defer obvious multiplicative costs until after implementation.
+- Comment optimisations that make the code less obvious, including what repeated work they are intentionally avoiding.
+- For performance-sensitive KSP-boundary changes, include a practical worst-case verification path where automated tests cannot measure the real API cost.
 
-Correctness and clarity come first.
+Correctness and clarity come first, but expected runtime cost is part of correctness for code that executes on the main KSP simulation thread.
 
 ## 11. Persistence and configuration
 
@@ -219,7 +235,8 @@ Before submitting a code change, confirm:
 - [ ] UI code remains presentation-only.
 - [ ] I considered invalid KSP objects and loaded/unloaded vessel behaviour where relevant.
 - [ ] I considered save/config compatibility where relevant.
-- [ ] I avoided unnecessary frequent work.
+- [ ] I estimated the worst-case performance load of new or changed algorithms, including timewarp/catch-up multiplication where relevant.
+- [ ] I avoided unnecessary frequent work and expensive repeated inner-loop operations.
 - [ ] I updated meaningful tests where practical.
 - [ ] I ran `tools/run-logic-tests.sh` when the change affects testable logic.
 - [ ] I did not make an unapproved structural change.

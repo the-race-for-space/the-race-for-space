@@ -13,7 +13,7 @@ The full working TODO used while version 0.6 was designed and implemented is pre
 
 ## Surface base progression
 
-The current base-content tranche is the surface-base progression. Orbital bases are deliberately a separate future contract line and are recorded later in this TODO rather than being part of the Desert/Polar -> Mun/Minmus path.
+The current surface-base progression remains separate from the orbital-base contract lines. Kerbin has its own Orbital Base I-III line beginning after Crewed Orbit, while Mun/Minmus orbital bases remain a separate future design item. Neither orbital line is a prerequisite in the current Desert/Polar -> Mun/Minmus surface-base path.
 
 ### Locked surface-base funding model
 
@@ -130,17 +130,47 @@ Before implementation, perform the required `AGENTS.md` cost review for the new 
 
 Keep this section as design work until those rules are approved. Structural, save-format, or configuration changes needed by the surface-base implementation still require the normal approval process in `AGENTS.md`.
 
-## Future orbital-base contract line
+## Kerbin orbital-base contract line
 
-Orbital bases around **Kerbin, Mun, and Minmus** are intentionally a separate future contract line. They are not prerequisites in the current Desert/Polar -> Mun/Minmus surface-base progression and should be designed at a later date.
+The Kerbin orbital-base programme is a separate contract line from the Desert/Polar surface-base progression.
 
-- [ ] Define the overall orbital-base/station progression separately from the surface-base programme.
-- [ ] Define and balance **Kerbin Orbital Base I-III**.
+### Locked Kerbin orbital-base progression
+
+- Completing the existing **Crewed Orbit** objective around Kerbin unlocks **Orbital Base I**.
+- **Orbital Base I, II and III** are one-off progression contracts for maintaining an increasingly capable crewed station in Kerbin orbit.
+- **Orbital Base II** follows Orbital Base I, and **Orbital Base III** follows Orbital Base II.
+- Completing **Orbital Base I** unlocks a separate **Kerbin Orbital Base static funding** contract.
+- Kerbin Orbital Base static funding scales with the current number of Kerbals aboard qualifying Orbital Base vessels in Kerbin orbit.
+- Player qualifying Kerbal counts should be refreshed on the existing **20-second broad vessel check**, alongside the other loaded/unloaded vessel observations. Do not create a separate realtime orbital-base scanner.
+- This Kerbin orbital-base line is independent from the current Desert/Polar -> Mun/Minmus surface-base unlock path.
+
+### Kerbin orbital-base design work
+
+- [ ] Define and balance **Orbital Base I-III** as one-off progression contracts.
+  - Orbital Base I unlock prerequisite: complete **Crewed Orbit** around Kerbin.
+  - Define the Base I -> II -> III crew requirements, qualifying duration, orbit requirements, station capability requirements, one-off rewards, and rival mission difficulty.
+- [ ] Define the separate **Kerbin Orbital Base static funding** contract.
+  - Unlock after Orbital Base I is completed.
+  - Funding scales from the current number of Kerbals aboard qualifying Orbital Base vessels in Kerbin orbit.
+  - Player qualifying crew count is refreshed on the existing 20-second broad vessel check.
+- [ ] Decide the exact static-funding formula, including Funds per Kerbal, any maximum qualifying crew, whether multiple qualifying orbital bases aggregate, and how funding is shared when multiple agencies qualify.
+- [ ] Decide the exact station qualification rules, including required hardware/capability, orbit tolerance, continuous-duration behaviour, vessel/station identity, docking/undocking, crew changes, loss, and resumption.
+- [ ] Define how rival agencies represent established Kerbin orbital bases and their current qualifying Kerbal counts without physical KSP vessels.
+- [ ] Implement the agreed Orbital Base I-III progression and Kerbin Orbital Base static funding.
+- [ ] Reuse the existing 20-second broad vessel capture for orbital-base presence/crew tracking and complete the required `AGENTS.md` performance review before implementation.
+
+Keep this section as design work until the remaining station qualification and balance rules are approved. Structural, save-format, or configuration changes needed by orbital-base tracking still require the normal approval process in `AGENTS.md`.
+
+## Future Mun and Minmus orbital-base contract line
+
+Orbital bases around **Mun and Minmus** remain a separate future contract line to be designed at a later date. They are not prerequisites in the current surface-base progression and are not part of the defined Kerbin Orbital Base I-III line above.
+
+- [ ] Define the overall Mun/Minmus orbital-base/station progression separately.
 - [ ] Define and balance **Mun Orbital Base I-III**.
 - [ ] Define and balance **Minmus Orbital Base I-III**.
-- [ ] Decide the unlock path for the orbital-base line without coupling it to the current surface-base implementation unless deliberately approved later.
+- [ ] Decide the unlock paths for the Mun/Minmus orbital-base lines without coupling them to the current surface-base implementation unless deliberately approved later.
 - [ ] Define crew, duration, orbit, station capability, persistence, loss, and resumption rules.
-- [ ] Decide whether orbital bases receive their own separate static/recurring crew-based funding contracts.
+- [ ] Decide whether Mun/Minmus orbital bases receive their own separate static/recurring crew-based funding contracts.
 - [ ] Define rival orbital-base mission profiles and representation.
-- [ ] Perform a separate performance/save-format review before implementing orbital-base tracking.
-- [ ] Implement the orbital-base contract line only after its design is separately approved.
+- [ ] Perform a separate performance/save-format review before implementing Mun/Minmus orbital-base tracking.
+- [ ] Implement the Mun/Minmus orbital-base contract lines only after their designs are separately approved.

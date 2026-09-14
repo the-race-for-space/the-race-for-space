@@ -43,6 +43,14 @@ Current locked progression/funding decisions:
 - Completing **Minmus Base I** unlocks a separate **Minmus Base static funding** programme.
 - Mun/Minmus static funding follows the same broad principle as Desert/Polar funding: payout is based on current qualifying Kerbal presence rather than making the Base I-II-III progression contracts recurring.
 
+### Player Overview presentation for static base contracts
+
+- [ ] Extend the Command Center **Overview** left column so the player-owned infrastructure summaries appear in this order: **Your Satellite Networks**, **Your Orbital Bases**, then **Your Surface Bases**.
+  - **Your Orbital Bases** records the player's static orbital-base funding programmes in the same broad presentation style as **Your Satellite Networks**, showing the current qualifying Kerbal presence for each applicable orbital-base programme. The defined Kerbin Orbital Base static contract belongs here; future Mun/Minmus orbital static contracts should use the same section if they are later approved.
+  - **Your Surface Bases** records the player's static surface-base funding programmes in the same broad presentation style, covering Desert Base, Polar Base, Mun Base, and Minmus Base static contracts as they become available and showing their current qualifying Kerbal presence.
+  - Show `None` when the player has no qualifying entry for a section, matching the existing satellite-network summary behaviour.
+  - Keep one-off **Base I-III** progression contracts under **Your Objectives**. The new Orbital/Surface Base sections are only for the separate static/recurring funding contracts and must read authoritative tracking/funding state rather than owning gameplay state.
+
 ### Kerbin proving grounds
 
 - [ ] Define and balance **Desert Base I-III** as one-off progression contracts.
